@@ -1,5 +1,7 @@
 #include <greeter/greeter.h>
 
+#include <QGuiApplication>
+#include <QQmlApplicationEngine>
 #include <cxxopts.hpp>
 #include <iostream>
 #include <string>
@@ -47,6 +49,14 @@ auto main(int argc, char** argv) -> int {
 
   greeter::Greeter greeter(name);
   std::cout << greeter.greet(langIt->second) << std::endl;
+  QGuiApplication app(argc, argv);
 
+  QQmlApplicationEngine engine;
+  QObject::connect(
+      &engine, &QQmlApplicationEngine::objectCreationFailed, &app,
+      []() { QCoreApplication::exit(-1); }, Qt::QueuedConnection);
+  engine.loadFromModule("OpenGeoLab", "Main");
+
+  return app.exec();
   return 0;
 }
