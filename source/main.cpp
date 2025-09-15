@@ -59,7 +59,5 @@ auto main(int argc, char** argv) -> int {
         &engine, &QQmlApplicationEngine::objectCreationFailed, &app,
         []() { QCoreApplication::exit(-1); }, Qt::QueuedConnection);
     engine.loadFromModule("OpenGeoLab", "Main");
-
     return app.exec();
-    return 0;
 }

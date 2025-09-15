@@ -76,6 +76,7 @@ qt_add_qml_module(
   1.0
   QML_FILES
   source/Main.qml
+  source/widgets/Button.qml
 )
 
 # being a cross-platform target, we enforce standards conformance on MSVC
