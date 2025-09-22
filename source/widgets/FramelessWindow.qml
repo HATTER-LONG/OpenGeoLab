@@ -67,7 +67,7 @@ Window {
             width: 18
             height: 18
             mipmap: true
-            source: "qrc:///app/example.png"
+            source: "qrc:/source/resource/app/example.png"
             fillMode: Image.PreserveAspectFit
             Component.onCompleted: windowAgent.setSystemButton(WindowAgent.WindowIcon, iconButton)
         }
@@ -95,7 +95,7 @@ Window {
             BarButton {
                 id: minButton
                 height: parent.height
-                source: "qrc:///window-bar/minimize.svg"
+                source: "qrc:/source/resource/window-bar/minimize.svg"
                 onClicked: window.showMinimized()
                 Component.onCompleted: windowAgent.setSystemButton(WindowAgent.Minimize, minButton)
             }
@@ -103,7 +103,7 @@ Window {
             BarButton {
                 id: maxButton
                 height: parent.height
-                source: window.visibility === Window.Maximized ? "qrc:///window-bar/restore.svg" : "qrc:///window-bar/maximize.svg"
+                source: window.visibility === Window.Maximized ? "qrc:/source/resource/window-bar/restore.svg" : "qrc:/source/resource/window-bar/maximize.svg"
                 onClicked: {
                     if (window.visibility === Window.Maximized) {
                         window.showNormal();
@@ -117,7 +117,7 @@ Window {
             BarButton {
                 id: closeButton
                 height: parent.height
-                source: "qrc:///window-bar/close.svg"
+                source: "qrc:/source/resource/window-bar/close.svg"
                 background: Rectangle {
                     color: {
                         if (!closeButton.enabled) {

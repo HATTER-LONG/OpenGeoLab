@@ -78,7 +78,20 @@ file(GLOB_RECURSE sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/source/
 
 qt_add_executable(${PROJECT_NAME} ${sources} ${headers})
 
-qt_add_resources(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/source/resource/shared.qrc)
+qt_add_resources(${PROJECT_NAME} "shared"
+    PREFIX "/"
+    FILES
+        source/resource/window-bar/close.svg
+        source/resource/window-bar/fullscreen.svg
+        source/resource/window-bar/maximize.svg
+        source/resource/window-bar/minimize.svg
+        source/resource/window-bar/restore.svg
+        source/resource/window-bar/more-line.svg
+        source/resource/window-bar/pin.svg
+        source/resource/window-bar/pin-fill.svg
+        source/resource/app/example.png
+)
+
 qt_add_qml_module(
   ${PROJECT_NAME}
   URI
