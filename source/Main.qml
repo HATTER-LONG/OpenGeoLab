@@ -1,9 +1,7 @@
-import QtQuick
 import QtQuick.Controls
 
-import "widgets"
-
 FramelessWindow {
+    id: root
     property FramelessWindow childWindow: FramelessWindow {
         showWhenReady: false
     }
@@ -15,6 +13,6 @@ FramelessWindow {
             bottomMargin: 20
         }
         text: qsTr("Open Child Window")
-        onClicked: childWindow.visible = true
+        onClicked: root.childWindow.visible = true
     }
 }
