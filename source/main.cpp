@@ -92,9 +92,9 @@ auto main(int argc, char** argv) -> int {
     engine.rootContext()->setContextProperty(QStringLiteral("$curveRenderingAvailable"),
                                              QVariant(true));
     QWK::registerTypes(&engine);
-    // QObject::connect(
-    //     &engine, &QQmlApplicationEngine::objectCreationFailed, &app,
-    //     []() { QCoreApplication::exit(-1); }, Qt::QueuedConnection);
+    QObject::connect(
+        &engine, &QQmlApplicationEngine::objectCreationFailed, &app,
+        []() { QCoreApplication::exit(-1); }, Qt::QueuedConnection);
     engine.loadFromModule("OpenGeoLab", "Main");
     return app.exec();
 }
