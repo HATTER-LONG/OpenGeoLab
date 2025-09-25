@@ -8,8 +8,10 @@
 #include <QtQuick/QQuickItem>
 #include <QtQuick/QQuickWindow>
 
+#include "qwkquickglobal.h"
+
 #include <QWKCore/windowagentbase.h>
-#include <QWKQuick/qwkquickglobal.h>
+
 
 namespace QWK {
 

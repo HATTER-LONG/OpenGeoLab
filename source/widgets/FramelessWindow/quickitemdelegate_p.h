@@ -17,8 +17,10 @@
 #include <QtCore/QObject>
 #include <QtGui/QWindow>
 
+#include "qwkquickglobal.h"
+
 #include <QWKCore/private/windowitemdelegate_p.h>
-#include <QWKQuick/qwkquickglobal.h>
+
 
 namespace QWK {
 

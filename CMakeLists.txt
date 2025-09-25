@@ -59,6 +59,11 @@ endif()
 find_package(Qt6 6.8 REQUIRED COMPONENTS Quick)
 qt_standard_project_setup(REQUIRES 6.8)
 
+# ---- Add subdirectories ----
+
+# Add FramelessWindow library
+add_subdirectory(source/widgets/FramelessWindow)
+
 # ---- Add source files ----
 
 # Note: globbing sources is considered bad practice as CMake's generators may not detect new files
@@ -66,7 +71,7 @@ qt_standard_project_setup(REQUIRES 6.8)
 file(GLOB_RECURSE headers CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h"
      "${CMAKE_CURRENT_SOURCE_DIR}/include/*.hpp"
 )
-file(GLOB_RECURSE sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/source/*.cpp")
+file(GLOB sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/source/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/source/greeter/*.cpp")
 
 qt_add_executable(${PROJECT_NAME} ${sources} ${headers})
 
@@ -108,7 +113,7 @@ set_target_properties(
              MACOSX_BUNDLE TRUE WIN32_EXECUTABLE TRUE
 )
 target_link_libraries(
-  ${PROJECT_NAME} PRIVATE Qt6::Quick Kangaroo::Kangaroo cxxopts fmt::fmt QWKQuick
+  ${PROJECT_NAME} PRIVATE Qt6::Quick Kangaroo::Kangaroo cxxopts fmt::fmt QWKQuick::QWKQuick
 )
 
 target_include_directories(

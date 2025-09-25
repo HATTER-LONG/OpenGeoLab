@@ -14,9 +14,12 @@
 // version without notice, or may even be removed.
 //
 
-#include <QWKCore/qwkconfig.h>
+#include "quickwindowagent.h"
+
+#include <QWKCore/../../etc/include/QWKCore/qwkconfig.h>
+
 #include <QWKCore/private/windowagentbase_p.h>
-#include <QWKQuick/quickwindowagent.h>
+
 
 namespace QWK {
 

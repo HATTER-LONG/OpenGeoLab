@@ -10,7 +10,7 @@
 #include <string>
 #include <unordered_map>
 
-#include <QWKQuick/qwkquickglobal.h>
+#include <qwkquickglobal.h>
 #include <QtQuick/QQuickWindow>
 
 #ifdef Q_OS_WIN
