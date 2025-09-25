@@ -54,14 +54,6 @@ else()
   )
 endif()
 
-# qwindowkit is a Qt abstraction library for frameless window
-CPMAddPackage(
-  NAME qwindowkit
-  GITHUB_REPOSITORY "stdware/qwindowkit"
-  GIT_TAG 1.4.0
-  OPTIONS "QWINDOWKIT_BUILD_WIDGETS OFF" "QWINDOWKIT_BUILD_EXAMPLES OFF"
-          "QWINDOWKIT_BUILD_TESTS OFF" "QWINDOWKIT_BUILD_QUICK ON"
-)
 
 # Qt6 setup
 find_package(Qt6 6.8 REQUIRED COMPONENTS Quick)
@@ -116,7 +108,7 @@ set_target_properties(
              MACOSX_BUNDLE TRUE WIN32_EXECUTABLE TRUE
 )
 target_link_libraries(
-  ${PROJECT_NAME} PRIVATE Qt6::Quick Kangaroo::Kangaroo cxxopts fmt::fmt QWindowKit::Quick
+  ${PROJECT_NAME} PRIVATE Qt6::Quick Kangaroo::Kangaroo cxxopts fmt::fmt QWKQuick
 )
 
 target_include_directories(
