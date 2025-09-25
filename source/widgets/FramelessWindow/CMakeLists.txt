@@ -14,8 +14,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Find Qt6 components (including private headers)
 find_package(Qt6 REQUIRED COMPONENTS Core Quick Qml)
+# Disable private module warning
+set(QT_NO_PRIVATE_MODULE_WARNING ON)
 # Find Qt6 private components for accessing private headers
 find_package(Qt6 REQUIRED COMPONENTS QuickPrivate)
+# Enable private module warning
+set(QT_NO_PRIVATE_MODULE_WARNING OFF)
 
 # qwindowkit is a Qt abstraction library for frameless window. depends QWindowKit::Core
 CPMAddPackage(
