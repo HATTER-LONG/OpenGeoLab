@@ -1,0 +1,4 @@
+module QWKQuickWindow 
+typeinfo plugins.qmltypes
+depends QtQuick
+prefer :/qt/qml/QWKQuickWindow/

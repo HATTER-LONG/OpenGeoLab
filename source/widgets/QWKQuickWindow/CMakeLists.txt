@@ -1,19 +1,4 @@
-# Set version if not provided
-if(NOT DEFINED QWINDOWKIT_VERSION)
-    set(QWINDOWKIT_VERSION "1.4.0")
-endif()
-
-project(QWKQuick
-    VERSION ${QWINDOWKIT_VERSION}
-    LANGUAGES CXX
-)
-
-# Set C++ standard
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-# Find Qt6 components (including private headers)
-find_package(Qt6 REQUIRED COMPONENTS Core Quick Qml)
+qt6_policy(SET QTP0001 NEW)
 # Disable private module warning
 set(QT_NO_PRIVATE_MODULE_WARNING ON)
 # Find Qt6 private components for accessing private headers
@@ -47,11 +32,18 @@ if(WIN32)
 elseif(APPLE)
     list(APPEND _src quickwindowagent_mac.cpp)
 endif()
+qt6_add_qml_module(qwkquickplugin
+    URI "QWKQuickWindow"
+    STATIC
+    PLUGIN_TARGET qwkquickplugin
+    DEPENDENCIES QtQuick
+     OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/qml/QWKQuickWindow
+)
 # Create the static library
-add_library(QWKQuick STATIC ${_src})
+target_sources(qwkquickplugin PRIVATE ${_src})
 
 # Set target properties
-set_target_properties(QWKQuick PROPERTIES
+set_target_properties(qwkquickplugin PROPERTIES
     VERSION ${PROJECT_VERSION}
     SOVERSION ${PROJECT_VERSION_MAJOR}
     POSITION_INDEPENDENT_CODE ON
@@ -59,27 +51,23 @@ set_target_properties(QWKQuick PROPERTIES
     VISIBILITY_INLINES_HIDDEN ON
 )
 
-# Define compile definitions for static library
-target_compile_definitions(QWKQuick 
+target_compile_definitions(qwkquickplugin 
     PRIVATE 
         QWK_QUICK_LIBRARY
-        QWK_QUICK_STATIC
-    PUBLIC
-        QWK_QUICK_STATIC
 )
 
 # Link Qt6 libraries
-target_link_libraries(QWKQuick 
+target_link_libraries(qwkquickplugin 
     PUBLIC 
         Qt6::Core
         Qt6::Quick 
         Qt6::Qml
-        Qt6::QuickPrivate  # Required for private headers like qquickitem_p.h
-    PUBLIC
+        Qt6::QuickPrivate 
+    PRIVATE
         QWindowKit::Core
 )
 # Set include directories
-target_include_directories(QWKQuick
+target_include_directories(qwkquickplugin
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
@@ -89,10 +77,10 @@ target_include_directories(QWKQuick
 )
 # Compiler-specific options
 if(MSVC)
-    target_compile_options(QWKQuick PRIVATE /W3)
+    target_compile_options(qwkquickplugin PRIVATE /W3)
 else()
-    target_compile_options(QWKQuick PRIVATE -Wall -Wextra)
+    target_compile_options(qwkquickplugin PRIVATE -Wall -Wextra)
 endif()
 
 # Create an alias target for easier usage in parent projects
-add_library(QWKQuick::QWKQuick ALIAS QWKQuick)
+# add_library(FramelessWindow::FramelessWindow ALIAS FramelessWindow)

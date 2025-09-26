@@ -10,7 +10,6 @@
 #include <string>
 #include <unordered_map>
 
-#include <qwkquickglobal.h>
 #include <QtQuick/QQuickWindow>
 
 #ifdef Q_OS_WIN
@@ -91,7 +90,7 @@ auto main(int argc, char** argv) -> int {
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty(QStringLiteral("$curveRenderingAvailable"),
                                              QVariant(true));
-    QWK::registerTypes(&engine);
+    // QWK::registerTypes(&engine);
     QObject::connect(
         &engine, &QQmlApplicationEngine::objectCreationFailed, &app,
         []() { QCoreApplication::exit(-1); }, Qt::QueuedConnection);

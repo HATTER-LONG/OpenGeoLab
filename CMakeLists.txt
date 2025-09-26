@@ -61,8 +61,8 @@ qt_standard_project_setup(REQUIRES 6.8)
 
 # ---- Add subdirectories ----
 
-# Add FramelessWindow library
-add_subdirectory(source/widgets/FramelessWindow)
+# Add QWKQuickWindow library
+add_subdirectory(source/widgets/QWKQuickWindow)
 
 # ---- Add source files ----
 
@@ -113,7 +113,7 @@ set_target_properties(
              MACOSX_BUNDLE TRUE WIN32_EXECUTABLE TRUE
 )
 target_link_libraries(
-  ${PROJECT_NAME} PRIVATE Qt6::Quick Kangaroo::Kangaroo cxxopts fmt::fmt QWKQuick::QWKQuick
+  ${PROJECT_NAME} PRIVATE Qt6::Quick Kangaroo::Kangaroo cxxopts fmt::fmt qwkquickplugin
 )
 
 target_include_directories(

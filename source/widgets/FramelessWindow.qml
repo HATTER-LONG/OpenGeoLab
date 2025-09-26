@@ -3,7 +3,7 @@ import QtQuick.Window
 import QtQuick.Controls
 import Qt.labs.platform
 
-import QWindowKit
+import QWKQuickWindow
 
 Window {
     id: window
@@ -36,7 +36,7 @@ Window {
         onTriggered: timeLabel.text = Qt.formatTime(new Date(), "hh:mm:ss")
     }
 
-    WindowAgent {
+    QuickWindowAgent {
         id: windowAgent
     }
 
