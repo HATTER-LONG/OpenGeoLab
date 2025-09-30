@@ -10,6 +10,7 @@
 #include <string>
 #include <unordered_map>
 
+#include <QtQuick/QQuickView>
 #include <QtQuick/QQuickWindow>
 
 #ifdef Q_OS_WIN
@@ -22,17 +23,6 @@ Q_DECL_EXPORT int AmdPowerXpressRequestHighPerformance = 1;   // NOLINT
 
 namespace {
 void initQtEnvironment() {
-
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-    qputenv("QT_QUICK_CONTROLS_STYLE", "Basic");
-#else
-    qputenv("QT_QUICK_CONTROLS_STYLE", "Default");
-#endif
-
-#ifdef Q_OS_WINDOWS
-    qputenv("QSG_RHI_BACKEND", "d3d12"); // options: d3d11, d3d12, opengl, vulkan
-    qputenv("QT_QPA_DISABLE_REDIRECTION_SURFACE", "1");
-#endif
 #if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
     QGuiApplication::setHighDpiScaleFactorRoundingPolicy(
         Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
@@ -84,13 +74,27 @@ auto main(int argc, char** argv) -> int {
     LOG_INFO("{}", greeter.greet(lang_it->second));
 
     initQtEnvironment();
+
+    QQuickWindow::setGraphicsApi(QSGRendererInterface::OpenGL);
     QGuiApplication app(argc, argv);
-    // Make sure alpha channel is requested, our special effects on Windows depends on it.
-    QQuickWindow::setDefaultAlphaBuffer(true);
     QQmlApplicationEngine engine;
     QObject::connect(
+        &engine, &QQmlApplicationEngine::objectCreated, &app,
+        [&app](QObject* obj, const QUrl& obj_url) {
+            if(!obj) {
+                LOG_ERROR("Failed to load QML file: {}", obj_url.toString().toStdString());
+                QCoreApplication::exit(-1);
+            }
+            LOG_INFO("QML file loaded successfully: {}", obj_url.toString().toStdString());
+        },
+        Qt::QueuedConnection);
+    QObject::connect(
         &engine, &QQmlApplicationEngine::objectCreationFailed, &app,
-        []() { QCoreApplication::exit(-1); }, Qt::QueuedConnection);
-    engine.loadFromModule("OpenGeoLab", "Main");
+        []() {
+            LOG_ERROR("Failed to load QML file.");
+            QCoreApplication::exit(-1);
+        },
+        Qt::QueuedConnection);
+    engine.load(QUrl("qrc:/scenegraph/opengeolab/source/Main.qml"));
     return app.exec();
 }

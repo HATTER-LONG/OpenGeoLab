@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.14...3.22)
 
 project(
-  OpenGeoLab
+  opengeolab
   VERSION 0.1
   LANGUAGES CXX
 )
@@ -55,7 +55,7 @@ else()
 endif()
 
 # Qt6 setup
-find_package(Qt6 6.8 REQUIRED COMPONENTS Quick)
+find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui Qml Quick)
 qt_standard_project_setup(REQUIRES 6.8)
 
 # ---- Add source files ----
@@ -69,31 +69,35 @@ file(GLOB_RECURSE sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/source/
 
 qt_add_executable(${PROJECT_NAME} ${sources} ${headers})
 
-qt_add_resources(${PROJECT_NAME} "shared"
-    PREFIX "/"
-    FILES
-        source/resource/window-bar/close.svg
-        source/resource/window-bar/fullscreen.svg
-        source/resource/window-bar/maximize.svg
-        source/resource/window-bar/minimize.svg
-        source/resource/window-bar/restore.svg
-        source/resource/window-bar/more-line.svg
-        source/resource/window-bar/pin.svg
-        source/resource/window-bar/pin-fill.svg
-        source/resource/app/example.png
+qt_add_resources(
+  ${PROJECT_NAME}
+  "shared"
+  PREFIX
+  "/"
+  FILES
+  source/resource/window-bar/close.svg
+  source/resource/window-bar/fullscreen.svg
+  source/resource/window-bar/maximize.svg
+  source/resource/window-bar/minimize.svg
+  source/resource/window-bar/restore.svg
+  source/resource/window-bar/more-line.svg
+  source/resource/window-bar/pin.svg
+  source/resource/window-bar/pin-fill.svg
+  source/resource/app/example.png
 )
 
 qt_add_qml_module(
   ${PROJECT_NAME}
   URI
-  ${PROJECT_NAME}
+  OpenGeoLab
   VERSION
   1.0
-  OUTPUT_DIRECTORY
-  ${CMAKE_BINARY_DIR}/qml/${PROJECT_NAME}
+  RESOURCE_PREFIX
+  /scenegraph/opengeolab
+  NO_RESOURCE_TARGET_PATH
   QML_FILES
   source/Main.qml
-  source/widgets/BarButton.qml
+  # source/widgets/BarButton.qml
 )
 
 # being a cross-platform target, we enforce standards conformance on MSVC
@@ -103,10 +107,17 @@ set_target_properties(
   ${PROJECT_NAME}
   PROPERTIES MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
              MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
-             MACOSX_BUNDLE TRUE WIN32_EXECUTABLE TRUE
+             MACOSX_BUNDLE TRUE WIN32_EXECUTABLE TRUE OUTPUT_NAME OpenGeoLabApp
 )
 target_link_libraries(
-  ${PROJECT_NAME} PRIVATE Qt6::Quick Kangaroo::Kangaroo cxxopts fmt::fmt
+  ${PROJECT_NAME}
+  PRIVATE Qt6::Core
+          Qt6::Gui
+          Qt6::Qml
+          Qt6::Quick
+          Kangaroo::Kangaroo
+          cxxopts
+          fmt::fmt
 )
 
 target_include_directories(
@@ -121,3 +132,13 @@ install(
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
+qt_generate_deploy_qml_app_script(
+  TARGET
+  ${PROJECT_NAME}
+  OUTPUT_SCRIPT
+  deploy_script
+  MACOS_BUNDLE_POST_BUILD
+  NO_UNSUPPORTED_PLATFORM_ERROR
+  DEPLOY_USER_QML_MODULES_ON_UNSUPPORTED_PLATFORM
+)
+install(SCRIPT ${deploy_script})
