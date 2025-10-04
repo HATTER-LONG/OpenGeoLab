@@ -1,9 +1,12 @@
 #include <greeter/greeter.h>
 
 #include "logger.hpp"
+#include "triangle.h"
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
+#include <QQmlComponent>
 #include <QQmlContext>
+#include <QQmlEngine>
 #include <cxxopts.hpp>
 #include <iostream>
 #include <kangaroo/util/stopwatch.hpp>
@@ -75,26 +78,39 @@ auto main(int argc, char** argv) -> int {
 
     initQtEnvironment();
 
+    // Set OpenGL as graphics API before creating QGuiApplication
     QQuickWindow::setGraphicsApi(QSGRendererInterface::OpenGL);
+
+    // 设置使用 Basic 样式,避免 Windows 原生样式的限制
+    qputenv("QT_QUICK_CONTROLS_STYLE", "Basic");
+
     QGuiApplication app(argc, argv);
     QQmlApplicationEngine engine;
+
+    // TriangleItem is automatically registered via QML_NAMED_ELEMENT
+    // No explicit qmlRegisterType needed
+
     QObject::connect(
         &engine, &QQmlApplicationEngine::objectCreated, &app,
-        [&app](QObject* obj, const QUrl& obj_url) {
+        [](QObject* obj, const QUrl& obj_url) {
             if(!obj) {
                 LOG_ERROR("Failed to load QML file: {}", obj_url.toString().toStdString());
                 QCoreApplication::exit(-1);
+            } else {
+                LOG_INFO("QML file loaded successfully: {}", obj_url.toString().toStdString());
             }
-            LOG_INFO("QML file loaded successfully: {}", obj_url.toString().toStdString());
         },
         Qt::QueuedConnection);
+
     QObject::connect(
         &engine, &QQmlApplicationEngine::objectCreationFailed, &app,
         []() {
-            LOG_ERROR("Failed to load QML file.");
+            LOG_ERROR("Failed to create QML objects.");
             QCoreApplication::exit(-1);
         },
         Qt::QueuedConnection);
+
     engine.load(QUrl("qrc:/scenegraph/opengeolab/source/Main.qml"));
+
     return app.exec();
 }

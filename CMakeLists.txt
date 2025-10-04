@@ -86,7 +86,9 @@ qt_add_qml_module(
   NO_RESOURCE_TARGET_PATH
   QML_FILES
   source/Main.qml
-  # source/widgets/BarButton.qml
+  SOURCES
+  source/triangle.cpp
+  source/triangle.h
 )
 
 # being a cross-platform target, we enforce standards conformance on MSVC
