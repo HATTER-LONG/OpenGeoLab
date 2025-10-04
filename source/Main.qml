@@ -2,9 +2,8 @@ import QtQuick
 import QtQuick.Window
 import OpenGeoLab
 
-// 改为 Window 或 ApplicationWindow
 Window {
-    visible: true  // 重要：设置为可见
+    visible: true
     width: 320
     height: 480
     title: "OpenGeoLab"
@@ -27,7 +26,7 @@ Window {
     }
 
     Rectangle {
-        color: Qt.rgba(1, 1, 1, 0.7)
+        color: Qt.rgba(1, 1, 1, 0.3)
         radius: 10
         border.width: 1
         border.color: "white"
