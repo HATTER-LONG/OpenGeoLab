@@ -15,6 +15,7 @@ Window {
     width: 960
     height: 600
     title: "OpenGeoLab - Triangle Demo"
+    color: "#1e1e1e"  // 设置窗口背景色,避免透明问题
 
     RowLayout {
         anchors.fill: parent
@@ -62,6 +63,7 @@ Window {
                     Repeater {
                         model: ["red", "green", "blue", "yellow", "magenta", "cyan"]
                         delegate: Button {
+                            id: colorButton
                             required property string modelData
                             required property int index
 
@@ -77,15 +79,15 @@ Window {
                             }
 
                             background: Rectangle {
-                                color: parent.down ? "#555" : (parent.hovered ? "#444" : "#333")
-                                border.color: triangle.color === modelData ? "#0078d7" : "#666"
-                                border.width: triangle.color === modelData ? 2 : 1
+                                color: colorButton.down ? "#555" : (colorButton.hovered ? "#444" : "#333")
+                                border.color: triangle.color === colorButton.modelData ? "#0078d7" : "#666"
+                                border.width: triangle.color === colorButton.modelData ? 2 : 1
                                 radius: 4
                             }
 
                             contentItem: Text {
-                                text: parent.text
-                                font: parent.font
+                                text: colorButton.text
+                                font: colorButton.font
                                 color: "white"
                                 horizontalAlignment: Text.AlignHCenter
                                 verticalAlignment: Text.AlignVCenter
@@ -163,18 +165,19 @@ Window {
                     }
 
                     Button {
+                        id: resetButton
                         text: "Reset"
                         onClicked: angleSlider.value = 0
 
                         background: Rectangle {
-                            color: parent.down ? "#555" : (parent.hovered ? "#444" : "#333")
+                            color: resetButton.down ? "#555" : (resetButton.hovered ? "#444" : "#333")
                             border.color: "#666"
                             radius: 4
                         }
 
                         contentItem: Text {
-                            text: parent.text
-                            font: parent.font
+                            text: resetButton.text
+                            font: resetButton.font
                             color: "white"
                             horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter
@@ -184,6 +187,25 @@ Window {
 
                 Item {
                     Layout.fillHeight: true
+                }
+
+                // FPS counter - 移到左侧面板
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 40
+                    color: "#333"
+                    radius: 4
+                    border.color: "#555"
+                    border.width: 1
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "OpenGL FPS: " + triangle.fps
+                        color: "lime"
+                        font.pixelSize: 16
+                        font.family: "Consolas"
+                        font.bold: true
+                    }
                 }
 
                 // Info label
@@ -209,28 +231,7 @@ Window {
                 anchors.fill: parent
                 color: "red"
                 angle: 0
-            }
-
-            // Optional: FPS counter
-            Text {
-                anchors.right: parent.right
-                anchors.top: parent.top
-                anchors.margins: 10
-                text: "FPS: " + Math.round(1000 / frameTimer.avgInterval)
-                color: "lime"
-                font.pixelSize: 14
-                font.family: "Consolas"
-
-                Timer {
-                    id: frameTimer
-                    property real avgInterval: 16.67
-                    running: true
-                    repeat: true
-                    interval: 16
-                    onTriggered: {
-                        frameTimer.avgInterval = frameTimer.avgInterval * 0.9 + 16 * 0.1;
-                    }
-                }
+                z: 0  // 确保在底层
             }
         }
     }
