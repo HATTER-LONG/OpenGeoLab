@@ -177,7 +177,7 @@ void TriangleRenderer::paint() {
     static bool first_paint = true;
     if(first_paint) {
         LOG_INFO("Triangle first paint - viewport pos: ({}, {}), size: {}x{}, "
-                 "color: ({:.2f}, {:.2f}, {:.2f}), angle: {:.1f}°",
+                 "color: ({:.2f}, {:.2f}, {:.2f}), angle: {:.1f}",
                  m_viewportPos.x(), m_viewportPos.y(), m_viewportSize.width(),
                  m_viewportSize.height(), m_colorVec.x(), m_colorVec.y(), m_colorVec.z(), m_angle);
         first_paint = false;
