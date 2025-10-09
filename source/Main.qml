@@ -1,18 +1,3 @@
-// Copyright (C) 2025 OpenGeoLab
-// SPDX-License-Identifier: MIT
-
-/**
- * @file Main.qml
- * @brief Main application window demonstrating OpenGL triangle rendering with Qt Quick
- *
- * This QML file provides:
- * - Interactive control panel for color and rotation
- * - Real-time OpenGL rendering area
- * - FPS monitoring
- * - Responsive layout with modern dark theme
- */
-
-// Allow delegate access to outer ids
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Window
@@ -26,225 +11,171 @@ Window {
     width: 960
     height: 600
     title: "OpenGeoLab - Triangle Demo"
-    color: "#1e1e1e"  // Dark background to prevent transparency issues
 
-    RowLayout {
-        anchors.fill: parent
-        spacing: 0
+    Squircle {
+        // 设置 Squircle 的位置和大小,避开左侧控制面板
+        anchors.left: controlPanel.right
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
 
-        // Left control panel (1/4 width)
-        Rectangle {
-            Layout.preferredWidth: parent.width * 0.25
-            Layout.fillHeight: true
-            color: "#2b2b2b"
-            border.color: "#444"
-            border.width: 1
+        SequentialAnimation on t {
+            NumberAnimation {
+                to: 1
+                duration: 2500
+                easing.type: Easing.InQuad
+            }
+            NumberAnimation {
+                to: 0
+                duration: 2500
+                easing.type: Easing.OutQuad
+            }
+            loops: Animation.Infinite
+            running: true
+        }
+    }
 
-            ColumnLayout {
-                anchors.fill: parent
-                anchors.margins: 16
-                spacing: 14
+    // 左侧控制面板
+    Rectangle {
+        id: controlPanel
+        width: 200
+        height: parent.height
+        anchors.left: parent.left
+        anchors.top: parent.top
+        color: Qt.rgba(0.2, 0.2, 0.2, 0.9)
 
-                // Title
-                Label {
-                    text: "Triangle Controls"
-                    font.pixelSize: 20
-                    font.bold: true
-                    color: "white"
-                }
+        ColumnLayout {
+            anchors.fill: parent
+            anchors.margins: 15
+            spacing: 20
 
-                Rectangle {
-                    implicitHeight: 1
-                    color: "#555"
-                    Layout.fillWidth: true
-                }
+            // 标题
+            Text {
+                text: "几何体控制面板"
+                color: "white"
+                font.pixelSize: 16
+                font.bold: true
+                Layout.alignment: Qt.AlignHCenter
+            }
 
-                // Color selection section
-                Label {
-                    text: "Colors"
-                    color: "#ccc"
-                    font.pixelSize: 14
-                }
+            // 分隔线
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 2
+                color: Qt.rgba(1, 1, 1, 0.3)
+            }
 
-                GridLayout {
-                    columns: 3
-                    rowSpacing: 8
-                    columnSpacing: 8
-                    Layout.fillWidth: true
+            // 几何体选择区域
+            Text {
+                text: "选择几何体:"
+                color: "white"
+                font.pixelSize: 14
+            }
 
-                    Repeater {
-                        model: ["red", "green", "blue", "yellow", "magenta", "cyan"]
-                        delegate: Button {
-                            id: colorButton
-                            required property string modelData
-                            required property int index
+            Button {
+                text: "立方体"
+                Layout.fillWidth: true
+                onClicked:
+                // TODO: 切换到立方体
+                {}
+            }
 
-                            Layout.fillWidth: true
-                            Layout.preferredHeight: 40
-                            text: modelData.charAt(0).toUpperCase() + modelData.slice(1)
+            Button {
+                text: "圆柱体"
+                Layout.fillWidth: true
+                onClicked:
+                // TODO: 切换到圆柱体
+                {}
+            }
 
-                            ToolTip.visible: hovered
-                            ToolTip.text: "Set color to " + modelData
+            Button {
+                text: "球体"
+                Layout.fillWidth: true
+                onClicked:
+                // TODO: 切换到球体
+                {}
+            }
 
-                            onClicked: {
-                                triangle.color = modelData;
-                            }
+            Button {
+                text: "圆锥体"
+                Layout.fillWidth: true
+                onClicked:
+                // TODO: 切换到圆锥体
+                {}
+            }
 
-                            background: Rectangle {
-                                color: colorButton.down ? "#555" : (colorButton.hovered ? "#444" : "#333")
-                                border.color: triangle.color === colorButton.modelData ? "#0078d7" : "#666"
-                                border.width: triangle.color === colorButton.modelData ? 2 : 1
-                                radius: 4
-                            }
+            // 分隔线
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 2
+                color: Qt.rgba(1, 1, 1, 0.3)
+                Layout.topMargin: 10
+            }
 
-                            contentItem: Text {
-                                text: colorButton.text
-                                font: colorButton.font
-                                color: "white"
-                                horizontalAlignment: Text.AlignHCenter
-                                verticalAlignment: Text.AlignVCenter
-                            }
-                        }
-                    }
-                }
+            // 颜色选择区域
+            Text {
+                text: "选择颜色:"
+                color: "white"
+                font.pixelSize: 14
+            }
 
-                Rectangle {
-                    implicitHeight: 1
-                    color: "#555"
-                    Layout.fillWidth: true
-                    Layout.topMargin: 8
-                }
+            Button {
+                text: "红色"
+                Layout.fillWidth: true
+                onClicked:
+                // TODO: 设置红色
+                {}
+            }
 
-                // Rotation control section
-                Label {
-                    text: "Rotation"
-                    color: "#ccc"
-                    font.pixelSize: 14
-                }
+            Button {
+                text: "绿色"
+                Layout.fillWidth: true
+                onClicked:
+                // TODO: 设置绿色
+                {}
+            }
 
-                Slider {
-                    id: angleSlider
-                    Layout.fillWidth: true
-                    from: 0
-                    to: 360
-                    value: triangle.angle
-                    stepSize: 1
+            Button {
+                text: "蓝色"
+                Layout.fillWidth: true
+                onClicked:
+                // TODO: 设置蓝色
+                {}
+            }
 
-                    onValueChanged: {
-                        triangle.angle = value;
-                    }
+            Button {
+                text: "黄色"
+                Layout.fillWidth: true
+                onClicked:
+                // TODO: 设置黄色
+                {}
+            }
 
-                    background: Rectangle {
-                        x: angleSlider.leftPadding
-                        y: angleSlider.topPadding + angleSlider.availableHeight / 2 - height / 2
-                        width: angleSlider.availableWidth
-                        height: 4
-                        radius: 2
-                        color: "#555"
-
-                        Rectangle {
-                            width: angleSlider.visualPosition * parent.width
-                            height: parent.height
-                            color: "#0078d7"
-                            radius: 2
-                        }
-                    }
-
-                    handle: Rectangle {
-                        x: angleSlider.leftPadding + angleSlider.visualPosition * (angleSlider.availableWidth - width)
-                        y: angleSlider.topPadding + angleSlider.availableHeight / 2 - height / 2
-                        width: 20
-                        height: 20
-                        radius: 10
-                        color: angleSlider.pressed ? "#0078d7" : "#ffffff"
-                        border.color: "#0078d7"
-                        border.width: 2
-                    }
-                }
-
-                RowLayout {
-                    Layout.fillWidth: true
-
-                    Label {
-                        text: Math.round(triangle.angle) + "°"
-                        color: "#ddd"
-                        font.pixelSize: 16
-                        font.bold: true
-                    }
-
-                    Item {
-                        Layout.fillWidth: true
-                    }
-
-                    Button {
-                        id: resetButton
-                        text: "Reset"
-                        onClicked: angleSlider.value = 0
-
-                        background: Rectangle {
-                            color: resetButton.down ? "#555" : (resetButton.hovered ? "#444" : "#333")
-                            border.color: "#666"
-                            radius: 4
-                        }
-
-                        contentItem: Text {
-                            text: resetButton.text
-                            font: resetButton.font
-                            color: "white"
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                        }
-                    }
-                }
-
-                Item {
-                    Layout.fillHeight: true
-                }
-
-                // FPS counter - positioned in left panel for better visibility
-                Rectangle {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 40
-                    color: "#333"
-                    radius: 4
-                    border.color: "#555"
-                    border.width: 1
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: "OpenGL FPS: " + triangle.fps
-                        color: "lime"
-                        font.pixelSize: 16
-                        font.family: "Consolas"
-                        font.bold: true
-                    }
-                }
-
-                // Info label
-                Label {
-                    text: "OpenGL Triangle Demo\nBuilt with Qt Quick"
-                    color: "#888"
-                    font.pixelSize: 11
-                    horizontalAlignment: Text.AlignHCenter
-                    Layout.fillWidth: true
-                }
+            // 占位符,填充剩余空间
+            Item {
+                Layout.fillHeight: true
             }
         }
+    }
 
-        // Right render area (3/4 width)
-        Rectangle {
-            id: renderArea
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            color: "black"
+    Rectangle {
+        color: Qt.rgba(1, 1, 1, 0.7)
+        radius: 10
+        border.width: 1
+        border.color: "white"
+        anchors.fill: label
+        anchors.margins: -10
+    }
 
-            TriangleItem {
-                id: triangle
-                anchors.fill: parent
-                color: "red"
-                angle: 0
-                z: 0  // Ensure triangle is rendered at base layer
-            }
-        }
+    Text {
+        id: label
+        color: "black"
+        wrapMode: Text.WordWrap
+        text: qsTr("The background here is a squircle rendered with raw OpenGL using the 'beforeRender()' signal in QQuickWindow. This text label and its border is rendered using QML")
+        anchors.right: parent.right
+        anchors.left: controlPanel.right
+        anchors.leftMargin: 20
+        anchors.bottom: parent.bottom
+        anchors.margins: 20
     }
 }
