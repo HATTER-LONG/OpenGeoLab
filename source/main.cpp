@@ -1,7 +1,6 @@
 #include <greeter/greeter.h>
 
 #include "logger.hpp"
-#include "triangle.h"
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlComponent>
