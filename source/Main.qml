@@ -1,6 +1,17 @@
 // Copyright (C) 2025 OpenGeoLab
 // SPDX-License-Identifier: MIT
 
+/**
+ * @file Main.qml
+ * @brief Main application window demonstrating OpenGL triangle rendering with Qt Quick
+ *
+ * This QML file provides:
+ * - Interactive control panel for color and rotation
+ * - Real-time OpenGL rendering area
+ * - FPS monitoring
+ * - Responsive layout with modern dark theme
+ */
+
 // Allow delegate access to outer ids
 pragma ComponentBehavior: Bound
 import QtQuick
@@ -15,7 +26,7 @@ Window {
     width: 960
     height: 600
     title: "OpenGeoLab - Triangle Demo"
-    color: "#1e1e1e"  // 设置窗口背景色,避免透明问题
+    color: "#1e1e1e"  // Dark background to prevent transparency issues
 
     RowLayout {
         anchors.fill: parent
@@ -34,6 +45,7 @@ Window {
                 anchors.margins: 16
                 spacing: 14
 
+                // Title
                 Label {
                     text: "Triangle Controls"
                     font.pixelSize: 20
@@ -189,7 +201,7 @@ Window {
                     Layout.fillHeight: true
                 }
 
-                // FPS counter - 移到左侧面板
+                // FPS counter - positioned in left panel for better visibility
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 40
@@ -231,7 +243,7 @@ Window {
                 anchors.fill: parent
                 color: "red"
                 angle: 0
-                z: 0  // 确保在底层
+                z: 0  // Ensure triangle is rendered at base layer
             }
         }
     }
