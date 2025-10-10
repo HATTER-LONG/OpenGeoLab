@@ -8,7 +8,6 @@
 #include <QtCore/QRunnable>
 #include <QtQuick/qquickwindow.h>
 
-
 //! [7]
 Squircle::Squircle() : m_t(0), m_renderer(nullptr) {
     connect(this, &QQuickItem::windowChanged, this, &Squircle::handleWindowChanged);
@@ -17,12 +16,14 @@ Squircle::Squircle() : m_t(0), m_renderer(nullptr) {
 
 //! [8]
 void Squircle::setT(qreal t) {
-    if(t == m_t)
+    if(t == m_t) {
         return;
+    }
     m_t = t;
     emit tChanged();
-    if(window())
+    if(window()) {
         window()->update();
+    }
 }
 //! [8]
 
@@ -49,7 +50,7 @@ void Squircle::cleanup() {
 
 class CleanupJob : public QRunnable {
 public:
-    CleanupJob(SquircleRenderer* renderer) : m_renderer(renderer) {}
+    explicit CleanupJob(SquircleRenderer* renderer) : m_renderer(renderer) {}
     void run() override { delete m_renderer; }
 
 private:
@@ -75,9 +76,9 @@ void Squircle::sync() {
     }
 
     // 计算 Squircle 在窗口中的实际位置和大小
-    QPointF scenePos = mapToScene(QPointF(0, 0));
-    QPoint offset(scenePos.x() * window()->devicePixelRatio(),
-                  scenePos.y() * window()->devicePixelRatio());
+    QPointF scene_pos = mapToScene(QPointF(0, 0));
+    QPoint offset(scene_pos.x() * window()->devicePixelRatio(),
+                  scene_pos.y() * window()->devicePixelRatio());
     QSize size(width() * window()->devicePixelRatio(), height() * window()->devicePixelRatio());
 
     m_renderer->setViewportSize(size);
@@ -136,7 +137,7 @@ void SquircleRenderer::paint() {
 
     m_vbo.bind();
     m_program->bind();
-    m_program->setUniformValue("t", (float)m_t);
+    m_program->setUniformValue("t", static_cast<float>(m_t));
 
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(GLfloat), nullptr);

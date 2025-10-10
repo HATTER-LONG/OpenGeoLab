@@ -128,8 +128,6 @@ qt_add_qml_module(
   QML_FILES
   source/Main.qml
   SOURCES
-  source/triangle.cpp
-  source/triangle.h
   source/squircle.cpp
   source/squircle.h
 )

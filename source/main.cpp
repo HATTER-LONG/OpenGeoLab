@@ -10,7 +10,6 @@
  */
 
 #include "logger.hpp"
-#include <greeter/greeter.h>
 
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
@@ -25,7 +24,6 @@
 
 #include <iostream>
 #include <string>
-#include <unordered_map>
 
 #ifdef Q_OS_WIN
 /**
@@ -70,14 +68,6 @@ auto main(int argc, char** argv) -> int {
     // Performance monitoring for total execution time
     Kangaroo::Util::Stopwatch stopwatch("Total execution time", OpenGeoLab::getLogger());
 
-    // Supported language codes for greeter
-    const std::unordered_map<std::string, greeter::LanguageCode> languages{
-        {"en", greeter::LanguageCode::EN}, // English
-        {"de", greeter::LanguageCode::DE}, // German (Deutsch)
-        {"es", greeter::LanguageCode::ES}, // Spanish (Español)
-        {"fr", greeter::LanguageCode::FR}, // French (Français)
-    };
-
     // Configure command-line options
     cxxopts::Options options(*argv, "A program to welcome the world!");
 
@@ -106,17 +96,6 @@ auto main(int argc, char** argv) -> int {
         std::cout << "Greeter, version " << 0.1 << std::endl;
         return 0;
     }
-
-    // Validate and process language code
-    auto lang_it = languages.find(language);
-    if(lang_it == languages.end()) {
-        std::cerr << "unknown language code: " << language << std::endl;
-        return 1;
-    }
-
-    // Demonstrate greeter functionality
-    greeter::Greeter greeter(name);
-    LOG_INFO("{}", greeter.greet(lang_it->second));
 
     // Initialize Qt environment for high DPI support
     initQtEnvironment();
