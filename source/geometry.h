@@ -1,99 +1,112 @@
-// geometry.h - 几何体数据定义
-// 将顶点数据与渲染逻辑分离
+// geometry.h - Geometry data definitions
+// Separates vertex data from rendering logic for better modularity
 #pragma once
 
 #include <vector>
 
-// 几何体数据基类
+/**
+ * @brief Base class for geometry data
+ *
+ * This abstract class defines the interface for geometry data,
+ * allowing different geometric shapes to provide their vertex
+ * and index data in a uniform way.
+ */
 struct GeometryData {
     virtual ~GeometryData() = default;
 
-    // 获取顶点数据
+    /**
+     * @brief Get vertex data pointer
+     * @return Pointer to vertex array (format depends on implementation)
+     */
     virtual const float* vertices() const = 0;
+
+    /**
+     * @brief Get number of vertices
+     * @return Total vertex count
+     */
     virtual int vertexCount() const = 0;
 
-    // 获取索引数据(如果有)
+    /**
+     * @brief Get index data pointer (optional)
+     * @return Pointer to index array, or nullptr if not using indexed drawing
+     */
     virtual const unsigned int* indices() const { return nullptr; }
+
+    /**
+     * @brief Get number of indices (optional)
+     * @return Total index count, or 0 if not using indexed drawing
+     */
     virtual int indexCount() const { return 0; }
 };
 
-// Squircle 几何数据 - 简单的四边形
-class SquircleData : public GeometryData {
-public:
-    SquircleData() {
-        // 四边形的四个顶点 (x, y)
-        m_vertices = {-1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f};
-    }
-
-    const float* vertices() const override { return m_vertices.data(); }
-    int vertexCount() const override { return 4; }
-
-private:
-    std::vector<float> m_vertices;
-};
-
-// 立方体几何数据
+/**
+ * @brief Cube geometry data with lighting support
+ *
+ * Provides vertex data for a unit cube centered at origin.
+ * Each vertex contains: position (3 floats), normal (3 floats), color (3 floats)
+ * Total: 9 floats per vertex
+ */
 class CubeData : public GeometryData {
 public:
     CubeData() {
-        // 每个顶点包含: 位置(x,y,z) + 法向量(nx,ny,nz) + 颜色(r,g,b)
-        // 立方体的 8 个顶点,每个面使用不同的法向量
+        // Each vertex contains: position(x,y,z) + normal(nx,ny,nz) + color(r,g,b)
+        // 8 vertices for cube, each face has its own normal vector
         // clang-format off
         m_vertices = {
-            // 前面 (z = 0.5) - 法向量 (0, 0, 1)
-            -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,  1.0f, 0.0f, 0.0f,  // 左下
-             0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,  0.0f, 1.0f, 0.0f,  // 右下
-             0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 1.0f,  0.0f, 0.0f, 1.0f,  // 右上
-            -0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 1.0f,  1.0f, 1.0f, 0.0f,  // 左上
+            // Front face (z = 0.5) - Normal (0, 0, 1)
+            -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,  1.0f, 0.0f, 0.0f,  // Bottom-left
+             0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,  0.0f, 1.0f, 0.0f,  // Bottom-right
+             0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 1.0f,  0.0f, 0.0f, 1.0f,  // Top-right
+            -0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 1.0f,  1.0f, 1.0f, 0.0f,  // Top-left
 
-            // 后面 (z = -0.5) - 法向量 (0, 0, -1)
+            // Back face (z = -0.5) - Normal (0, 0, -1)
              0.5f, -0.5f, -0.5f,  0.0f, 0.0f, -1.0f,  1.0f, 0.0f, 1.0f,
             -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, -1.0f,  0.0f, 1.0f, 1.0f,
             -0.5f,  0.5f, -0.5f,  0.0f, 0.0f, -1.0f,  1.0f, 1.0f, 1.0f,
              0.5f,  0.5f, -0.5f,  0.0f, 0.0f, -1.0f,  0.5f, 0.5f, 0.5f,
 
-            // 顶面 (y = 0.5) - 法向量 (0, 1, 0)
+            // Top face (y = 0.5) - Normal (0, 1, 0)
             -0.5f,  0.5f,  0.5f,  0.0f, 1.0f, 0.0f,  1.0f, 0.5f, 0.0f,
              0.5f,  0.5f,  0.5f,  0.0f, 1.0f, 0.0f,  0.5f, 1.0f, 0.0f,
              0.5f,  0.5f, -0.5f,  0.0f, 1.0f, 0.0f,  0.0f, 0.5f, 1.0f,
             -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, 0.0f,  1.0f, 1.0f, 0.5f,
 
-            // 底面 (y = -0.5) - 法向量 (0, -1, 0)
+            // Bottom face (y = -0.5) - Normal (0, -1, 0)
             -0.5f, -0.5f, -0.5f,  0.0f, -1.0f, 0.0f,  0.5f, 0.0f, 1.0f,
              0.5f, -0.5f, -0.5f,  0.0f, -1.0f, 0.0f,  0.0f, 0.5f, 0.5f,
              0.5f, -0.5f,  0.5f,  0.0f, -1.0f, 0.0f,  1.0f, 0.0f, 0.5f,
             -0.5f, -0.5f,  0.5f,  0.0f, -1.0f, 0.0f,  0.5f, 1.0f, 0.5f,
 
-            // 右面 (x = 0.5) - 法向量 (1, 0, 0)
+            // Right face (x = 0.5) - Normal (1, 0, 0)
              0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 0.0f,  1.0f, 0.5f, 0.5f,
              0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.0f,  0.5f, 1.0f, 1.0f,
              0.5f,  0.5f, -0.5f,  1.0f, 0.0f, 0.0f,  1.0f, 1.0f, 0.5f,
              0.5f,  0.5f,  0.5f,  1.0f, 0.0f, 0.0f,  0.5f, 0.5f, 1.0f,
 
-            // 左面 (x = -0.5) - 法向量 (-1, 0, 0)
+            // Left face (x = -0.5) - Normal (-1, 0, 0)
             -0.5f, -0.5f, -0.5f,  -1.0f, 0.0f, 0.0f,  1.0f, 1.0f, 1.0f,
             -0.5f, -0.5f,  0.5f,  -1.0f, 0.0f, 0.0f,  0.8f, 0.8f, 0.8f,
             -0.5f,  0.5f,  0.5f,  -1.0f, 0.0f, 0.0f,  0.6f, 0.6f, 0.6f,
             -0.5f,  0.5f, -0.5f,  -1.0f, 0.0f, 0.0f,  0.9f, 0.9f, 0.9f,
         };
 
-        // 索引数据 - 每个面两个三角形
+        // Index data - two triangles per face
         m_indices = {
-            0,  1,  2,   0,  2,  3,   // 前面
-            4,  5,  6,   4,  6,  7,   // 后面
-            8,  9,  10,  8,  10, 11,  // 顶面
-            12, 13, 14,  12, 14, 15,  // 底面
-            16, 17, 18,  16, 18, 19,  // 右面
-            20, 21, 22,  20, 22, 23   // 左面
+            0,  1,  2,   0,  2,  3,   // Front face
+            4,  5,  6,   4,  6,  7,   // Back face
+            8,  9,  10,  8,  10, 11,  // Top face
+            12, 13, 14,  12, 14, 15,  // Bottom face
+            16, 17, 18,  16, 18, 19,  // Right face
+            20, 21, 22,  20, 22, 23   // Left face
         };
         // clang-format on
     }
 
     const float* vertices() const override { return m_vertices.data(); }
-    int vertexCount() const override { return 24; } // 6面 * 4顶点
+    int vertexCount() const override { return 24; } // 6 faces * 4 vertices
 
     const unsigned int* indices() const override { return m_indices.data(); }
-    int indexCount() const override { return 36; } // 6面 * 2三角形 * 3顶点
+    int indexCount() const override { return 36; } // 6 faces * 2 triangles * 3 vertices
 
 private:
     std::vector<float> m_vertices;

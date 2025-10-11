@@ -115,7 +115,7 @@ qt_add_executable(${PROJECT_NAME} ${sources} ${headers})
 # QML Module Configuration
 # ==============================================================================
 
-# Register QML module with custom OpenGL rendering component
+# Register QML module with custom OpenGL 3D rendering components
 qt_add_qml_module(
   ${PROJECT_NAME}
   URI
@@ -128,8 +128,12 @@ qt_add_qml_module(
   QML_FILES
   source/Main.qml
   SOURCES
-  source/squircle.cpp
-  source/squircle.h
+  source/cube_renderer.cpp
+  source/cube_renderer.h
+  source/opengl_renderer.cpp
+  source/opengl_renderer.h
+  source/logger.cpp
+  source/logger.hpp
 )
 
 # ==============================================================================
