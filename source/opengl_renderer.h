@@ -32,7 +32,7 @@ public:
      * @brief Set geometry data to render
      * @param geometryData Pointer to geometry data (vertices, normals, colors, indices)
      */
-    void setGeometryData(std::shared_ptr<GeometryData> geometryData);
+    void setGeometryData(std::shared_ptr<GeometryData> geometry_data);
 
     /**
      * @brief Set color override for the entire geometry
@@ -52,7 +52,7 @@ public:
      * @param rotationX Rotation around X axis in degrees
      * @param rotationY Rotation around Y axis in degrees
      */
-    void setRotation(qreal rotationX, qreal rotationY);
+    void setRotation(qreal rotation_x, qreal rotation_y);
 
     /**
      * @brief Get current rotation angles

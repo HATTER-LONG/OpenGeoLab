@@ -2,6 +2,7 @@
 // Separates vertex data from rendering logic for better modularity
 #pragma once
 
+#include <cmath>
 #include <vector>
 
 /**
@@ -107,6 +108,115 @@ public:
 
     const unsigned int* indices() const override { return m_indices.data(); }
     int indexCount() const override { return 36; } // 6 faces * 2 triangles * 3 vertices
+
+private:
+    std::vector<float> m_vertices;
+    std::vector<unsigned int> m_indices;
+};
+
+/**
+ * @brief Cylinder geometry data with lighting support
+ *
+ * Provides vertex data for a cylinder centered at origin.
+ * Each vertex contains: position (3 floats), normal (3 floats), color (3 floats)
+ * Total: 9 floats per vertex
+ */
+class CylinderData : public GeometryData {
+public:
+    explicit CylinderData(int segments = 32, float radius = 0.5f, float height = 1.0f) {
+        // Generate cylinder geometry
+        const float half_height = height * 0.5f;
+        const float angle_step = 2.0f * 3.14159265f / segments;
+
+        // Reserve space for vertices and indices
+        m_vertices.reserve((segments * 2 + 2) * 9); // Side + top + bottom circles
+        m_indices.reserve(segments * 12);           // Side faces + top + bottom caps
+
+        // Generate side vertices
+        for(int i = 0; i <= segments; ++i) {
+            float angle = i * angle_step;
+            float x = radius * std::cos(angle);
+            float z = radius * std::sin(angle);
+            float nx = std::cos(angle);
+            float nz = std::sin(angle);
+
+            // Color gradient based on angle
+            float r = 0.5f + 0.5f * std::cos(angle);
+            float g = 0.5f + 0.5f * std::sin(angle);
+            float b = 0.5f + 0.5f * std::cos(angle + 1.0f);
+
+            // Bottom vertex
+            m_vertices.insert(m_vertices.end(), {x, -half_height, z, nx, 0.0f, nz, r, g, b});
+
+            // Top vertex
+            m_vertices.insert(m_vertices.end(), {x, half_height, z, nx, 0.0f, nz, r, g, b});
+        }
+
+        // Generate side face indices
+        for(int i = 0; i < segments; ++i) {
+            int bottom_left = i * 2;
+            int top_left = i * 2 + 1;
+            int bottom_right = (i + 1) * 2;
+            int top_right = (i + 1) * 2 + 1;
+
+            // First triangle
+            m_indices.insert(m_indices.end(), {static_cast<unsigned int>(bottom_left),
+                                               static_cast<unsigned int>(bottom_right),
+                                               static_cast<unsigned int>(top_left)});
+
+            // Second triangle
+            m_indices.insert(m_indices.end(), {static_cast<unsigned int>(top_left),
+                                               static_cast<unsigned int>(bottom_right),
+                                               static_cast<unsigned int>(top_right)});
+        }
+
+        // Add center vertices for caps
+        int bottom_center_idx = m_vertices.size() / 9;
+        m_vertices.insert(m_vertices.end(),
+                          {0.0f, -half_height, 0.0f, 0.0f, -1.0f, 0.0f, 0.8f, 0.8f, 0.8f});
+
+        int top_center_idx = m_vertices.size() / 9;
+        m_vertices.insert(m_vertices.end(),
+                          {0.0f, half_height, 0.0f, 0.0f, 1.0f, 0.0f, 0.9f, 0.9f, 0.9f});
+
+        // Generate bottom cap vertices and indices
+        for(int i = 0; i < segments; ++i) {
+            float angle = i * angle_step;
+            float x = radius * std::cos(angle);
+            float z = radius * std::sin(angle);
+
+            int vertex_idx = m_vertices.size() / 9;
+            m_vertices.insert(m_vertices.end(),
+                              {x, -half_height, z, 0.0f, -1.0f, 0.0f, 0.7f, 0.7f, 0.8f});
+
+            int next_idx = (i + 1) < segments ? vertex_idx + 1 : bottom_center_idx + 2;
+            m_indices.insert(m_indices.end(), {static_cast<unsigned int>(bottom_center_idx),
+                                               static_cast<unsigned int>(next_idx),
+                                               static_cast<unsigned int>(vertex_idx)});
+        }
+
+        // Generate top cap vertices and indices
+        for(int i = 0; i < segments; ++i) {
+            float angle = i * angle_step;
+            float x = radius * std::cos(angle);
+            float z = radius * std::sin(angle);
+
+            int vertex_idx = m_vertices.size() / 9;
+            m_vertices.insert(m_vertices.end(),
+                              {x, half_height, z, 0.0f, 1.0f, 0.0f, 0.8f, 0.7f, 0.7f});
+
+            int next_idx = (i + 1) < segments ? vertex_idx + 1 : top_center_idx + segments + 2;
+            m_indices.insert(m_indices.end(), {static_cast<unsigned int>(top_center_idx),
+                                               static_cast<unsigned int>(vertex_idx),
+                                               static_cast<unsigned int>(next_idx)});
+        }
+    }
+
+    const float* vertices() const override { return m_vertices.data(); }
+    int vertexCount() const override { return m_vertices.size() / 9; }
+
+    const unsigned int* indices() const override { return m_indices.data(); }
+    int indexCount() const override { return m_indices.size(); }
 
 private:
     std::vector<float> m_vertices;

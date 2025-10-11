@@ -22,6 +22,8 @@
 class Geometry3D : public QQuickItem {
     Q_OBJECT
     Q_PROPERTY(QColor color READ color WRITE setColor NOTIFY colorChanged)
+    Q_PROPERTY(
+        QString geometryType READ geometryType WRITE setGeometryType NOTIFY geometryTypeChanged)
     QML_ELEMENT
 
 public:
@@ -40,8 +42,21 @@ public:
      */
     void setColor(const QColor& color);
 
+    /**
+     * @brief Get current geometry type
+     * @return Geometry type ("cube" or "cylinder")
+     */
+    QString geometryType() const { return m_geometryType; }
+
+    /**
+     * @brief Set geometry type to render
+     * @param type Geometry type ("cube" or "cylinder")
+     */
+    Q_INVOKABLE void setGeometryType(const QString& type);
+
 signals:
     void colorChanged();
+    void geometryTypeChanged();
     void rendererReady();
 
 public slots:
@@ -81,6 +96,7 @@ private:
 
     OpenGLRenderer* m_renderer = nullptr;
     QColor m_color = QColor(0, 0, 0, 0); // Default: use vertex colors
+    QString m_geometryType = "cube";     // Default geometry type
 
     // Mouse interaction state
     bool m_isDragging = false;

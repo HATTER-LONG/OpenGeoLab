@@ -33,109 +33,150 @@ Window {
         anchors.top: parent.top
         color: Qt.rgba(0.2, 0.2, 0.2, 0.9)
 
-        ColumnLayout {
+        ScrollView {
             anchors.fill: parent
             anchors.margins: 15
-            spacing: 20
+            clip: true
 
-            // Title
-            Text {
-                text: "Color Control"
-                color: "white"
-                font.pixelSize: 16
-                font.bold: true
-                Layout.alignment: Qt.AlignHCenter
-            }
+            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+            ScrollBar.vertical.policy: ScrollBar.AsNeeded
 
-            // Separator
-            Rectangle {
-                Layout.fillWidth: true
-                Layout.preferredHeight: 2
-                color: Qt.rgba(1, 1, 1, 0.3)
-            }
+            ColumnLayout {
+                width: controlPanel.width - 30
+                spacing: 20
 
-            // Color selection area
-            Text {
-                text: "Select Color:"
-                color: "white"
-                font.pixelSize: 14
-            }
-
-            Button {
-                text: "Use Vertex Colors"
-                Layout.fillWidth: true
-                highlighted: geometryRenderer.color.a === 0
-                onClicked: {
-                    geometryRenderer.color = Qt.rgba(0, 0, 0, 0);
+                // Title
+                Text {
+                    text: "Color Control"
+                    color: "white"
+                    font.pixelSize: 16
+                    font.bold: true
+                    Layout.alignment: Qt.AlignHCenter
                 }
-            }
 
-            Button {
-                text: "Red"
-                Layout.fillWidth: true
-                highlighted: geometryRenderer.color.r > 0.9 && geometryRenderer.color.a > 0
-                onClicked: {
-                    geometryRenderer.color = Qt.rgba(1, 0, 0, 1);
+                // Separator
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 2
+                    color: Qt.rgba(1, 1, 1, 0.3)
                 }
-            }
 
-            Button {
-                text: "Green"
-                Layout.fillWidth: true
-                highlighted: geometryRenderer.color.g > 0.9 && geometryRenderer.color.a > 0
-                onClicked: {
-                    geometryRenderer.color = Qt.rgba(0, 1, 0, 1);
+                // Geometry type selection
+                Text {
+                    text: "Geometry Type:"
+                    color: "white"
+                    font.pixelSize: 14
                 }
-            }
 
-            Button {
-                text: "Blue"
-                Layout.fillWidth: true
-                highlighted: geometryRenderer.color.b > 0.9 && geometryRenderer.color.a > 0
-                onClicked: {
-                    geometryRenderer.color = Qt.rgba(0, 0, 1, 1);
+                Button {
+                    text: "Cube"
+                    Layout.fillWidth: true
+                    highlighted: geometryRenderer.geometryType === "cube"
+                    onClicked: {
+                        geometryRenderer.geometryType = "cube";
+                    }
                 }
-            }
 
-            Button {
-                text: "Yellow"
-                Layout.fillWidth: true
-                highlighted: geometryRenderer.color.r > 0.9 && geometryRenderer.color.g > 0.9 && geometryRenderer.color.a > 0
-                onClicked: {
-                    geometryRenderer.color = Qt.rgba(1, 1, 0, 1);
+                Button {
+                    text: "Cylinder"
+                    Layout.fillWidth: true
+                    highlighted: geometryRenderer.geometryType === "cylinder"
+                    onClicked: {
+                        geometryRenderer.geometryType = "cylinder";
+                    }
                 }
-            }
 
-            Button {
-                text: "Cyan"
-                Layout.fillWidth: true
-                highlighted: geometryRenderer.color.g > 0.9 && geometryRenderer.color.b > 0.9 && geometryRenderer.color.a > 0
-                onClicked: {
-                    geometryRenderer.color = Qt.rgba(0, 1, 1, 1);
+                // Separator
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 2
+                    color: Qt.rgba(1, 1, 1, 0.3)
                 }
-            }
 
-            Button {
-                text: "Magenta"
-                Layout.fillWidth: true
-                highlighted: geometryRenderer.color.r > 0.9 && geometryRenderer.color.b > 0.9 && geometryRenderer.color.a > 0
-                onClicked: {
-                    geometryRenderer.color = Qt.rgba(1, 0, 1, 1);
+                // Color selection area
+                Text {
+                    text: "Select Color:"
+                    color: "white"
+                    font.pixelSize: 14
                 }
-            }
 
-            Button {
-                text: "White"
-                Layout.fillWidth: true
-                highlighted: geometryRenderer.color.r > 0.9 && geometryRenderer.color.g > 0.9 && geometryRenderer.color.b > 0.9 && geometryRenderer.color.a > 0
-                onClicked: {
-                    geometryRenderer.color = Qt.rgba(1, 1, 1, 1);
+                Button {
+                    text: "Use Vertex Colors"
+                    Layout.fillWidth: true
+                    highlighted: geometryRenderer.color.a === 0
+                    onClicked: {
+                        geometryRenderer.color = Qt.rgba(0, 0, 0, 0);
+                    }
                 }
-            }
 
-            // Spacer
-            Item {
-                Layout.fillHeight: true
+                Button {
+                    text: "Red"
+                    Layout.fillWidth: true
+                    highlighted: geometryRenderer.color.r > 0.9 && geometryRenderer.color.a > 0
+                    onClicked: {
+                        geometryRenderer.color = Qt.rgba(1, 0, 0, 1);
+                    }
+                }
+
+                Button {
+                    text: "Green"
+                    Layout.fillWidth: true
+                    highlighted: geometryRenderer.color.g > 0.9 && geometryRenderer.color.a > 0
+                    onClicked: {
+                        geometryRenderer.color = Qt.rgba(0, 1, 0, 1);
+                    }
+                }
+
+                Button {
+                    text: "Blue"
+                    Layout.fillWidth: true
+                    highlighted: geometryRenderer.color.b > 0.9 && geometryRenderer.color.a > 0
+                    onClicked: {
+                        geometryRenderer.color = Qt.rgba(0, 0, 1, 1);
+                    }
+                }
+
+                Button {
+                    text: "Yellow"
+                    Layout.fillWidth: true
+                    highlighted: geometryRenderer.color.r > 0.9 && geometryRenderer.color.g > 0.9 && geometryRenderer.color.a > 0
+                    onClicked: {
+                        geometryRenderer.color = Qt.rgba(1, 1, 0, 1);
+                    }
+                }
+
+                Button {
+                    text: "Cyan"
+                    Layout.fillWidth: true
+                    highlighted: geometryRenderer.color.g > 0.9 && geometryRenderer.color.b > 0.9 && geometryRenderer.color.a > 0
+                    onClicked: {
+                        geometryRenderer.color = Qt.rgba(0, 1, 1, 1);
+                    }
+                }
+
+                Button {
+                    text: "Magenta"
+                    Layout.fillWidth: true
+                    highlighted: geometryRenderer.color.r > 0.9 && geometryRenderer.color.b > 0.9 && geometryRenderer.color.a > 0
+                    onClicked: {
+                        geometryRenderer.color = Qt.rgba(1, 0, 1, 1);
+                    }
+                }
+
+                Button {
+                    text: "White"
+                    Layout.fillWidth: true
+                    highlighted: geometryRenderer.color.r > 0.9 && geometryRenderer.color.g > 0.9 && geometryRenderer.color.b > 0.9 && geometryRenderer.color.a > 0
+                    onClicked: {
+                        geometryRenderer.color = Qt.rgba(1, 1, 1, 1);
+                    }
+                }
+
+                // Bottom spacing
+                Item {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 20
+                }
             }
         }
     }

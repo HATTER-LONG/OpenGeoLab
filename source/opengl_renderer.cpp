@@ -10,18 +10,13 @@
 
 OpenGLRenderer::~OpenGLRenderer() { delete m_program; }
 
-void OpenGLRenderer::setGeometryData(std::shared_ptr<GeometryData> geometryData) {
-    m_geometryData = geometryData;
+void OpenGLRenderer::setGeometryData(std::shared_ptr<GeometryData> geometry_data) {
+    m_geometryData = geometry_data;
     m_needsBufferUpdate = true;
 
-    if(m_initialized && geometryData) {
-        createBuffers();
-        m_needsBufferUpdate = false;
-    }
-
     LOG_INFO("Geometry data set: {} vertices, {} indices",
-             geometryData ? geometryData->vertexCount() : 0,
-             geometryData ? geometryData->indexCount() : 0);
+             geometry_data ? geometry_data->vertexCount() : 0,
+             geometry_data ? geometry_data->indexCount() : 0);
 }
 
 void OpenGLRenderer::setColor(const QColor& color) {
@@ -32,9 +27,9 @@ void OpenGLRenderer::setColor(const QColor& color) {
     }
 }
 
-void OpenGLRenderer::setRotation(qreal rotationX, qreal rotationY) {
-    m_rotationX = rotationX;
-    m_rotationY = rotationY;
+void OpenGLRenderer::setRotation(qreal rotation_x, qreal rotation_y) {
+    m_rotationX = rotation_x;
+    m_rotationY = rotation_y;
     LOG_TRACE("Rotation set to: X={}, Y={}", rotationX, rotationY);
 }
 
@@ -71,7 +66,7 @@ void OpenGLRenderer::createShaderProgram() {
     m_program = new QOpenGLShaderProgram();
 
     // Vertex shader with color override support
-    const char* vertexShader =
+    const char* vertex_shader =
         "attribute vec3 aPos;"
         "attribute vec3 aNormal;"
         "attribute vec3 aColor;"
@@ -94,34 +89,34 @@ void OpenGLRenderer::createShaderProgram() {
         "}";
 
     // Fragment shader with simple lighting
-    const char* fragmentShader = "varying vec3 vColor;"
-                                 "varying vec3 vNormal;"
-                                 "varying vec3 vFragPos;"
-                                 "void main() {"
-                                 "    vec3 lightPos = vec3(2.0, 2.0, 2.0);"
-                                 "    vec3 lightColor = vec3(1.0, 1.0, 1.0);"
-                                 "    float ambientStrength = 0.3;"
-                                 "    vec3 ambient = ambientStrength * lightColor;"
-                                 "    vec3 norm = normalize(vNormal);"
-                                 "    vec3 lightDir = normalize(lightPos - vFragPos);"
-                                 "    float diff = max(dot(norm, lightDir), 0.0);"
-                                 "    vec3 diffuse = diff * lightColor;"
-                                 "    vec3 result = (ambient + diffuse) * vColor;"
-                                 "    gl_FragColor = vec4(result, 1.0);"
-                                 "}";
+    const char* fragment_shader = "varying vec3 vColor;"
+                                  "varying vec3 vNormal;"
+                                  "varying vec3 vFragPos;"
+                                  "void main() {"
+                                  "    vec3 lightPos = vec3(2.0, 2.0, 2.0);"
+                                  "    vec3 lightColor = vec3(1.0, 1.0, 1.0);"
+                                  "    float ambientStrength = 0.3;"
+                                  "    vec3 ambient = ambientStrength * lightColor;"
+                                  "    vec3 norm = normalize(vNormal);"
+                                  "    vec3 lightDir = normalize(lightPos - vFragPos);"
+                                  "    float diff = max(dot(norm, lightDir), 0.0);"
+                                  "    vec3 diffuse = diff * lightColor;"
+                                  "    vec3 result = (ambient + diffuse) * vColor;"
+                                  "    gl_FragColor = vec4(result, 1.0);"
+                                  "}";
 
-    bool vertexOk =
-        m_program->addCacheableShaderFromSourceCode(QOpenGLShader::Vertex, vertexShader);
-    if(!vertexOk) {
+    bool vertex_ok =
+        m_program->addCacheableShaderFromSourceCode(QOpenGLShader::Vertex, vertex_shader);
+    if(!vertex_ok) {
         LOG_ERROR("Failed to compile vertex shader: {}", m_program->log().toStdString());
         delete m_program;
         m_program = nullptr;
         return;
     }
 
-    bool fragmentOk =
-        m_program->addCacheableShaderFromSourceCode(QOpenGLShader::Fragment, fragmentShader);
-    if(!fragmentOk) {
+    bool fragment_ok =
+        m_program->addCacheableShaderFromSourceCode(QOpenGLShader::Fragment, fragment_shader);
+    if(!fragment_ok) {
         LOG_ERROR("Failed to compile fragment shader: {}", m_program->log().toStdString());
         delete m_program;
         m_program = nullptr;
@@ -133,8 +128,8 @@ void OpenGLRenderer::createShaderProgram() {
     m_program->bindAttributeLocation("aNormal", 1);
     m_program->bindAttributeLocation("aColor", 2);
 
-    bool linkOk = m_program->link();
-    if(!linkOk) {
+    bool link_ok = m_program->link();
+    if(!link_ok) {
         LOG_ERROR("Failed to link shader program: {}", m_program->log().toStdString());
         delete m_program;
         m_program = nullptr;
@@ -152,6 +147,14 @@ void OpenGLRenderer::createBuffers() {
 
     LOG_DEBUG("Creating VBO and EBO for geometry with {} vertices, {} indices",
               m_geometryData->vertexCount(), m_geometryData->indexCount());
+
+    // Destroy old buffers if they exist
+    if(m_vbo.isCreated()) {
+        m_vbo.destroy();
+    }
+    if(m_ebo.isCreated()) {
+        m_ebo.destroy();
+    }
 
     // Create and populate vertex buffer
     m_vbo = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
@@ -224,6 +227,12 @@ void OpenGLRenderer::paint() {
 
     LOG_TRACE("OpenGLRenderer::paint() called");
 
+    // Check if buffers need to be updated (e.g., geometry changed)
+    if(m_needsBufferUpdate) {
+        createBuffers();
+        m_needsBufferUpdate = false;
+    }
+
     m_window->beginExternalCommands();
 
     // Setup viewport
@@ -262,8 +271,8 @@ void OpenGLRenderer::paint() {
     m_program->setUniformValue("uModel", model);
 
     // Set color override
-    QVector4D colorOverride(m_color.redF(), m_color.greenF(), m_color.blueF(), m_color.alphaF());
-    m_program->setUniformValue("uColorOverride", colorOverride);
+    QVector4D color_override(m_color.redF(), m_color.greenF(), m_color.blueF(), m_color.alphaF());
+    m_program->setUniformValue("uColorOverride", color_override);
 
     // Draw geometry
     if(m_geometryData->indices() && m_geometryData->indexCount() > 0) {

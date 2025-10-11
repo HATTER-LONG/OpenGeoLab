@@ -36,6 +36,32 @@ void Geometry3D::setColor(const QColor& color) {
     }
 }
 
+void Geometry3D::setGeometryType(const QString& type) {
+    if(m_geometryType != type) {
+        m_geometryType = type;
+
+        // Update geometry if renderer exists
+        if(m_renderer) {
+            if(type == "cylinder") {
+                auto cylinder_data = std::make_shared<CylinderData>();
+                m_renderer->setGeometryData(cylinder_data);
+                LOG_INFO("Geometry changed to cylinder");
+            } else {
+                auto cube_data = std::make_shared<CubeData>();
+                m_renderer->setGeometryData(cube_data);
+                LOG_INFO("Geometry changed to cube");
+            }
+
+            // Trigger repaint
+            if(window()) {
+                window()->update();
+            }
+        }
+
+        emit geometryTypeChanged();
+    }
+}
+
 void Geometry3D::handleWindowChanged(QQuickWindow* win) {
     if(win) {
         LOG_DEBUG("Geometry3D window changed, setting up connections");
@@ -58,11 +84,16 @@ void Geometry3D::initializeGeometry() {
         return;
     }
 
-    // Create default cube geometry
-    auto cubeData = std::make_shared<CubeData>();
-    m_renderer->setGeometryData(cubeData);
-
-    LOG_INFO("Default cube geometry initialized");
+    // Create geometry based on type
+    if(m_geometryType == "cylinder") {
+        auto cylinder_data = std::make_shared<CylinderData>();
+        m_renderer->setGeometryData(cylinder_data);
+        LOG_INFO("Default cylinder geometry initialized");
+    } else {
+        auto cube_data = std::make_shared<CubeData>();
+        m_renderer->setGeometryData(cube_data);
+        LOG_INFO("Default cube geometry initialized");
+    }
 }
 
 void Geometry3D::sync() {
@@ -87,9 +118,9 @@ void Geometry3D::sync() {
     }
 
     // Calculate item position and size in window coordinates
-    QPointF scenePos = mapToScene(QPointF(0, 0));
-    QPoint offset(scenePos.x() * window()->devicePixelRatio(),
-                  scenePos.y() * window()->devicePixelRatio());
+    QPointF scene_pos = mapToScene(QPointF(0, 0));
+    QPoint offset(scene_pos.x() * window()->devicePixelRatio(),
+                  scene_pos.y() * window()->devicePixelRatio());
     QSize size(width() * window()->devicePixelRatio(), height() * window()->devicePixelRatio());
 
     // Update renderer state
@@ -115,8 +146,8 @@ void Geometry3D::mousePressEvent(QMouseEvent* event) {
 
 void Geometry3D::mouseMoveEvent(QMouseEvent* event) {
     if(m_isDragging) {
-        QPointF currentPos = event->position();
-        QPointF delta = currentPos - m_lastMousePos;
+        QPointF current_pos = event->position();
+        QPointF delta = current_pos - m_lastMousePos;
 
         // Update rotation based on mouse movement
         // Horizontal movement rotates around Y axis
@@ -127,7 +158,7 @@ void Geometry3D::mouseMoveEvent(QMouseEvent* event) {
         // Clamp X rotation to avoid gimbal lock
         m_rotationX = qBound(-89.0, m_rotationX, 89.0);
 
-        m_lastMousePos = currentPos;
+        m_lastMousePos = current_pos;
 
         // Update renderer rotation
         if(m_renderer) {
