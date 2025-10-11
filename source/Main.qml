@@ -13,11 +13,15 @@ Window {
     title: "OpenGeoLab - Triangle Demo"
 
     Squircle {
+        id: geometryRenderer
         // 设置 Squircle 的位置和大小,避开左侧控制面板
         anchors.left: controlPanel.right
         anchors.right: parent.right
         anchors.top: parent.top
         anchors.bottom: parent.bottom
+
+        // 默认为 squircle
+        geometryType: "squircle"
 
         SequentialAnimation on t {
             NumberAnimation {
@@ -31,7 +35,7 @@ Window {
                 easing.type: Easing.OutQuad
             }
             loops: Animation.Infinite
-            running: true
+            running: geometryRenderer.geometryType === "squircle"  // 只在 squircle 模式下运行
         }
     }
 
@@ -73,35 +77,48 @@ Window {
             }
 
             Button {
+                text: "Squircle"
+                Layout.fillWidth: true
+                highlighted: geometryRenderer.geometryType === "squircle"
+                onClicked: {
+                    geometryRenderer.geometryType = "squircle";
+                }
+            }
+
+            Button {
                 text: "立方体"
                 Layout.fillWidth: true
-                onClicked:
-                // TODO: 切换到立方体
-                {}
+                highlighted: geometryRenderer.geometryType === "cube"
+                onClicked: {
+                    geometryRenderer.geometryType = "cube";
+                }
             }
 
             Button {
                 text: "圆柱体"
                 Layout.fillWidth: true
-                onClicked:
-                // TODO: 切换到圆柱体
-                {}
+                enabled: false
+                onClicked: {
+                    // TODO: 切换到圆柱体
+                }
             }
 
             Button {
                 text: "球体"
                 Layout.fillWidth: true
-                onClicked:
-                // TODO: 切换到球体
-                {}
+                enabled: false
+                onClicked: {
+                    // TODO: 切换到球体
+                }
             }
 
             Button {
                 text: "圆锥体"
                 Layout.fillWidth: true
-                onClicked:
-                // TODO: 切换到圆锥体
-                {}
+                enabled: false
+                onClicked: {
+                    // TODO: 切换到圆锥体
+                }
             }
 
             // 分隔线
@@ -122,33 +139,37 @@ Window {
             Button {
                 text: "红色"
                 Layout.fillWidth: true
-                onClicked:
-                // TODO: 设置红色
-                {}
+                enabled: false
+                onClicked: {
+                    // TODO: 设置红色
+                }
             }
 
             Button {
                 text: "绿色"
                 Layout.fillWidth: true
-                onClicked:
-                // TODO: 设置绿色
-                {}
+                enabled: false
+                onClicked: {
+                    // TODO: 设置绿色
+                }
             }
 
             Button {
                 text: "蓝色"
                 Layout.fillWidth: true
-                onClicked:
-                // TODO: 设置蓝色
-                {}
+                enabled: false
+                onClicked: {
+                    // TODO: 设置蓝色
+                }
             }
 
             Button {
                 text: "黄色"
                 Layout.fillWidth: true
-                onClicked:
-                // TODO: 设置黄色
-                {}
+                enabled: false
+                onClicked: {
+                    // TODO: 设置黄色
+                }
             }
 
             // 占位符,填充剩余空间
@@ -171,7 +192,13 @@ Window {
         id: label
         color: "black"
         wrapMode: Text.WordWrap
-        text: qsTr("The background here is a squircle rendered with raw OpenGL using the 'beforeRender()' signal in QQuickWindow. This text label and its border is rendered using QML")
+        text: {
+            if (geometryRenderer.geometryType === "cube") {
+                return qsTr("立方体渲染示例 - 使用 OpenGL 顶点缓冲和索引缓冲,带有简单的光照效果。立方体会自动旋转。");
+            } else {
+                return qsTr("Squircle 背景使用原始 OpenGL 的 'beforeRender()' 信号渲染。这个文本标签和边框使用 QML 渲染。");
+            }
+        }
         anchors.right: parent.right
         anchors.left: controlPanel.right
         anchors.leftMargin: 20
