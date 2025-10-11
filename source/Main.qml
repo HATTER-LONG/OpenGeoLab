@@ -10,12 +10,134 @@ Window {
     visible: true
     width: 960
     height: 600
-    title: "OpenGeoLab - 3D Cube Demo"
+    title: "OpenGeoLab - 3D Geometry Renderer"
 
-    // 3D Cube renderer - fills entire window
-    Cube3D {
-        id: cubeRenderer
-        anchors.fill: parent
+    // 3D Geometry renderer - fills most of the window, leaving space for control panel
+    Geometry3D {
+        id: geometryRenderer
+        anchors.left: controlPanel.right
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+
+        // Default: use vertex colors (alpha = 0)
+        color: Qt.rgba(0, 0, 0, 0)
+    }
+
+    // Left control panel
+    Rectangle {
+        id: controlPanel
+        width: 200
+        height: parent.height
+        anchors.left: parent.left
+        anchors.top: parent.top
+        color: Qt.rgba(0.2, 0.2, 0.2, 0.9)
+
+        ColumnLayout {
+            anchors.fill: parent
+            anchors.margins: 15
+            spacing: 20
+
+            // Title
+            Text {
+                text: "Color Control"
+                color: "white"
+                font.pixelSize: 16
+                font.bold: true
+                Layout.alignment: Qt.AlignHCenter
+            }
+
+            // Separator
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 2
+                color: Qt.rgba(1, 1, 1, 0.3)
+            }
+
+            // Color selection area
+            Text {
+                text: "Select Color:"
+                color: "white"
+                font.pixelSize: 14
+            }
+
+            Button {
+                text: "Use Vertex Colors"
+                Layout.fillWidth: true
+                highlighted: geometryRenderer.color.a === 0
+                onClicked: {
+                    geometryRenderer.color = Qt.rgba(0, 0, 0, 0);
+                }
+            }
+
+            Button {
+                text: "Red"
+                Layout.fillWidth: true
+                highlighted: geometryRenderer.color.r > 0.9 && geometryRenderer.color.a > 0
+                onClicked: {
+                    geometryRenderer.color = Qt.rgba(1, 0, 0, 1);
+                }
+            }
+
+            Button {
+                text: "Green"
+                Layout.fillWidth: true
+                highlighted: geometryRenderer.color.g > 0.9 && geometryRenderer.color.a > 0
+                onClicked: {
+                    geometryRenderer.color = Qt.rgba(0, 1, 0, 1);
+                }
+            }
+
+            Button {
+                text: "Blue"
+                Layout.fillWidth: true
+                highlighted: geometryRenderer.color.b > 0.9 && geometryRenderer.color.a > 0
+                onClicked: {
+                    geometryRenderer.color = Qt.rgba(0, 0, 1, 1);
+                }
+            }
+
+            Button {
+                text: "Yellow"
+                Layout.fillWidth: true
+                highlighted: geometryRenderer.color.r > 0.9 && geometryRenderer.color.g > 0.9 && geometryRenderer.color.a > 0
+                onClicked: {
+                    geometryRenderer.color = Qt.rgba(1, 1, 0, 1);
+                }
+            }
+
+            Button {
+                text: "Cyan"
+                Layout.fillWidth: true
+                highlighted: geometryRenderer.color.g > 0.9 && geometryRenderer.color.b > 0.9 && geometryRenderer.color.a > 0
+                onClicked: {
+                    geometryRenderer.color = Qt.rgba(0, 1, 1, 1);
+                }
+            }
+
+            Button {
+                text: "Magenta"
+                Layout.fillWidth: true
+                highlighted: geometryRenderer.color.r > 0.9 && geometryRenderer.color.b > 0.9 && geometryRenderer.color.a > 0
+                onClicked: {
+                    geometryRenderer.color = Qt.rgba(1, 0, 1, 1);
+                }
+            }
+
+            Button {
+                text: "White"
+                Layout.fillWidth: true
+                highlighted: geometryRenderer.color.r > 0.9 && geometryRenderer.color.g > 0.9 && geometryRenderer.color.b > 0.9 && geometryRenderer.color.a > 0
+                onClicked: {
+                    geometryRenderer.color = Qt.rgba(1, 1, 1, 1);
+                }
+            }
+
+            // Spacer
+            Item {
+                Layout.fillHeight: true
+            }
+        }
     }
 
     // Information overlay
@@ -32,9 +154,9 @@ Window {
         id: label
         color: "black"
         wrapMode: Text.WordWrap
-        text: qsTr("3D Cube rendering demo using OpenGL. The cube rotates automatically with simple lighting effects.")
+        text: qsTr("3D Cube rendering using OpenGL. Use the control panel to change colors.\nDrag with left mouse button to rotate the cube.")
         anchors.right: parent.right
-        anchors.left: parent.left
+        anchors.left: controlPanel.right
         anchors.leftMargin: 20
         anchors.bottom: parent.bottom
         anchors.margins: 20

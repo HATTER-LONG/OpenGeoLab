@@ -1,61 +1,48 @@
-// opengl_renderer.cpp - Implementation of OpenGL renderer base classes
+// opengl_renderer.cpp - Implementation of OpenGL renderer
 #include "opengl_renderer.h"
 #include "logger.hpp"
 
 #include <QMatrix4x4>
 
 // ============================================================================
-// OpenGLRendererBase Implementation
+// OpenGLRenderer Implementation
 // ============================================================================
 
-QOpenGLShaderProgram* OpenGLRendererBase::createShaderProgram(const char* vertexShader,
-                                                              const char* fragmentShader) {
-    auto* program = new QOpenGLShaderProgram();
+OpenGLRenderer::~OpenGLRenderer() { delete m_program; }
 
-    bool vertexOk = program->addCacheableShaderFromSourceCode(QOpenGLShader::Vertex, vertexShader);
-    if(!vertexOk) {
-        LOG_ERROR("Failed to compile vertex shader: {}", program->log().toStdString());
-        delete program;
-        return nullptr;
-    }
-
-    bool fragmentOk =
-        program->addCacheableShaderFromSourceCode(QOpenGLShader::Fragment, fragmentShader);
-    if(!fragmentOk) {
-        LOG_ERROR("Failed to compile fragment shader: {}", program->log().toStdString());
-        delete program;
-        return nullptr;
-    }
-
-    return program;
-}
-
-void OpenGLRendererBase::setupVertexAttribPointer(GLuint index,
-                                                  GLint size,
-                                                  GLsizei stride,
-                                                  const void* offset) {
-    glEnableVertexAttribArray(index);
-    glVertexAttribPointer(index, size, GL_FLOAT, GL_FALSE, stride, offset);
-}
-
-// ============================================================================
-// OpenGL3DRenderer Implementation
-// ============================================================================
-
-OpenGL3DRenderer::~OpenGL3DRenderer() { delete m_program; }
-
-void OpenGL3DRenderer::setGeometryData(std::shared_ptr<GeometryData> geometryData) {
+void OpenGLRenderer::setGeometryData(std::shared_ptr<GeometryData> geometryData) {
     m_geometryData = geometryData;
+    m_needsBufferUpdate = true;
+
     if(m_initialized && geometryData) {
         createBuffers();
+        m_needsBufferUpdate = false;
+    }
+
+    LOG_INFO("Geometry data set: {} vertices, {} indices",
+             geometryData ? geometryData->vertexCount() : 0,
+             geometryData ? geometryData->indexCount() : 0);
+}
+
+void OpenGLRenderer::setColor(const QColor& color) {
+    if(m_color != color) {
+        m_color = color;
+        LOG_DEBUG("Color override set to: ({}, {}, {}, {})", color.red(), color.green(),
+                  color.blue(), color.alpha());
     }
 }
 
-void OpenGL3DRenderer::init() {
-    LOG_TRACE("OpenGL3DRenderer::init() called, m_program={}", static_cast<void*>(m_program));
+void OpenGLRenderer::setRotation(qreal rotationX, qreal rotationY) {
+    m_rotationX = rotationX;
+    m_rotationY = rotationY;
+    LOG_TRACE("Rotation set to: X={}, Y={}", rotationX, rotationY);
+}
+
+void OpenGLRenderer::init() {
+    LOG_TRACE("OpenGLRenderer::init() called");
 
     if(!m_program && m_window) {
-        LOG_INFO("Initializing OpenGL3DRenderer resources");
+        LOG_INFO("Initializing OpenGL renderer resources");
 
         QSGRendererInterface* rif = m_window->rendererInterface();
         Q_ASSERT(rif->graphicsApi() == QSGRendererInterface::OpenGL);
@@ -63,38 +50,101 @@ void OpenGL3DRenderer::init() {
         initializeOpenGLFunctions();
 
         // Create shader program
-        m_program = createShaderProgram(getVertexShaderSource(), getFragmentShaderSource());
+        createShaderProgram();
         if(!m_program) {
             LOG_ERROR("Failed to create shader program");
             return;
         }
 
-        // Bind attribute locations
-        m_program->bindAttributeLocation("aPos", 0);
-        m_program->bindAttributeLocation("aNormal", 1);
-        m_program->bindAttributeLocation("aColor", 2);
-
-        bool linkOk = m_program->link();
-        if(!linkOk) {
-            LOG_ERROR("Failed to link shader program: {}", m_program->log().toStdString());
-            delete m_program;
-            m_program = nullptr;
-            return;
-        }
-
-        LOG_INFO("Shader program linked successfully");
-
         // Create buffers if geometry data is available
-        if(m_geometryData) {
+        if(m_geometryData && m_needsBufferUpdate) {
             createBuffers();
+            m_needsBufferUpdate = false;
         }
 
         m_initialized = true;
-        LOG_INFO("OpenGL3DRenderer initialization complete");
+        LOG_INFO("OpenGL renderer initialization complete");
     }
 }
 
-void OpenGL3DRenderer::createBuffers() {
+void OpenGLRenderer::createShaderProgram() {
+    m_program = new QOpenGLShaderProgram();
+
+    // Vertex shader with color override support
+    const char* vertexShader =
+        "attribute vec3 aPos;"
+        "attribute vec3 aNormal;"
+        "attribute vec3 aColor;"
+        "uniform mat4 uMVP;"
+        "uniform mat4 uModel;"
+        "uniform vec4 uColorOverride;" // Alpha = 0 means use vertex colors
+        "varying vec3 vColor;"
+        "varying vec3 vNormal;"
+        "varying vec3 vFragPos;"
+        "void main() {"
+        "    gl_Position = uMVP * vec4(aPos, 1.0);"
+        "    if (uColorOverride.a > 0.0) {"
+        "        vColor = uColorOverride.rgb;"
+        "    } else {"
+        "        vColor = aColor;"
+        "    }"
+        "    mat3 normalMatrix = mat3(uModel[0].xyz, uModel[1].xyz, uModel[2].xyz);"
+        "    vNormal = normalMatrix * aNormal;"
+        "    vFragPos = vec3(uModel * vec4(aPos, 1.0));"
+        "}";
+
+    // Fragment shader with simple lighting
+    const char* fragmentShader = "varying vec3 vColor;"
+                                 "varying vec3 vNormal;"
+                                 "varying vec3 vFragPos;"
+                                 "void main() {"
+                                 "    vec3 lightPos = vec3(2.0, 2.0, 2.0);"
+                                 "    vec3 lightColor = vec3(1.0, 1.0, 1.0);"
+                                 "    float ambientStrength = 0.3;"
+                                 "    vec3 ambient = ambientStrength * lightColor;"
+                                 "    vec3 norm = normalize(vNormal);"
+                                 "    vec3 lightDir = normalize(lightPos - vFragPos);"
+                                 "    float diff = max(dot(norm, lightDir), 0.0);"
+                                 "    vec3 diffuse = diff * lightColor;"
+                                 "    vec3 result = (ambient + diffuse) * vColor;"
+                                 "    gl_FragColor = vec4(result, 1.0);"
+                                 "}";
+
+    bool vertexOk =
+        m_program->addCacheableShaderFromSourceCode(QOpenGLShader::Vertex, vertexShader);
+    if(!vertexOk) {
+        LOG_ERROR("Failed to compile vertex shader: {}", m_program->log().toStdString());
+        delete m_program;
+        m_program = nullptr;
+        return;
+    }
+
+    bool fragmentOk =
+        m_program->addCacheableShaderFromSourceCode(QOpenGLShader::Fragment, fragmentShader);
+    if(!fragmentOk) {
+        LOG_ERROR("Failed to compile fragment shader: {}", m_program->log().toStdString());
+        delete m_program;
+        m_program = nullptr;
+        return;
+    }
+
+    // Bind attribute locations
+    m_program->bindAttributeLocation("aPos", 0);
+    m_program->bindAttributeLocation("aNormal", 1);
+    m_program->bindAttributeLocation("aColor", 2);
+
+    bool linkOk = m_program->link();
+    if(!linkOk) {
+        LOG_ERROR("Failed to link shader program: {}", m_program->log().toStdString());
+        delete m_program;
+        m_program = nullptr;
+        return;
+    }
+
+    LOG_INFO("Shader program created and linked successfully");
+}
+
+void OpenGLRenderer::createBuffers() {
     if(!m_geometryData) {
         LOG_WARN("No geometry data available for buffer creation");
         return;
@@ -113,7 +163,7 @@ void OpenGL3DRenderer::createBuffers() {
 
     LOG_DEBUG("VBO created with {} bytes", m_geometryData->vertexCount() * 9 * sizeof(float));
 
-    // Create and populate index buffer
+    // Create and populate index buffer if available
     if(m_geometryData->indices() && m_geometryData->indexCount() > 0) {
         m_ebo = QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
         m_ebo.create();
@@ -126,24 +176,31 @@ void OpenGL3DRenderer::createBuffers() {
     }
 }
 
-void OpenGL3DRenderer::setupVertexAttributes() {
+void OpenGLRenderer::setupVertexAttributes() {
     int stride = 9 * sizeof(float); // Each vertex: 3(pos) + 3(normal) + 3(color)
 
     // Position attribute (location = 0)
-    setupVertexAttribPointer(0, 3, stride, nullptr);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, nullptr);
 
     // Normal attribute (location = 1)
-    setupVertexAttribPointer(1, 3, stride, reinterpret_cast<void*>(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride,
+                          reinterpret_cast<void*>(3 * sizeof(float)));
 
     // Color attribute (location = 2)
-    setupVertexAttribPointer(2, 3, stride, reinterpret_cast<void*>(6 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, stride,
+                          reinterpret_cast<void*>(6 * sizeof(float)));
 }
 
-QMatrix4x4 OpenGL3DRenderer::calculateMVPMatrix() {
+QMatrix4x4 OpenGLRenderer::calculateMVPMatrix() const {
     QMatrix4x4 model, view, projection;
 
-    // Model matrix - rotate the geometry
-    model.rotate(m_rotation, 0.5f, 1.0f, 0.0f);
+    // Model matrix - apply rotations
+    model.setToIdentity();
+    model.rotate(m_rotationY, 0.0f, 1.0f, 0.0f); // Rotate around Y axis (left-right drag)
+    model.rotate(m_rotationX, 1.0f, 0.0f, 0.0f); // Rotate around X axis (up-down drag)
 
     // View matrix - camera position
     view.lookAt(QVector3D(0, 0, 3),  // Camera position
@@ -158,50 +215,14 @@ QMatrix4x4 OpenGL3DRenderer::calculateMVPMatrix() {
     return projection * view * model;
 }
 
-const char* OpenGL3DRenderer::getVertexShaderSource() {
-    return "attribute vec3 aPos;"
-           "attribute vec3 aNormal;"
-           "attribute vec3 aColor;"
-           "uniform mat4 uMVP;"
-           "uniform mat4 uModel;"
-           "varying vec3 vColor;"
-           "varying vec3 vNormal;"
-           "varying vec3 vFragPos;"
-           "void main() {"
-           "    gl_Position = uMVP * vec4(aPos, 1.0);"
-           "    vColor = aColor;"
-           "    mat3 normalMatrix = mat3(uModel[0].xyz, uModel[1].xyz, uModel[2].xyz);"
-           "    vNormal = normalMatrix * aNormal;"
-           "    vFragPos = vec3(uModel * vec4(aPos, 1.0));"
-           "}";
-}
-
-const char* OpenGL3DRenderer::getFragmentShaderSource() {
-    return "varying vec3 vColor;"
-           "varying vec3 vNormal;"
-           "varying vec3 vFragPos;"
-           "void main() {"
-           "    vec3 lightPos = vec3(2.0, 2.0, 2.0);"
-           "    vec3 lightColor = vec3(1.0, 1.0, 1.0);"
-           "    float ambientStrength = 0.3;"
-           "    vec3 ambient = ambientStrength * lightColor;"
-           "    vec3 norm = normalize(vNormal);"
-           "    vec3 lightDir = normalize(lightPos - vFragPos);"
-           "    float diff = max(dot(norm, lightDir), 0.0);"
-           "    vec3 diffuse = diff * lightColor;"
-           "    vec3 result = (ambient + diffuse) * vColor;"
-           "    gl_FragColor = vec4(result, 1.0);"
-           "}";
-}
-
-void OpenGL3DRenderer::paint() {
+void OpenGLRenderer::paint() {
     if(!m_program || !m_geometryData) {
-        LOG_WARN("Cannot paint: program={}, geometryData={}", static_cast<void*>(m_program),
-                 static_cast<void*>(m_geometryData.get()));
+        LOG_TRACE("Skipping paint: program={}, geometryData={}", static_cast<void*>(m_program),
+                  static_cast<void*>(m_geometryData.get()));
         return;
     }
 
-    LOG_TRACE("OpenGL3DRenderer::paint() called, rotation={}", m_rotation);
+    LOG_TRACE("OpenGLRenderer::paint() called");
 
     m_window->beginExternalCommands();
 
@@ -229,13 +250,20 @@ void OpenGL3DRenderer::paint() {
     // Setup vertex attributes
     setupVertexAttributes();
 
-    // Calculate and set transformation matrices
+    // Set transformation matrices
     QMatrix4x4 model;
-    model.rotate(m_rotation, 0.5f, 1.0f, 0.0f);
+    model.setToIdentity();
+    model.rotate(m_rotationY, 0.0f, 1.0f, 0.0f); // Rotate around Y axis (left-right drag)
+    model.rotate(m_rotationX, 1.0f, 0.0f, 0.0f); // Rotate around X axis (up-down drag)
+
     QMatrix4x4 mvp = calculateMVPMatrix();
 
     m_program->setUniformValue("uMVP", mvp);
     m_program->setUniformValue("uModel", model);
+
+    // Set color override
+    QVector4D colorOverride(m_color.redF(), m_color.greenF(), m_color.blueF(), m_color.alphaF());
+    m_program->setUniformValue("uColorOverride", colorOverride);
 
     // Draw geometry
     if(m_geometryData->indices() && m_geometryData->indexCount() > 0) {
@@ -253,15 +281,4 @@ void OpenGL3DRenderer::paint() {
     m_program->release();
 
     m_window->endExternalCommands();
-
-    // Update rotation for animation
-    m_rotation += 1.0;
-    if(m_rotation >= 360.0) {
-        m_rotation = 0.0;
-    }
-
-    // Trigger continuous updates
-    if(m_window) {
-        m_window->update();
-    }
 }

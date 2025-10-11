@@ -128,8 +128,8 @@ qt_add_qml_module(
   QML_FILES
   source/Main.qml
   SOURCES
-  source/cube_renderer.cpp
-  source/cube_renderer.h
+  source/geometry3d.cpp
+  source/geometry3d.h
   source/opengl_renderer.cpp
   source/opengl_renderer.h
   source/logger.cpp
