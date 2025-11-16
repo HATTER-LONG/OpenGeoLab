@@ -3,8 +3,26 @@
 // Example:
 [
   {
-    "label": "cmake generate",
-    "command": "& 'C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\Common7\\Tools\\Launch-VsDevShell.ps1' -Arch amd64 -HostArch amd64;cd $ZED_WORKTREE_ROOT;cmake -DCMAKE_BUILD_TYPE:STRING=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=TRUE -DQT_QML_GENERATE_QMLLS_INI:STRING=ON -S . -B build -G Ninja",
+    "label": "cmake generate(default)",
+    "command": "cmake -DCMAKE_BUILD_TYPE:STRING=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=TRUE -DQT_QML_GENERATE_QMLLS_INI:STRING=ON -S . -B build -G Ninja",
+    "env": { "CPM_SOURCE_CACHE": "$ZED_WORKTREE_ROOT/cpm_modules" },
+    "hide": "on_success",
+    "shell": {
+      "with_arguments": {
+        "program": "powershell",
+        "args": []
+      }
+    }
+  },
+  {
+    "label": "CMake build(default)",
+    "command": "cmake --build build --config Debug",
+    "args": [],
+    "hide": "on_success"
+  },
+  {
+    "label": "cmake generate(msvc)",
+    "command": "& 'C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\Common7\\Tools\\Launch-VsDevShell.ps1' -Arch amd64 -HostArch amd64;cd $ZED_WORKTREE_ROOT;cmake -DCMAKE_BUILD_TYPE:STRING=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=TRUE -DQT_QML_GENERATE_QMLLS_INI:STRING=ON -S . -B build -G Ninja",
     //"args": [],
     // Env overrides for the command, will be appended to the terminal's environment from the settings.
     "env": { "CPM_SOURCE_CACHE": "$ZED_WORKTREE_ROOT/cpm_modules" },
@@ -42,7 +60,7 @@
     // "tags": []
   },
   {
-    "label": "CMake build ",
+    "label": "CMake build(msvc)",
     "command": "& 'C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\Common7\\Tools\\Launch-VsDevShell.ps1' -Arch amd64 -HostArch amd64;cd $ZED_WORKTREE_ROOT;cmake --build build --config Debug",
     "args": [],
     "hide": "on_success"
