@@ -134,6 +134,8 @@ qt_add_qml_module(
   source/opengl_renderer.h
   source/logger.cpp
   source/logger.hpp
+  source/model_importer.cpp
+  source/model_importer.h
 )
 
 # ==============================================================================

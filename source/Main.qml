@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Window
 import QtQuick.Layouts
 import QtQuick.Controls
+import QtQuick.Dialogs
 import OpenGeoLab
 
 Window {
@@ -11,7 +12,15 @@ Window {
     width: 960
     height: 600
     title: "OpenGeoLab - 3D Geometry Renderer"
-
+    // File dialog for model import
+    FileDialog {
+        id: fileDialog
+        title: "Import Model"
+        nameFilters: ["STEP files (*.stp *.step)", "BREP files (*.brep)", "All files (*)"]
+        onAccepted: {
+            ModelImporter.importModel(selectedFile);
+        }
+    }
     // 3D Geometry renderer - fills most of the window, leaving space for control panel
     Geometry3D {
         id: geometryRenderer
@@ -23,7 +32,6 @@ Window {
         // Default: use vertex colors (alpha = 0)
         color: Qt.rgba(0, 0, 0, 0)
     }
-
     // Left control panel
     Rectangle {
         id: controlPanel
@@ -68,6 +76,21 @@ Window {
                     font.pixelSize: 14
                 }
 
+                // Model Import Button
+                Button {
+                    text: "Import Model"
+                    Layout.fillWidth: true
+                    onClicked: {
+                        fileDialog.open();
+                    }
+                }
+
+                // Separator
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 2
+                    color: Qt.rgba(1, 1, 1, 0.3)
+                }
                 Button {
                     text: "Cube"
                     Layout.fillWidth: true
