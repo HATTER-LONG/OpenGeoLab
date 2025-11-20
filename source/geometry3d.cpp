@@ -62,6 +62,23 @@ void Geometry3D::setGeometryType(const QString& type) {
     }
 }
 
+void Geometry3D::setCustomGeometry(std::shared_ptr<GeometryData> geometry_data) {
+    if(m_renderer && geometry_data) {
+        m_renderer->setGeometryData(geometry_data);
+        LOG_INFO("Custom geometry set: {} vertices, {} indices", geometry_data->vertexCount(),
+                 geometry_data->indexCount());
+
+        // Trigger repaint
+        if(window()) {
+            window()->update();
+        }
+    } else if(!m_renderer) {
+        LOG_DEBUG("Cannot set custom geometry: renderer not initialized");
+    } else {
+        LOG_DEBUG("Cannot set custom geometry: null geometry data provided");
+    }
+}
+
 void Geometry3D::handleWindowChanged(QQuickWindow* win) {
     if(win) {
         LOG_DEBUG("Geometry3D window changed, setting up connections");

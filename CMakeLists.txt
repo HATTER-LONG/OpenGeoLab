@@ -88,6 +88,40 @@ else()
   )
 endif()
 
+# Find Open CASCADE Technology
+find_package(OpenCASCADE REQUIRED)
+
+message(STATUS "Using OpenCASCADE from \"${OpenCASCADE_INSTALL_PREFIX}\"")
+message(STATUS "OpenCASCADE_INCLUDE_DIR=${OpenCASCADE_INCLUDE_DIR}")
+message(STATUS "OpenCASCADE_LIBRARY_DIR=${OpenCASCADE_LIBRARY_DIR}")
+include_directories(${OpenCASCADE_INCLUDE_DIR})
+link_directories(${OpenCASCADE_LIBRARY_DIR})
+
+set(OpenCASCADE_LIBS
+    TKRWMesh
+    TKBinXCAF
+    TKBin
+    TKBinL
+    TKXCAF
+    TKVCAF
+    TKCAF
+    TKMesh
+    TKShHealing
+    TKPrim
+    TKTopAlgo
+    TKGeomAlgo
+    TKBRep
+    TKXSBase
+    TKDESTEP
+    TKGeomBase
+    TKG3d
+    TKG2d
+    TKMath
+    TKLCAF
+    TKCDF
+    TKernel
+)
+
 # Qt 6: GUI framework with QML support
 find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui Qml Quick)
 qt_standard_project_setup(REQUIRES 6.8)
@@ -174,6 +208,7 @@ target_link_libraries(
           Kangaroo::Kangaroo
           cxxopts
           fmt::fmt
+          ${OpenCASCADE_LIBS}
 )
 
 # ==============================================================================

@@ -54,10 +54,17 @@ public:
      */
     Q_INVOKABLE void setGeometryType(const QString& type);
 
+    /**
+     * @brief Set custom geometry data from external source
+     * @param geometry_data Shared pointer to geometry data
+     */
+    Q_INVOKABLE void setCustomGeometry(std::shared_ptr<GeometryData> geometry_data);
+
 signals:
     void colorChanged();
     void geometryTypeChanged();
     void rendererReady();
+    void modelLoadFailed(const QString& error);
 
 public slots:
     /**

@@ -222,3 +222,45 @@ private:
     std::vector<float> m_vertices;
     std::vector<unsigned int> m_indices;
 };
+
+/**
+ * @brief Mesh geometry data for imported models
+ *
+ * Provides vertex data for meshes loaded from external files (BREP, STEP, etc.)
+ * Each vertex contains: position (3 floats), normal (3 floats), color (3 floats)
+ * Total: 9 floats per vertex
+ */
+class MeshData : public GeometryData {
+public:
+    MeshData() = default;
+
+    /**
+     * @brief Set vertex data (moves data to avoid copying)
+     * @param vertex_data Vector containing position, normal, and color data (9 floats per vertex)
+     */
+    void setVertexData(std::vector<float>&& vertex_data) { m_vertex_data = std::move(vertex_data); }
+
+    /**
+     * @brief Set index data (moves data to avoid copying)
+     * @param index_data Vector containing triangle indices
+     */
+    void setIndexData(std::vector<unsigned int>&& index_data) {
+        m_index_data = std::move(index_data);
+    }
+
+    const float* vertices() const override { return m_vertex_data.data(); }
+
+    int vertexCount() const override {
+        return static_cast<int>(m_vertex_data.size() / 9); // 9 floats per vertex
+    }
+
+    const unsigned int* indices() const override {
+        return m_index_data.empty() ? nullptr : m_index_data.data();
+    }
+
+    int indexCount() const override { return static_cast<int>(m_index_data.size()); }
+
+private:
+    std::vector<float> m_vertex_data;       // position(3) + normal(3) + color(3)
+    std::vector<unsigned int> m_index_data; // Triangle indices
+};

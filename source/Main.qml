@@ -12,15 +12,59 @@ Window {
     width: 960
     height: 600
     title: "OpenGeoLab - 3D Geometry Renderer"
+
+    Component.onCompleted: {
+        // 设置 ModelImporter 的目标渲染器
+        ModelImporter.setTargetRenderer(geometryRenderer);
+    }
+
+    // 连接 ModelImporter 信号
+    Connections {
+        target: ModelImporter
+        function onModelLoaded(filename) {
+            statusText.text = "Loaded: " + filename;
+            statusText.color = "lightgreen";
+        }
+        function onModelLoadFailed(error) {
+            statusText.text = "Error: " + error;
+            statusText.color = "red";
+        }
+    }
+
     // File dialog for model import
     FileDialog {
         id: fileDialog
         title: "Import Model"
         nameFilters: ["STEP files (*.stp *.step)", "BREP files (*.brep)", "All files (*)"]
         onAccepted: {
+            statusText.text = "Loading model...";
+            statusText.color = "yellow";
             ModelImporter.importModel(selectedFile);
         }
     }
+
+    // Status text overlay
+    Text {
+        id: statusText
+        color: "white"
+        font.pixelSize: 14
+        font.bold: true
+        text: "Ready to import model"
+        anchors.top: parent.top
+        anchors.left: controlPanel.right
+        anchors.margins: 15
+        z: 100
+
+        // Background for better visibility
+        Rectangle {
+            anchors.fill: parent
+            anchors.margins: -5
+            color: Qt.rgba(0, 0, 0, 0.7)
+            radius: 5
+            z: -1
+        }
+    }
+
     // 3D Geometry renderer - fills most of the window, leaving space for control panel
     Geometry3D {
         id: geometryRenderer
