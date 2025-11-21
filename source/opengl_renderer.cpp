@@ -30,7 +30,19 @@ void OpenGLRenderer::setColor(const QColor& color) {
 void OpenGLRenderer::setRotation(qreal rotation_x, qreal rotation_y) {
     m_rotationX = rotation_x;
     m_rotationY = rotation_y;
-    LOG_TRACE("Rotation set to: X={}, Y={}", rotationX, rotationY);
+    LOG_TRACE("Rotation set to: X={}, Y={}", rotation_x, rotation_y);
+}
+
+void OpenGLRenderer::setZoom(qreal zoom) {
+    // Clamp zoom to extended range (0.01x to 100x)
+    m_zoom = qBound(0.01, zoom, 100.0);
+    LOG_TRACE("Zoom set to: {}", m_zoom);
+}
+
+void OpenGLRenderer::setPan(qreal pan_x, qreal pan_y) {
+    m_panX = pan_x;
+    m_panY = pan_y;
+    LOG_TRACE("Pan set to: X={}, Y={}", m_panX, m_panY);
 }
 
 void OpenGLRenderer::init() {
@@ -93,7 +105,7 @@ void OpenGLRenderer::createShaderProgram() {
                                   "varying vec3 vNormal;"
                                   "varying vec3 vFragPos;"
                                   "void main() {"
-                                  "    vec3 lightPos = vec3(2.0, 2.0, 2.0);"
+                                  "    vec3 lightPos = vec3(50.0, 50.0, 50.0);"
                                   "    vec3 lightColor = vec3(1.0, 1.0, 1.0);"
                                   "    float ambientStrength = 0.3;"
                                   "    vec3 ambient = ambientStrength * lightColor;"
@@ -200,20 +212,28 @@ void OpenGLRenderer::setupVertexAttributes() {
 QMatrix4x4 OpenGLRenderer::calculateMVPMatrix() const {
     QMatrix4x4 model, view, projection;
 
-    // Model matrix - apply rotations
+    // Model matrix - apply rotations around model center
     model.setToIdentity();
     model.rotate(m_rotationY, 0.0f, 1.0f, 0.0f); // Rotate around Y axis (left-right drag)
     model.rotate(m_rotationX, 1.0f, 0.0f, 0.0f); // Rotate around X axis (up-down drag)
 
-    // View matrix - camera position
-    view.lookAt(QVector3D(0, 0, 3),  // Camera position
-                QVector3D(0, 0, 0),  // Look at origin
+    // View matrix - camera position with zoom and pan
+    // Camera orbit: fixed distance * zoom factor
+    float camera_distance = 3.0f / m_zoom; // Zoom in = closer camera
+
+    // Apply pan by translating the look-at target
+    QVector3D look_at_target(m_panX, m_panY, 0.0f);
+    QVector3D camera_position(m_panX, m_panY, camera_distance);
+
+    view.lookAt(camera_position,     // Camera position (affected by zoom and pan)
+                look_at_target,      // Look at target (affected by pan)
                 QVector3D(0, 1, 0)); // Up direction
 
     // Projection matrix - perspective projection
+    // Extended far clipping plane to support wide zoom range
     float aspect =
         static_cast<float>(m_viewportSize.width()) / static_cast<float>(m_viewportSize.height());
-    projection.perspective(45.0f, aspect, 0.1f, 100.0f);
+    projection.perspective(45.0f, aspect, 0.01f, 10000.0f); // Near: 0.01, Far: 10000
 
     return projection * view * model;
 }

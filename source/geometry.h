@@ -2,7 +2,9 @@
 // Separates vertex data from rendering logic for better modularity
 #pragma once
 
+#include <algorithm>
 #include <cmath>
+#include <limits>
 #include <vector>
 
 /**
@@ -38,6 +40,30 @@ struct GeometryData {
      * @return Total index count, or 0 if not using indexed drawing
      */
     virtual int indexCount() const { return 0; }
+
+    /**
+     * @brief Get bounding box of the geometry
+     * @param min_point Output parameter for minimum corner (x, y, z)
+     * @param max_point Output parameter for maximum corner (x, y, z)
+     * @return true if bounding box is valid, false otherwise
+     */
+    virtual bool getBoundingBox(float min_point[3], float max_point[3]) const {
+        if(vertexCount() == 0)
+            return false;
+
+        const float* verts = vertices();
+        min_point[0] = min_point[1] = min_point[2] = std::numeric_limits<float>::max();
+        max_point[0] = max_point[1] = max_point[2] = std::numeric_limits<float>::lowest();
+
+        for(int i = 0; i < vertexCount(); ++i) {
+            int idx = i * 9; // 9 floats per vertex (pos, normal, color)
+            for(int j = 0; j < 3; ++j) {
+                min_point[j] = std::min(min_point[j], verts[idx + j]);
+                max_point[j] = std::max(max_point[j], verts[idx + j]);
+            }
+        }
+        return true;
+    }
 };
 
 /**

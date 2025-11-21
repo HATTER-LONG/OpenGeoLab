@@ -60,6 +60,23 @@ public:
      */
     Q_INVOKABLE void setCustomGeometry(std::shared_ptr<GeometryData> geometry_data);
 
+    /**
+     * @brief Get current zoom level
+     * @return Zoom factor
+     */
+    qreal zoom() const { return m_zoom; }
+
+    /**
+     * @brief Set zoom level
+     * @param zoom Zoom factor
+     */
+    void setZoom(qreal zoom);
+
+    /**
+     * @brief Auto-fit the view to show the entire geometry
+     */
+    Q_INVOKABLE void fitToView();
+
 signals:
     void colorChanged();
     void geometryTypeChanged();
@@ -97,6 +114,11 @@ protected:
      */
     void mouseReleaseEvent(QMouseEvent* event) override;
 
+    /**
+     * @brief Handle mouse wheel events (for zooming)
+     */
+    void wheelEvent(QWheelEvent* event) override;
+
 private:
     void releaseResources() override;
     void initializeGeometry();
@@ -107,7 +129,11 @@ private:
 
     // Mouse interaction state
     bool m_isDragging = false;
+    bool m_isPanning = false; // Is panning with Shift+Left button
     QPointF m_lastMousePos;
     qreal m_rotationX = 0.0; // Rotation around X axis
     qreal m_rotationY = 0.0; // Rotation around Y axis
+    qreal m_zoom = 1.0;      // Camera zoom factor
+    qreal m_panX = 0.0;      // Camera horizontal pan
+    qreal m_panY = 0.0;      // Camera vertical pan
 };

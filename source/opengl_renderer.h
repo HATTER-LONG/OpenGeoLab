@@ -48,6 +48,12 @@ public:
     QColor color() const { return m_color; }
 
     /**
+     * @brief Get current geometry data
+     * @return Shared pointer to current geometry data
+     */
+    std::shared_ptr<GeometryData> geometryData() const { return m_geometryData; }
+
+    /**
      * @brief Set rotation angles for the geometry
      * @param rotationX Rotation around X axis in degrees
      * @param rotationY Rotation around Y axis in degrees
@@ -59,6 +65,31 @@ public:
      * @return QPair with X and Y rotation angles in degrees
      */
     QPair<qreal, qreal> rotation() const { return qMakePair(m_rotationX, m_rotationY); }
+
+    /**
+     * @brief Set camera zoom level
+     * @param zoom Zoom factor (> 1.0 zooms in, < 1.0 zooms out)
+     */
+    void setZoom(qreal zoom);
+
+    /**
+     * @brief Get current zoom level
+     * @return Current zoom factor
+     */
+    qreal zoom() const { return m_zoom; }
+
+    /**
+     * @brief Set camera pan offset
+     * @param panX Horizontal pan offset
+     * @param panY Vertical pan offset
+     */
+    void setPan(qreal pan_x, qreal pan_y);
+
+    /**
+     * @brief Get current pan offset
+     * @return QPair with X and Y pan offsets
+     */
+    QPair<qreal, qreal> pan() const { return qMakePair(m_panX, m_panY); }
 
     // Viewport and window management
     void setViewportSize(const QSize& size) { m_viewportSize = size; }
@@ -104,9 +135,12 @@ private:
     bool m_initialized = false;
     bool m_needsBufferUpdate = false;
 
-    // Rotation angles in degrees
-    qreal m_rotationX = 0.0;
-    qreal m_rotationY = 0.0;
+    // Camera transformation parameters
+    qreal m_rotationX = 0.0; // Rotation around X axis in degrees
+    qreal m_rotationY = 0.0; // Rotation around Y axis in degrees
+    qreal m_zoom = 1.0;      // Zoom factor (distance multiplier)
+    qreal m_panX = 0.0;      // Camera horizontal pan
+    qreal m_panY = 0.0;      // Camera vertical pan
 
     // OpenGL resources
     QOpenGLShaderProgram* m_program = nullptr;
