@@ -1,3 +1,11 @@
+/**
+ * @file model_importer.cpp
+ * @brief Implementation of model importer for 3D file formats
+ *
+ * Supports loading and converting BREP files using Open CASCADE Technology.
+ * Uses mesh triangulation to generate renderable geometry data.
+ */
+
 #include "model_importer.h"
 #include "geometry.h"
 #include "geometry3d.h"
@@ -23,13 +31,16 @@
 #include <unordered_map>
 #include <vector>
 
+namespace OpenGeoLab {
+namespace IO {
+
 ModelImporter::ModelImporter(QObject* parent) : QObject(parent) {
     LOG_INFO("ModelImporter initialized");
 }
 
 void ModelImporter::setTargetRenderer(QObject* renderer) {
-    m_target_renderer = qobject_cast<Geometry3D*>(renderer);
-    if(m_target_renderer) {
+    m_targetRenderer = qobject_cast<UI::Geometry3D*>(renderer);
+    if(m_targetRenderer) {
         LOG_INFO("Target renderer set successfully");
     } else {
         LOG_DEBUG("Failed to set target renderer - invalid object type");
@@ -47,9 +58,9 @@ void ModelImporter::importModel(const QUrl& file_url) {
         return;
     }
 
-    std::shared_ptr<GeometryData> geometry_data;
+    std::shared_ptr<Geometry::GeometryData> geometry_data;
 
-    // 根据文件扩展名选择加载器
+    // Select loader based on file extension
     if(file_path.endsWith(".brep", Qt::CaseInsensitive)) {
         geometry_data = loadBrepFile(file_path);
     } else if(file_path.endsWith(".stp", Qt::CaseInsensitive) ||
@@ -69,9 +80,9 @@ void ModelImporter::importModel(const QUrl& file_url) {
         return;
     }
 
-    // 将几何数据传递给渲染器
-    if(m_target_renderer) {
-        m_target_renderer->setCustomGeometry(geometry_data);
+    // Pass geometry data to renderer
+    if(m_targetRenderer) {
+        m_targetRenderer->setCustomGeometry(geometry_data);
         LOG_INFO("Model loaded successfully: {} vertices, {} indices", geometry_data->vertexCount(),
                  geometry_data->indexCount());
         emit modelLoaded(QFileInfo(file_path).fileName());
@@ -81,9 +92,9 @@ void ModelImporter::importModel(const QUrl& file_url) {
     }
 }
 
-std::shared_ptr<GeometryData> ModelImporter::loadBrepFile(const QString& file_path) {
+std::shared_ptr<Geometry::GeometryData> ModelImporter::loadBrepFile(const QString& file_path) {
     try {
-        // 1. 读取 BREP 文件
+        // Step 1: Read BREP file
         TopoDS_Shape shape;
         BRep_Builder builder;
 
@@ -97,7 +108,7 @@ std::shared_ptr<GeometryData> ModelImporter::loadBrepFile(const QString& file_pa
             return nullptr;
         }
 
-        // 2. 执行三角剖分（线性偏差 0.1，角度偏差 0.5 弧度）
+        // Step 2: Perform triangulation (linear deflection 0.1, angular deflection 0.5 rad)
         BRepMesh_IncrementalMesh mesher(shape, 0.1, Standard_False, 0.5, Standard_True);
         mesher.Perform();
 
@@ -106,11 +117,11 @@ std::shared_ptr<GeometryData> ModelImporter::loadBrepFile(const QString& file_pa
             return nullptr;
         }
 
-        // 3. 提取三角形数据
+        // Step 3: Extract triangle data
         std::vector<float> vertex_data;
         std::vector<unsigned int> index_data;
 
-        // 用于顶点去重
+        // Vertex deduplication structure
         struct Vertex {
             float x, y, z;
             float nx, ny, nz;
@@ -133,7 +144,7 @@ std::shared_ptr<GeometryData> ModelImporter::loadBrepFile(const QString& file_pa
         std::unordered_map<Vertex, unsigned int, VertexHash> vertex_map;
         unsigned int current_index = 0;
 
-        // 遍历所有面
+        // Traverse all faces
         for(TopExp_Explorer face_exp(shape, TopAbs_FACE); face_exp.More(); face_exp.Next()) {
             TopoDS_Face face = TopoDS::Face(face_exp.Current());
             TopLoc_Location location;
@@ -145,32 +156,32 @@ std::shared_ptr<GeometryData> ModelImporter::loadBrepFile(const QString& file_pa
                 continue;
             }
 
-            // 获取变换矩阵
+            // Get transformation matrix
             gp_Trsf transform = location.Transformation();
 
-            // 计算面法线方向
+            // Calculate face normal direction
             bool is_reversed = (face.Orientation() == TopAbs_REVERSED);
 
             const Poly_Array1OfTriangle& triangles = triangulation->InternalTriangles();
 
-            // 遍历所有三角形
+            // Traverse all triangles
             for(int i = triangles.Lower(); i <= triangles.Upper(); ++i) {
                 const Poly_Triangle& triangle = triangles(i);
 
                 int n1, n2, n3;
                 triangle.Get(n1, n2, n3);
 
-                // 根据面方向调整三角形顶点顺序
+                // Adjust triangle vertex order based on face orientation
                 if(is_reversed) {
                     std::swap(n2, n3);
                 }
 
-                // 获取三个顶点
+                // Get three vertices
                 gp_Pnt p1 = triangulation->Node(n1).Transformed(transform);
                 gp_Pnt p2 = triangulation->Node(n2).Transformed(transform);
                 gp_Pnt p3 = triangulation->Node(n3).Transformed(transform);
 
-                // 计算三角形法线
+                // Calculate triangle normal
                 gp_Vec v1(p1, p2);
                 gp_Vec v2(p1, p3);
                 gp_Vec normal = v1.Crossed(v2);
@@ -178,10 +189,10 @@ std::shared_ptr<GeometryData> ModelImporter::loadBrepFile(const QString& file_pa
                 if(normal.Magnitude() > 1e-7) {
                     normal.Normalize();
                 } else {
-                    normal = gp_Vec(0, 0, 1); // 退化三角形，使用默认法线
+                    normal = gp_Vec(0, 0, 1); // Degenerate triangle, use default normal
                 }
 
-                // 处理三个顶点
+                // Process three vertices
                 gp_Pnt points[3] = {p1, p2, p3};
                 for(int j = 0; j < 3; ++j) {
                     Vertex vertex;
@@ -192,10 +203,10 @@ std::shared_ptr<GeometryData> ModelImporter::loadBrepFile(const QString& file_pa
                     vertex.ny = static_cast<float>(normal.Y());
                     vertex.nz = static_cast<float>(normal.Z());
 
-                    // 查找或插入顶点
+                    // Find or insert vertex
                     auto it = vertex_map.find(vertex);
                     if(it == vertex_map.end()) {
-                        // 新顶点 - 添加到缓冲区
+                        // New vertex - add to buffer
                         vertex_data.push_back(vertex.x);
                         vertex_data.push_back(vertex.y);
                         vertex_data.push_back(vertex.z);
@@ -204,13 +215,13 @@ std::shared_ptr<GeometryData> ModelImporter::loadBrepFile(const QString& file_pa
                         vertex_data.push_back(vertex.nz);
                         vertex_data.push_back(0.8f); // R
                         vertex_data.push_back(0.8f); // G
-                        vertex_data.push_back(0.8f); // B (默认灰色)
+                        vertex_data.push_back(0.8f); // B (default gray color)
 
                         vertex_map[vertex] = current_index;
                         index_data.push_back(current_index);
                         ++current_index;
                     } else {
-                        // 已存在的顶点 - 重用索引
+                        // Existing vertex - reuse index
                         index_data.push_back(it->second);
                     }
                 }
@@ -222,8 +233,8 @@ std::shared_ptr<GeometryData> ModelImporter::loadBrepFile(const QString& file_pa
             return nullptr;
         }
 
-        // 4. 创建 MeshData 对象
-        auto mesh_data = std::make_shared<MeshData>();
+        // Step 4: Create MeshData object
+        auto mesh_data = std::make_shared<Geometry::MeshData>();
         mesh_data->setVertexData(std::move(vertex_data));
         mesh_data->setIndexData(std::move(index_data));
 
@@ -241,11 +252,14 @@ std::shared_ptr<GeometryData> ModelImporter::loadBrepFile(const QString& file_pa
     }
 }
 
-std::shared_ptr<GeometryData>
+std::shared_ptr<Geometry::GeometryData>
 ModelImporter::loadStepFile([[maybe_unused]] const QString& file_path) {
-    // STEP 文件加载需要 STEPControl_Reader
-    // 留待后续实现
+    // STEP file loading requires STEPControl_Reader
+    // To be implemented in future
     LOG_DEBUG("STEP file import not yet implemented");
     emit modelLoadFailed("STEP file format not yet supported");
     return nullptr;
 }
+
+} // namespace IO
+} // namespace OpenGeoLab

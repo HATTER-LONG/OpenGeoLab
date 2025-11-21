@@ -1,3 +1,14 @@
+/**
+ * @file model_importer.h
+ * @brief QML singleton for importing 3D model files
+ *
+ * Provides functionality to load 3D models from various file formats
+ * (BREP, STEP) and convert them to renderable geometry data.
+ *
+ * @author OpenGeoLab Team
+ * @date 2024
+ */
+
 #pragma once
 
 #include <QObject>
@@ -5,8 +16,15 @@
 #include <QUrl>
 #include <memory>
 
+namespace OpenGeoLab {
+namespace Geometry {
 class GeometryData;
+} // namespace Geometry
+namespace UI {
 class Geometry3D;
+} // namespace UI
+
+namespace IO {
 
 /**
  * @brief Model importer for loading 3D geometry files
@@ -53,14 +71,17 @@ private:
      * @param file_path Local file path to BREP file
      * @return Shared pointer to geometry data, or nullptr on failure
      */
-    std::shared_ptr<GeometryData> loadBrepFile(const QString& file_path);
+    std::shared_ptr<Geometry::GeometryData> loadBrepFile(const QString& file_path);
 
     /**
      * @brief Load a STEP file and convert to geometry data
      * @param file_path Local file path to STEP file
      * @return Shared pointer to geometry data, or nullptr on failure
      */
-    std::shared_ptr<GeometryData> loadStepFile(const QString& file_path);
+    std::shared_ptr<Geometry::GeometryData> loadStepFile(const QString& file_path);
 
-    Geometry3D* m_target_renderer = nullptr;
+    UI::Geometry3D* m_targetRenderer = nullptr;
 };
+
+} // namespace IO
+} // namespace OpenGeoLab

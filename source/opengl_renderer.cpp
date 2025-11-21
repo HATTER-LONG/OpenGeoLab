@@ -1,8 +1,15 @@
-// opengl_renderer.cpp - Implementation of OpenGL renderer
+/**
+ * @file opengl_renderer.cpp
+ * @brief Implementation of OpenGL renderer for 3D geometry
+ */
+
 #include "opengl_renderer.h"
 #include "logger.hpp"
 
 #include <QMatrix4x4>
+
+namespace OpenGeoLab {
+namespace Rendering {
 
 // ============================================================================
 // OpenGLRenderer Implementation
@@ -10,7 +17,7 @@
 
 OpenGLRenderer::~OpenGLRenderer() { delete m_program; }
 
-void OpenGLRenderer::setGeometryData(std::shared_ptr<GeometryData> geometry_data) {
+void OpenGLRenderer::setGeometryData(std::shared_ptr<Geometry::GeometryData> geometry_data) {
     m_geometryData = geometry_data;
     m_needsBufferUpdate = true;
 
@@ -34,8 +41,8 @@ void OpenGLRenderer::setRotation(qreal rotation_x, qreal rotation_y) {
 }
 
 void OpenGLRenderer::setZoom(qreal zoom) {
-    // Clamp zoom to extended range (0.01x to 100x)
-    m_zoom = qBound(0.01, zoom, 100.0);
+    // Clamp zoom to extended range for stability
+    m_zoom = qBound(MIN_ZOOM, zoom, MAX_ZOOM);
     LOG_TRACE("Zoom set to: {}", m_zoom);
 }
 
@@ -218,8 +225,8 @@ QMatrix4x4 OpenGLRenderer::calculateMVPMatrix() const {
     model.rotate(m_rotationX, 1.0f, 0.0f, 0.0f); // Rotate around X axis (up-down drag)
 
     // View matrix - camera position with zoom and pan
-    // Camera orbit: fixed distance * zoom factor
-    float camera_distance = 3.0f / m_zoom; // Zoom in = closer camera
+    // Camera orbit: base distance divided by zoom factor (zoom in = closer camera)
+    float camera_distance = DEFAULT_CAMERA_DISTANCE / m_zoom;
 
     // Apply pan by translating the look-at target
     QVector3D look_at_target(m_panX, m_panY, 0.0f);
@@ -311,3 +318,6 @@ void OpenGLRenderer::paint() {
 
     m_window->endExternalCommands();
 }
+
+} // namespace Rendering
+} // namespace OpenGeoLab

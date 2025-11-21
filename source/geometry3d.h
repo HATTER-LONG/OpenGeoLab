@@ -1,10 +1,23 @@
-// geometry3d.h - QML item for 3D geometry rendering
-// Simple wrapper around OpenGLRenderer for QML integration
+/**
+ * @file geometry3d.h
+ * @brief QML item for interactive 3D geometry rendering
+ *
+ * Provides a Qt Quick item that wraps OpenGLRenderer for easy QML integration.
+ * Supports mouse interaction (rotation, pan, zoom) and dynamic geometry loading.
+ *
+ * @author OpenGeoLab Team
+ * @date 2024
+ */
+
 #pragma once
 
 #include "opengl_renderer.h"
+
 #include <QColor>
 #include <QtQuick/QQuickItem>
+
+namespace OpenGeoLab {
+namespace UI {
 
 /**
  * @brief QML item for 3D geometry rendering
@@ -58,7 +71,7 @@ public:
      * @brief Set custom geometry data from external source
      * @param geometry_data Shared pointer to geometry data
      */
-    Q_INVOKABLE void setCustomGeometry(std::shared_ptr<GeometryData> geometry_data);
+    Q_INVOKABLE void setCustomGeometry(std::shared_ptr<Geometry::GeometryData> geometry_data);
 
     /**
      * @brief Get current zoom level
@@ -123,13 +136,13 @@ private:
     void releaseResources() override;
     void initializeGeometry();
 
-    OpenGLRenderer* m_renderer = nullptr;
+    Rendering::OpenGLRenderer* m_renderer = nullptr;
     QColor m_color = QColor(0, 0, 0, 0); // Default: use vertex colors
     QString m_geometryType = "cube";     // Default geometry type
 
     // Mouse interaction state
     bool m_isDragging = false;
-    bool m_isPanning = false; // Is panning with Shift+Left button
+    bool m_isPanning = false; // Panning with Shift+Left button
     QPointF m_lastMousePos;
     qreal m_rotationX = 0.0; // Rotation around X axis
     qreal m_rotationY = 0.0; // Rotation around Y axis
@@ -137,3 +150,6 @@ private:
     qreal m_panX = 0.0;      // Camera horizontal pan
     qreal m_panY = 0.0;      // Camera vertical pan
 };
+
+} // namespace UI
+} // namespace OpenGeoLab

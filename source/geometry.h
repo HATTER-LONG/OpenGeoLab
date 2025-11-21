@@ -1,5 +1,15 @@
-// geometry.h - Geometry data definitions
-// Separates vertex data from rendering logic for better modularity
+/**
+ * @file geometry.h
+ * @brief Geometry data structures for 3D rendering
+ *
+ * Defines abstract and concrete geometry data classes for various 3D shapes.
+ * Separates vertex data from rendering logic for better modularity.
+ * Each vertex contains: position (3 floats), normal (3 floats), color (3 floats).
+ *
+ * @author OpenGeoLab Team
+ * @date 2024
+ */
+
 #pragma once
 
 #include <algorithm>
@@ -7,8 +17,11 @@
 #include <limits>
 #include <vector>
 
+namespace OpenGeoLab {
+namespace Geometry {
+
 /**
- * @brief Base class for geometry data
+ * @brief Abstract base class for geometry data
  *
  * This abstract class defines the interface for geometry data,
  * allowing different geometric shapes to provide their vertex
@@ -48,8 +61,9 @@ struct GeometryData {
      * @return true if bounding box is valid, false otherwise
      */
     virtual bool getBoundingBox(float min_point[3], float max_point[3]) const {
-        if(vertexCount() == 0)
+        if(vertexCount() == 0) {
             return false;
+        }
 
         const float* verts = vertices();
         min_point[0] = min_point[1] = min_point[2] = std::numeric_limits<float>::max();
@@ -264,29 +278,32 @@ public:
      * @brief Set vertex data (moves data to avoid copying)
      * @param vertex_data Vector containing position, normal, and color data (9 floats per vertex)
      */
-    void setVertexData(std::vector<float>&& vertex_data) { m_vertex_data = std::move(vertex_data); }
+    void setVertexData(std::vector<float>&& vertex_data) { m_vertexData = std::move(vertex_data); }
 
     /**
      * @brief Set index data (moves data to avoid copying)
      * @param index_data Vector containing triangle indices
      */
     void setIndexData(std::vector<unsigned int>&& index_data) {
-        m_index_data = std::move(index_data);
+        m_indexData = std::move(index_data);
     }
 
-    const float* vertices() const override { return m_vertex_data.data(); }
+    const float* vertices() const override { return m_vertexData.data(); }
 
     int vertexCount() const override {
-        return static_cast<int>(m_vertex_data.size() / 9); // 9 floats per vertex
+        return static_cast<int>(m_vertexData.size() / 9); // 9 floats per vertex
     }
 
     const unsigned int* indices() const override {
-        return m_index_data.empty() ? nullptr : m_index_data.data();
+        return m_indexData.empty() ? nullptr : m_indexData.data();
     }
 
-    int indexCount() const override { return static_cast<int>(m_index_data.size()); }
+    int indexCount() const override { return static_cast<int>(m_indexData.size()); }
 
 private:
-    std::vector<float> m_vertex_data;       // position(3) + normal(3) + color(3)
-    std::vector<unsigned int> m_index_data; // Triangle indices
+    std::vector<float> m_vertexData;       // position(3) + normal(3) + color(3)
+    std::vector<unsigned int> m_indexData; // Triangle indices
 };
+
+} // namespace Geometry
+} // namespace OpenGeoLab

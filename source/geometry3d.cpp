@@ -1,4 +1,8 @@
-// geometry3d.cpp - Implementation of Geometry3D QML item
+/**
+ * @file geometry3d.cpp
+ * @brief Implementation of Geometry3D QML item
+ */
+
 #include "geometry3d.h"
 #include "geometry.h"
 #include "logger.hpp"
@@ -6,6 +10,9 @@
 #include <QMouseEvent>
 #include <QtCore/QRunnable>
 #include <QtQuick/qquickwindow.h>
+
+namespace OpenGeoLab {
+namespace UI {
 
 // ============================================================================
 // Geometry3D QML Item Implementation
@@ -43,11 +50,11 @@ void Geometry3D::setGeometryType(const QString& type) {
         // Update geometry if renderer exists
         if(m_renderer) {
             if(type == "cylinder") {
-                auto cylinder_data = std::make_shared<CylinderData>();
+                auto cylinder_data = std::make_shared<Geometry::CylinderData>();
                 m_renderer->setGeometryData(cylinder_data);
                 LOG_INFO("Geometry changed to cylinder");
             } else {
-                auto cube_data = std::make_shared<CubeData>();
+                auto cube_data = std::make_shared<Geometry::CubeData>();
                 m_renderer->setGeometryData(cube_data);
                 LOG_INFO("Geometry changed to cube");
             }
@@ -143,7 +150,7 @@ void Geometry3D::fitToView() {
     LOG_INFO("Fit to view: zoom={}, pan=({}, {}), bbox_size={}", m_zoom, m_panX, m_panY, max_size);
 }
 
-void Geometry3D::setCustomGeometry(std::shared_ptr<GeometryData> geometry_data) {
+void Geometry3D::setCustomGeometry(std::shared_ptr<Geometry::GeometryData> geometry_data) {
     if(m_renderer && geometry_data) {
         m_renderer->setGeometryData(geometry_data);
         LOG_INFO("Custom geometry set: {} vertices, {} indices", geometry_data->vertexCount(),
@@ -187,11 +194,11 @@ void Geometry3D::initializeGeometry() {
 
     // Create geometry based on type
     if(m_geometryType == "cylinder") {
-        auto cylinder_data = std::make_shared<CylinderData>();
+        auto cylinder_data = std::make_shared<Geometry::CylinderData>();
         m_renderer->setGeometryData(cylinder_data);
         LOG_INFO("Default cylinder geometry initialized");
     } else {
-        auto cube_data = std::make_shared<CubeData>();
+        auto cube_data = std::make_shared<Geometry::CubeData>();
         m_renderer->setGeometryData(cube_data);
         LOG_INFO("Default cube geometry initialized");
     }
@@ -201,7 +208,7 @@ void Geometry3D::sync() {
     if(!m_renderer) {
         LOG_INFO("Creating new OpenGLRenderer");
 
-        m_renderer = new OpenGLRenderer();
+        m_renderer = new Rendering::OpenGLRenderer();
 
         // Initialize geometry
         initializeGeometry();
@@ -210,10 +217,10 @@ void Geometry3D::sync() {
         m_renderer->setColor(m_color);
 
         // Connect renderer to scene graph signals
-        connect(window(), &QQuickWindow::beforeRendering, m_renderer, &OpenGLRenderer::init,
-                Qt::DirectConnection);
+        connect(window(), &QQuickWindow::beforeRendering, m_renderer,
+                &Rendering::OpenGLRenderer::init, Qt::DirectConnection);
         connect(window(), &QQuickWindow::beforeRenderPassRecording, m_renderer,
-                &OpenGLRenderer::paint, Qt::DirectConnection);
+                &Rendering::OpenGLRenderer::paint, Qt::DirectConnection);
 
         emit rendererReady();
     }
@@ -353,7 +360,7 @@ void Geometry3D::cleanup() {
  */
 class CleanupJob : public QRunnable {
 public:
-    explicit CleanupJob(OpenGLRenderer* renderer) : m_renderer(renderer) {
+    explicit CleanupJob(Rendering::OpenGLRenderer* renderer) : m_renderer(renderer) {
         LOG_DEBUG("CleanupJob created for renderer");
     }
 
@@ -363,7 +370,7 @@ public:
     }
 
 private:
-    OpenGLRenderer* m_renderer;
+    Rendering::OpenGLRenderer* m_renderer;
 };
 
 void Geometry3D::releaseResources() {
@@ -371,3 +378,6 @@ void Geometry3D::releaseResources() {
     window()->scheduleRenderJob(new CleanupJob(m_renderer), QQuickWindow::BeforeSynchronizingStage);
     m_renderer = nullptr;
 }
+
+} // namespace UI
+} // namespace OpenGeoLab

@@ -1,8 +1,21 @@
-// opengl_renderer.h - Basic OpenGL renderer for triangle mesh rendering
-// Provides simple rendering functionality for geometry data
+/**
+ * @file opengl_renderer.h
+ * @brief OpenGL renderer for 3D triangle mesh rendering
+ *
+ * Provides basic OpenGL rendering functionality with support for:
+ * - Custom geometry data (position, normal, color)
+ * - Color override capability
+ * - Simple lighting (ambient + diffuse)
+ * - Camera transformation (rotation, zoom, pan)
+ *
+ * @author OpenGeoLab Team
+ * @date 2024
+ */
+
 #pragma once
 
 #include "geometry.h"
+
 #include <QColor>
 #include <QMatrix4x4>
 #include <QOpenGLBuffer>
@@ -12,8 +25,11 @@
 #include <QtCore/QObject>
 #include <memory>
 
+namespace OpenGeoLab {
+namespace Rendering {
+
 /**
- * @brief Simple OpenGL renderer for 3D triangle mesh rendering
+ * @brief OpenGL renderer for 3D geometry
  *
  * This renderer provides basic functionality for rendering triangle meshes
  * with support for:
@@ -30,9 +46,9 @@ public:
 
     /**
      * @brief Set geometry data to render
-     * @param geometryData Pointer to geometry data (vertices, normals, colors, indices)
+     * @param geometry_data Pointer to geometry data (vertices, normals, colors, indices)
      */
-    void setGeometryData(std::shared_ptr<GeometryData> geometry_data);
+    void setGeometryData(std::shared_ptr<Geometry::GeometryData> geometry_data);
 
     /**
      * @brief Set color override for the entire geometry
@@ -51,7 +67,7 @@ public:
      * @brief Get current geometry data
      * @return Shared pointer to current geometry data
      */
-    std::shared_ptr<GeometryData> geometryData() const { return m_geometryData; }
+    std::shared_ptr<Geometry::GeometryData> geometryData() const { return m_geometryData; }
 
     /**
      * @brief Set rotation angles for the geometry
@@ -148,11 +164,19 @@ private:
     QOpenGLBuffer m_ebo;
 
     // Geometry data
-    std::shared_ptr<GeometryData> m_geometryData;
+    std::shared_ptr<Geometry::GeometryData> m_geometryData;
 
     // Rendering configuration
     QColor m_color = QColor(0, 0, 0, 0); // Alpha = 0 means use vertex colors
     QSize m_viewportSize;
     QPoint m_viewportOffset;
     QQuickWindow* m_window = nullptr;
+
+    // Camera constants
+    static constexpr qreal MIN_ZOOM = 0.01;
+    static constexpr qreal MAX_ZOOM = 100.0;
+    static constexpr qreal DEFAULT_CAMERA_DISTANCE = 3.0f;
 };
+
+} // namespace Rendering
+} // namespace OpenGeoLab
