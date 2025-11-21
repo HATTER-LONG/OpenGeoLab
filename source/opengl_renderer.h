@@ -7,9 +7,6 @@
  * - Color override capability
  * - Simple lighting (ambient + diffuse)
  * - Camera transformation (rotation, zoom, pan)
- *
- * @author OpenGeoLab Team
- * @date 2024
  */
 
 #pragma once

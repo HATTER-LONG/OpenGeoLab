@@ -5,9 +5,6 @@
  * Defines abstract and concrete geometry data classes for various 3D shapes.
  * Separates vertex data from rendering logic for better modularity.
  * Each vertex contains: position (3 floats), normal (3 floats), color (3 floats).
- *
- * @author OpenGeoLab Team
- * @date 2024
  */
 
 #pragma once

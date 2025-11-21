@@ -4,9 +4,6 @@
  *
  * Provides functionality to load 3D models from various file formats
  * (BREP, STEP) and convert them to renderable geometry data.
- *
- * @author OpenGeoLab Team
- * @date 2024
  */
 
 #pragma once

@@ -4,9 +4,6 @@
  *
  * Provides a Qt Quick item that wraps OpenGLRenderer for easy QML integration.
  * Supports mouse interaction (rotation, pan, zoom) and dynamic geometry loading.
- *
- * @author OpenGeoLab Team
- * @date 2024
  */
 
 #pragma once
