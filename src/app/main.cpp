@@ -9,7 +9,7 @@
  * - Performance monitoring with Kangaroo utilities
  */
 
-#include "logger.hpp"
+#include <core/logger.hpp>
 
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
@@ -137,7 +137,7 @@ auto main(int argc, char** argv) -> int {
         Qt::QueuedConnection);
 
     // Load main QML file
-    engine.load(QUrl("qrc:/scenegraph/opengeolab/source/Main.qml"));
+    engine.load(QUrl("qrc:/scenegraph/opengeolab/resources/qml/Main.qml"));
 
     return app.exec();
 }

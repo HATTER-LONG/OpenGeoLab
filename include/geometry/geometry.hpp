@@ -1,5 +1,5 @@
 /**
- * @file geometry.h
+ * @file geometry.hpp
  * @brief Geometry data structures for 3D rendering
  *
  * Defines abstract and concrete geometry data classes for various 3D shapes.
@@ -304,3 +304,4 @@ private:
 
 } // namespace Geometry
 } // namespace OpenGeoLab
+

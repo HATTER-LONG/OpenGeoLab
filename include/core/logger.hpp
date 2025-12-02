@@ -92,3 +92,4 @@ std::shared_ptr<spdlog::logger> getLogger();
  * or major functionality failure.
  */
 #define LOG_CRITICAL(...) SPDLOG_LOGGER_CRITICAL(OpenGeoLab::getLogger(), __VA_ARGS__)
+

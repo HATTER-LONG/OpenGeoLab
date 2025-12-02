@@ -1,10 +1,11 @@
-/**
+﻿/**
  * @file opengl_renderer.cpp
  * @brief Implementation of OpenGL renderer for 3D geometry
  */
 
-#include "opengl_renderer.h"
-#include "logger.hpp"
+#include <core/logger.hpp>
+#include <render/opengl_renderer.hpp>
+
 
 #include <QMatrix4x4>
 

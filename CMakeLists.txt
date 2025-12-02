@@ -137,7 +137,7 @@ qt_standard_project_setup(REQUIRES 6.8)
 file(GLOB_RECURSE headers CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h"
      "${CMAKE_CURRENT_SOURCE_DIR}/include/*.hpp"
 )
-file(GLOB_RECURSE sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/source/*.cpp")
+file(GLOB_RECURSE sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 
 # ==============================================================================
 # Executable Target Configuration
@@ -149,7 +149,8 @@ qt_add_executable(${PROJECT_NAME} ${sources} ${headers})
 # QML Module Configuration
 # ==============================================================================
 
-# Register QML module with custom OpenGL 3D rendering components
+# Register QML module with custom OpenGL 3D rendering components Only UI-related files (with
+# QML_ELEMENT) need to be listed here
 qt_add_qml_module(
   ${PROJECT_NAME}
   URI
@@ -160,16 +161,12 @@ qt_add_qml_module(
   /scenegraph/opengeolab
   NO_RESOURCE_TARGET_PATH
   QML_FILES
-  source/Main.qml
+  resources/qml/Main.qml
   SOURCES
-  source/geometry3d.cpp
-  source/geometry3d.h
-  source/opengl_renderer.cpp
-  source/opengl_renderer.h
-  source/logger.cpp
-  source/logger.hpp
-  source/model_importer.cpp
-  source/model_importer.h
+  src/ui/geometry3d.cpp
+  include/ui/geometry3d.hpp
+  src/ui/model_importer.cpp
+  include/ui/model_importer.hpp
 )
 
 # ==============================================================================
@@ -216,8 +213,10 @@ target_link_libraries(
 # ==============================================================================
 
 target_include_directories(
-  ${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include"
-                          "${CMAKE_CURRENT_SOURCE_DIR}/source"
+  ${PROJECT_NAME}
+  PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include"
+          "${CMAKE_CURRENT_SOURCE_DIR}/include/ui" # For Qt moc generated code
+          "${CMAKE_CURRENT_SOURCE_DIR}/src"
 )
 
 # ==============================================================================

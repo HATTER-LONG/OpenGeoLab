@@ -3,9 +3,10 @@
  * @brief Implementation of Geometry3D QML item
  */
 
-#include "geometry3d.h"
-#include "geometry.h"
-#include "logger.hpp"
+#include <core/logger.hpp>
+#include <geometry/geometry.hpp>
+#include <geometry3d.hpp>
+
 
 #include <QMouseEvent>
 #include <QtCore/QRunnable>

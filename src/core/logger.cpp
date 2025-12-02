@@ -3,7 +3,7 @@
  * @brief Implementation of global logger functions for the OpenGeoLab project
  */
 
-#include "logger.hpp"
+#include <core/logger.hpp>
 
 #include <kangaroo/util/logger_factory.hpp>
 #include <spdlog/spdlog.h>

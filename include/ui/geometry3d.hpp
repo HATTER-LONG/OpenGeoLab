@@ -1,5 +1,5 @@
-/**
- * @file geometry3d.h
+﻿/**
+ * @file geometry3d.hpp
  * @brief QML item for interactive 3D geometry rendering
  *
  * Provides a Qt Quick item that wraps OpenGLRenderer for easy QML integration.
@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "opengl_renderer.h"
+#include <render/opengl_renderer.hpp>
 
 #include <QColor>
 #include <QtQuick/QQuickItem>

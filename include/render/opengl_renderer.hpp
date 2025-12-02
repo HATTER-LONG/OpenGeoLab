@@ -1,5 +1,5 @@
-/**
- * @file opengl_renderer.h
+﻿/**
+ * @file opengl_renderer.hpp
  * @brief OpenGL renderer for 3D triangle mesh rendering
  *
  * Provides basic OpenGL rendering functionality with support for:
@@ -11,7 +11,7 @@
 
 #pragma once
 
-#include "geometry.h"
+#include <geometry/geometry.hpp>
 
 #include <QColor>
 #include <QMatrix4x4>

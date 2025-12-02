@@ -6,10 +6,11 @@
  * Uses mesh triangulation to generate renderable geometry data.
  */
 
-#include "model_importer.h"
-#include "geometry.h"
-#include "geometry3d.h"
-#include "logger.hpp"
+#include <core/logger.hpp>
+#include <geometry/geometry.hpp>
+#include <geometry3d.hpp>
+#include <model_importer.hpp>
+
 
 // Open CASCADE includes
 #include <BRepGProp_Face.hxx>

@@ -1,5 +1,5 @@
 /**
- * @file model_importer.h
+ * @file model_importer.hpp
  * @brief QML singleton for importing 3D model files
  *
  * Provides functionality to load 3D models from various file formats
