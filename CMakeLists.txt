@@ -14,6 +14,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 # ==============================================================================
+# Build Options
+# ==============================================================================
+
+option(ENABLE_CONSOLE "Enable console window on Windows for debugging" ON)
+
+# ==============================================================================
 # Qt Configuration
 # ==============================================================================
 
@@ -171,9 +177,7 @@ set_target_properties(
              MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
              MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
              MACOSX_BUNDLE TRUE
-             # Windows executable configuration
-             WIN32_EXECUTABLE TRUE
-             # Output name
+             WIN32_EXECUTABLE $<NOT:$<BOOL:${ENABLE_CONSOLE}>>
              OUTPUT_NAME OpenGeoLabApp
 )
 

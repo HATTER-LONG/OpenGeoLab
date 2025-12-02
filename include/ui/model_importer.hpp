@@ -2,8 +2,8 @@
  * @file model_importer.hpp
  * @brief QML singleton for importing 3D model files
  *
- * Provides functionality to load 3D models from various file formats
- * (BREP, STEP) and convert them to renderable geometry data.
+ * Provides QML interface for loading 3D models from various file formats.
+ * Delegates actual file reading to IO component system.
  */
 
 #pragma once
@@ -11,23 +11,16 @@
 #include <QObject>
 #include <QQmlEngine>
 #include <QUrl>
-#include <memory>
 
 namespace OpenGeoLab {
-namespace Geometry {
-class GeometryData;
-} // namespace Geometry
 namespace UI {
 class Geometry3D;
-} // namespace UI
-
-namespace IO {
 
 /**
- * @brief Model importer for loading 3D geometry files
+ * @brief QML interface for importing 3D geometry files
  *
- * This singleton class handles importing 3D model files (BREP, STEP)
- * and converting them to renderable geometry data.
+ * This singleton class provides QML bindings for the model import functionality.
+ * It delegates actual file reading to the IO component system.
  */
 class ModelImporter : public QObject {
     Q_OBJECT
@@ -49,6 +42,12 @@ public:
      */
     Q_INVOKABLE void importModel(const QUrl& file_url);
 
+    /**
+     * @brief Get the file filter string for supported formats
+     * @return Filter string for file dialogs (e.g., "3D Models (*.brep *.step)")
+     */
+    Q_INVOKABLE QString getSupportedFormatsFilter() const;
+
 signals:
     /**
      * @brief Emitted when a model is successfully loaded
@@ -63,22 +62,8 @@ signals:
     void modelLoadFailed(const QString& error);
 
 private:
-    /**
-     * @brief Load a BREP file and convert to geometry data
-     * @param file_path Local file path to BREP file
-     * @return Shared pointer to geometry data, or nullptr on failure
-     */
-    std::shared_ptr<Geometry::GeometryData> loadBrepFile(const QString& file_path);
-
-    /**
-     * @brief Load a STEP file and convert to geometry data
-     * @param file_path Local file path to STEP file
-     * @return Shared pointer to geometry data, or nullptr on failure
-     */
-    std::shared_ptr<Geometry::GeometryData> loadStepFile(const QString& file_path);
-
-    UI::Geometry3D* m_targetRenderer = nullptr;
+    Geometry3D* m_targetRenderer = nullptr;
 };
 
-} // namespace IO
+} // namespace UI
 } // namespace OpenGeoLab

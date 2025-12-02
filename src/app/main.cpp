@@ -25,6 +25,8 @@
 #include <iostream>
 #include <string>
 
+#include "component_example/component_example.hpp"
+
 #ifdef Q_OS_WIN
 /**
  * @brief Export symbols to hint hybrid graphics systems to prefer discrete GPU
