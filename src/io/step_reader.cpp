@@ -16,7 +16,7 @@
 
 #include <algorithm>
 
-// TODO: Uncomment when STEP support is fully implemented
+// TODO(layton): Uncomment when STEP support is fully implemented
 // #include <STEPControl_Reader.hxx>
 // #include <BRepMesh_IncrementalMesh.hxx>
 // #include <TopoDS_Shape.hxx>
@@ -37,10 +37,10 @@ bool StepReader::canRead(const std::string& file_path) const {
     return false;
 }
 
-std::shared_ptr<Geometry::GeometryData> StepReader::read(const std::string& file_path) {
+std::shared_ptr<Geometry::GeometryData> StepReader::read(const std::string& /*file_path*/) {
     m_lastError.clear();
 
-    // TODO: Implement STEP file reading using STEPControl_Reader
+    // TODO(layton): Implement STEP file reading using STEPControl_Reader
     // Example implementation:
     //
     // STEPControl_Reader reader;
