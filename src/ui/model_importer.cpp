@@ -10,7 +10,7 @@
 
 #include <core/logger.hpp>
 #include <geometry3d.hpp>
-#include <io/model_reader_manager.hpp>
+#include <io/model_reader_registry.hpp>
 
 #include <QFileInfo>
 
@@ -18,8 +18,8 @@ namespace OpenGeoLab {
 namespace UI {
 
 ModelImporter::ModelImporter(QObject* parent) : QObject(parent) {
-    // Initialize the IO component system
-    IO::ModelReaderManager::instance().registerBuiltinReaders();
+    // Initialize the IO component system with dependency injection
+    IO::registerBuiltinModelReaders();
     LOG_INFO("ModelImporter initialized with IO component system");
 }
 
@@ -45,8 +45,7 @@ void ModelImporter::importModel(const QUrl& file_url) {
 
     // Use the IO component system to read the model
     std::string error_msg;
-    auto geometry_data =
-        IO::ModelReaderManager::instance().readModel(file_path.toStdString(), error_msg);
+    auto geometry_data = IO::getModelReaderRegistry().readModel(file_path.toStdString(), error_msg);
 
     if(!geometry_data) {
         QString error = QString::fromStdString(error_msg);
@@ -71,7 +70,7 @@ void ModelImporter::importModel(const QUrl& file_url) {
 }
 
 QString ModelImporter::getSupportedFormatsFilter() const {
-    auto extensions = IO::ModelReaderManager::instance().getSupportedExtensions();
+    auto extensions = IO::getModelReaderRegistry().getSupportedExtensions();
 
     QString filter = "3D Models (";
     for(size_t i = 0; i < extensions.size(); ++i) {
