@@ -1,18 +1,3 @@
-# ==============================================================================
-# OpenGeoLab Project CMake Configuration
-# ==============================================================================
-#
-# This CMake configuration builds the OpenGeoLab application, which demonstrates OpenGL rendering
-# integration with Qt Quick.
-#
-# Project structure: - Uses Qt 6.8+ for GUI and QML support - Integrates custom OpenGL rendering via
-# Qt's scene graph - Depends on external libraries: cxxopts, Kangaroo, fmt, spdlog - Includes test
-# suite for unit testing
-#
-# Build requirements: - CMake 3.14 or later - Qt 6.8 or later - C++17 or later - OpenGL support
-#
-# ==============================================================================
-
 cmake_minimum_required(VERSION 3.14...3.22)
 
 project(
@@ -83,7 +68,7 @@ else()
   CPMAddPackage(
     NAME Kangaroo
     GITHUB_REPOSITORY HATTER-LONG/Kangaroo
-    VERSION 2.1.1
+    VERSION 2.2.1
     OPTIONS "BUILD_SHARED_LIBS ON"
   )
 endif()
