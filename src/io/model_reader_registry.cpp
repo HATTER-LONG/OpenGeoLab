@@ -6,10 +6,10 @@
  * dependency injection pattern.
  */
 
-#include <io/model_reader_registry.hpp>
+#include "model_reader_registry_impl.hpp"
 
-#include <io/brep_reader.hpp>
-#include <io/step_reader.hpp>
+#include "brep_reader.hpp"
+#include "step_reader.hpp"
 
 #include <core/logger.hpp>
 

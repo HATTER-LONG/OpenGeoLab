@@ -9,7 +9,7 @@
  * requires STEPControl_Reader from Open CASCADE.
  */
 
-#include <io/step_reader.hpp>
+#include "step_reader.hpp"
 
 #include <core/logger.hpp>
 #include <geometry/geometry.hpp>

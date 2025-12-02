@@ -1,7 +1,8 @@
 /**
  * @file brep_reader.hpp
- * @brief BREP file format reader implementation
+ * @brief BREP file format reader implementation (internal)
  *
+ * This is an internal header file, not intended for public use.
  * Provides functionality to load BREP files using Open CASCADE Technology
  * and convert them to renderable geometry data.
  */

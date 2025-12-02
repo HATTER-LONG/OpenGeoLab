@@ -6,7 +6,7 @@
  * mesh triangulation to generate renderable geometry data.
  */
 
-#include <io/brep_reader.hpp>
+#include "brep_reader.hpp"
 
 #include <core/logger.hpp>
 #include <geometry/geometry.hpp>

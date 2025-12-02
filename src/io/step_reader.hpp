@@ -1,7 +1,8 @@
 /**
  * @file step_reader.hpp
- * @brief STEP file format reader implementation
+ * @brief STEP file format reader implementation (internal)
  *
+ * This is an internal header file, not intended for public use.
  * Provides functionality to load STEP files using Open CASCADE Technology
  * and convert them to renderable geometry data.
  */

@@ -1,6 +1,6 @@
 /**
  * @file model_reader_registry.hpp
- * @brief Model reader registry component using dependency injection
+ * @brief Model reader registry interface using dependency injection
  *
  * Provides a registry interface for model readers using the component factory
  * pattern. This replaces the Manager pattern with a more explicit dependency
@@ -67,43 +67,6 @@ public:
 };
 
 /**
- * @brief Concrete implementation of IModelReaderRegistry
- *
- * This class manages registration and access to model readers.
- * It uses the component factory to create reader instances on demand.
- */
-class ModelReaderRegistry : public IModelReaderRegistry {
-public:
-    ModelReaderRegistry() = default;
-    ~ModelReaderRegistry() override = default;
-
-    /**
-     * @brief Register a model reader factory with a product ID
-     *
-     * The factory must already be registered with ComponentFactoryInjector
-     * before calling this method. This method only tracks the reader ID
-     * for iteration purposes.
-     *
-     * @param product_id Unique identifier for the reader
-     */
-    void registerReader(const std::string& product_id) override;
-
-    std::vector<std::string> getSupportedExtensions() const override;
-
-    std::unique_ptr<IModelReader> getReaderForFile(const std::string& file_path) const override;
-
-    std::shared_ptr<Geometry::GeometryData> readModel(const std::string& file_path,
-                                                      std::string& error_out) const override;
-
-    const std::vector<std::string>& getRegisteredReaderIds() const override {
-        return m_registeredReaders;
-    }
-
-private:
-    std::vector<std::string> m_registeredReaders;
-};
-
-/**
  * @brief Factory interface for creating IModelReaderRegistry instances
  *
  * This factory uses the singleton pattern (instance factory) to ensure
@@ -125,22 +88,6 @@ public:
      * @return Shared pointer to the registry instance
      */
     virtual tObjectSharedPtr instance() const = 0;
-};
-
-/**
- * @brief Concrete factory for ModelReaderRegistry
- *
- * Implements the instance factory pattern for singleton access
- * while allowing creation of new instances for testing.
- */
-class ModelReaderRegistryFactory : public IModelReaderRegistryFactory {
-public:
-    tObjectPtr create() const override { return std::make_unique<ModelReaderRegistry>(); }
-
-    tObjectSharedPtr instance() const override {
-        static auto s_instance = std::make_shared<ModelReaderRegistry>();
-        return s_instance;
-    }
 };
 
 /**
