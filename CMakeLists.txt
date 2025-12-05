@@ -1,18 +1,3 @@
-# ==============================================================================
-# OpenGeoLab Project CMake Configuration
-# ==============================================================================
-#
-# This CMake configuration builds the OpenGeoLab application, which demonstrates OpenGL rendering
-# integration with Qt Quick.
-#
-# Project structure: - Uses Qt 6.8+ for GUI and QML support - Integrates custom OpenGL rendering via
-# Qt's scene graph - Depends on external libraries: cxxopts, Kangaroo, fmt, spdlog - Includes test
-# suite for unit testing
-#
-# Build requirements: - CMake 3.14 or later - Qt 6.8 or later - C++17 or later - OpenGL support
-#
-# ==============================================================================
-
 cmake_minimum_required(VERSION 3.14...3.22)
 
 project(
@@ -27,6 +12,12 @@ project(
 
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+
+# ==============================================================================
+# Build Options
+# ==============================================================================
+
+option(ENABLE_CONSOLE "Enable console window on Windows for debugging" ON)
 
 # ==============================================================================
 # Qt Configuration
@@ -83,10 +74,44 @@ else()
   CPMAddPackage(
     NAME Kangaroo
     GITHUB_REPOSITORY HATTER-LONG/Kangaroo
-    VERSION 2.1.1
+    VERSION 2.2.1
     OPTIONS "BUILD_SHARED_LIBS ON"
   )
 endif()
+
+# Find Open CASCADE Technology
+find_package(OpenCASCADE REQUIRED)
+
+message(STATUS "Using OpenCASCADE from \"${OpenCASCADE_INSTALL_PREFIX}\"")
+message(STATUS "OpenCASCADE_INCLUDE_DIR=${OpenCASCADE_INCLUDE_DIR}")
+message(STATUS "OpenCASCADE_LIBRARY_DIR=${OpenCASCADE_LIBRARY_DIR}")
+include_directories(${OpenCASCADE_INCLUDE_DIR})
+link_directories(${OpenCASCADE_LIBRARY_DIR})
+
+set(OpenCASCADE_LIBS
+    TKRWMesh
+    TKBinXCAF
+    TKBin
+    TKBinL
+    TKXCAF
+    TKVCAF
+    TKCAF
+    TKMesh
+    TKShHealing
+    TKPrim
+    TKTopAlgo
+    TKGeomAlgo
+    TKBRep
+    TKXSBase
+    TKDESTEP
+    TKGeomBase
+    TKG3d
+    TKG2d
+    TKMath
+    TKLCAF
+    TKCDF
+    TKernel
+)
 
 # Qt 6: GUI framework with QML support
 find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui Qml Quick)
@@ -103,7 +128,7 @@ qt_standard_project_setup(REQUIRES 6.8)
 file(GLOB_RECURSE headers CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h"
      "${CMAKE_CURRENT_SOURCE_DIR}/include/*.hpp"
 )
-file(GLOB_RECURSE sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/source/*.cpp")
+file(GLOB_RECURSE sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 
 # ==============================================================================
 # Executable Target Configuration
@@ -115,7 +140,8 @@ qt_add_executable(${PROJECT_NAME} ${sources} ${headers})
 # QML Module Configuration
 # ==============================================================================
 
-# Register QML module with custom OpenGL 3D rendering components
+# Register QML module with custom OpenGL 3D rendering components Only UI-related files (with
+# QML_ELEMENT) need to be listed here
 qt_add_qml_module(
   ${PROJECT_NAME}
   URI
@@ -126,16 +152,12 @@ qt_add_qml_module(
   /scenegraph/opengeolab
   NO_RESOURCE_TARGET_PATH
   QML_FILES
-  source/Main.qml
+  resources/qml/Main.qml
   SOURCES
-  source/geometry3d.cpp
-  source/geometry3d.h
-  source/opengl_renderer.cpp
-  source/opengl_renderer.h
-  source/logger.cpp
-  source/logger.hpp
-  source/model_importer.cpp
-  source/model_importer.h
+  src/ui/geometry3d.cpp
+  include/ui/geometry3d.hpp
+  src/ui/model_importer.cpp
+  include/ui/model_importer.hpp
 )
 
 # ==============================================================================
@@ -155,9 +177,7 @@ set_target_properties(
              MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
              MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
              MACOSX_BUNDLE TRUE
-             # Windows executable configuration
-             WIN32_EXECUTABLE TRUE
-             # Output name
+             WIN32_EXECUTABLE $<NOT:$<BOOL:${ENABLE_CONSOLE}>>
              OUTPUT_NAME OpenGeoLabApp
 )
 
@@ -174,6 +194,7 @@ target_link_libraries(
           Kangaroo::Kangaroo
           cxxopts
           fmt::fmt
+          ${OpenCASCADE_LIBS}
 )
 
 # ==============================================================================
@@ -181,8 +202,10 @@ target_link_libraries(
 # ==============================================================================
 
 target_include_directories(
-  ${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include"
-                          "${CMAKE_CURRENT_SOURCE_DIR}/source"
+  ${PROJECT_NAME}
+  PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include"
+          "${CMAKE_CURRENT_SOURCE_DIR}/include/ui" # For Qt moc generated code
+          "${CMAKE_CURRENT_SOURCE_DIR}/src"
 )
 
 # ==============================================================================

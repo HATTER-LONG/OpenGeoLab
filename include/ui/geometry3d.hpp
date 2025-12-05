@@ -1,10 +1,20 @@
-// geometry3d.h - QML item for 3D geometry rendering
-// Simple wrapper around OpenGLRenderer for QML integration
+﻿/**
+ * @file geometry3d.hpp
+ * @brief QML item for interactive 3D geometry rendering
+ *
+ * Provides a Qt Quick item that wraps OpenGLRenderer for easy QML integration.
+ * Supports mouse interaction (rotation, pan, zoom) and dynamic geometry loading.
+ */
+
 #pragma once
 
-#include "opengl_renderer.h"
+#include <render/opengl_renderer.hpp>
+
 #include <QColor>
 #include <QtQuick/QQuickItem>
+
+namespace OpenGeoLab {
+namespace UI {
 
 /**
  * @brief QML item for 3D geometry rendering
@@ -54,10 +64,34 @@ public:
      */
     Q_INVOKABLE void setGeometryType(const QString& type);
 
+    /**
+     * @brief Set custom geometry data from external source
+     * @param geometry_data Shared pointer to geometry data
+     */
+    Q_INVOKABLE void setCustomGeometry(std::shared_ptr<Geometry::GeometryData> geometry_data);
+
+    /**
+     * @brief Get current zoom level
+     * @return Zoom factor
+     */
+    qreal zoom() const { return m_zoom; }
+
+    /**
+     * @brief Set zoom level
+     * @param zoom Zoom factor
+     */
+    void setZoom(qreal zoom);
+
+    /**
+     * @brief Auto-fit the view to show the entire geometry
+     */
+    Q_INVOKABLE void fitToView();
+
 signals:
     void colorChanged();
     void geometryTypeChanged();
     void rendererReady();
+    void modelLoadFailed(const QString& error);
 
 public slots:
     /**
@@ -90,17 +124,29 @@ protected:
      */
     void mouseReleaseEvent(QMouseEvent* event) override;
 
+    /**
+     * @brief Handle mouse wheel events (for zooming)
+     */
+    void wheelEvent(QWheelEvent* event) override;
+
 private:
     void releaseResources() override;
     void initializeGeometry();
 
-    OpenGLRenderer* m_renderer = nullptr;
+    Rendering::OpenGLRenderer* m_renderer = nullptr;
     QColor m_color = QColor(0, 0, 0, 0); // Default: use vertex colors
     QString m_geometryType = "cube";     // Default geometry type
 
     // Mouse interaction state
     bool m_isDragging = false;
+    bool m_isPanning = false; // Panning with Shift+Left button
     QPointF m_lastMousePos;
     qreal m_rotationX = 0.0; // Rotation around X axis
     qreal m_rotationY = 0.0; // Rotation around Y axis
+    qreal m_zoom = 1.0;      // Camera zoom factor
+    qreal m_panX = 0.0;      // Camera horizontal pan
+    qreal m_panY = 0.0;      // Camera vertical pan
 };
+
+} // namespace UI
+} // namespace OpenGeoLab
