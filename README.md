@@ -1,219 +1,225 @@
-[![Actions Status](https://github.com/TheLartians/ModernCppStarter/workflows/MacOS/badge.svg)](https://github.com/TheLartians/ModernCppStarter/actions)
-[![Actions Status](https://github.com/TheLartians/ModernCppStarter/workflows/Windows/badge.svg)](https://github.com/TheLartians/ModernCppStarter/actions)
-[![Actions Status](https://github.com/TheLartians/ModernCppStarter/workflows/Ubuntu/badge.svg)](https://github.com/TheLartians/ModernCppStarter/actions)
-[![Actions Status](https://github.com/TheLartians/ModernCppStarter/workflows/Style/badge.svg)](https://github.com/TheLartians/ModernCppStarter/actions)
-[![Actions Status](https://github.com/TheLartians/ModernCppStarter/workflows/Install/badge.svg)](https://github.com/TheLartians/ModernCppStarter/actions)
-[![codecov](https://codecov.io/gh/TheLartians/ModernCppStarter/branch/master/graph/badge.svg)](https://codecov.io/gh/TheLartians/ModernCppStarter)
+# OpenGeoLab
 
 <p align="center">
-  <img src="https://repository-images.githubusercontent.com/254842585/4dfa7580-7ffb-11ea-99d0-46b8fe2f4170" height="175" width="auto" />
+  <strong>基于 Qt6/QML 和 OpenCASCADE 的现代 3D CAD 几何可视化应用</strong>
 </p>
 
-# ModernCppStarter
+<p align="center">
+  <a href="#功能特性">功能特性</a> •
+  <a href="#快速开始">快速开始</a> •
+  <a href="#项目结构">项目结构</a> •
+  <a href="#构建说明">构建说明</a> •
+  <a href="#使用示例">使用示例</a> •
+  <a href="#许可证">许可证</a>
+</p>
 
-Setting up a new C++ project usually requires a significant amount of preparation and boilerplate code, even more so for modern C++ projects with tests, executables and continuous integration.
-This template is the result of learnings from many previous projects and should help reduce the work required to setup up a modern C++ project.
+---
 
-## Features
+## 功能特性
 
-- [Modern CMake practices](https://pabloariasal.github.io/2018/02/19/its-time-to-do-cmake-right/)
-- Suited for single header libraries and projects of any scale
-- Clean separation of library and executable code
-- Integrated test suite
-- Continuous integration via [GitHub Actions](https://help.github.com/en/actions/)
-- Code coverage via [codecov](https://codecov.io)
-- Code formatting enforced by [clang-format](https://clang.llvm.org/docs/ClangFormat.html) and [cmake-format](https://github.com/cheshirekow/cmake_format) via [Format.cmake](https://github.com/TheLartians/Format.cmake)
-- Reproducible dependency management via [CPM.cmake](https://github.com/TheLartians/CPM.cmake)
-- Installable target with automatic versioning information and header generation via [PackageProject.cmake](https://github.com/TheLartians/PackageProject.cmake)
-- Automatic [documentation](https://thelartians.github.io/ModernCppStarter) and deployment with [Doxygen](https://www.doxygen.nl) and [GitHub Pages](https://pages.github.com)
-- Support for [sanitizer tools, and more](#additional-tools)
+- 🎨 **现代 UI 框架** - 基于 Qt6/QML 构建的响应式用户界面
+- 🔧 **CAD 文件支持** - 导入 STEP (.step, .stp) 和 BREP (.brep, .brp) 格式
+- 🖼️ **OpenGL 渲染** - 自定义 OpenGL 渲染器，支持光照和着色
+- 🖱️ **交互式操作** - 鼠标拖拽旋转、滚轮缩放、Shift+拖拽平移
+- 📊 **HDF5 数据支持** - 通过 HighFive 库支持 HDF5 数据格式
+- 🧩 **组件化架构** - 基于依赖注入的可扩展文件读取器系统
+- ✅ **单元测试** - 使用 doctest 框架的完整测试覆盖
 
-## Usage
+## 依赖项
 
-### vscode config
+### 必需依赖
 
-```json
-{
-    "cmake.sourceDirectory": "${workspaceFolder}",
-    "cmake.environment": {
-        "CPM_SOURCE_CACHE": "${workspaceFolder}/cpm_modules"
-    }
-}
-```
+| 依赖项 | 最低版本 | 说明 |
+|--------|----------|------|
+| [Qt](https://www.qt.io/) | 6.8+ | GUI 框架 (Core, Gui, Qml, Quick) |
+| [OpenCASCADE](https://dev.opencascade.org/) | 7.6+ | 3D CAD 建模内核 |
+| [CMake](https://cmake.org/) | 3.14+ | 构建系统 |
+| [HDF5](https://www.hdfgroup.org/solutions/hdf5/) | 1.10+ | 高性能数据格式 |
 
-### Adjust the template to your needs
+### 自动管理依赖 (通过 CPM)
 
-- Use this repo [as a template](https://help.github.com/en/github/creating-cloning-and-archiving-repositories/creating-a-repository-from-a-template).
-- Replace all occurrences of "Greeter" in the relevant CMakeLists.txt with the name of your project
-  - Capitalization matters here: `Greeter` means the name of the project, while `greeter` is used in file names.
-  - Remember to rename the `include/greeter` directory to use your project's lowercase name and update all relevant `#include`s accordingly.
-- Replace the source files with your own
-- For header-only libraries: see the comments in [CMakeLists.txt](CMakeLists.txt)
-- Add [your project's codecov token](https://docs.codecov.io/docs/quick-start) to your project's github secrets under `CODECOV_TOKEN`
-- Happy coding!
+| 依赖项 | 版本 | 说明 |
+|--------|------|------|
+| [cxxopts](https://github.com/jarro2783/cxxopts) | 3.0.0 | 命令行参数解析 |
+| [Kangaroo](https://github.com/HATTER-LONG/Kangaroo) | 2.2.1 | 基础设施工具库 |
+| [HighFive](https://github.com/highfive-devs/highfive) | 3.2.0 | 现代 C++ HDF5 接口 |
+| [doctest](https://github.com/doctest/doctest) | 2.4.12 | 单元测试框架 |
+| [spdlog](https://github.com/gabime/spdlog) | - | 日志库 (通过 Kangaroo) |
+| [fmt](https://github.com/fmtlib/fmt) | - | 格式化库 (通过 Kangaroo) |
 
-Eventually, you can remove any unused files, such as the standalone directory or irrelevant github workflows for your project.
-Feel free to replace the License with one suited for your project.
+## 快速开始
 
-To cleanly separate the library and subproject code, the outer `CMakeList.txt` only defines the library itself while the tests and other subprojects are self-contained in their own directories.
-During development it is usually convenient to [build all subprojects at once](#build-everything-at-once).
-
-### Build and run the standalone target
-
-Use the following command to build and run the executable target.
+### 1. 克隆仓库
 
 ```bash
-cmake -S standalone -B build/standalone
-cmake --build build/standalone
-./build/standalone/Greeter --help
+git clone https://github.com/yourusername/OpenGeoLab.git
+cd OpenGeoLab
 ```
 
-### Build and run test suite
-
-Use the following commands from the project's root directory to run the test suite.
+### 2. 配置项目
 
 ```bash
-cmake -S test -B build/test
-cmake --build build/test
-CTEST_OUTPUT_ON_FAILURE=1 cmake --build build/test --target test
-
-# or simply call the executable: 
-./build/test/GreeterTests
+cmake -B build -G Ninja \
+    -DCMAKE_BUILD_TYPE=Debug \
+    -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+    -DQT_QML_GENERATE_QMLLS_INI=ON
 ```
 
-To collect code coverage information, run CMake with the `-DENABLE_TEST_COVERAGE=1` option.
+> 💡 **提示**: 设置 `CPM_SOURCE_CACHE` 环境变量可以缓存下载的依赖项:
+> ```bash
+> export CPM_SOURCE_CACHE=$HOME/.cache/CPM
+> ```
 
-### Run clang-format
-
-Use the following commands from the project's root directory to check and fix C++ and CMake source style.
-This requires _clang-format_, _cmake-format_ and _pyyaml_ to be installed on the current system.
+### 3. 构建
 
 ```bash
-cmake -S test -B build/test
-
-# view changes
-cmake --build build/test --target format
-
-# apply changes
-cmake --build build/test --target fix-format
+cmake --build build --config Debug
 ```
 
-See [Format.cmake](https://github.com/TheLartians/Format.cmake) for details.
-These dependencies can be easily installed using pip.
+### 4. 运行
 
 ```bash
-pip install clang-format==14.0.6 cmake_format==0.6.11 pyyaml
+./build/bin/OpenGeoLabApp
 ```
 
-### Build the documentation
+## 项目结构
 
-The documentation is automatically built and [published](https://thelartians.github.io/ModernCppStarter) whenever a [GitHub Release](https://help.github.com/en/github/administering-a-repository/managing-releases-in-a-repository) is created.
-To manually build documentation, call the following command.
-
-```bash
-cmake -S documentation -B build/doc
-cmake --build build/doc --target GenerateDocs
-# view the docs
-open build/doc/doxygen/html/index.html
+```
+OpenGeoLab/
+├── cmake/                  # CMake 工具模块
+│   ├── CPM.cmake          # CPM 包管理器
+│   └── tools.cmake        # 工具配置 (sanitizers, ccache 等)
+├── include/               # 公共头文件
+│   ├── core/             # 核心功能 (日志等)
+│   ├── geometry/         # 几何数据结构
+│   ├── io/               # 文件 I/O 接口
+│   ├── render/           # 渲染器接口
+│   └── ui/               # UI 组件接口
+├── src/                   # 源代码
+│   ├── app/              # 应用程序入口
+│   ├── core/             # 核心功能实现
+│   ├── io/               # 文件读取器实现
+│   ├── render/           # OpenGL 渲染器实现
+│   └── ui/               # QML 组件实现
+├── resources/             # 资源文件
+│   └── qml/              # QML 界面文件
+├── test/                  # 单元测试
+│   └── source/           # 测试源文件
+├── CMakeLists.txt        # 主 CMake 配置
+└── README.md             # 本文件
 ```
 
-To build the documentation locally, you will need Doxygen, jinja2 and Pygments installed on your system.
+## 构建说明
 
-### Build everything at once
+### CMake 选项
 
-The project also includes an `all` directory that allows building all targets at the same time.
-This is useful during development, as it exposes all subprojects to your IDE and avoids redundant builds of the library.
+| 选项 | 默认值 | 说明 |
+|------|--------|------|
+| `ENABLE_CONSOLE` | ON | Windows 下启用控制台窗口 |
+| `ENABLE_TEST_COVERAGE` | OFF | 启用测试覆盖率统计 |
+| `USE_SANITIZER` | - | 启用 Sanitizer (Address, Memory, Thread 等) |
+| `USE_STATIC_ANALYZER` | - | 启用静态分析 (clang-tidy, cppcheck 等) |
+| `USE_CCACHE` | - | 启用 ccache 加速编译 |
+
+### 构建示例
 
 ```bash
-cmake -S all -B build
+# Release 构建
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release
+
+# 启用 Address Sanitizer
+cmake -B build -DUSE_SANITIZER=Address
 cmake --build build
 
-# run tests
-./build/test/GreeterTests
-# format code
-cmake --build build --target fix-format
-# run standalone
-./build/standalone/Greeter --help
-# build docs
-cmake --build build --target GenerateDocs
+# 启用 clang-tidy
+cmake -B build -DUSE_STATIC_ANALYZER="clang-tidy"
+cmake --build build
 ```
 
-### Additional tools
+### 运行测试
 
-The test and standalone subprojects include the [tools.cmake](cmake/tools.cmake) file which is used to import additional tools on-demand through CMake configuration arguments.
-The following are currently supported.
+```bash
+# 构建并运行所有测试
+cmake --build build --target OpenGeoLabTests
+ctest --test-dir build --output-on-failure
 
-#### Sanitizers
+# 或直接运行测试可执行文件
+./build/bin/OpenGeoLabTests
+```
 
-Sanitizers can be enabled by configuring CMake with `-DUSE_SANITIZER=<Address | Memory | MemoryWithOrigins | Undefined | Thread | Leak | 'Address;Undefined'>`.
+## 使用示例
 
-#### Static Analyzers
+### 命令行参数
 
-Static Analyzers can be enabled by setting `-DUSE_STATIC_ANALYZER=<clang-tidy | iwyu | cppcheck>`, or a combination of those in quotation marks, separated by semicolons.
-By default, analyzers will automatically find configuration files such as `.clang-format`.
-Additional arguments can be passed to the analyzers by setting the `CLANG_TIDY_ARGS`, `IWYU_ARGS` or `CPPCHECK_ARGS` variables.
+```bash
+# 显示帮助
+./OpenGeoLabApp --help
 
-#### Ccache
+# 指定名称和语言
+./OpenGeoLabApp --name="User" --lang=zh
+```
 
-Ccache can be enabled by configuring with `-DUSE_CCACHE=<ON | OFF>`.
+### 交互操作
 
-## FAQ
+| 操作 | 功能 |
+|------|------|
+| 左键拖拽 | 旋转模型 |
+| Shift + 左键拖拽 | 平移视图 |
+| 滚轮 | 缩放视图 |
 
-> Can I use this for header-only libraries?
+### 支持的文件格式
 
-Yes, however you will need to change the library type to an `INTERFACE` library as documented in the [CMakeLists.txt](CMakeLists.txt).
-See [here](https://github.com/TheLartians/StaticTypeInfo) for an example header-only library based on the template.
+- **STEP** (.step, .stp) - ISO 10303 标准交换格式
+- **BREP** (.brep, .brp) - OpenCASCADE 原生边界表示格式
 
-> I don't need a standalone target / documentation. How can I get rid of it?
+## 架构设计
 
-Simply remove the standalone / documentation directory and according github workflow file.
+### 文件读取器系统
 
-> Can I build the standalone and tests at the same time? / How can I tell my IDE about all subprojects?
+项目使用组件工厂模式实现可扩展的文件读取器系统：
 
-To keep the template modular, all subprojects derived from the library have been separated into their own CMake modules.
-This approach makes it trivial for third-party projects to re-use the projects library code.
-To allow IDEs to see the full scope of the project, the template includes the `all` directory that will create a single build for all subprojects.
-Use this as the main directory for best IDE support.
+```
+IModelReader (接口)
+    ├── BrepReader (.brep, .brp)
+    └── StepReader (.step, .stp)
 
-> I see you are using `GLOB` to add source files in CMakeLists.txt. Isn't that evil?
+IModelReaderRegistry (注册表)
+    └── 管理所有读取器的注册和查找
+```
 
-Glob is considered bad because any changes to the source file structure [might not be automatically caught](https://cmake.org/cmake/help/latest/command/file.html#filesystem) by CMake's builders and you will need to manually invoke CMake on changes.
-  I personally prefer the `GLOB` solution for its simplicity, but feel free to change it to explicitly listing sources.
+### 渲染管线
 
-> I want create additional targets that depend on my library. Should I modify the main CMakeLists to include them?
+```
+QML (Geometry3D)
+    └── OpenGLRenderer
+        ├── Vertex Shader (MVP 变换 + 光照)
+        └── Fragment Shader (漫反射 + 环境光)
+```
 
-Avoid including derived projects from the libraries CMakeLists (even though it is a common sight in the C++ world), as this effectively inverts the dependency tree and makes the build system hard to reason about.
-Instead, create a new directory or project with a CMakeLists that adds the library as a dependency (e.g. like the [standalone](standalone/CMakeLists.txt) directory).
-Depending type it might make sense move these components into a separate repositories and reference a specific commit or version of the library.
-This has the advantage that individual libraries and components can be improved and updated independently.
+## 开发指南
 
-> You recommend to add external dependencies using CPM.cmake. Will this force users of my library to use CPM.cmake as well?
+### 代码风格
 
-[CPM.cmake](https://github.com/TheLartians/CPM.cmake) should be invisible to library users as it's a self-contained CMake Script.
-If problems do arise, users can always opt-out by defining the CMake or env variable [`CPM_USE_LOCAL_PACKAGES`](https://github.com/cpm-cmake/CPM.cmake#options), which will override all calls to `CPMAddPackage` with the according `find_package` call.
-This should also enable users to use the project with their favorite external C++ dependency manager, such as vcpkg or Conan.
+项目使用以下工具保证代码质量：
 
-> Can I configure and build my project offline?
+- **clang-format** - C++ 代码格式化
+- **cmake-format** - CMake 文件格式化
+- **clang-tidy** - 静态代码分析
 
-No internet connection is required for building the project, however when using CPM missing dependencies are downloaded at configure time.
-To avoid redundant downloads, it's highly recommended to set a CPM.cmake cache directory, e.g.: `export CPM_SOURCE_CACHE=$HOME/.cache/CPM`.
-This will enable shallow clones and allow offline configurations dependencies are already available in the cache.
+### 添加新的文件格式支持
 
-> Can I use CPack to create a package installer for my project?
+1. 在 `src/io/` 创建新的读取器类，实现 `IModelReader` 接口
+2. 在 `model_reader_registry.cpp` 的 `registerBuiltinModelReaders()` 中注册
+3. 更新 `Main.qml` 中的文件过滤器
 
-As there are a lot of possible options and configurations, this is not (yet) in the scope of this template. See the [CPack documentation](https://cmake.org/cmake/help/latest/module/CPack.html) for more information on setting up CPack installers.
+## 许可证
 
-> This is too much, I just want to play with C++ code and test some libraries.
+本项目基于 [Unlicense](LICENSE) 发布 - 公共领域，可自由使用。
 
-Perhaps the [MiniCppStarter](https://github.com/TheLartians/MiniCppStarter) is something for you!
+## 致谢
 
-## Related projects and alternatives
-
-- [**ModernCppStarter & PVS-Studio Static Code Analyzer**](https://github.com/viva64/pvs-studio-cmake-examples/tree/master/modern-cpp-starter): Official instructions on how to use the ModernCppStarter with the PVS-Studio Static Code Analyzer.
-- [**cpp-best-practices/gui_starter_template**](https://github.com/cpp-best-practices/gui_starter_template/): A popular C++ starter project, created in 2017.
-- [**filipdutescu/modern-cpp-template**](https://github.com/filipdutescu/modern-cpp-template): A recent starter using a more traditional approach for CMake structure and dependency management.
-- [**vector-of-bool/pitchfork**](https://github.com/vector-of-bool/pitchfork/): Pitchfork is a Set of C++ Project Conventions.
-
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=TheLartians/ModernCppStarter,cpp-best-practices/gui_starter_template,filipdutescu/modern-cpp-template&type=Date)](https://star-history.com/#TheLartians/ModernCppStarter&cpp-best-practices/gui_starter_template&filipdutescu/modern-cpp-template&Date)
+- [Qt Project](https://www.qt.io/) - 优秀的跨平台 GUI 框架
+- [OpenCASCADE](https://dev.opencascade.org/) - 强大的 3D CAD 内核
+- [HighFive](https://github.com/highfive-devs/highfive) - 现代化的 HDF5 C++ 接口
+- [Kangaroo](https://github.com/HATTER-LONG/Kangaroo) - 实用的基础设施工具库

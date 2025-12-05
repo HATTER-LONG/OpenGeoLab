@@ -52,6 +52,10 @@ include(./cmake/CPM.cmake)
 # External Dependencies
 # ==============================================================================
 
+# ------------------------------------------------------------------------------
+# CPM-managed Dependencies
+# ------------------------------------------------------------------------------
+
 # cxxopts: Command-line argument parsing library
 CPMAddPackage(
   GITHUB_REPOSITORY jarro2783/cxxopts
@@ -79,7 +83,19 @@ else()
   )
 endif()
 
-# Find Open CASCADE Technology
+# HighFive: Modern C++ interface for HDF5 Requires HDF5 to be pre-installed on the system
+CPMAddPackage(
+  NAME HighFive
+  GITHUB_REPOSITORY highfive-devs/highfive
+  VERSION 3.2.0
+  OPTIONS "HIGHFIVE_UNIT_TESTS OFF" "HIGHFIVE_EXAMPLES OFF" "HIGHFIVE_BUILD_DOCS OFF"
+)
+
+# ------------------------------------------------------------------------------
+# Pre-installed Dependencies
+# ------------------------------------------------------------------------------
+
+# OpenCASCADE: 3D CAD modeling kernel (must be pre-installed)
 find_package(OpenCASCADE REQUIRED)
 
 message(STATUS "Using OpenCASCADE from \"${OpenCASCADE_INSTALL_PREFIX}\"")
@@ -194,6 +210,7 @@ target_link_libraries(
           Kangaroo::Kangaroo
           cxxopts
           fmt::fmt
+          HighFive::HighFive
           ${OpenCASCADE_LIBS}
 )
 
@@ -238,3 +255,10 @@ qt_generate_deploy_qml_app_script(
 )
 
 install(SCRIPT ${deploy_script})
+
+# ==============================================================================
+# Testing Configuration
+# ==============================================================================
+
+enable_testing()
+add_subdirectory(test)
