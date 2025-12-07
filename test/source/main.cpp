@@ -2,13 +2,13 @@
  * @file main.cpp
  * @brief Main entry point for OpenGeoLab unit tests
  *
- * This file configures doctest as the testing framework and serves as
+ * This file configures Catch2 as the testing framework and serves as
  * the entry point for all test cases in the project.
  */
 
-#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include <catch2/catch_test_macros.hpp>
 
-#include <doctest/doctest.h>
+namespace {
 
 // =============================================================================
 // Basic Sanity Tests
@@ -27,3 +27,5 @@ TEST_CASE("Sanity check - string operations") {
     CHECK(hello + " " + world == "Hello World");
     CHECK(hello.size() == 5);
 }
+
+} // namespace

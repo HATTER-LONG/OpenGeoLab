@@ -23,7 +23,7 @@
 - 🖱️ **交互式操作** - 鼠标拖拽旋转、滚轮缩放、Shift+拖拽平移
 - 📊 **HDF5 数据支持** - 通过 HighFive 库支持 HDF5 数据格式
 - 🧩 **组件化架构** - 基于依赖注入的可扩展文件读取器系统
-- ✅ **单元测试** - 使用 doctest 框架的完整测试覆盖
+- ✅ **单元测试** - 使用 Catch2 框架的完整测试覆盖
 
 ## 依赖项
 
@@ -43,7 +43,7 @@
 | [cxxopts](https://github.com/jarro2783/cxxopts) | 3.0.0 | 命令行参数解析 |
 | [Kangaroo](https://github.com/HATTER-LONG/Kangaroo) | 2.2.1 | 基础设施工具库 |
 | [HighFive](https://github.com/highfive-devs/highfive) | 3.2.0 | 现代 C++ HDF5 接口 |
-| [doctest](https://github.com/doctest/doctest) | 2.4.12 | 单元测试框架 |
+| [Catch2](https://github.com/catchorg/Catch2) | 3.11.0 | 单元测试框架 |
 | [spdlog](https://github.com/gabime/spdlog) | - | 日志库 (通过 Kangaroo) |
 | [fmt](https://github.com/fmtlib/fmt) | - | 格式化库 (通过 Kangaroo) |
 

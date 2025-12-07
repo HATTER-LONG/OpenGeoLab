@@ -18,32 +18,12 @@ if(NOT COMMAND CPMAddPackage)
   include(../cmake/CPM.cmake)
 endif()
 
-# doctest: Fast C++ testing framework
-CPMAddPackage("gh:doctest/doctest@2.4.12")
-
-# Format.cmake: Auto-formatting support
-CPMAddPackage("gh:TheLartians/Format.cmake@1.7.3")
-
-# Kangaroo: Only add if not already available from parent project
-if(NOT TARGET Kangaroo::Kangaroo)
-  set(LOCAL_KANGAROO_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../Kangaroo")
-  if(EXISTS ${LOCAL_KANGAROO_PATH})
-    message(STATUS "Found local Kangaroo at ${LOCAL_KANGAROO_PATH}, using local version")
-    CPMAddPackage(
-      NAME Kangaroo
-      SOURCE_DIR ${LOCAL_KANGAROO_PATH}
-      OPTIONS "BUILD_SHARED_LIBS ON"
-    )
-  else()
-    message(STATUS "Local Kangaroo not found, downloading from GitHub")
-    CPMAddPackage(
-      NAME Kangaroo
-      GITHUB_REPOSITORY HATTER-LONG/Kangaroo
-      VERSION 2.2.1
-      OPTIONS "BUILD_SHARED_LIBS ON"
-    )
-  endif()
-endif()
+# Catch2: Modern C++ testing framework
+CPMAddPackage(
+  NAME Catch2
+  GITHUB_REPOSITORY catchorg/Catch2
+  VERSION 3.11.0
+)
 
 # ==============================================================================
 # Test Sources Collection
@@ -57,7 +37,10 @@ file(GLOB_RECURSE test_sources CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/sou
 
 add_executable(${PROJECT_NAME} ${test_sources})
 
-target_link_libraries(${PROJECT_NAME} PRIVATE doctest::doctest Kangaroo::Kangaroo fmt::fmt)
+target_link_libraries(
+  ${PROJECT_NAME} PRIVATE Catch2::Catch2WithMain Kangaroo::Kangaroo HighFive::HighFive
+                          ${OpenCASCADE_LIBS}
+)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 17)
 
@@ -82,7 +65,6 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU")
   endif()
 elseif(MSVC)
   target_compile_options(${PROJECT_NAME} PRIVATE /W4)
-  target_compile_definitions(${PROJECT_NAME} PRIVATE DOCTEST_CONFIG_USE_STD_HEADERS)
 endif()
 
 # ==============================================================================
@@ -91,8 +73,10 @@ endif()
 
 enable_testing()
 
-include(${doctest_SOURCE_DIR}/scripts/cmake/doctest.cmake)
-doctest_discover_tests(${PROJECT_NAME})
+list(APPEND CMAKE_MODULE_PATH ${Catch2_SOURCE_DIR}/extras)
+include(CTest)
+include(Catch)
+catch_discover_tests(${PROJECT_NAME})
 
 # ==============================================================================
 # Code Coverage (optional)
