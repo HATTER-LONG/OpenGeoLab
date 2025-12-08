@@ -156,6 +156,16 @@ qt_add_executable(${PROJECT_NAME} ${sources} ${headers})
 # QML Module Configuration
 # ==============================================================================
 
+# Collect all SVG icon resources automatically (using relative paths)
+file(GLOB ICON_RESOURCES_ABS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/*.svg")
+
+# Convert absolute paths to relative paths for Qt resource system
+set(ICON_RESOURCES "")
+foreach(icon_file ${ICON_RESOURCES_ABS})
+  file(RELATIVE_PATH icon_rel "${CMAKE_CURRENT_SOURCE_DIR}" "${icon_file}")
+  list(APPEND ICON_RESOURCES "${icon_rel}")
+endforeach()
+
 # Register QML module with custom OpenGL 3D rendering components Only UI-related files (with
 # QML_ELEMENT) need to be listed here
 qt_add_qml_module(
@@ -179,6 +189,8 @@ qt_add_qml_module(
   resources/qml/RibbonTabContent.qml
   resources/qml/OperationPanel.qml
   resources/qml/OperationPanelManager.qml
+  RESOURCES
+  ${ICON_RESOURCES}
   SOURCES
   src/ui/geometry3d.cpp
   include/ui/geometry3d.hpp

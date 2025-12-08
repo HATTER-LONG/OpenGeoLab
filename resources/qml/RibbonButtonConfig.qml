@@ -12,13 +12,16 @@ import QtQuick
  *
  * Button config properties:
  * - id: Unique identifier, used as signal name
- * - icon: Unicode icon character
+ * - iconSource: Path to SVG icon resource (e.g., iconBasePath + "icon.svg")
  * - text: Button label (use \n for multi-line)
  * - tooltip: Optional tooltip text
  * - type: "button" (default) or "separator"
  */
 QtObject {
     id: buttonConfig
+
+    // Icon base path - matches RESOURCE_PREFIX in CMakeLists.txt
+    readonly property string iconBasePath: "qrc:/scenegraph/opengeolab/resources/icons/"
 
     // ========================================================================
     // GEOMETRY TAB
@@ -29,12 +32,12 @@ QtObject {
             buttons: [
                 {
                     id: "addPoint",
-                    icon: "•",
+                    iconSource: iconBasePath + "point.svg",
                     text: "Point"
                 },
                 {
                     id: "pointReplace",
-                    icon: "⊕",
+                    iconSource: iconBasePath + "point_replace.svg",
                     text: "Point\nReplace"
                 },
                 {
@@ -42,17 +45,17 @@ QtObject {
                 },
                 {
                     id: "addPlane",
-                    icon: "▭",
+                    iconSource: iconBasePath + "plane.svg",
                     text: "Plane"
                 },
                 {
                     id: "addLine",
-                    icon: "╱",
+                    iconSource: iconBasePath + "line.svg",
                     text: "Line"
                 },
                 {
                     id: "addBox",
-                    icon: "☐",
+                    iconSource: iconBasePath + "box.svg",
                     text: "Box"
                 }
             ]
@@ -62,27 +65,27 @@ QtObject {
             buttons: [
                 {
                     id: "toggleRelease",
-                    icon: "⇥",
+                    iconSource: iconBasePath + "release.svg",
                     text: "Release"
                 },
                 {
                     id: "toggle",
-                    icon: "⊞",
+                    iconSource: iconBasePath + "toggle.svg",
                     text: "Toggle"
                 },
                 {
                     id: "toggleStitch",
-                    icon: "⊟",
+                    iconSource: iconBasePath + "stitch.svg",
                     text: "Stitch"
                 },
                 {
                     id: "tangentExtend",
-                    icon: "↗",
+                    iconSource: iconBasePath + "tangent_extend.svg",
                     text: "Tangent\nExtend"
                 },
                 {
                     id: "projectGeometry",
-                    icon: "⊡",
+                    iconSource: iconBasePath + "project.svg",
                     text: "Project"
                 }
             ]
@@ -92,37 +95,37 @@ QtObject {
             buttons: [
                 {
                     id: "trim",
-                    icon: "✂",
+                    iconSource: iconBasePath + "trim.svg",
                     text: "Trim"
                 },
                 {
                     id: "offset",
-                    icon: "⊖",
+                    iconSource: iconBasePath + "offset.svg",
                     text: "Offset"
                 },
                 {
                     id: "fill",
-                    icon: "◉",
+                    iconSource: iconBasePath + "fill.svg",
                     text: "Fill"
                 },
                 {
                     id: "surfaceExtend",
-                    icon: "↔",
+                    iconSource: iconBasePath + "surface_extend.svg",
                     text: "Surface\nExtend"
                 },
                 {
                     id: "surfaceMerge",
-                    icon: "⊗",
+                    iconSource: iconBasePath + "surface_merge.svg",
                     text: "Surface\nMerge"
                 },
                 {
                     id: "suppress",
-                    icon: "⊘",
+                    iconSource: iconBasePath + "suppress.svg",
                     text: "Suppress"
                 },
                 {
                     id: "split",
-                    icon: "⫽",
+                    iconSource: iconBasePath + "split.svg",
                     text: "Split"
                 }
             ]
@@ -138,22 +141,22 @@ QtObject {
             buttons: [
                 {
                     id: "generateMesh",
-                    icon: "◇",
+                    iconSource: iconBasePath + "generate_mesh.svg",
                     text: "Generate\nMesh"
                 },
                 {
                     id: "refineMesh",
-                    icon: "△",
+                    iconSource: iconBasePath + "refine_mesh.svg",
                     text: "Refine"
                 },
                 {
                     id: "simplifyMesh",
-                    icon: "▽",
+                    iconSource: iconBasePath + "simplify_mesh.svg",
                     text: "Simplify"
                 },
                 {
                     id: "smoothMesh",
-                    icon: "⬡",
+                    iconSource: iconBasePath + "smooth_mesh.svg",
                     text: "Smooth"
                 }
             ]
@@ -163,12 +166,12 @@ QtObject {
             buttons: [
                 {
                     id: "checkMesh",
-                    icon: "✓",
+                    iconSource: iconBasePath + "check_mesh.svg",
                     text: "Check"
                 },
                 {
                     id: "repairMesh",
-                    icon: "🔧",
+                    iconSource: iconBasePath + "repair_mesh.svg",
                     text: "Repair"
                 }
             ]
@@ -184,22 +187,22 @@ QtObject {
             buttons: [
                 {
                     id: "rotateView",
-                    icon: "⟳",
+                    iconSource: iconBasePath + "rotate_view.svg",
                     text: "Rotate"
                 },
                 {
                     id: "panView",
-                    icon: "⤡",
+                    iconSource: iconBasePath + "pan_view.svg",
                     text: "Pan"
                 },
                 {
                     id: "zoomView",
-                    icon: "🔍",
+                    iconSource: iconBasePath + "zoom_view.svg",
                     text: "Zoom"
                 },
                 {
                     id: "fitAll",
-                    icon: "⬚",
+                    iconSource: iconBasePath + "fit_all.svg",
                     text: "Fit All"
                 }
             ]
@@ -209,12 +212,12 @@ QtObject {
             buttons: [
                 {
                     id: "pick",
-                    icon: "☝",
+                    iconSource: iconBasePath + "pick.svg",
                     text: "Pick"
                 },
                 {
                     id: "boxSelect",
-                    icon: "▢",
+                    iconSource: iconBasePath + "box_select.svg",
                     text: "Box\nSelect"
                 }
             ]
@@ -230,17 +233,17 @@ QtObject {
             buttons: [
                 {
                     id: "options",
-                    icon: "⚙",
+                    iconSource: iconBasePath + "options.svg",
                     text: "Options"
                 },
                 {
                     id: "theme",
-                    icon: "🎨",
+                    iconSource: iconBasePath + "theme.svg",
                     text: "Theme"
                 },
                 {
                     id: "help",
-                    icon: "❓",
+                    iconSource: iconBasePath + "help.svg",
                     text: "Help"
                 }
             ]

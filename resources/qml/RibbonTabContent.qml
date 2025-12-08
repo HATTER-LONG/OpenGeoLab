@@ -40,7 +40,7 @@ Item {
                 Row {
                     id: buttonRow
                     anchors.top: parent.top
-                    anchors.topMargin: 5
+                    anchors.topMargin: 2
                     anchors.horizontalCenter: parent.horizontalCenter
                     spacing: 4
 
@@ -71,7 +71,7 @@ Item {
                 // Title at bottom
                 Text {
                     anchors.bottom: parent.bottom
-                    anchors.bottomMargin: 2
+                    anchors.bottomMargin: 4
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: groupContainer.modelData.title || ""
                     font.pixelSize: 10
@@ -100,7 +100,7 @@ Item {
             id: btn
             property var buttonData: ({})
 
-            iconText: buttonData.icon || "?"
+            iconSource: buttonData.iconSource || ""
             text: buttonData.text || ""
 
             onClicked: {

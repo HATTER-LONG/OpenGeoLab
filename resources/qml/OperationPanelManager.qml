@@ -113,14 +113,17 @@ Item {
             }
         })
 
+    // Position offset properties for panel placement
+    // These should be set by the parent to position the panel correctly
+    property real panelLeftOffset: 210  // Default: after 200px control panel + margin
+    property real panelTopOffset: 10    // Default: small margin from top
+
     // The actual panel component
     OperationPanel {
         id: operationPanel
         visible: panelManager.hasPanelOpen
-        anchors.right: parent.right
-        anchors.top: parent.top
-        anchors.rightMargin: 10
-        anchors.topMargin: 10
+        x: panelManager.panelLeftOffset
+        y: panelManager.panelTopOffset
 
         onApplyClicked: {
             panelManager.panelApplied(panelManager.activePanelId, {

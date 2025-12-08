@@ -46,13 +46,42 @@ Rectangle {
         anchors.fill: parent
         spacing: 0
 
-        // Title bar
+        // Title bar (draggable)
         Rectangle {
+            id: titleBar
             width: parent.width
             height: 28
             color: "#F0F0F0"
             border.color: "#C0C0C0"
             border.width: 1
+
+            // Drag handler for the title bar
+            MouseArea {
+                id: dragArea
+                anchors.fill: parent
+                property point clickPos: Qt.point(0, 0)
+
+                onPressed: mouse => {
+                    clickPos = Qt.point(mouse.x, mouse.y);
+                    cursorShape = Qt.ClosedHandCursor;
+                }
+
+                onReleased: {
+                    cursorShape = Qt.OpenHandCursor;
+                }
+
+                onPositionChanged: mouse => {
+                    if (pressed) {
+                        let deltaX = mouse.x - clickPos.x;
+                        let deltaY = mouse.y - clickPos.y;
+                        operationPanel.x += deltaX;
+                        operationPanel.y += deltaY;
+                    }
+                }
+
+                hoverEnabled: true
+                cursorShape: Qt.OpenHandCursor
+            }
 
             RowLayout {
                 anchors.fill: parent
@@ -86,6 +115,7 @@ Rectangle {
                     Layout.preferredHeight: 20
                     color: closeMouseArea.containsMouse ? "#E81123" : "transparent"
                     radius: 2
+                    z: 1  // Ensure close button is above drag area
 
                     Text {
                         anchors.centerIn: parent

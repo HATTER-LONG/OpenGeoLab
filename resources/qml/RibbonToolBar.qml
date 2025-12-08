@@ -88,7 +88,8 @@ Rectangle {
 
     readonly property var tabNames: ["Geometry", "Mesh", "Interaction", "General"]
 
-    height: 130
+    // Height: tab bar (28) + content area (button 60 + top margin 2 + bottom title 14) + padding
+    height: 120
     color: tabBackgroundColor
 
     // Button configuration instance
