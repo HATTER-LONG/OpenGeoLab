@@ -9,16 +9,14 @@ import OpenGeoLab
 Window {
     id: root
     visible: true
-    width: 960
-    height: 600
+    width: 1200
+    height: 800
     title: "OpenGeoLab - 3D Geometry Renderer"
 
     Component.onCompleted: {
-        // 设置 ModelImporter 的目标渲染器
         ModelImporter.setTargetRenderer(geometryRenderer);
     }
 
-    // 连接 ModelImporter 信号
     Connections {
         target: ModelImporter
         function onModelLoaded(filename) {
@@ -35,12 +33,29 @@ Window {
     FileDialog {
         id: fileDialog
         title: "Import Model"
-        nameFilters: ["STEP files (*.stp *.step)", "BREP files (*.brep)", "All files (*)"]
+        nameFilters: ["STEP files (*.stp *.step)", "BREP files (*.brep *.brp)", "All files (*)"]
         onAccepted: {
             statusText.text = "Loading model...";
             statusText.color = "yellow";
             ModelImporter.importModel(selectedFile);
         }
+    }
+
+    // ========================================================================
+    // Ribbon Toolbar at top
+    // ========================================================================
+    RibbonToolBar {
+        id: ribbonToolBar
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: parent.top
+
+        onOpenFile: fileDialog.open()
+        onImportModel: fileDialog.open()
+        onSaveFile: console.log("Save file - TODO")
+        onExportModel: console.log("Export model - TODO")
+
+        onAddBox: geometryRenderer.geometryType = "cube"
     }
 
     // Status text overlay
@@ -50,7 +65,7 @@ Window {
         font.pixelSize: 14
         font.bold: true
         text: "Ready to import model"
-        anchors.top: parent.top
+        anchors.top: ribbonToolBar.bottom
         anchors.left: controlPanel.right
         anchors.margins: 15
         z: 100
@@ -65,12 +80,12 @@ Window {
         }
     }
 
-    // 3D Geometry renderer - fills most of the window, leaving space for control panel
+    // 3D Geometry renderer - fills most of the window, leaving space for control panel and ribbon
     Geometry3D {
         id: geometryRenderer
         anchors.left: controlPanel.right
         anchors.right: parent.right
-        anchors.top: parent.top
+        anchors.top: ribbonToolBar.bottom
         anchors.bottom: parent.bottom
 
         // Default: use vertex colors (alpha = 0)
@@ -80,9 +95,9 @@ Window {
     Rectangle {
         id: controlPanel
         width: 200
-        height: parent.height
         anchors.left: parent.left
-        anchors.top: parent.top
+        anchors.top: ribbonToolBar.bottom
+        anchors.bottom: parent.bottom
         color: Qt.rgba(0.2, 0.2, 0.2, 0.9)
 
         ScrollView {
@@ -262,7 +277,7 @@ Window {
         id: label
         color: "black"
         wrapMode: Text.WordWrap
-        text: qsTr("3D Cube rendering using OpenGL. Use the control panel to change colors.\nDrag with left mouse button to rotate the cube.")
+        text: qsTr("3D Geometry Renderer - Use Ribbon toolbar for file operations and geometry tools.\nDrag with left mouse button to rotate, Shift+drag to pan, scroll wheel to zoom.")
         anchors.right: parent.right
         anchors.left: controlPanel.right
         anchors.leftMargin: 20

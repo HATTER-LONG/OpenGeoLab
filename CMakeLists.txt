@@ -169,6 +169,10 @@ qt_add_qml_module(
   NO_RESOURCE_TARGET_PATH
   QML_FILES
   resources/qml/Main.qml
+  resources/qml/RibbonToolBar.qml
+  resources/qml/RibbonLargeButton.qml
+  resources/qml/RibbonGroup.qml
+  resources/qml/RibbonGroupSeparator.qml
   SOURCES
   src/ui/geometry3d.cpp
   include/ui/geometry3d.hpp
