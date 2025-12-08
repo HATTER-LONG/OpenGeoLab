@@ -1,0 +1,177 @@
+pragma ComponentBehavior: Bound
+import QtQuick
+import QtQuick.Controls
+
+/**
+ * @brief Manager for operation panels triggered by Ribbon toolbar actions
+ *
+ * This component manages the display of operation panels in a consistent manner.
+ * Place this in your main window and connect it to your RibbonToolBar signals.
+ *
+ * Usage pattern:
+ * 1. RibbonToolBar emits signal (e.g., toggleRelease)
+ * 2. Main.qml connects signal to panelManager.showPanel("release", ...)
+ * 3. OperationPanelManager shows the panel
+ * 4. User interacts, panel emits applyClicked/cancelClicked
+ * 5. Main.qml handles the actual operation
+ */
+Item {
+    id: panelManager
+
+    // Signals for panel actions - connect these in your main application
+    signal panelApplied(string panelId, var selectionData)
+    signal panelCancelled(string panelId)
+    signal selectionRequested(string panelId)
+
+    // Current active panel info
+    property string activePanelId: ""
+    property bool hasPanelOpen: activePanelId !== ""
+
+    // Panel configurations
+    readonly property var panelConfigs: ({
+            // Geometry operations
+            "release": {
+                title: "Release",
+                hint: "Select the entities you want to Operate",
+                showWorkflow: true
+            },
+            "toggle": {
+                title: "Toggle",
+                hint: "Select surfaces to toggle",
+                showWorkflow: true
+            },
+            "stitch": {
+                title: "Stitch",
+                hint: "Select edges to stitch",
+                showWorkflow: true
+            },
+            "tangentExtend": {
+                title: "Tangent Extend",
+                hint: "Select edge to extend",
+                showWorkflow: true
+            },
+            "project": {
+                title: "Project",
+                hint: "Select geometry to project",
+                showWorkflow: true
+            },
+            "trim": {
+                title: "Trim",
+                hint: "Select curves to trim",
+                showWorkflow: true
+            },
+            "offset": {
+                title: "Offset",
+                hint: "Select geometry to offset",
+                showWorkflow: true
+            },
+            "fill": {
+                title: "Fill",
+                hint: "Select boundary to fill",
+                showWorkflow: true
+            },
+            "surfaceExtend": {
+                title: "Surface Extend",
+                hint: "Select surface edge to extend",
+                showWorkflow: true
+            },
+            "surfaceMerge": {
+                title: "Surface Merge",
+                hint: "Select surfaces to merge",
+                showWorkflow: true
+            },
+            "suppress": {
+                title: "Suppress",
+                hint: "Select features to suppress",
+                showWorkflow: true
+            },
+            "split": {
+                title: "Split",
+                hint: "Select geometry to split",
+                showWorkflow: true
+            },
+            // Mesh operations
+            "generateMesh": {
+                title: "Generate Mesh",
+                hint: "Select geometry to mesh",
+                showWorkflow: true
+            },
+            "refineMesh": {
+                title: "Refine Mesh",
+                hint: "Select mesh regions to refine",
+                showWorkflow: true
+            },
+            "checkMesh": {
+                title: "Check Mesh",
+                hint: "Select mesh to check quality",
+                showWorkflow: false
+            },
+            "repairMesh": {
+                title: "Repair Mesh",
+                hint: "Select mesh to repair",
+                showWorkflow: true
+            }
+        })
+
+    // The actual panel component
+    OperationPanel {
+        id: operationPanel
+        visible: panelManager.hasPanelOpen
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.rightMargin: 10
+        anchors.topMargin: 10
+
+        onApplyClicked: {
+            panelManager.panelApplied(panelManager.activePanelId, {
+                selectedCount: operationPanel.selectedCount
+            });
+            panelManager.closePanel();
+        }
+
+        onCancelClicked: {
+            panelManager.panelCancelled(panelManager.activePanelId);
+            panelManager.closePanel();
+        }
+
+        onSelectionRequested: {
+            panelManager.selectionRequested(panelManager.activePanelId);
+        }
+    }
+
+    // Show a panel by ID
+    function showPanel(panelId: string): void {
+        const config = panelConfigs[panelId];
+        if (config) {
+            operationPanel.title = config.title;
+            operationPanel.selectionHint = config.hint;
+            operationPanel.showWorkflowSection = config.showWorkflow;
+            operationPanel.reset();
+            activePanelId = panelId;
+        } else {
+            console.warn("Unknown panel ID:", panelId);
+        }
+    }
+
+    // Close the current panel
+    function closePanel(): void {
+        activePanelId = "";
+        operationPanel.reset();
+    }
+
+    // Update selection count for the current panel
+    function updateSelection(count: int): void {
+        if (hasPanelOpen) {
+            operationPanel.setSelection(count);
+        }
+    }
+
+    // Toggle panel - if same panel is open, close it; otherwise open the new one
+    function togglePanel(panelId: string): void {
+        if (activePanelId === panelId) {
+            closePanel();
+        } else {
+            showPanel(panelId);
+        }
+    }
+}

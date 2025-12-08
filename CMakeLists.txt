@@ -173,6 +173,11 @@ qt_add_qml_module(
   resources/qml/RibbonLargeButton.qml
   resources/qml/RibbonGroup.qml
   resources/qml/RibbonGroupSeparator.qml
+  resources/qml/RibbonFileMenu.qml
+  resources/qml/FileMenuItem.qml
+  resources/qml/RibbonConfig.qml
+  resources/qml/OperationPanel.qml
+  resources/qml/OperationPanelManager.qml
   SOURCES
   src/ui/geometry3d.cpp
   include/ui/geometry3d.hpp

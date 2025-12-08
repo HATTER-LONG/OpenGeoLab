@@ -42,6 +42,42 @@ Window {
     }
 
     // ========================================================================
+    // Operation Panel Manager - handles tool operation panels
+    // ========================================================================
+    OperationPanelManager {
+        id: panelManager
+        anchors.fill: parent
+        z: 1000  // Above other content
+
+        onPanelApplied: function (panelId, selectionData) {
+            console.log("Panel applied:", panelId, "with", selectionData.selectedCount, "selections");
+            // TODO: Handle the actual operation based on panelId
+            switch (panelId) {
+            case "release":
+                console.log("Executing Release operation...");
+                break;
+            case "toggle":
+                console.log("Executing Toggle operation...");
+                break;
+            // Add more cases as needed
+            }
+        }
+
+        onPanelCancelled: function (panelId) {
+            console.log("Panel cancelled:", panelId);
+        }
+
+        onSelectionRequested: function (panelId) {
+            console.log("Selection requested for:", panelId);
+            // TODO: Enter selection mode in the 3D view
+            // For demo, simulate selection after a delay
+            Qt.callLater(function () {
+                panelManager.updateSelection(3);  // Simulate 3 entities selected
+            });
+        }
+    }
+
+    // ========================================================================
     // Ribbon Toolbar at top
     // ========================================================================
     RibbonToolBar {
@@ -50,12 +86,37 @@ Window {
         anchors.right: parent.right
         anchors.top: parent.top
 
+        // File operations
         onOpenFile: fileDialog.open()
         onImportModel: fileDialog.open()
         onSaveFile: console.log("Save file - TODO")
         onExportModel: console.log("Export model - TODO")
 
+        // Geometry operations - show operation panels
+        onToggleRelease: panelManager.togglePanel("release")
+        onToggle: panelManager.togglePanel("toggle")
+        onToggleStitch: panelManager.togglePanel("stitch")
+        onTangentExtend: panelManager.togglePanel("tangentExtend")
+        onProjectGeometry: panelManager.togglePanel("project")
+        onTrim: panelManager.togglePanel("trim")
+        onOffset: panelManager.togglePanel("offset")
+        onFill: panelManager.togglePanel("fill")
+        onSurfaceExtend: panelManager.togglePanel("surfaceExtend")
+        onSurfaceMerge: panelManager.togglePanel("surfaceMerge")
+        onSuppress: panelManager.togglePanel("suppress")
+        onSplit: panelManager.togglePanel("split")
+
+        // Simple geometry creation (no panel needed)
         onAddBox: geometryRenderer.geometryType = "cube"
+        onAddPoint: console.log("Add point - TODO")
+        onAddPlane: console.log("Add plane - TODO")
+        onAddLine: console.log("Add line - TODO")
+
+        // Mesh operations
+        onGenerateMesh: panelManager.togglePanel("generateMesh")
+        onRefineMesh: panelManager.togglePanel("refineMesh")
+        onCheckMesh: panelManager.togglePanel("checkMesh")
+        onRepairMesh: panelManager.togglePanel("repairMesh")
     }
 
     // Status text overlay
