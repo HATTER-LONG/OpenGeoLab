@@ -9,18 +9,21 @@ import QtQuick.Controls
  * Features:
  * - Tab-based navigation (Geometry, Mesh, Interaction, General)
  * - File button opens a popup menu (Office backstage style)
- * - Tool buttons with icons and text labels
- * - Grouped tool sections with separators
- * - Configuration separated for easy customization
+ * - Configuration-driven button generation (see RibbonButtonConfig.qml)
+ *
+ * To add new buttons:
+ * 1. Edit RibbonButtonConfig.qml to add button definition
+ * 2. Add signal below if needed
+ * 3. Connect signal in Main.qml
  */
 Rectangle {
     id: ribbonToolBar
 
-    // ============================================
-    // SIGNALS - Connect these in your main application
-    // ============================================
+    // ========================================================================
+    // SIGNALS - Auto-dispatched based on button ID from config
+    // ========================================================================
 
-    // File operations (emitted from FileMenu)
+    // File operations (from FileMenu)
     signal newFile
     signal openFile
     signal saveFile
@@ -71,27 +74,31 @@ Rectangle {
     signal theme
     signal help
 
-    // ============================================
+    // ========================================================================
     // PROPERTIES
-    // ============================================
+    // ========================================================================
 
-    property int currentTabIndex: 0  // Default to Geometry tab (0-based, File is not a tab)
-    property color accentColor: "#0078D4"  // Microsoft blue
+    property int currentTabIndex: 0  // Default to Geometry tab
+    property color accentColor: "#0078D4"
     property color hoverColor: "#E5F1FB"
     property color selectedColor: "#CCE4F7"
     property color borderColor: "#D1D1D1"
     property color tabBackgroundColor: "#F3F3F3"
     property color contentBackgroundColor: "#FCFCFC"
 
-    // Tab names (File is not included - it's a menu button)
     readonly property var tabNames: ["Geometry", "Mesh", "Interaction", "General"]
 
     height: 130
     color: tabBackgroundColor
 
-    // ============================================
+    // Button configuration instance
+    RibbonButtonConfig {
+        id: buttonConfig
+    }
+
+    // ========================================================================
     // FILE MENU POPUP
-    // ============================================
+    // ========================================================================
     RibbonFileMenu {
         id: fileMenu
         x: 0
@@ -108,9 +115,9 @@ Rectangle {
         onExitApp: ribbonToolBar.exitApp()
     }
 
-    // ============================================
+    // ========================================================================
     // TAB BAR
-    // ============================================
+    // ========================================================================
     Rectangle {
         id: tabBar
         anchors.left: parent.left
@@ -125,7 +132,7 @@ Rectangle {
             anchors.verticalCenter: parent.verticalCenter
             spacing: 0
 
-            // File button (opens menu, not a tab)
+            // File button (opens menu)
             Rectangle {
                 Layout.preferredWidth: 60
                 Layout.preferredHeight: 24
@@ -148,7 +155,7 @@ Rectangle {
                 }
             }
 
-            // Regular tabs
+            // Tab buttons
             Repeater {
                 model: ribbonToolBar.tabNames
 
@@ -163,7 +170,6 @@ Rectangle {
                     border.width: ribbonToolBar.currentTabIndex === index ? 1 : 0
                     border.color: ribbonToolBar.borderColor
 
-                    // Hide bottom border when selected
                     Rectangle {
                         visible: ribbonToolBar.currentTabIndex === tabDelegate.index
                         anchors.bottom: parent.bottom
@@ -193,9 +199,9 @@ Rectangle {
         }
     }
 
-    // ============================================
-    // CONTENT AREA
-    // ============================================
+    // ========================================================================
+    // CONTENT AREA - Dynamic Tab Content
+    // ========================================================================
     Rectangle {
         id: contentArea
         anchors.left: parent.left
@@ -206,285 +212,49 @@ Rectangle {
         border.width: 1
         border.color: ribbonToolBar.borderColor
 
-        // ========== GEOMETRY TAB ==========
-        Row {
+        // Geometry Tab
+        RibbonTabContent {
             visible: ribbonToolBar.currentTabIndex === 0
             anchors.fill: parent
-            anchors.margins: 5
-            spacing: 2
-
-            RibbonGroup {
-                title: "Create"
-                height: parent.height
-
-                RibbonLargeButton {
-                    iconText: "•"
-                    text: "Point"
-                    onClicked: ribbonToolBar.addPoint()
-                }
-
-                RibbonLargeButton {
-                    iconText: "⊕"
-                    text: "Point\nReplace"
-                    onClicked: ribbonToolBar.pointReplace()
-                }
-
-                RibbonGroupSeparator {}
-
-                RibbonLargeButton {
-                    iconText: "▭"
-                    text: "Plane"
-                    onClicked: ribbonToolBar.addPlane()
-                }
-
-                RibbonLargeButton {
-                    iconText: "╱"
-                    text: "Line"
-                    onClicked: ribbonToolBar.addLine()
-                }
-
-                RibbonLargeButton {
-                    iconText: "☐"
-                    text: "Box"
-                    onClicked: ribbonToolBar.addBox()
-                }
-            }
-
-            RibbonGroup {
-                title: "Modify"
-                height: parent.height
-
-                RibbonLargeButton {
-                    iconText: "⇥"
-                    text: "Release"
-                    onClicked: ribbonToolBar.toggleRelease()
-                }
-
-                RibbonLargeButton {
-                    iconText: "⊞"
-                    text: "Toggle"
-                    onClicked: ribbonToolBar.toggle()
-                }
-
-                RibbonLargeButton {
-                    iconText: "⊟"
-                    text: "Stitch"
-                    onClicked: ribbonToolBar.toggleStitch()
-                }
-
-                RibbonLargeButton {
-                    iconText: "↗"
-                    text: "Tangent\nExtend"
-                    onClicked: ribbonToolBar.tangentExtend()
-                }
-
-                RibbonLargeButton {
-                    iconText: "⊡"
-                    text: "Project"
-                    onClicked: ribbonToolBar.projectGeometry()
-                }
-            }
-
-            RibbonGroup {
-                title: "Edit"
-                height: parent.height
-
-                RibbonLargeButton {
-                    iconText: "✂"
-                    text: "Trim"
-                    onClicked: ribbonToolBar.trim()
-                }
-
-                RibbonLargeButton {
-                    iconText: "⊖"
-                    text: "Offset"
-                    onClicked: ribbonToolBar.offset()
-                }
-
-                RibbonLargeButton {
-                    iconText: "◉"
-                    text: "Fill"
-                    onClicked: ribbonToolBar.fill()
-                }
-
-                RibbonLargeButton {
-                    iconText: "↔"
-                    text: "Surface\nExtend"
-                    onClicked: ribbonToolBar.surfaceExtend()
-                }
-
-                RibbonLargeButton {
-                    iconText: "⊗"
-                    text: "Surface\nMerge"
-                    onClicked: ribbonToolBar.surfaceMerge()
-                }
-
-                RibbonLargeButton {
-                    iconText: "⊘"
-                    text: "Suppress"
-                    onClicked: ribbonToolBar.suppress()
-                }
-
-                RibbonLargeButton {
-                    iconText: "⫽"
-                    text: "Split"
-                    onClicked: ribbonToolBar.split()
-                }
-            }
+            groups: buttonConfig.geometryTab
+            onButtonClicked: actionId => ribbonToolBar.dispatchAction(actionId)
         }
 
-        // ========== MESH TAB ==========
-        Row {
+        // Mesh Tab
+        RibbonTabContent {
             visible: ribbonToolBar.currentTabIndex === 1
             anchors.fill: parent
-            anchors.margins: 5
-            spacing: 2
-
-            RibbonGroup {
-                title: "Mesh Operations"
-                height: parent.height
-
-                RibbonLargeButton {
-                    iconText: "◇"
-                    text: "Generate\nMesh"
-                    onClicked: ribbonToolBar.generateMesh()
-                }
-
-                RibbonLargeButton {
-                    iconText: "△"
-                    text: "Refine"
-                    onClicked: ribbonToolBar.refineMesh()
-                }
-
-                RibbonLargeButton {
-                    iconText: "▽"
-                    text: "Simplify"
-                    onClicked: ribbonToolBar.simplifyMesh()
-                }
-
-                RibbonLargeButton {
-                    iconText: "⬡"
-                    text: "Smooth"
-                    onClicked: ribbonToolBar.smoothMesh()
-                }
-            }
-
-            RibbonGroup {
-                title: "Quality"
-                height: parent.height
-
-                RibbonLargeButton {
-                    iconText: "✓"
-                    text: "Check"
-                    onClicked: ribbonToolBar.checkMesh()
-                }
-
-                RibbonLargeButton {
-                    iconText: "🔧"
-                    text: "Repair"
-                    onClicked: ribbonToolBar.repairMesh()
-                }
-            }
+            groups: buttonConfig.meshTab
+            onButtonClicked: actionId => ribbonToolBar.dispatchAction(actionId)
         }
 
-        // ========== INTERACTION TAB ==========
-        Row {
+        // Interaction Tab
+        RibbonTabContent {
             visible: ribbonToolBar.currentTabIndex === 2
             anchors.fill: parent
-            anchors.margins: 5
-            spacing: 2
-
-            RibbonGroup {
-                title: "View"
-                height: parent.height
-
-                RibbonLargeButton {
-                    iconText: "⟳"
-                    text: "Rotate"
-                    onClicked: ribbonToolBar.rotateView()
-                }
-
-                RibbonLargeButton {
-                    iconText: "⤡"
-                    text: "Pan"
-                    onClicked: ribbonToolBar.panView()
-                }
-
-                RibbonLargeButton {
-                    iconText: "🔍"
-                    text: "Zoom"
-                    onClicked: ribbonToolBar.zoomView()
-                }
-
-                RibbonLargeButton {
-                    iconText: "⬚"
-                    text: "Fit All"
-                    onClicked: ribbonToolBar.fitAll()
-                }
-            }
-
-            RibbonGroup {
-                title: "Selection"
-                height: parent.height
-
-                RibbonLargeButton {
-                    iconText: "☝"
-                    text: "Pick"
-                    onClicked: ribbonToolBar.pick()
-                }
-
-                RibbonLargeButton {
-                    iconText: "▢"
-                    text: "Box\nSelect"
-                    onClicked: ribbonToolBar.boxSelect()
-                }
-            }
+            groups: buttonConfig.interactionTab
+            onButtonClicked: actionId => ribbonToolBar.dispatchAction(actionId)
         }
 
-        // ========== GENERAL TAB ==========
-        Row {
+        // General Tab
+        RibbonTabContent {
             visible: ribbonToolBar.currentTabIndex === 3
             anchors.fill: parent
-            anchors.margins: 5
-            spacing: 2
-
-            RibbonGroup {
-                title: "Settings"
-                height: parent.height
-
-                RibbonLargeButton {
-                    iconText: "⚙"
-                    text: "Options"
-                    onClicked: ribbonToolBar.options()
-                }
-
-                RibbonLargeButton {
-                    iconText: "🎨"
-                    text: "Theme"
-                    onClicked: ribbonToolBar.theme()
-                }
-
-                RibbonLargeButton {
-                    iconText: "❓"
-                    text: "Help"
-                    onClicked: ribbonToolBar.help()
-                }
-            }
+            groups: buttonConfig.generalTab
+            onButtonClicked: actionId => ribbonToolBar.dispatchAction(actionId)
         }
     }
 
-    // ============================================
-    // PUBLIC FUNCTIONS
-    // ============================================
+    // ========================================================================
+    // ACTION DISPATCHER
+    // ========================================================================
 
-    // Update recent files in the file menu
-    function setRecentFiles(files: list<string>): void {
-        fileMenu.setRecentFiles(files);
-    }
-
-    // Handle action by name (for dynamic button configuration)
-    function handleAction(actionName: string): void {
-        switch (actionName) {
+    /**
+     * Dispatch action by ID to the corresponding signal
+     * This maps button IDs from config to actual signals
+     */
+    function dispatchAction(actionId: string): void {
+        switch (actionId) {
         // Geometry actions
         case "addPoint":
             addPoint();
@@ -589,7 +359,15 @@ Rectangle {
             help();
             break;
         default:
-            console.log("Unknown action:", actionName);
+            console.warn("Unknown action:", actionId);
         }
+    }
+
+    // ========================================================================
+    // PUBLIC API
+    // ========================================================================
+
+    function setRecentFiles(files: list<string>): void {
+        fileMenu.setRecentFiles(files);
     }
 }

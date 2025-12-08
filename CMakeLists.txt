@@ -175,7 +175,8 @@ qt_add_qml_module(
   resources/qml/RibbonGroupSeparator.qml
   resources/qml/RibbonFileMenu.qml
   resources/qml/FileMenuItem.qml
-  resources/qml/RibbonConfig.qml
+  resources/qml/RibbonButtonConfig.qml
+  resources/qml/RibbonTabContent.qml
   resources/qml/OperationPanel.qml
   resources/qml/OperationPanelManager.qml
   SOURCES

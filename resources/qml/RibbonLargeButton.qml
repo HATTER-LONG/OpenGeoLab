@@ -16,9 +16,13 @@ Rectangle {
 
     signal clicked
 
+    // Fixed size for consistent layout
+    width: 50
+    height: 70
+
+    // Layout hints (for when used in RowLayout)
     Layout.preferredWidth: 50
     Layout.preferredHeight: 70
-    Layout.fillHeight: true
 
     color: buttonMouseArea.containsMouse ? (buttonMouseArea.pressed ? "#CCE4F7" : "#E5F1FB") : "transparent"
     radius: 3

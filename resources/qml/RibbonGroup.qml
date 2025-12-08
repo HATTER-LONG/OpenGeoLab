@@ -16,17 +16,23 @@ Rectangle {
     Layout.fillHeight: true
     color: "transparent"
 
-    // Group content area
+    // Group content area - use Item with Row for dynamic content
     default property alias content: contentRow.data
 
-    RowLayout {
-        id: contentRow
+    Item {
+        id: contentContainer
         anchors.top: parent.top
         anchors.bottom: titleBar.top
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.topMargin: 5
         anchors.bottomMargin: 0
-        spacing: 4
+        width: contentRow.width
+
+        Row {
+            id: contentRow
+            anchors.centerIn: parent
+            spacing: 4
+        }
     }
 
     // Title bar at bottom
