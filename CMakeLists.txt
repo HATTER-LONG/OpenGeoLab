@@ -200,6 +200,10 @@ qt_add_qml_module(
   include/ui/geometry3d.hpp
   src/ui/model_importer.cpp
   include/ui/model_importer.hpp
+  src/geometry/geometry_creator.cpp
+  include/ui/geometry_creator.hpp
+  src/geometry/shape_triangulator.cpp
+  include/geometry/shape_triangulator.hpp
 )
 
 # ==============================================================================

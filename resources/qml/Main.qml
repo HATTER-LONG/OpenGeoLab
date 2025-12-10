@@ -13,6 +13,18 @@ Window {
 
     Component.onCompleted: {
         ModelImporter.setTargetRenderer(geometryRenderer);
+        GeometryCreator.setTargetRenderer(geometryRenderer);
+    }
+
+    // Create Box Dialog
+    CreateBoxDialog {
+        id: createBoxDialog
+        anchors.centerIn: parent
+
+        onBoxCreated: function (width, height, depth) {
+            console.log("Creating box:", width, "x", height, "x", depth);
+            GeometryCreator.createBox(width, height, depth);
+        }
     }
 
     Connections {
@@ -22,6 +34,18 @@ Window {
             statusText.color = "lightgreen";
         }
         function onModelLoadFailed(error) {
+            statusText.text = "Error: " + error;
+            statusText.color = "red";
+        }
+    }
+
+    Connections {
+        target: GeometryCreator
+        function onGeometryCreated(name) {
+            statusText.text = "Created: " + name;
+            statusText.color = "lightgreen";
+        }
+        function onGeometryCreationFailed(error) {
             statusText.text = "Error: " + error;
             statusText.color = "red";
         }
@@ -109,8 +133,8 @@ Window {
         onSuppress: panelManager.togglePanel("suppress")
         onSplit: panelManager.togglePanel("split")
 
-        // Simple geometry creation - removed hardcoded cube/cylinder creation
-        onAddBox: console.log("Add box - use Import to load BREP/STEP files")
+        // Simple geometry creation - use OCC-based GeometryCreator
+        onAddBox: createBoxDialog.open()
         onAddPoint: console.log("Add point - TODO")
         onAddPlane: console.log("Add plane - TODO")
         onAddLine: console.log("Add line - TODO")

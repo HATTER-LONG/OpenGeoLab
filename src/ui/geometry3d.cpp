@@ -198,26 +198,6 @@ void Geometry3D::setViewIsometric() {
 }
 
 // ============================================================================
-// Geometry Creation Methods
-// ============================================================================
-
-void Geometry3D::createBox(qreal width, qreal height, qreal depth) {
-    LOG_INFO("Creating box with dimensions: {} x {} x {}", width, height, depth);
-
-    // Create box geometry data with the specified dimensions
-    auto box_data = std::make_shared<Geometry::BoxData>(
-        static_cast<float>(width), static_cast<float>(height), static_cast<float>(depth));
-
-    // Set the geometry using existing method
-    setCustomGeometry(box_data);
-
-    // Auto-fit view to show the new box
-    fitToView();
-
-    LOG_INFO("Box created and displayed successfully");
-}
-
-// ============================================================================
 // Window and Renderer Setup
 // ============================================================================
 

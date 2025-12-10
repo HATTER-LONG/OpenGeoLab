@@ -66,14 +66,9 @@ void Camera::orbit(float delta_yaw, float delta_pitch) {
         m_yaw += 360.0f;
     }
 
-    // Allow full vertical rotation but keep pitch in reasonable range
-    // This allows viewing from any angle including top/bottom
-    while(m_pitch > 180.0f) {
-        m_pitch -= 360.0f;
-    }
-    while(m_pitch < -180.0f) {
-        m_pitch += 360.0f;
-    }
+    // Clamp pitch to avoid gimbal lock
+    // Standard CAD software limits pitch to avoid the singularity at ±90°
+    m_pitch = qBound(MIN_PITCH, m_pitch, MAX_PITCH);
 
     emit cameraChanged();
 }
@@ -90,13 +85,8 @@ void Camera::setOrbitAngles(float yaw, float pitch) {
         m_yaw += 360.0f;
     }
 
-    // Normalize pitch
-    while(m_pitch > 180.0f) {
-        m_pitch -= 360.0f;
-    }
-    while(m_pitch < -180.0f) {
-        m_pitch += 360.0f;
-    }
+    // Clamp pitch to avoid gimbal lock
+    m_pitch = qBound(MIN_PITCH, m_pitch, MAX_PITCH);
 
     emit cameraChanged();
 }
