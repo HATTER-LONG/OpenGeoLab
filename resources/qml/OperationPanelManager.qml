@@ -31,18 +31,18 @@ Item {
     readonly property var panelConfigs: ({
             // Geometry operations
             "release": {
-                title: "Release",
-                hint: "Select the entities you want to Operate",
+                title: "Extrude",
+                hint: "Select the geometry to extrude",
                 showWorkflow: true
             },
             "toggle": {
-                title: "Toggle",
-                hint: "Select surfaces to toggle",
+                title: "Revolve",
+                hint: "Select geometry to revolve",
                 showWorkflow: true
             },
             "stitch": {
-                title: "Stitch",
-                hint: "Select edges to stitch",
+                title: "Boolean",
+                hint: "Select geometries for boolean operation",
                 showWorkflow: true
             },
             "tangentExtend": {
@@ -92,8 +92,8 @@ Item {
             },
             // Mesh operations
             "generateMesh": {
-                title: "Generate Mesh",
-                hint: "Select geometry to mesh",
+                title: "Auto Mesh",
+                hint: "Select geometry to generate mesh",
                 showWorkflow: true
             },
             "refineMesh": {
@@ -102,7 +102,7 @@ Item {
                 showWorkflow: true
             },
             "checkMesh": {
-                title: "Check Mesh",
+                title: "Check Mesh Quality",
                 hint: "Select mesh to check quality",
                 showWorkflow: false
             },
@@ -110,6 +110,27 @@ Item {
                 title: "Repair Mesh",
                 hint: "Select mesh to repair",
                 showWorkflow: true
+            },
+            // AI operations
+            "aiSuggest": {
+                title: "Smart Suggest",
+                hint: "Select geometry for AI modeling suggestions",
+                showWorkflow: true
+            },
+            "aiOptimize": {
+                title: "Auto Optimize",
+                hint: "Select mesh for AI optimization",
+                showWorkflow: true
+            },
+            "aiExplore": {
+                title: "Design Explore",
+                hint: "Select design space for AI exploration",
+                showWorkflow: true
+            },
+            "aiChat": {
+                title: "AI Assistant",
+                hint: "Ask AI assistant for help",
+                showWorkflow: false
             }
         })
 

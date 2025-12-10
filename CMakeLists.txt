@@ -189,6 +189,7 @@ qt_add_qml_module(
   resources/qml/RibbonTabContent.qml
   resources/qml/OperationPanel.qml
   resources/qml/OperationPanelManager.qml
+  resources/qml/ModelTreeView.qml
   RESOURCES
   ${ICON_RESOURCES}
   SOURCES

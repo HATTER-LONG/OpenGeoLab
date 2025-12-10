@@ -69,6 +69,12 @@ Rectangle {
     signal pick
     signal boxSelect
 
+    // AI operations
+    signal aiSuggest
+    signal aiOptimize
+    signal aiExplore
+    signal aiChat
+
     // General operations
     signal options
     signal theme
@@ -86,7 +92,7 @@ Rectangle {
     property color tabBackgroundColor: "#F3F3F3"
     property color contentBackgroundColor: "#FCFCFC"
 
-    readonly property var tabNames: ["Geometry", "Mesh", "Interaction", "General"]
+    readonly property var tabNames: ["Geometry", "Mesh", "AI"]
 
     // Height: tab bar (28) + content area (button 60 + top margin 2 + bottom title 14) + padding
     height: 120
@@ -229,19 +235,11 @@ Rectangle {
             onButtonClicked: actionId => ribbonToolBar.dispatchAction(actionId)
         }
 
-        // Interaction Tab
+        // AI Tab
         RibbonTabContent {
             visible: ribbonToolBar.currentTabIndex === 2
             anchors.fill: parent
-            groups: buttonConfig.interactionTab
-            onButtonClicked: actionId => ribbonToolBar.dispatchAction(actionId)
-        }
-
-        // General Tab
-        RibbonTabContent {
-            visible: ribbonToolBar.currentTabIndex === 3
-            anchors.fill: parent
-            groups: buttonConfig.generalTab
+            groups: buttonConfig.aiTab
             onButtonClicked: actionId => ribbonToolBar.dispatchAction(actionId)
         }
     }
@@ -329,24 +327,18 @@ Rectangle {
             repairMesh();
             break;
 
-        // Interaction actions
-        case "rotateView":
-            rotateView();
+        // AI actions
+        case "aiSuggest":
+            aiSuggest();
             break;
-        case "panView":
-            panView();
+        case "aiOptimize":
+            aiOptimize();
             break;
-        case "zoomView":
-            zoomView();
+        case "aiExplore":
+            aiExplore();
             break;
-        case "fitAll":
-            fitAll();
-            break;
-        case "pick":
-            pick();
-            break;
-        case "boxSelect":
-            boxSelect();
+        case "aiChat":
+            aiChat();
             break;
 
         // General actions

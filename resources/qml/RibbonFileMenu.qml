@@ -54,6 +54,7 @@ Popup {
                 FileMenuItem {
                     iconText: "📄"
                     text: "New"
+                    shortcut: "Ctrl+N"
                     onClicked: {
                         fileMenu.newFile();
                         fileMenu.close();
@@ -61,18 +62,9 @@ Popup {
                 }
 
                 FileMenuItem {
-                    iconText: "📂"
-                    text: "Open"
-                    shortcut: "Ctrl+O"
-                    onClicked: {
-                        fileMenu.openFile();
-                        fileMenu.close();
-                    }
-                }
-
-                FileMenuItem {
                     iconText: "📥"
                     text: "Import"
+                    shortcut: "Ctrl+I"
                     onClicked: {
                         fileMenu.importModel();
                         fileMenu.close();
@@ -80,36 +72,9 @@ Popup {
                 }
 
                 FileMenuItem {
-                    iconText: "💾"
-                    text: "Save"
-                    onClicked: {
-                        fileMenu.saveFile();
-                        fileMenu.close();
-                    }
-                }
-
-                FileMenuItem {
-                    iconText: "💾"
-                    text: "Save As"
-                    onClicked: {
-                        fileMenu.saveAsFile();
-                        fileMenu.close();
-                    }
-                }
-
-                FileMenuItem {
-                    iconText: "▶"
-                    text: "Replay"
-                    onClicked: {
-                        fileMenu.replayFile();
-                        fileMenu.close();
-                    }
-                }
-
-                FileMenuItem {
                     iconText: "📤"
                     text: "Export"
-                    hasSubmenu: true
+                    shortcut: "Ctrl+E"
                     onClicked: {
                         fileMenu.exportModel();
                         fileMenu.close();
@@ -140,15 +105,6 @@ Popup {
                     text: "Options"
                     onClicked: {
                         fileMenu.showOptions();
-                        fileMenu.close();
-                    }
-                }
-
-                FileMenuItem {
-                    iconText: "🚪"
-                    text: "Exit"
-                    onClicked: {
-                        fileMenu.exitApp();
                         fileMenu.close();
                     }
                 }

@@ -87,10 +87,15 @@ Window {
         anchors.top: parent.top
 
         // File operations
-        onOpenFile: fileDialog.open()
+        onNewFile: {
+            console.log("New file - TODO");
+            modelTreePanel.resetToDefault();
+            statusText.text = "New model created";
+            statusText.color = "lightgreen";
+        }
         onImportModel: fileDialog.open()
-        onSaveFile: console.log("Save file - TODO")
         onExportModel: console.log("Export model - TODO")
+        onShowOptions: console.log("Show options - TODO")
 
         // Geometry operations - show operation panels
         onToggleRelease: panelManager.togglePanel("release")
@@ -117,6 +122,12 @@ Window {
         onRefineMesh: panelManager.togglePanel("refineMesh")
         onCheckMesh: panelManager.togglePanel("checkMesh")
         onRepairMesh: panelManager.togglePanel("repairMesh")
+
+        // AI operations
+        onAiSuggest: panelManager.togglePanel("aiSuggest")
+        onAiOptimize: panelManager.togglePanel("aiOptimize")
+        onAiExplore: panelManager.togglePanel("aiExplore")
+        onAiChat: panelManager.togglePanel("aiChat")
     }
 
     // Status text overlay
@@ -127,7 +138,7 @@ Window {
         font.bold: true
         text: "Ready to import model"
         anchors.top: ribbonToolBar.bottom
-        anchors.left: controlPanel.right
+        anchors.left: modelTreePanel.right
         anchors.margins: 15
         z: 100
 
@@ -141,10 +152,10 @@ Window {
         }
     }
 
-    // 3D Geometry renderer - fills most of the window, leaving space for control panel and ribbon
+    // 3D Geometry renderer - fills most of the window, leaving space for model tree panel and ribbon
     Geometry3D {
         id: geometryRenderer
-        anchors.left: controlPanel.right
+        anchors.left: modelTreePanel.right
         anchors.right: parent.right
         anchors.top: ribbonToolBar.bottom
         anchors.bottom: parent.bottom
@@ -152,175 +163,23 @@ Window {
         // Default: use vertex colors (alpha = 0)
         color: Qt.rgba(0, 0, 0, 0)
     }
-    // Left control panel
-    Rectangle {
-        id: controlPanel
-        width: 200
+
+    // Left Model Tree Panel
+    ModelTreeView {
+        id: modelTreePanel
+        width: 220
         anchors.left: parent.left
         anchors.top: ribbonToolBar.bottom
         anchors.bottom: parent.bottom
-        color: Qt.rgba(0.2, 0.2, 0.2, 0.9)
 
-        ScrollView {
-            anchors.fill: parent
-            anchors.margins: 15
-            clip: true
+        onItemSelected: function (index, name, type) {
+            console.log("Selected:", name, "Type:", type);
+            statusText.text = "Selected: " + name;
+            statusText.color = "lightblue";
+        }
 
-            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
-            ScrollBar.vertical.policy: ScrollBar.AsNeeded
-
-            ColumnLayout {
-                width: controlPanel.width - 30
-                spacing: 20
-
-                // Title
-                Text {
-                    text: "Color Control"
-                    color: "white"
-                    font.pixelSize: 16
-                    font.bold: true
-                    Layout.alignment: Qt.AlignHCenter
-                }
-
-                // Separator
-                Rectangle {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 2
-                    color: Qt.rgba(1, 1, 1, 0.3)
-                }
-
-                // Geometry type selection
-                Text {
-                    text: "Geometry Type:"
-                    color: "white"
-                    font.pixelSize: 14
-                }
-
-                // Model Import Button
-                Button {
-                    text: "Import Model"
-                    Layout.fillWidth: true
-                    onClicked: {
-                        fileDialog.open();
-                    }
-                }
-
-                // Separator
-                Rectangle {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 2
-                    color: Qt.rgba(1, 1, 1, 0.3)
-                }
-                Button {
-                    text: "Cube"
-                    Layout.fillWidth: true
-                    highlighted: geometryRenderer.geometryType === "cube"
-                    onClicked: {
-                        geometryRenderer.geometryType = "cube";
-                    }
-                }
-
-                Button {
-                    text: "Cylinder"
-                    Layout.fillWidth: true
-                    highlighted: geometryRenderer.geometryType === "cylinder"
-                    onClicked: {
-                        geometryRenderer.geometryType = "cylinder";
-                    }
-                }
-
-                // Separator
-                Rectangle {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 2
-                    color: Qt.rgba(1, 1, 1, 0.3)
-                }
-
-                // Color selection area
-                Text {
-                    text: "Select Color:"
-                    color: "white"
-                    font.pixelSize: 14
-                }
-
-                Button {
-                    text: "Use Vertex Colors"
-                    Layout.fillWidth: true
-                    highlighted: geometryRenderer.color.a === 0
-                    onClicked: {
-                        geometryRenderer.color = Qt.rgba(0, 0, 0, 0);
-                    }
-                }
-
-                Button {
-                    text: "Red"
-                    Layout.fillWidth: true
-                    highlighted: geometryRenderer.color.r > 0.9 && geometryRenderer.color.a > 0
-                    onClicked: {
-                        geometryRenderer.color = Qt.rgba(1, 0, 0, 1);
-                    }
-                }
-
-                Button {
-                    text: "Green"
-                    Layout.fillWidth: true
-                    highlighted: geometryRenderer.color.g > 0.9 && geometryRenderer.color.a > 0
-                    onClicked: {
-                        geometryRenderer.color = Qt.rgba(0, 1, 0, 1);
-                    }
-                }
-
-                Button {
-                    text: "Blue"
-                    Layout.fillWidth: true
-                    highlighted: geometryRenderer.color.b > 0.9 && geometryRenderer.color.a > 0
-                    onClicked: {
-                        geometryRenderer.color = Qt.rgba(0, 0, 1, 1);
-                    }
-                }
-
-                Button {
-                    text: "Yellow"
-                    Layout.fillWidth: true
-                    highlighted: geometryRenderer.color.r > 0.9 && geometryRenderer.color.g > 0.9 && geometryRenderer.color.a > 0
-                    onClicked: {
-                        geometryRenderer.color = Qt.rgba(1, 1, 0, 1);
-                    }
-                }
-
-                Button {
-                    text: "Cyan"
-                    Layout.fillWidth: true
-                    highlighted: geometryRenderer.color.g > 0.9 && geometryRenderer.color.b > 0.9 && geometryRenderer.color.a > 0
-                    onClicked: {
-                        geometryRenderer.color = Qt.rgba(0, 1, 1, 1);
-                    }
-                }
-
-                Button {
-                    text: "Magenta"
-                    Layout.fillWidth: true
-                    highlighted: geometryRenderer.color.r > 0.9 && geometryRenderer.color.b > 0.9 && geometryRenderer.color.a > 0
-                    onClicked: {
-                        geometryRenderer.color = Qt.rgba(1, 0, 1, 1);
-                    }
-                }
-
-                Button {
-                    text: "White"
-                    Layout.fillWidth: true
-                    highlighted: geometryRenderer.color.r > 0.9 && geometryRenderer.color.g > 0.9 && geometryRenderer.color.b > 0.9 && geometryRenderer.color.a > 0
-                    onClicked: {
-                        geometryRenderer.color = Qt.rgba(1, 1, 1, 1);
-                    }
-                }
-
-                // Bottom spacing
-                Item {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 20
-                }
-            }
+        onItemDoubleClicked: function (index, name, type) {
+            console.log("Double clicked:", name, "Type:", type);
         }
     }
 
@@ -338,9 +197,9 @@ Window {
         id: label
         color: "black"
         wrapMode: Text.WordWrap
-        text: qsTr("3D Geometry Renderer - Use Ribbon toolbar for file operations and geometry tools.\nDrag with left mouse button to rotate, Shift+drag to pan, scroll wheel to zoom.")
+        text: qsTr("OpenGeoLab - CAE Software. Use Ribbon toolbar for geometry modeling, mesh generation and AI assistant.\nDrag with left mouse button to rotate, Shift+drag to pan, scroll wheel to zoom.")
         anchors.right: parent.right
-        anchors.left: controlPanel.right
+        anchors.left: modelTreePanel.right
         anchors.leftMargin: 20
         anchors.bottom: parent.bottom
         anchors.margins: 20

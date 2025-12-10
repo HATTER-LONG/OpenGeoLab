@@ -24,7 +24,7 @@ QtObject {
     readonly property string iconBasePath: "qrc:/scenegraph/opengeolab/resources/icons/"
 
     // ========================================================================
-    // GEOMETRY TAB
+    // GEOMETRY TAB - 几何建模工具
     // ========================================================================
     readonly property var geometryTab: [
         {
@@ -33,60 +33,49 @@ QtObject {
                 {
                     id: "addPoint",
                     iconSource: iconBasePath + "point.svg",
-                    text: "Point"
-                },
-                {
-                    id: "pointReplace",
-                    iconSource: iconBasePath + "point_replace.svg",
-                    text: "Point\nReplace"
-                },
-                {
-                    type: "separator"
-                },
-                {
-                    id: "addPlane",
-                    iconSource: iconBasePath + "plane.svg",
-                    text: "Plane"
+                    text: "Point",
+                    tooltip: "创建点"
                 },
                 {
                     id: "addLine",
                     iconSource: iconBasePath + "line.svg",
-                    text: "Line"
+                    text: "Line",
+                    tooltip: "创建线"
+                },
+                {
+                    id: "addPlane",
+                    iconSource: iconBasePath + "plane.svg",
+                    text: "Plane",
+                    tooltip: "创建平面"
                 },
                 {
                     id: "addBox",
                     iconSource: iconBasePath + "box.svg",
-                    text: "Box"
+                    text: "Box",
+                    tooltip: "创建立方体"
                 }
             ]
         },
         {
-            title: "Modify",
+            title: "Transform",
             buttons: [
                 {
                     id: "toggleRelease",
                     iconSource: iconBasePath + "release.svg",
-                    text: "Release"
+                    text: "Extrude",
+                    tooltip: "拉伸几何体"
                 },
                 {
                     id: "toggle",
                     iconSource: iconBasePath + "toggle.svg",
-                    text: "Toggle"
+                    text: "Revolve",
+                    tooltip: "旋转几何体"
                 },
                 {
                     id: "toggleStitch",
                     iconSource: iconBasePath + "stitch.svg",
-                    text: "Stitch"
-                },
-                {
-                    id: "tangentExtend",
-                    iconSource: iconBasePath + "tangent_extend.svg",
-                    text: "Tangent\nExtend"
-                },
-                {
-                    id: "projectGeometry",
-                    iconSource: iconBasePath + "project.svg",
-                    text: "Project"
+                    text: "Boolean",
+                    tooltip: "布尔运算"
                 }
             ]
         },
@@ -96,68 +85,78 @@ QtObject {
                 {
                     id: "trim",
                     iconSource: iconBasePath + "trim.svg",
-                    text: "Trim"
+                    text: "Trim",
+                    tooltip: "修剪几何体"
                 },
                 {
                     id: "offset",
                     iconSource: iconBasePath + "offset.svg",
-                    text: "Offset"
+                    text: "Offset",
+                    tooltip: "偏移几何体"
                 },
                 {
                     id: "fill",
                     iconSource: iconBasePath + "fill.svg",
-                    text: "Fill"
-                },
-                {
-                    id: "surfaceExtend",
-                    iconSource: iconBasePath + "surface_extend.svg",
-                    text: "Surface\nExtend"
-                },
-                {
-                    id: "surfaceMerge",
-                    iconSource: iconBasePath + "surface_merge.svg",
-                    text: "Surface\nMerge"
-                },
-                {
-                    id: "suppress",
-                    iconSource: iconBasePath + "suppress.svg",
-                    text: "Suppress"
+                    text: "Fill",
+                    tooltip: "填充区域"
                 },
                 {
                     id: "split",
                     iconSource: iconBasePath + "split.svg",
-                    text: "Split"
+                    text: "Split",
+                    tooltip: "分割几何体"
                 }
             ]
         }
     ]
 
     // ========================================================================
-    // MESH TAB
+    // MESH TAB - 网格划分工具
     // ========================================================================
     readonly property var meshTab: [
         {
-            title: "Mesh Operations",
+            title: "Mesh Generation",
             buttons: [
                 {
                     id: "generateMesh",
                     iconSource: iconBasePath + "generate_mesh.svg",
-                    text: "Generate\nMesh"
+                    text: "Auto\nMesh",
+                    tooltip: "自动网格划分"
                 },
                 {
                     id: "refineMesh",
                     iconSource: iconBasePath + "refine_mesh.svg",
-                    text: "Refine"
+                    text: "Refine",
+                    tooltip: "网格加密"
                 },
                 {
                     id: "simplifyMesh",
                     iconSource: iconBasePath + "simplify_mesh.svg",
-                    text: "Simplify"
-                },
+                    text: "Coarsen",
+                    tooltip: "网格粗化"
+                }
+            ]
+        },
+        {
+            title: "Mesh Type",
+            buttons: [
                 {
                     id: "smoothMesh",
                     iconSource: iconBasePath + "smooth_mesh.svg",
-                    text: "Smooth"
+                    text: "Triangle",
+                    tooltip: "三角形网格"
+                },
+                {
+                    id: "checkMesh",
+                    iconSource: iconBasePath + "check_mesh.svg",
+                    text: "Quad",
+                    tooltip: "四边形网格"
+                },
+                {
+                    id: "repairMesh",
+                    iconSource: iconBasePath + "repair_mesh.svg",
+                    text: "Tetra",
+                    tooltip: "四面体网格"
                 }
             ]
         },
@@ -167,84 +166,54 @@ QtObject {
                 {
                     id: "checkMesh",
                     iconSource: iconBasePath + "check_mesh.svg",
-                    text: "Check"
+                    text: "Check",
+                    tooltip: "网格质量检查"
                 },
                 {
                     id: "repairMesh",
                     iconSource: iconBasePath + "repair_mesh.svg",
-                    text: "Repair"
+                    text: "Repair",
+                    tooltip: "网格修复"
                 }
             ]
         }
     ]
 
     // ========================================================================
-    // INTERACTION TAB
+    // AI TAB - AI 辅助设计工具
     // ========================================================================
-    readonly property var interactionTab: [
+    readonly property var aiTab: [
         {
-            title: "View",
+            title: "AI Assist",
             buttons: [
                 {
-                    id: "rotateView",
-                    iconSource: iconBasePath + "rotate_view.svg",
-                    text: "Rotate"
+                    id: "aiSuggest",
+                    iconSource: iconBasePath + "ai_suggest.svg",
+                    text: "Smart\nSuggest",
+                    tooltip: "智能几何建模建议"
                 },
                 {
-                    id: "panView",
-                    iconSource: iconBasePath + "pan_view.svg",
-                    text: "Pan"
+                    id: "aiOptimize",
+                    iconSource: iconBasePath + "ai_optimize.svg",
+                    text: "Auto\nOptimize",
+                    tooltip: "自动网格优化"
                 },
                 {
-                    id: "zoomView",
-                    iconSource: iconBasePath + "zoom_view.svg",
-                    text: "Zoom"
-                },
-                {
-                    id: "fitAll",
-                    iconSource: iconBasePath + "fit_all.svg",
-                    text: "Fit All"
+                    id: "aiExplore",
+                    iconSource: iconBasePath + "ai_explore.svg",
+                    text: "Design\nExplore",
+                    tooltip: "设计空间探索"
                 }
             ]
         },
         {
-            title: "Selection",
+            title: "AI Chat",
             buttons: [
                 {
-                    id: "pick",
-                    iconSource: iconBasePath + "pick.svg",
-                    text: "Pick"
-                },
-                {
-                    id: "boxSelect",
-                    iconSource: iconBasePath + "box_select.svg",
-                    text: "Box\nSelect"
-                }
-            ]
-        }
-    ]
-
-    // ========================================================================
-    // GENERAL TAB
-    // ========================================================================
-    readonly property var generalTab: [
-        {
-            title: "Settings",
-            buttons: [
-                {
-                    id: "options",
-                    iconSource: iconBasePath + "options.svg",
-                    text: "Options"
-                },
-                {
-                    id: "theme",
-                    iconSource: iconBasePath + "theme.svg",
-                    text: "Theme"
-                },
-                {
-                    id: "help",
-                    iconSource: iconBasePath + "help.svg",
-                    text: "Help"
+                    id: "aiChat",
+                    iconSource: iconBasePath + "ai_chat.svg",
+                    text: "AI\nAssistant",
+                    tooltip: "AI 设计助手对话"
                 }
             ]
         }
@@ -262,9 +231,7 @@ QtObject {
         case 1:
             return meshTab;
         case 2:
-            return interactionTab;
-        case 3:
-            return generalTab;
+            return aiTab;
         default:
             return [];
         }
@@ -273,7 +240,7 @@ QtObject {
     // Get all button IDs (useful for signal generation)
     function getAllButtonIds(): var {
         let ids = [];
-        let tabs = [geometryTab, meshTab, interactionTab, generalTab];
+        let tabs = [geometryTab, meshTab, aiTab];
         for (let tab of tabs) {
             for (let group of tab) {
                 for (let btn of group.buttons) {
