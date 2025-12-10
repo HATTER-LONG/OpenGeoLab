@@ -190,6 +190,8 @@ qt_add_qml_module(
   resources/qml/OperationPanel.qml
   resources/qml/OperationPanelManager.qml
   resources/qml/ModelTreeView.qml
+  resources/qml/ViewControlToolbar.qml
+  resources/qml/ViewControlButton.qml
   RESOURCES
   ${ICON_RESOURCES}
   SOURCES

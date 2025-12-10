@@ -1,8 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Window
-import QtQuick.Layouts
-import QtQuick.Controls
 import QtQuick.Dialogs
 import OpenGeoLab
 
@@ -111,8 +109,8 @@ Window {
         onSuppress: panelManager.togglePanel("suppress")
         onSplit: panelManager.togglePanel("split")
 
-        // Simple geometry creation (no panel needed)
-        onAddBox: geometryRenderer.geometryType = "cube"
+        // Simple geometry creation - removed hardcoded cube/cylinder creation
+        onAddBox: console.log("Add box - use Import to load BREP/STEP files")
         onAddPoint: console.log("Add point - TODO")
         onAddPlane: console.log("Add plane - TODO")
         onAddLine: console.log("Add line - TODO")
@@ -136,7 +134,7 @@ Window {
         color: "white"
         font.pixelSize: 14
         font.bold: true
-        text: "Ready to import model"
+        text: "Ready - Import a BREP or STEP model to begin"
         anchors.top: ribbonToolBar.bottom
         anchors.left: modelTreePanel.right
         anchors.margins: 15
@@ -162,6 +160,17 @@ Window {
 
         // Default: use vertex colors (alpha = 0)
         color: Qt.rgba(0, 0, 0, 0)
+    }
+
+    // View Control Toolbar - positioned in bottom-right of the 3D view
+    ViewControlToolbar {
+        id: viewControlToolbar
+        targetRenderer: geometryRenderer
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        anchors.rightMargin: 20
+        anchors.bottomMargin: 60
+        z: 100
     }
 
     // Left Model Tree Panel
@@ -197,7 +206,7 @@ Window {
         id: label
         color: "black"
         wrapMode: Text.WordWrap
-        text: qsTr("OpenGeoLab - CAE Software. Use Ribbon toolbar for geometry modeling, mesh generation and AI assistant.\nDrag with left mouse button to rotate, Shift+drag to pan, scroll wheel to zoom.")
+        text: qsTr("OpenGeoLab - CAE Software. Use Ribbon toolbar for geometry modeling, mesh generation and AI assistant.\nDrag with left mouse button to rotate, Shift+drag or middle button to pan, scroll wheel to zoom.")
         anchors.right: parent.right
         anchors.left: modelTreePanel.right
         anchors.leftMargin: 20
