@@ -52,6 +52,10 @@ include(./cmake/CPM.cmake)
 # External Dependencies
 # ==============================================================================
 
+# ------------------------------------------------------------------------------
+# CPM-managed Dependencies
+# ------------------------------------------------------------------------------
+
 # cxxopts: Command-line argument parsing library
 CPMAddPackage(
   GITHUB_REPOSITORY jarro2783/cxxopts
@@ -79,7 +83,19 @@ else()
   )
 endif()
 
-# Find Open CASCADE Technology
+# HighFive: Modern C++ interface for HDF5 Requires HDF5 to be pre-installed on the system
+CPMAddPackage(
+  NAME HighFive
+  GITHUB_REPOSITORY highfive-devs/highfive
+  VERSION 3.2.0
+  OPTIONS "HIGHFIVE_UNIT_TESTS OFF" "HIGHFIVE_EXAMPLES OFF" "HIGHFIVE_BUILD_DOCS OFF"
+)
+
+# ------------------------------------------------------------------------------
+# Pre-installed Dependencies
+# ------------------------------------------------------------------------------
+
+# OpenCASCADE: 3D CAD modeling kernel (must be pre-installed)
 find_package(OpenCASCADE REQUIRED)
 
 message(STATUS "Using OpenCASCADE from \"${OpenCASCADE_INSTALL_PREFIX}\"")
@@ -140,6 +156,16 @@ qt_add_executable(${PROJECT_NAME} ${sources} ${headers})
 # QML Module Configuration
 # ==============================================================================
 
+# Collect all SVG icon resources automatically (using relative paths)
+file(GLOB ICON_RESOURCES_ABS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/*.svg")
+
+# Convert absolute paths to relative paths for Qt resource system
+set(ICON_RESOURCES "")
+foreach(icon_file ${ICON_RESOURCES_ABS})
+  file(RELATIVE_PATH icon_rel "${CMAKE_CURRENT_SOURCE_DIR}" "${icon_file}")
+  list(APPEND ICON_RESOURCES "${icon_rel}")
+endforeach()
+
 # Register QML module with custom OpenGL 3D rendering components Only UI-related files (with
 # QML_ELEMENT) need to be listed here
 qt_add_qml_module(
@@ -153,6 +179,19 @@ qt_add_qml_module(
   NO_RESOURCE_TARGET_PATH
   QML_FILES
   resources/qml/Main.qml
+  resources/qml/RibbonToolBar.qml
+  resources/qml/RibbonLargeButton.qml
+  resources/qml/RibbonGroup.qml
+  resources/qml/RibbonGroupSeparator.qml
+  resources/qml/RibbonFileMenu.qml
+  resources/qml/FileMenuItem.qml
+  resources/qml/RibbonButtonConfig.qml
+  resources/qml/RibbonTabContent.qml
+  resources/qml/OperationPanel.qml
+  resources/qml/OperationPanelManager.qml
+  resources/qml/ModelTreeView.qml
+  RESOURCES
+  ${ICON_RESOURCES}
   SOURCES
   src/ui/geometry3d.cpp
   include/ui/geometry3d.hpp
@@ -194,6 +233,7 @@ target_link_libraries(
           Kangaroo::Kangaroo
           cxxopts
           fmt::fmt
+          HighFive::HighFive
           ${OpenCASCADE_LIBS}
 )
 
@@ -238,3 +278,10 @@ qt_generate_deploy_qml_app_script(
 )
 
 install(SCRIPT ${deploy_script})
+
+# ==============================================================================
+# Testing Configuration
+# ==============================================================================
+
+enable_testing()
+add_subdirectory(test)

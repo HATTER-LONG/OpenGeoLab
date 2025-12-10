@@ -63,6 +63,15 @@ ModelReaderRegistry::readModel(const std::string& file_path, std::string& error_
     return geometry;
 }
 
+ModelReaderRegistryFactory::tObjectPtr ModelReaderRegistryFactory::create() const {
+    return std::make_unique<ModelReaderRegistry>();
+}
+
+ModelReaderRegistryFactory::tObjectSharedPtr ModelReaderRegistryFactory::instance() const {
+    static auto s_instance = std::make_shared<ModelReaderRegistry>();
+    return s_instance;
+}
+
 void registerBuiltinModelReaders() {
     LOG_INFO("Registering built-in model readers");
 

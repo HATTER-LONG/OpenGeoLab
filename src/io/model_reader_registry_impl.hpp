@@ -58,12 +58,9 @@ private:
  */
 class ModelReaderRegistryFactory : public IModelReaderRegistryFactory {
 public:
-    tObjectPtr create() const override { return std::make_unique<ModelReaderRegistry>(); }
+    tObjectPtr create() const override;
 
-    tObjectSharedPtr instance() const override {
-        static auto s_instance = std::make_shared<ModelReaderRegistry>();
-        return s_instance;
-    }
+    tObjectSharedPtr instance() const override;
 };
 
 } // namespace IO

@@ -9,16 +9,14 @@ import OpenGeoLab
 Window {
     id: root
     visible: true
-    width: 960
-    height: 600
+    width: 1200
+    height: 800
     title: "OpenGeoLab - 3D Geometry Renderer"
 
     Component.onCompleted: {
-        // 设置 ModelImporter 的目标渲染器
         ModelImporter.setTargetRenderer(geometryRenderer);
     }
 
-    // 连接 ModelImporter 信号
     Connections {
         target: ModelImporter
         function onModelLoaded(filename) {
@@ -35,12 +33,101 @@ Window {
     FileDialog {
         id: fileDialog
         title: "Import Model"
-        nameFilters: ["STEP files (*.stp *.step)", "BREP files (*.brep)", "All files (*)"]
+        nameFilters: ["STEP files (*.stp *.step)", "BREP files (*.brep *.brp)", "All files (*)"]
         onAccepted: {
             statusText.text = "Loading model...";
             statusText.color = "yellow";
             ModelImporter.importModel(selectedFile);
         }
+    }
+
+    // ========================================================================
+    // Operation Panel Manager - handles tool operation panels
+    // ========================================================================
+    OperationPanelManager {
+        id: panelManager
+        anchors.fill: parent
+        z: 1000  // Above other content
+
+        onPanelApplied: function (panelId, selectionData) {
+            console.log("Panel applied:", panelId, "with", selectionData.selectedCount, "selections");
+            // TODO: Handle the actual operation based on panelId
+            switch (panelId) {
+            case "release":
+                console.log("Executing Release operation...");
+                break;
+            case "toggle":
+                console.log("Executing Toggle operation...");
+                break;
+            // Add more cases as needed
+            }
+        }
+
+        onPanelCancelled: function (panelId) {
+            console.log("Panel cancelled:", panelId);
+        }
+
+        onSelectionRequested: function (panelId) {
+            console.log("Selection requested for:", panelId);
+            // TODO: Enter selection mode in the 3D view
+            // For demo, simulate selection after a delay
+            Qt.callLater(function () {
+                panelManager.updateSelection(3);  // Simulate 3 entities selected
+            });
+        }
+    }
+
+    // ========================================================================
+    // Ribbon Toolbar at top
+    // ========================================================================
+    RibbonToolBar {
+        id: ribbonToolBar
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: parent.top
+
+        // File operations
+        onNewFile: {
+            console.log("New file - TODO");
+            modelTreePanel.resetToDefault();
+            statusText.text = "New model created";
+            statusText.color = "lightgreen";
+        }
+        onImportModel: fileDialog.open()
+        onExportModel: console.log("Export model - TODO")
+        onShowOptions: console.log("Show options - TODO")
+
+        // Geometry operations - show operation panels
+        onToggleRelease: panelManager.togglePanel("release")
+        onToggle: panelManager.togglePanel("toggle")
+        onToggleStitch: panelManager.togglePanel("stitch")
+        onTangentExtend: panelManager.togglePanel("tangentExtend")
+        onProjectGeometry: panelManager.togglePanel("project")
+        onTrim: panelManager.togglePanel("trim")
+        onOffset: panelManager.togglePanel("offset")
+        onFill: panelManager.togglePanel("fill")
+        onSurfaceExtend: panelManager.togglePanel("surfaceExtend")
+        onSurfaceMerge: panelManager.togglePanel("surfaceMerge")
+        onSuppress: panelManager.togglePanel("suppress")
+        onSplit: panelManager.togglePanel("split")
+
+        // Simple geometry creation (no panel needed)
+        onAddBox: geometryRenderer.geometryType = "cube"
+        onAddPoint: console.log("Add point - TODO")
+        onAddPlane: console.log("Add plane - TODO")
+        onAddLine: console.log("Add line - TODO")
+
+        // Mesh operations
+        onGenerateMesh: panelManager.togglePanel("generateMesh")
+        onRefineMesh: panelManager.togglePanel("refineMesh")
+        onCheckMesh: panelManager.togglePanel("checkMesh")
+        onRepairMesh: panelManager.togglePanel("repairMesh")
+
+        // AI operations
+        onAiSuggest: panelManager.togglePanel("aiSuggest")
+        onAiOptimize: panelManager.togglePanel("aiOptimize")
+        onAiExplore: panelManager.togglePanel("aiExplore")
+        onAiChat: panelManager.togglePanel("aiChat")
     }
 
     // Status text overlay
@@ -50,8 +137,8 @@ Window {
         font.pixelSize: 14
         font.bold: true
         text: "Ready to import model"
-        anchors.top: parent.top
-        anchors.left: controlPanel.right
+        anchors.top: ribbonToolBar.bottom
+        anchors.left: modelTreePanel.right
         anchors.margins: 15
         z: 100
 
@@ -65,186 +152,34 @@ Window {
         }
     }
 
-    // 3D Geometry renderer - fills most of the window, leaving space for control panel
+    // 3D Geometry renderer - fills most of the window, leaving space for model tree panel and ribbon
     Geometry3D {
         id: geometryRenderer
-        anchors.left: controlPanel.right
+        anchors.left: modelTreePanel.right
         anchors.right: parent.right
-        anchors.top: parent.top
+        anchors.top: ribbonToolBar.bottom
         anchors.bottom: parent.bottom
 
         // Default: use vertex colors (alpha = 0)
         color: Qt.rgba(0, 0, 0, 0)
     }
-    // Left control panel
-    Rectangle {
-        id: controlPanel
-        width: 200
-        height: parent.height
+
+    // Left Model Tree Panel
+    ModelTreeView {
+        id: modelTreePanel
+        width: 220
         anchors.left: parent.left
-        anchors.top: parent.top
-        color: Qt.rgba(0.2, 0.2, 0.2, 0.9)
+        anchors.top: ribbonToolBar.bottom
+        anchors.bottom: parent.bottom
 
-        ScrollView {
-            anchors.fill: parent
-            anchors.margins: 15
-            clip: true
+        onItemSelected: function (index, name, type) {
+            console.log("Selected:", name, "Type:", type);
+            statusText.text = "Selected: " + name;
+            statusText.color = "lightblue";
+        }
 
-            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
-            ScrollBar.vertical.policy: ScrollBar.AsNeeded
-
-            ColumnLayout {
-                width: controlPanel.width - 30
-                spacing: 20
-
-                // Title
-                Text {
-                    text: "Color Control"
-                    color: "white"
-                    font.pixelSize: 16
-                    font.bold: true
-                    Layout.alignment: Qt.AlignHCenter
-                }
-
-                // Separator
-                Rectangle {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 2
-                    color: Qt.rgba(1, 1, 1, 0.3)
-                }
-
-                // Geometry type selection
-                Text {
-                    text: "Geometry Type:"
-                    color: "white"
-                    font.pixelSize: 14
-                }
-
-                // Model Import Button
-                Button {
-                    text: "Import Model"
-                    Layout.fillWidth: true
-                    onClicked: {
-                        fileDialog.open();
-                    }
-                }
-
-                // Separator
-                Rectangle {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 2
-                    color: Qt.rgba(1, 1, 1, 0.3)
-                }
-                Button {
-                    text: "Cube"
-                    Layout.fillWidth: true
-                    highlighted: geometryRenderer.geometryType === "cube"
-                    onClicked: {
-                        geometryRenderer.geometryType = "cube";
-                    }
-                }
-
-                Button {
-                    text: "Cylinder"
-                    Layout.fillWidth: true
-                    highlighted: geometryRenderer.geometryType === "cylinder"
-                    onClicked: {
-                        geometryRenderer.geometryType = "cylinder";
-                    }
-                }
-
-                // Separator
-                Rectangle {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 2
-                    color: Qt.rgba(1, 1, 1, 0.3)
-                }
-
-                // Color selection area
-                Text {
-                    text: "Select Color:"
-                    color: "white"
-                    font.pixelSize: 14
-                }
-
-                Button {
-                    text: "Use Vertex Colors"
-                    Layout.fillWidth: true
-                    highlighted: geometryRenderer.color.a === 0
-                    onClicked: {
-                        geometryRenderer.color = Qt.rgba(0, 0, 0, 0);
-                    }
-                }
-
-                Button {
-                    text: "Red"
-                    Layout.fillWidth: true
-                    highlighted: geometryRenderer.color.r > 0.9 && geometryRenderer.color.a > 0
-                    onClicked: {
-                        geometryRenderer.color = Qt.rgba(1, 0, 0, 1);
-                    }
-                }
-
-                Button {
-                    text: "Green"
-                    Layout.fillWidth: true
-                    highlighted: geometryRenderer.color.g > 0.9 && geometryRenderer.color.a > 0
-                    onClicked: {
-                        geometryRenderer.color = Qt.rgba(0, 1, 0, 1);
-                    }
-                }
-
-                Button {
-                    text: "Blue"
-                    Layout.fillWidth: true
-                    highlighted: geometryRenderer.color.b > 0.9 && geometryRenderer.color.a > 0
-                    onClicked: {
-                        geometryRenderer.color = Qt.rgba(0, 0, 1, 1);
-                    }
-                }
-
-                Button {
-                    text: "Yellow"
-                    Layout.fillWidth: true
-                    highlighted: geometryRenderer.color.r > 0.9 && geometryRenderer.color.g > 0.9 && geometryRenderer.color.a > 0
-                    onClicked: {
-                        geometryRenderer.color = Qt.rgba(1, 1, 0, 1);
-                    }
-                }
-
-                Button {
-                    text: "Cyan"
-                    Layout.fillWidth: true
-                    highlighted: geometryRenderer.color.g > 0.9 && geometryRenderer.color.b > 0.9 && geometryRenderer.color.a > 0
-                    onClicked: {
-                        geometryRenderer.color = Qt.rgba(0, 1, 1, 1);
-                    }
-                }
-
-                Button {
-                    text: "Magenta"
-                    Layout.fillWidth: true
-                    highlighted: geometryRenderer.color.r > 0.9 && geometryRenderer.color.b > 0.9 && geometryRenderer.color.a > 0
-                    onClicked: {
-                        geometryRenderer.color = Qt.rgba(1, 0, 1, 1);
-                    }
-                }
-
-                Button {
-                    text: "White"
-                    Layout.fillWidth: true
-                    highlighted: geometryRenderer.color.r > 0.9 && geometryRenderer.color.g > 0.9 && geometryRenderer.color.b > 0.9 && geometryRenderer.color.a > 0
-                    onClicked: {
-                        geometryRenderer.color = Qt.rgba(1, 1, 1, 1);
-                    }
-                }
-
-                // Bottom spacing
-                Item {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 20
-                }
-            }
+        onItemDoubleClicked: function (index, name, type) {
+            console.log("Double clicked:", name, "Type:", type);
         }
     }
 
@@ -262,9 +197,9 @@ Window {
         id: label
         color: "black"
         wrapMode: Text.WordWrap
-        text: qsTr("3D Cube rendering using OpenGL. Use the control panel to change colors.\nDrag with left mouse button to rotate the cube.")
+        text: qsTr("OpenGeoLab - CAE Software. Use Ribbon toolbar for geometry modeling, mesh generation and AI assistant.\nDrag with left mouse button to rotate, Shift+drag to pan, scroll wheel to zoom.")
         anchors.right: parent.right
-        anchors.left: controlPanel.right
+        anchors.left: modelTreePanel.right
         anchors.leftMargin: 20
         anchors.bottom: parent.bottom
         anchors.margins: 20
