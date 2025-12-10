@@ -6,7 +6,6 @@
 #include <core/logger.hpp>
 #include <render/opengl_renderer.hpp>
 
-
 #include <QMatrix4x4>
 
 namespace OpenGeoLab {
@@ -188,6 +187,56 @@ void OpenGLRenderer::setColorOverride(const QColor& color) {
 }
 
 void OpenGLRenderer::setMaterial(const Material& material) { m_material = material; }
+
+void OpenGLRenderer::rotateModel(float delta_yaw, float delta_pitch) {
+    m_modelYaw += delta_yaw;
+    m_modelPitch += delta_pitch;
+
+    // Normalize yaw to [0, 360)
+    while(m_modelYaw >= 360.0f) {
+        m_modelYaw -= 360.0f;
+    }
+    while(m_modelYaw < 0.0f) {
+        m_modelYaw += 360.0f;
+    }
+
+    // No pitch clamping needed for model rotation
+    // This allows full 360 degree rotation in all axes
+    // Normalize pitch to [-180, 180)
+    while(m_modelPitch >= 180.0f) {
+        m_modelPitch -= 360.0f;
+    }
+    while(m_modelPitch < -180.0f) {
+        m_modelPitch += 360.0f;
+    }
+}
+
+void OpenGLRenderer::setModelRotation(float yaw, float pitch) {
+    m_modelYaw = yaw;
+    m_modelPitch = pitch;
+}
+
+void OpenGLRenderer::modelRotation(float& yaw, float& pitch) const {
+    yaw = m_modelYaw;
+    pitch = m_modelPitch;
+}
+
+void OpenGLRenderer::resetModelRotation() {
+    m_modelYaw = 0.0f;
+    m_modelPitch = 0.0f;
+}
+
+QMatrix4x4 OpenGLRenderer::modelMatrix() const {
+    QMatrix4x4 model;
+    model.setToIdentity();
+
+    // Apply rotations: first yaw (around Y), then pitch (around X)
+    // This gives intuitive turntable-style rotation
+    model.rotate(m_modelYaw, 0.0f, 1.0f, 0.0f);   // Yaw around Y-axis
+    model.rotate(m_modelPitch, 1.0f, 0.0f, 0.0f); // Pitch around X-axis
+
+    return model;
+}
 
 void OpenGLRenderer::init() {
     LOG_TRACE("OpenGLRenderer::init() called");
@@ -402,8 +451,13 @@ void OpenGLRenderer::paint() {
     // Get matrices from camera
     QMatrix4x4 view = m_camera->viewMatrix();
     QMatrix4x4 projection = m_camera->projectionMatrix(aspect);
-    QMatrix4x4 model; // Identity for now
-    model.setToIdentity();
+
+    // Get model matrix with rotation
+    // Using model rotation instead of camera rotation provides:
+    // 1. Consistent lighting (lights stay fixed in world space)
+    // 2. No gimbal lock issues
+    // 3. More intuitive rotation behavior
+    QMatrix4x4 model = modelMatrix();
 
     QMatrix4x4 mvp = projection * view * model;
 

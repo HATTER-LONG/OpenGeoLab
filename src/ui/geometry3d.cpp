@@ -120,6 +120,7 @@ void Geometry3D::fitToView() {
 void Geometry3D::resetView() {
     if(m_renderer && m_renderer->camera()) {
         m_renderer->camera()->reset();
+        m_renderer->resetModelRotation(); // Also reset model rotation
         if(window()) {
             window()->update();
         }
@@ -294,12 +295,13 @@ void Geometry3D::mouseMoveEvent(QMouseEvent* event) {
                                       static_cast<float>(delta.y()));
             LOG_TRACE("Pan: delta=({}, {})", delta.x(), delta.y());
         } else if(m_dragMode == DragMode::Orbit) {
-            // Orbit the camera
+            // Rotate the model (instead of camera orbit)
+            // This provides better lighting consistency as lights stay fixed in world space
             // Sensitivity factor for rotation
             float sensitivity = 0.3f;
-            m_renderer->camera()->orbit(static_cast<float>(delta.x()) * sensitivity,
-                                        static_cast<float>(-delta.y()) * sensitivity);
-            LOG_TRACE("Orbit: delta=({}, {})", delta.x(), delta.y());
+            m_renderer->rotateModel(static_cast<float>(delta.x()) * sensitivity,
+                                    static_cast<float>(-delta.y()) * sensitivity);
+            LOG_TRACE("Model rotate: delta=({}, {})", delta.x(), delta.y());
         }
 
         m_lastMousePos = current_pos;

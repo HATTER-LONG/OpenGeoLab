@@ -203,6 +203,11 @@ private:
      */
     void updateCameraVectors();
 
+    /**
+     * @brief Update near/far clipping planes based on current distance
+     */
+    void updateClippingPlanes();
+
     // Orbit parameters
     float m_yaw = 0.0f;      // Horizontal rotation (degrees)
     float m_pitch = 30.0f;   // Vertical rotation (degrees), default slightly above

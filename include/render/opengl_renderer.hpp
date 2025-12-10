@@ -149,6 +149,45 @@ public:
      */
     QColor backgroundColor() const { return m_backgroundColor; }
 
+    // ========================================================================
+    // Model Rotation
+    // ========================================================================
+
+    /**
+     * @brief Rotate the model (instead of rotating camera)
+     * @param delta_yaw Horizontal rotation in degrees
+     * @param delta_pitch Vertical rotation in degrees
+     *
+     * Model rotation provides better lighting consistency as lights stay fixed
+     * in world space. Also avoids gimbal lock issues at extreme camera angles.
+     */
+    void rotateModel(float delta_yaw, float delta_pitch);
+
+    /**
+     * @brief Set model rotation angles directly
+     * @param yaw Horizontal rotation in degrees
+     * @param pitch Vertical rotation in degrees
+     */
+    void setModelRotation(float yaw, float pitch);
+
+    /**
+     * @brief Get current model rotation angles
+     * @param yaw Output: horizontal rotation in degrees
+     * @param pitch Output: vertical rotation in degrees
+     */
+    void modelRotation(float& yaw, float& pitch) const;
+
+    /**
+     * @brief Reset model rotation to identity
+     */
+    void resetModelRotation();
+
+    /**
+     * @brief Get model transformation matrix
+     * @return Current model matrix including rotation
+     */
+    QMatrix4x4 modelMatrix() const;
+
 public slots:
     /**
      * @brief Initialize OpenGL resources
@@ -219,6 +258,10 @@ private:
     QSize m_viewportSize;
     QPoint m_viewportOffset;
     QQuickWindow* m_window = nullptr;
+
+    // Model rotation (for rotating model instead of camera)
+    float m_modelYaw = 0.0f;   // Horizontal rotation in degrees
+    float m_modelPitch = 0.0f; // Vertical rotation in degrees
 
     // Maximum supported lights in shader
     static constexpr int MAX_LIGHTS = 4;

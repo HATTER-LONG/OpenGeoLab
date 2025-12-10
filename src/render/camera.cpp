@@ -96,7 +96,19 @@ void Camera::zoom(float factor) {
     // factor > 1 means zoom in (closer), factor < 1 means zoom out (farther)
     m_distance /= factor;
     m_distance = qBound(MIN_DISTANCE, m_distance, MAX_DISTANCE);
+
+    // Update near/far planes dynamically based on current distance
+    // This prevents clipping when zooming in/out
+    updateClippingPlanes();
+
     emit cameraChanged();
+}
+
+void Camera::updateClippingPlanes() {
+    // Calculate appropriate near/far planes based on current distance
+    // Near plane should be small enough to not clip objects, but large enough for depth precision
+    m_nearPlane = qMax(0.001f, m_distance * 0.001f);
+    m_farPlane = qMax(m_distance * 100.0f, 10000.0f);
 }
 
 void Camera::setDistance(float distance) {
