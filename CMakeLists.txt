@@ -192,6 +192,7 @@ qt_add_qml_module(
   resources/qml/ModelTreeView.qml
   resources/qml/ViewControlToolbar.qml
   resources/qml/ViewControlButton.qml
+  resources/qml/CreateBoxDialog.qml
   RESOURCES
   ${ICON_RESOURCES}
   SOURCES

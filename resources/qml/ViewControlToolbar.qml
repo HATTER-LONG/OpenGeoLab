@@ -12,11 +12,15 @@ Rectangle {
     // Target geometry renderer
     property var targetRenderer: null
 
-    // Appearance
-    color: Qt.rgba(0.15, 0.15, 0.18, 0.9)
-    radius: 8
-    border.color: Qt.rgba(0.3, 0.3, 0.35, 1.0)
+    // Modern dark appearance
+    color: "#1e2127"
+    radius: 6
+    border.color: "#3a3f4b"
     border.width: 1
+
+    // Subtle shadow effect
+    layer.enabled: true
+    layer.effect: null
 
     implicitWidth: buttonLayout.implicitWidth + 20
     implicitHeight: buttonLayout.implicitHeight + 16

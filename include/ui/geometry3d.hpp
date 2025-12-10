@@ -117,6 +117,18 @@ public:
      */
     Q_INVOKABLE void setViewIsometric();
 
+    // ========================================================================
+    // Geometry Creation Methods
+    // ========================================================================
+
+    /**
+     * @brief Create and display a box with given dimensions
+     * @param width Box width (X dimension)
+     * @param height Box height (Y dimension)
+     * @param depth Box depth (Z dimension)
+     */
+    Q_INVOKABLE void createBox(qreal width, qreal height, qreal depth);
+
 signals:
     void colorChanged();
     void rendererReady();

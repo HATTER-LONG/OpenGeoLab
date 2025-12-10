@@ -15,7 +15,6 @@
 #include <render/camera.hpp>
 #include <render/lighting.hpp>
 
-
 #include <QColor>
 #include <QMatrix4x4>
 #include <QOpenGLBuffer>
@@ -216,7 +215,7 @@ private:
 
     // Rendering configuration
     QColor m_colorOverride = QColor(0, 0, 0, 0);   // Alpha = 0 means use vertex colors
-    QColor m_backgroundColor = QColor(51, 51, 77); // Dark blue-gray
+    QColor m_backgroundColor = QColor(45, 50, 56); // Modern dark gray
     QSize m_viewportSize;
     QPoint m_viewportOffset;
     QQuickWindow* m_window = nullptr;

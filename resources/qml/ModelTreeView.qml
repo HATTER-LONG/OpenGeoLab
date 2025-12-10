@@ -11,11 +11,12 @@ import QtQuick.Layouts
 Rectangle {
     id: modelTreeView
 
-    property color headerColor: "#2B579A"
-    property color backgroundColor: Qt.rgba(0.15, 0.15, 0.15, 0.95)
-    property color itemHoverColor: Qt.rgba(0.3, 0.3, 0.3, 0.8)
-    property color selectedColor: "#0078D4"
-    property color textColor: "white"
+    property color headerColor: "#1a1d23"           // Dark header
+    property color backgroundColor: "#252830"       // Dark sidebar background
+    property color itemHoverColor: "#3a3f4b"        // Hover color
+    property color selectedColor: "#0d6efd"         // Modern blue selection
+    property color textColor: "#e1e1e1"             // Light gray text
+    property color borderColor: "#363b44"           // Subtle border
 
     // 当前选中的项目
     property int selectedIndex: -1
@@ -25,6 +26,15 @@ Rectangle {
     signal itemDoubleClicked(int index, string name, string type)
 
     color: backgroundColor
+
+    // Right border for visual separation
+    Rectangle {
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        width: 1
+        color: modelTreeView.borderColor
+    }
 
     // 树节点模型
     ListModel {

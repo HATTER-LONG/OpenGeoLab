@@ -152,6 +152,95 @@ private:
 };
 
 /**
+ * @brief Box geometry data with configurable dimensions
+ *
+ * Provides vertex data for a box centered at origin with custom dimensions.
+ * Each vertex contains: position (3 floats), normal (3 floats), color (3 floats)
+ * Total: 9 floats per vertex
+ */
+class BoxData : public GeometryData {
+public:
+    /**
+     * @brief Create a box with given dimensions
+     * @param width Width (X dimension)
+     * @param height Height (Y dimension)
+     * @param depth Depth (Z dimension)
+     * @param color Optional uniform color (default: gray)
+     */
+    explicit BoxData(float width = 1.0f,
+                     float height = 1.0f,
+                     float depth = 1.0f,
+                     float r = 0.7f,
+                     float g = 0.7f,
+                     float b = 0.7f) {
+        float hw = width * 0.5f;  // half width
+        float hh = height * 0.5f; // half height
+        float hd = depth * 0.5f;  // half depth
+
+        // Each vertex contains: position(x,y,z) + normal(nx,ny,nz) + color(r,g,b)
+        // clang-format off
+        m_vertices = {
+            // Front face (z = +hd) - Normal (0, 0, 1)
+            -hw, -hh,  hd,  0.0f, 0.0f, 1.0f,  r, g, b,
+             hw, -hh,  hd,  0.0f, 0.0f, 1.0f,  r, g, b,
+             hw,  hh,  hd,  0.0f, 0.0f, 1.0f,  r, g, b,
+            -hw,  hh,  hd,  0.0f, 0.0f, 1.0f,  r, g, b,
+
+            // Back face (z = -hd) - Normal (0, 0, -1)
+             hw, -hh, -hd,  0.0f, 0.0f, -1.0f,  r, g, b,
+            -hw, -hh, -hd,  0.0f, 0.0f, -1.0f,  r, g, b,
+            -hw,  hh, -hd,  0.0f, 0.0f, -1.0f,  r, g, b,
+             hw,  hh, -hd,  0.0f, 0.0f, -1.0f,  r, g, b,
+
+            // Top face (y = +hh) - Normal (0, 1, 0)
+            -hw,  hh,  hd,  0.0f, 1.0f, 0.0f,  r, g, b,
+             hw,  hh,  hd,  0.0f, 1.0f, 0.0f,  r, g, b,
+             hw,  hh, -hd,  0.0f, 1.0f, 0.0f,  r, g, b,
+            -hw,  hh, -hd,  0.0f, 1.0f, 0.0f,  r, g, b,
+
+            // Bottom face (y = -hh) - Normal (0, -1, 0)
+            -hw, -hh, -hd,  0.0f, -1.0f, 0.0f,  r, g, b,
+             hw, -hh, -hd,  0.0f, -1.0f, 0.0f,  r, g, b,
+             hw, -hh,  hd,  0.0f, -1.0f, 0.0f,  r, g, b,
+            -hw, -hh,  hd,  0.0f, -1.0f, 0.0f,  r, g, b,
+
+            // Right face (x = +hw) - Normal (1, 0, 0)
+             hw, -hh,  hd,  1.0f, 0.0f, 0.0f,  r, g, b,
+             hw, -hh, -hd,  1.0f, 0.0f, 0.0f,  r, g, b,
+             hw,  hh, -hd,  1.0f, 0.0f, 0.0f,  r, g, b,
+             hw,  hh,  hd,  1.0f, 0.0f, 0.0f,  r, g, b,
+
+            // Left face (x = -hw) - Normal (-1, 0, 0)
+            -hw, -hh, -hd,  -1.0f, 0.0f, 0.0f,  r, g, b,
+            -hw, -hh,  hd,  -1.0f, 0.0f, 0.0f,  r, g, b,
+            -hw,  hh,  hd,  -1.0f, 0.0f, 0.0f,  r, g, b,
+            -hw,  hh, -hd,  -1.0f, 0.0f, 0.0f,  r, g, b,
+        };
+
+        // Index data - two triangles per face
+        m_indices = {
+            0,  1,  2,   0,  2,  3,   // Front face
+            4,  5,  6,   4,  6,  7,   // Back face
+            8,  9,  10,  8,  10, 11,  // Top face
+            12, 13, 14,  12, 14, 15,  // Bottom face
+            16, 17, 18,  16, 18, 19,  // Right face
+            20, 21, 22,  20, 22, 23   // Left face
+        };
+        // clang-format on
+    }
+
+    const float* vertices() const override { return m_vertices.data(); }
+    int vertexCount() const override { return 24; } // 6 faces * 4 vertices
+
+    const unsigned int* indices() const override { return m_indices.data(); }
+    int indexCount() const override { return 36; } // 6 faces * 2 triangles * 3 vertices
+
+private:
+    std::vector<float> m_vertices;
+    std::vector<unsigned int> m_indices;
+};
+
+/**
  * @brief Cylinder geometry data with lighting support
  *
  * Provides vertex data for a cylinder centered at origin.
@@ -304,4 +393,3 @@ private:
 
 } // namespace Geometry
 } // namespace OpenGeoLab
-

@@ -3,8 +3,9 @@
  * @brief Implementation of OpenGL renderer for 3D geometry
  */
 
-#include <render/opengl_renderer.hpp>
 #include <core/logger.hpp>
+#include <render/opengl_renderer.hpp>
+
 
 #include <QMatrix4x4>
 
@@ -167,9 +168,7 @@ OpenGLRenderer::OpenGLRenderer() : m_camera(std::make_unique<Camera>()) {
     m_lighting.setupCADLighting();
 }
 
-OpenGLRenderer::~OpenGLRenderer() {
-    delete m_program;
-}
+OpenGLRenderer::~OpenGLRenderer() { delete m_program; }
 
 void OpenGLRenderer::setGeometryData(std::shared_ptr<Geometry::GeometryData> geometry_data) {
     m_geometryData = geometry_data;
@@ -181,21 +180,19 @@ void OpenGLRenderer::setGeometryData(std::shared_ptr<Geometry::GeometryData> geo
 }
 
 void OpenGLRenderer::setColorOverride(const QColor& color) {
-    if (m_colorOverride != color) {
+    if(m_colorOverride != color) {
         m_colorOverride = color;
-        LOG_DEBUG("Color override set to: ({}, {}, {}, {})", 
-                  color.red(), color.green(), color.blue(), color.alpha());
+        LOG_DEBUG("Color override set to: ({}, {}, {}, {})", color.red(), color.green(),
+                  color.blue(), color.alpha());
     }
 }
 
-void OpenGLRenderer::setMaterial(const Material& material) {
-    m_material = material;
-}
+void OpenGLRenderer::setMaterial(const Material& material) { m_material = material; }
 
 void OpenGLRenderer::init() {
     LOG_TRACE("OpenGLRenderer::init() called");
 
-    if (!m_program && m_window) {
+    if(!m_program && m_window) {
         LOG_INFO("Initializing OpenGL renderer resources");
 
         QSGRendererInterface* rif = m_window->rendererInterface();
@@ -205,13 +202,13 @@ void OpenGLRenderer::init() {
 
         // Create shader program
         createShaderProgram();
-        if (!m_program) {
+        if(!m_program) {
             LOG_ERROR("Failed to create shader program");
             return;
         }
 
         // Create buffers if geometry data is available
-        if (m_geometryData && m_needsBufferUpdate) {
+        if(m_geometryData && m_needsBufferUpdate) {
             createBuffers();
             m_needsBufferUpdate = false;
         }
@@ -224,18 +221,18 @@ void OpenGLRenderer::init() {
 void OpenGLRenderer::createShaderProgram() {
     m_program = new QOpenGLShaderProgram();
 
-    bool vertex_ok = m_program->addCacheableShaderFromSourceCode(
-        QOpenGLShader::Vertex, vertexShaderSource());
-    if (!vertex_ok) {
+    bool vertex_ok =
+        m_program->addCacheableShaderFromSourceCode(QOpenGLShader::Vertex, vertexShaderSource());
+    if(!vertex_ok) {
         LOG_ERROR("Failed to compile vertex shader: {}", m_program->log().toStdString());
         delete m_program;
         m_program = nullptr;
         return;
     }
 
-    bool fragment_ok = m_program->addCacheableShaderFromSourceCode(
-        QOpenGLShader::Fragment, fragmentShaderSource());
-    if (!fragment_ok) {
+    bool fragment_ok = m_program->addCacheableShaderFromSourceCode(QOpenGLShader::Fragment,
+                                                                   fragmentShaderSource());
+    if(!fragment_ok) {
         LOG_ERROR("Failed to compile fragment shader: {}", m_program->log().toStdString());
         delete m_program;
         m_program = nullptr;
@@ -248,7 +245,7 @@ void OpenGLRenderer::createShaderProgram() {
     m_program->bindAttributeLocation("aColor", 2);
 
     bool link_ok = m_program->link();
-    if (!link_ok) {
+    if(!link_ok) {
         LOG_ERROR("Failed to link shader program: {}", m_program->log().toStdString());
         delete m_program;
         m_program = nullptr;
@@ -259,7 +256,7 @@ void OpenGLRenderer::createShaderProgram() {
 }
 
 void OpenGLRenderer::createBuffers() {
-    if (!m_geometryData) {
+    if(!m_geometryData) {
         LOG_WARN("No geometry data available for buffer creation");
         return;
     }
@@ -268,10 +265,10 @@ void OpenGLRenderer::createBuffers() {
               m_geometryData->vertexCount(), m_geometryData->indexCount());
 
     // Destroy old buffers if they exist
-    if (m_vbo.isCreated()) {
+    if(m_vbo.isCreated()) {
         m_vbo.destroy();
     }
-    if (m_ebo.isCreated()) {
+    if(m_ebo.isCreated()) {
         m_ebo.destroy();
     }
 
@@ -279,14 +276,13 @@ void OpenGLRenderer::createBuffers() {
     m_vbo = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
     m_vbo.create();
     m_vbo.bind();
-    m_vbo.allocate(m_geometryData->vertices(),
-                   m_geometryData->vertexCount() * 9 * sizeof(float));
+    m_vbo.allocate(m_geometryData->vertices(), m_geometryData->vertexCount() * 9 * sizeof(float));
     m_vbo.release();
 
     LOG_DEBUG("VBO created with {} bytes", m_geometryData->vertexCount() * 9 * sizeof(float));
 
     // Create and populate index buffer if available
-    if (m_geometryData->indices() && m_geometryData->indexCount() > 0) {
+    if(m_geometryData->indices() && m_geometryData->indexCount() > 0) {
         m_ebo = QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
         m_ebo.create();
         m_ebo.bind();
@@ -299,7 +295,7 @@ void OpenGLRenderer::createBuffers() {
 }
 
 void OpenGLRenderer::setupVertexAttributes() {
-    int stride = 9 * sizeof(float);  // Each vertex: 3(pos) + 3(normal) + 3(color)
+    int stride = 9 * sizeof(float); // Each vertex: 3(pos) + 3(normal) + 3(color)
 
     // Position attribute (location = 0)
     glEnableVertexAttribArray(0);
@@ -332,9 +328,9 @@ void OpenGLRenderer::uploadLightingUniforms() {
     int light_count = qMin(m_lighting.lightCount(), MAX_LIGHTS);
     m_program->setUniformValue("uLightCount", light_count);
 
-    for (int i = 0; i < light_count; ++i) {
+    for(int i = 0; i < light_count; ++i) {
         const Light& light = m_lighting.lights()[i];
-        
+
         QString type_name = QString("uLightTypes[%1]").arg(i);
         QString pos_name = QString("uLightPositions[%1]").arg(i);
         QString color_name = QString("uLightColors[%1]").arg(i);
@@ -348,50 +344,51 @@ void OpenGLRenderer::uploadLightingUniforms() {
 }
 
 void OpenGLRenderer::paint() {
-    if (!m_program || !m_geometryData) {
-        LOG_TRACE("Skipping paint: program={}, geometryData={}", 
+    // Always clear background, even without geometry
+    m_window->beginExternalCommands();
+
+    // Setup viewport - use full viewport without offset issues
+    int window_height = m_window->height() * m_window->devicePixelRatio();
+    int viewport_y = window_height - m_viewportOffset.y() - m_viewportSize.height();
+
+    glViewport(m_viewportOffset.x(), viewport_y, m_viewportSize.width(), m_viewportSize.height());
+
+    // Clear with background color
+    glClearColor(m_backgroundColor.redF(), m_backgroundColor.greenF(), m_backgroundColor.blueF(),
+                 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    // Skip rendering if no geometry
+    if(!m_program || !m_geometryData) {
+        LOG_TRACE("Skipping geometry render: program={}, geometryData={}",
                   static_cast<void*>(m_program), static_cast<void*>(m_geometryData.get()));
+        m_window->endExternalCommands();
         return;
     }
 
     LOG_TRACE("OpenGLRenderer::paint() called");
 
     // Check if buffers need to be updated
-    if (m_needsBufferUpdate) {
+    if(m_needsBufferUpdate) {
         createBuffers();
         m_needsBufferUpdate = false;
     }
-
-    m_window->beginExternalCommands();
-
-    // Setup viewport - use full viewport without offset issues
-    int window_height = m_window->height() * m_window->devicePixelRatio();
-    int viewport_y = window_height - m_viewportOffset.y() - m_viewportSize.height();
-    
-    glViewport(m_viewportOffset.x(), viewport_y, 
-               m_viewportSize.width(), m_viewportSize.height());
 
     // Enable depth testing for 3D rendering
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
     glDisable(GL_BLEND);
 
-    // Enable backface culling for better performance
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_BACK);
-    glFrontFace(GL_CCW);
-
-    // Clear with background color
-    glClearColor(m_backgroundColor.redF(), m_backgroundColor.greenF(), 
-                 m_backgroundColor.blueF(), 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    // Disable backface culling to show both sides of surfaces
+    // This is important for CAD models where users need to see backfaces
+    glDisable(GL_CULL_FACE);
 
     // Bind shader program
     m_program->bind();
 
     // Bind buffers
     m_vbo.bind();
-    if (m_geometryData->indices()) {
+    if(m_geometryData->indices()) {
         m_ebo.bind();
     }
 
@@ -399,13 +396,13 @@ void OpenGLRenderer::paint() {
     setupVertexAttributes();
 
     // Calculate aspect ratio
-    float aspect = static_cast<float>(m_viewportSize.width()) / 
-                   static_cast<float>(m_viewportSize.height());
+    float aspect =
+        static_cast<float>(m_viewportSize.width()) / static_cast<float>(m_viewportSize.height());
 
     // Get matrices from camera
     QMatrix4x4 view = m_camera->viewMatrix();
     QMatrix4x4 projection = m_camera->projectionMatrix(aspect);
-    QMatrix4x4 model;  // Identity for now
+    QMatrix4x4 model; // Identity for now
     model.setToIdentity();
 
     QMatrix4x4 mvp = projection * view * model;
@@ -422,7 +419,7 @@ void OpenGLRenderer::paint() {
     m_program->setUniformValue("uCameraPos", m_camera->position());
 
     // Upload color override
-    QVector4D color_override(m_colorOverride.redF(), m_colorOverride.greenF(), 
+    QVector4D color_override(m_colorOverride.redF(), m_colorOverride.greenF(),
                              m_colorOverride.blueF(), m_colorOverride.alphaF());
     m_program->setUniformValue("uColorOverride", color_override);
 
@@ -430,7 +427,7 @@ void OpenGLRenderer::paint() {
     uploadLightingUniforms();
 
     // Draw geometry
-    if (m_geometryData->indices() && m_geometryData->indexCount() > 0) {
+    if(m_geometryData->indices() && m_geometryData->indexCount() > 0) {
         glDrawElements(GL_TRIANGLES, m_geometryData->indexCount(), GL_UNSIGNED_INT, nullptr);
         LOG_TRACE("Drew geometry with {} indices", m_geometryData->indexCount());
     } else {
@@ -442,10 +439,7 @@ void OpenGLRenderer::paint() {
     glDisableVertexAttribArray(0);
     glDisableVertexAttribArray(1);
     glDisableVertexAttribArray(2);
-    
-    // Reset state
-    glDisable(GL_CULL_FACE);
-    
+
     m_program->release();
 
     m_window->endExternalCommands();
