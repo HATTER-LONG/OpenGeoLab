@@ -188,6 +188,18 @@ public:
      */
     QMatrix4x4 modelMatrix() const;
 
+    /**
+     * @brief Set model center point for rotation
+     * @param center Center point of the model
+     */
+    void setModelCenter(const QVector3D& center);
+
+    /**
+     * @brief Get model center point
+     * @return Current model center
+     */
+    QVector3D modelCenter() const { return m_modelCenter; }
+
 public slots:
     /**
      * @brief Initialize OpenGL resources
@@ -262,6 +274,9 @@ private:
     // Model rotation (for rotating model instead of camera)
     float m_modelYaw = 0.0f;   // Horizontal rotation in degrees
     float m_modelPitch = 0.0f; // Vertical rotation in degrees
+
+    // Model center point (for rotation around model center)
+    QVector3D m_modelCenter = QVector3D(0, 0, 0);
 
     // Maximum supported lights in shader
     static constexpr int MAX_LIGHTS = 4;

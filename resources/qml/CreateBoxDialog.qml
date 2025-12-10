@@ -9,9 +9,8 @@ import QtQuick.Layouts
 Dialog {
     id: root
 
-    title: qsTr("Create Box")
+    title: "Create Box"
     modal: true
-    standardButtons: Dialog.Ok | Dialog.Cancel
 
     // Output values
     property real boxWidth: 1.0
@@ -63,7 +62,7 @@ Dialog {
             spacing: 12
 
             Text {
-                text: qsTr("Width (X):")
+                text: "Width (X):"
                 color: "#e1e1e1"
                 font.pixelSize: 13
                 Layout.preferredWidth: 80
@@ -104,7 +103,7 @@ Dialog {
             spacing: 12
 
             Text {
-                text: qsTr("Height (Y):")
+                text: "Height (Y):"
                 color: "#e1e1e1"
                 font.pixelSize: 13
                 Layout.preferredWidth: 80
@@ -145,7 +144,7 @@ Dialog {
             spacing: 12
 
             Text {
-                text: qsTr("Depth (Z):")
+                text: "Depth (Z):"
                 color: "#e1e1e1"
                 font.pixelSize: 13
                 Layout.preferredWidth: 80
@@ -187,46 +186,79 @@ Dialog {
 
         // Info text
         Text {
-            text: qsTr("Box will be centered at origin")
+            text: "Box will be centered at origin"
             color: "#888"
             font.pixelSize: 11
             Layout.alignment: Qt.AlignHCenter
         }
     }
 
-    footer: DialogButtonBox {
-        background: Rectangle {
-            color: "#1a1d23"
-            radius: 8
+    footer: Rectangle {
+        color: "#1a1d23"
+        height: 50
+        radius: 8
 
-            // Top corners should be square
-            Rectangle {
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.top: parent.top
-                height: 8
-                color: parent.color
-            }
+        // Top corners should be square
+        Rectangle {
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            height: 8
+            color: parent.color
         }
 
-        delegate: Button {
-            id: footerButton
+        Row {
+            anchors.centerIn: parent
+            spacing: 16
 
-            contentItem: Text {
-                text: footerButton.text
-                color: "#e1e1e1"
-                font.pixelSize: 13
-                horizontalAlignment: Text.AlignHCenter
-                verticalAlignment: Text.AlignVCenter
+            Button {
+                id: okButton
+                text: "OK"
+                width: 80
+                height: 32
+
+                contentItem: Text {
+                    text: okButton.text
+                    color: "#e1e1e1"
+                    font.pixelSize: 13
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+
+                background: Rectangle {
+                    color: okButton.down ? "#0b5ed7" : (okButton.hovered ? "#1a6ed8" : "#0d6efd")
+                    radius: 4
+                }
+
+                onClicked: {
+                    root.accept();
+                }
             }
 
-            background: Rectangle {
-                implicitWidth: 80
-                implicitHeight: 32
-                color: footerButton.down ? "#0b5ed7" : (footerButton.hovered ? "#3a3f4b" : "#2a2e35")
-                radius: 4
-                border.color: footerButton.DialogButtonBox.buttonRole === DialogButtonBox.AcceptRole ? "#0d6efd" : "#3a3f4b"
-                border.width: 1
+            Button {
+                id: cancelButton
+                text: "Cancel"
+                width: 80
+                height: 32
+
+                contentItem: Text {
+                    text: cancelButton.text
+                    color: "#e1e1e1"
+                    font.pixelSize: 13
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+
+                background: Rectangle {
+                    color: cancelButton.down ? "#3a3f4b" : (cancelButton.hovered ? "#3a3f4b" : "#2a2e35")
+                    radius: 4
+                    border.color: "#3a3f4b"
+                    border.width: 1
+                }
+
+                onClicked: {
+                    root.reject();
+                }
             }
         }
     }

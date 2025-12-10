@@ -226,14 +226,20 @@ void OpenGLRenderer::resetModelRotation() {
     m_modelPitch = 0.0f;
 }
 
+void OpenGLRenderer::setModelCenter(const QVector3D& center) { m_modelCenter = center; }
+
 QMatrix4x4 OpenGLRenderer::modelMatrix() const {
     QMatrix4x4 model;
     model.setToIdentity();
 
-    // Apply rotations: first yaw (around Y), then pitch (around X)
-    // This gives intuitive turntable-style rotation
+    // Rotate around model center:
+    // 1. Translate model center to origin
+    // 2. Apply rotation
+    // 3. Translate back
+    model.translate(m_modelCenter);
     model.rotate(m_modelYaw, 0.0f, 1.0f, 0.0f);   // Yaw around Y-axis
     model.rotate(m_modelPitch, 1.0f, 0.0f, 0.0f); // Pitch around X-axis
+    model.translate(-m_modelCenter);
 
     return model;
 }

@@ -56,6 +56,13 @@ void Geometry3D::setCustomGeometry(std::shared_ptr<Geometry::GeometryData> geome
             m_boundsMin = QVector3D(min_point[0], min_point[1], min_point[2]);
             m_boundsMax = QVector3D(max_point[0], max_point[1], max_point[2]);
 
+            // Set model center for rotation pivot
+            QVector3D center = (m_boundsMin + m_boundsMax) * 0.5f;
+            m_renderer->setModelCenter(center);
+
+            // Reset model rotation when loading new geometry
+            m_renderer->resetModelRotation();
+
             // Auto-fit the view to show the entire model
             fitToView();
         }
@@ -129,8 +136,9 @@ void Geometry3D::resetView() {
 }
 
 void Geometry3D::setViewFront() {
-    if(m_renderer && m_renderer->camera()) {
-        m_renderer->camera()->setOrbitAngles(0.0f, 0.0f);
+    if(m_renderer) {
+        // Set model rotation to show front view
+        m_renderer->setModelRotation(0.0f, 0.0f);
         if(window()) {
             window()->update();
         }
@@ -139,8 +147,9 @@ void Geometry3D::setViewFront() {
 }
 
 void Geometry3D::setViewBack() {
-    if(m_renderer && m_renderer->camera()) {
-        m_renderer->camera()->setOrbitAngles(180.0f, 0.0f);
+    if(m_renderer) {
+        // Set model rotation to show back view (rotate 180 degrees around Y)
+        m_renderer->setModelRotation(180.0f, 0.0f);
         if(window()) {
             window()->update();
         }
@@ -149,8 +158,9 @@ void Geometry3D::setViewBack() {
 }
 
 void Geometry3D::setViewTop() {
-    if(m_renderer && m_renderer->camera()) {
-        m_renderer->camera()->setOrbitAngles(0.0f, 89.0f);
+    if(m_renderer) {
+        // Set model rotation to show top view (rotate -90 degrees around X)
+        m_renderer->setModelRotation(0.0f, -90.0f);
         if(window()) {
             window()->update();
         }
@@ -159,8 +169,9 @@ void Geometry3D::setViewTop() {
 }
 
 void Geometry3D::setViewBottom() {
-    if(m_renderer && m_renderer->camera()) {
-        m_renderer->camera()->setOrbitAngles(0.0f, -89.0f);
+    if(m_renderer) {
+        // Set model rotation to show bottom view (rotate 90 degrees around X)
+        m_renderer->setModelRotation(0.0f, 90.0f);
         if(window()) {
             window()->update();
         }
@@ -169,8 +180,9 @@ void Geometry3D::setViewBottom() {
 }
 
 void Geometry3D::setViewLeft() {
-    if(m_renderer && m_renderer->camera()) {
-        m_renderer->camera()->setOrbitAngles(-90.0f, 0.0f);
+    if(m_renderer) {
+        // Set model rotation to show left view (rotate 90 degrees around Y)
+        m_renderer->setModelRotation(90.0f, 0.0f);
         if(window()) {
             window()->update();
         }
@@ -179,8 +191,9 @@ void Geometry3D::setViewLeft() {
 }
 
 void Geometry3D::setViewRight() {
-    if(m_renderer && m_renderer->camera()) {
-        m_renderer->camera()->setOrbitAngles(90.0f, 0.0f);
+    if(m_renderer) {
+        // Set model rotation to show right view (rotate -90 degrees around Y)
+        m_renderer->setModelRotation(-90.0f, 0.0f);
         if(window()) {
             window()->update();
         }
@@ -189,8 +202,10 @@ void Geometry3D::setViewRight() {
 }
 
 void Geometry3D::setViewIsometric() {
-    if(m_renderer && m_renderer->camera()) {
-        m_renderer->camera()->setOrbitAngles(45.0f, 35.264f); // Standard isometric angles
+    if(m_renderer) {
+        // Set model rotation to show isometric view
+        // Standard isometric: 45 degrees yaw, ~35.264 degrees pitch
+        m_renderer->setModelRotation(-45.0f, -35.264f);
         if(window()) {
             window()->update();
         }
@@ -299,7 +314,19 @@ void Geometry3D::mouseMoveEvent(QMouseEvent* event) {
             // This provides better lighting consistency as lights stay fixed in world space
             // Sensitivity factor for rotation
             float sensitivity = 0.3f;
-            m_renderer->rotateModel(static_cast<float>(delta.x()) * sensitivity,
+
+            // Get current model pitch to handle mouse direction inversion
+            float currentYaw, currentPitch;
+            m_renderer->modelRotation(currentYaw, currentPitch);
+
+            // When pitch is between 90 and 270 degrees (model is upside down),
+            // invert the yaw direction to make mouse movement feel natural
+            float yawMultiplier = 1.0f;
+            if(std::abs(currentPitch) > 90.0f) {
+                yawMultiplier = -1.0f;
+            }
+
+            m_renderer->rotateModel(static_cast<float>(delta.x()) * sensitivity * yawMultiplier,
                                     static_cast<float>(-delta.y()) * sensitivity);
             LOG_TRACE("Model rotate: delta=({}, {})", delta.x(), delta.y());
         }
