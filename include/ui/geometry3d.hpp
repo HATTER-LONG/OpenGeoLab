@@ -32,6 +32,8 @@ namespace UI {
 class Geometry3D : public QQuickItem {
     Q_OBJECT
     Q_PROPERTY(QColor color READ color WRITE setColor NOTIFY colorChanged)
+    Q_PROPERTY(QColor backgroundColor READ backgroundColor WRITE setBackgroundColor NOTIFY
+                   backgroundColorChanged)
     QML_ELEMENT
 
 public:
@@ -49,6 +51,18 @@ public:
      * @param color Color to use (set alpha to 0 to use per-vertex colors)
      */
     void setColor(const QColor& color);
+
+    /**
+     * @brief Get current background color
+     * @return Background color for the 3D viewport
+     */
+    QColor backgroundColor() const { return m_backgroundColor; }
+
+    /**
+     * @brief Set background color for the 3D viewport
+     * @param color Background color
+     */
+    void setBackgroundColor(const QColor& color);
 
     /**
      * @brief Set custom geometry data from external source
@@ -119,6 +133,7 @@ public:
 
 signals:
     void colorChanged();
+    void backgroundColorChanged();
     void rendererReady();
     void modelLoadFailed(const QString& error);
 
@@ -163,7 +178,8 @@ private:
     void updateCameraFromBounds();
 
     Rendering::OpenGLRenderer* m_renderer = nullptr;
-    QColor m_color = QColor(0, 0, 0, 0); // Default: use vertex colors
+    QColor m_color = QColor(0, 0, 0, 0);           // Default: use vertex colors
+    QColor m_backgroundColor = QColor(45, 50, 56); // Default: dark gray
 
     // Mouse interaction state
     enum class DragMode { None, Orbit, Pan };

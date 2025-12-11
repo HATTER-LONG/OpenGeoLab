@@ -203,8 +203,9 @@ void OpenGLRenderer::rotateModel(float delta_yaw, float delta_pitch) {
     // we achieve screen-space rotation that feels natural.
 
     // Create rotation quaternions for screen-space axes
-    // Negate delta_yaw so dragging right rotates model right (clockwise from above)
-    QQuaternion yaw_rotation = QQuaternion::fromAxisAndAngle(QVector3D(0, 1, 0), -delta_yaw);
+    // delta_yaw: dragging right should rotate model to show its left side (positive Y rotation)
+    // delta_pitch: dragging down should rotate model to show its top (negative X rotation)
+    QQuaternion yaw_rotation = QQuaternion::fromAxisAndAngle(QVector3D(0, 1, 0), delta_yaw);
     QQuaternion pitch_rotation = QQuaternion::fromAxisAndAngle(QVector3D(1, 0, 0), -delta_pitch);
 
     // Pre-multiply: new rotation is applied in screen space

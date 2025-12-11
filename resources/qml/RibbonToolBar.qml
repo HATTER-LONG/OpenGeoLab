@@ -91,14 +91,15 @@ Rectangle {
 
     // Color palette - automatically switches based on theme
     property color accentColor: isDarkTheme ? "#0d6efd" : "#0078d4"
-    property color hoverColor: isDarkTheme ? "#3a3f4b" : "#e5f1fb"
-    property color selectedColor: isDarkTheme ? "#4a5568" : "#cce4f7"
-    property color borderColor: isDarkTheme ? "#363b44" : "#d1d1d1"
-    property color tabBackgroundColor: isDarkTheme ? "#1e2127" : "#f0f0f0"
-    property color contentBackgroundColor: isDarkTheme ? "#252830" : "#ffffff"
+    property color hoverColor: isDarkTheme ? "#3a3f4b" : "#d4e6f7"
+    property color selectedColor: isDarkTheme ? "#4a5568" : "#b8d4f0"
+    property color selectedTabColor: isDarkTheme ? "#323842" : "#ffffff"  // More visible selected tab
+    property color borderColor: isDarkTheme ? "#363b44" : "#c0c0c0"
+    property color tabBackgroundColor: isDarkTheme ? "#1e2127" : "#e8e8e8"
+    property color contentBackgroundColor: isDarkTheme ? "#252830" : "#f5f5f5"
     property color textColor: isDarkTheme ? "#ffffff" : "#1a1a1a"
-    property color textColorDim: isDarkTheme ? "#b8b8b8" : "#666666"
-    property color iconColor: isDarkTheme ? "#e1e1e1" : "#333333"
+    property color textColorDim: isDarkTheme ? "#b8b8b8" : "#555555"
+    property color iconColor: isDarkTheme ? "#e1e1e1" : "#1a1a1a"
 
     readonly property var tabNames: ["Geometry", "Mesh", "AI"]
 
@@ -181,9 +182,19 @@ Rectangle {
 
                     Layout.preferredWidth: 80
                     Layout.preferredHeight: 24
-                    color: ribbonToolBar.currentTabIndex === index ? ribbonToolBar.contentBackgroundColor : (tabMouseArea.containsMouse ? ribbonToolBar.hoverColor : "transparent")
+                    color: ribbonToolBar.currentTabIndex === index ? ribbonToolBar.selectedTabColor : (tabMouseArea.containsMouse ? ribbonToolBar.hoverColor : "transparent")
                     border.width: ribbonToolBar.currentTabIndex === index ? 1 : 0
-                    border.color: ribbonToolBar.borderColor
+                    border.color: ribbonToolBar.currentTabIndex === index ? ribbonToolBar.accentColor : ribbonToolBar.borderColor
+
+                    // Accent line at top of selected tab for better visibility
+                    Rectangle {
+                        visible: ribbonToolBar.currentTabIndex === tabDelegate.index
+                        anchors.top: parent.top
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        height: 2
+                        color: ribbonToolBar.accentColor
+                    }
 
                     Rectangle {
                         visible: ribbonToolBar.currentTabIndex === tabDelegate.index

@@ -43,6 +43,26 @@ void Geometry3D::setColor(const QColor& color) {
     }
 }
 
+void Geometry3D::setBackgroundColor(const QColor& color) {
+    if(m_backgroundColor != color) {
+        m_backgroundColor = color;
+
+        // Update renderer if it exists
+        if(m_renderer) {
+            m_renderer->setBackgroundColor(color);
+        }
+
+        // Trigger repaint
+        if(window()) {
+            window()->update();
+        }
+
+        emit backgroundColorChanged();
+        LOG_INFO("Geometry3D background color changed to: ({}, {}, {})", color.red(), color.green(),
+                 color.blue());
+    }
+}
+
 void Geometry3D::setCustomGeometry(std::shared_ptr<Geometry::GeometryData> geometry_data) {
     if(m_renderer && geometry_data) {
         m_renderer->setGeometryData(geometry_data);
@@ -242,6 +262,9 @@ void Geometry3D::sync() {
 
         // Set initial color
         m_renderer->setColorOverride(m_color);
+
+        // Set initial background color
+        m_renderer->setBackgroundColor(m_backgroundColor);
 
         // Connect renderer to scene graph signals
         connect(window(), &QQuickWindow::beforeRendering, m_renderer,

@@ -195,6 +195,9 @@ Window {
 
         // Default: use vertex colors (alpha = 0)
         color: Qt.rgba(0, 0, 0, 0)
+
+        // Sync background color with current theme
+        backgroundColor: theme.isDarkTheme ? "#2d3238" : "#f0f0f0"
     }
 
     // View Control Toolbar - positioned in bottom-right of the 3D view
