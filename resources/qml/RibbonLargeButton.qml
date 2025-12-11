@@ -23,10 +23,15 @@ Rectangle {
     Layout.preferredWidth: 48
     Layout.preferredHeight: 60
 
-    color: buttonMouseArea.containsMouse ? (buttonMouseArea.pressed ? "#CCE4F7" : "#E5F1FB") : "transparent"
+    // Dark theme colors
+    property color hoverColor: "#3a3f4b"
+    property color pressedColor: "#4a5568"
+    property color textColor: "#e1e1e1"
+
+    color: buttonMouseArea.containsMouse ? (buttonMouseArea.pressed ? pressedColor : hoverColor) : "transparent"
     radius: 3
     border.width: buttonMouseArea.containsMouse ? 1 : 0
-    border.color: "#CCE4F7"
+    border.color: hoverColor
 
     Column {
         anchors.centerIn: parent
@@ -53,7 +58,7 @@ Rectangle {
             id: labelText
             anchors.horizontalCenter: parent.horizontalCenter
             font.pixelSize: 10
-            color: "#333333"
+            color: ribbonButton.textColor
             horizontalAlignment: Text.AlignHCenter
             lineHeight: 0.85
         }

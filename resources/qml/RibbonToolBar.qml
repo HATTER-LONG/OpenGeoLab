@@ -85,12 +85,16 @@ Rectangle {
     // ========================================================================
 
     property int currentTabIndex: 0  // Default to Geometry tab
-    property color accentColor: "#0078D4"
-    property color hoverColor: "#E5F1FB"
-    property color selectedColor: "#CCE4F7"
-    property color borderColor: "#D1D1D1"
-    property color tabBackgroundColor: "#F3F3F3"
-    property color contentBackgroundColor: "#FCFCFC"
+
+    // Modern dark theme color palette
+    property color accentColor: "#0d6efd"           // Primary blue accent
+    property color hoverColor: "#3a3f4b"            // Hover state
+    property color selectedColor: "#4a5568"         // Selected state
+    property color borderColor: "#363b44"           // Subtle border
+    property color tabBackgroundColor: "#1e2127"    // Tab bar background
+    property color contentBackgroundColor: "#252830" // Content area background
+    property color textColor: "#e1e1e1"             // Primary text
+    property color textColorDim: "#a0a0a0"          // Secondary text
 
     readonly property var tabNames: ["Geometry", "Mesh", "AI"]
 
@@ -131,7 +135,7 @@ Rectangle {
         anchors.right: parent.right
         anchors.top: parent.top
         height: 28
-        color: "white"
+        color: ribbonToolBar.tabBackgroundColor
 
         RowLayout {
             anchors.left: parent.left
@@ -143,13 +147,13 @@ Rectangle {
             Rectangle {
                 Layout.preferredWidth: 60
                 Layout.preferredHeight: 24
-                color: fileMenu.visible ? ribbonToolBar.accentColor : (fileButtonArea.containsMouse ? ribbonToolBar.accentColor : "transparent")
+                color: fileMenu.visible ? ribbonToolBar.accentColor : (fileButtonArea.containsMouse ? ribbonToolBar.hoverColor : "transparent")
                 radius: 2
 
                 Text {
                     anchors.centerIn: parent
                     text: "File"
-                    color: fileMenu.visible || fileButtonArea.containsMouse ? "white" : "#333333"
+                    color: ribbonToolBar.textColor
                     font.pixelSize: 12
                     font.bold: true
                 }
@@ -191,7 +195,7 @@ Rectangle {
                     Text {
                         anchors.centerIn: parent
                         text: tabDelegate.modelData
-                        color: "#333333"
+                        color: ribbonToolBar.textColor
                         font.pixelSize: 12
                     }
 

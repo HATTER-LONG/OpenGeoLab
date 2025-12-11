@@ -12,6 +12,10 @@ Rectangle {
 
     property string title: "Group"
 
+    // Dark theme colors
+    property color titleColor: "#a0a0a0"
+    property color separatorColor: "#3a3f4b"
+
     implicitWidth: contentRow.implicitWidth + 16
     Layout.fillHeight: true
     color: "transparent"
@@ -48,7 +52,7 @@ Rectangle {
             anchors.centerIn: parent
             text: ribbonGroup.title
             font.pixelSize: 10
-            color: "#666666"
+            color: ribbonGroup.titleColor
         }
     }
 
@@ -60,6 +64,6 @@ Rectangle {
         anchors.topMargin: 5
         anchors.bottomMargin: 5
         width: 1
-        color: "#D1D1D1"
+        color: ribbonGroup.separatorColor
     }
 }

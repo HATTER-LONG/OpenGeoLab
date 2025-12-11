@@ -21,6 +21,7 @@
 #include <QOpenGLFunctions>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLVertexArrayObject>
+#include <QQuaternion>
 #include <QQuickWindow>
 #include <QtCore/QObject>
 #include <memory>
@@ -271,9 +272,8 @@ private:
     QPoint m_viewportOffset;
     QQuickWindow* m_window = nullptr;
 
-    // Model rotation (for rotating model instead of camera)
-    float m_modelYaw = 0.0f;   // Horizontal rotation in degrees
-    float m_modelPitch = 0.0f; // Vertical rotation in degrees
+    // Model rotation (using quaternion to avoid gimbal lock)
+    QQuaternion m_modelRotation;
 
     // Model center point (for rotation around model center)
     QVector3D m_modelCenter = QVector3D(0, 0, 0);

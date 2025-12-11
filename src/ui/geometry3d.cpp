@@ -310,23 +310,10 @@ void Geometry3D::mouseMoveEvent(QMouseEvent* event) {
                                       static_cast<float>(delta.y()));
             LOG_TRACE("Pan: delta=({}, {})", delta.x(), delta.y());
         } else if(m_dragMode == DragMode::Orbit) {
-            // Rotate the model (instead of camera orbit)
-            // This provides better lighting consistency as lights stay fixed in world space
-            // Sensitivity factor for rotation
+            // Rotate the model using quaternion-based rotation
+            // This avoids gimbal lock and direction inversion issues
             float sensitivity = 0.3f;
-
-            // Get current model pitch to handle mouse direction inversion
-            float currentYaw, currentPitch;
-            m_renderer->modelRotation(currentYaw, currentPitch);
-
-            // When pitch is between 90 and 270 degrees (model is upside down),
-            // invert the yaw direction to make mouse movement feel natural
-            float yawMultiplier = 1.0f;
-            if(std::abs(currentPitch) > 90.0f) {
-                yawMultiplier = -1.0f;
-            }
-
-            m_renderer->rotateModel(static_cast<float>(delta.x()) * sensitivity * yawMultiplier,
+            m_renderer->rotateModel(static_cast<float>(delta.x()) * sensitivity,
                                     static_cast<float>(-delta.y()) * sensitivity);
             LOG_TRACE("Model rotate: delta=({}, {})", delta.x(), delta.y());
         }

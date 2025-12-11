@@ -218,17 +218,17 @@ Window {
 
     // Information overlay
     Rectangle {
-        color: Qt.rgba(1, 1, 1, 0.7)
+        color: Qt.rgba(0.12, 0.13, 0.16, 0.85)
         radius: 10
         border.width: 1
-        border.color: "white"
+        border.color: "#3a3f4b"
         anchors.fill: label
         anchors.margins: -10
     }
 
     Text {
         id: label
-        color: "black"
+        color: "#e1e1e1"
         wrapMode: Text.WordWrap
         text: qsTr("OpenGeoLab - CAE Software. Use Ribbon toolbar for geometry modeling, mesh generation and AI assistant.\nDrag with left mouse button to rotate, Shift+drag or middle button to pan, scroll wheel to zoom.")
         anchors.right: parent.right

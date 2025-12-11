@@ -189,42 +189,36 @@ void OpenGLRenderer::setColorOverride(const QColor& color) {
 void OpenGLRenderer::setMaterial(const Material& material) { m_material = material; }
 
 void OpenGLRenderer::rotateModel(float delta_yaw, float delta_pitch) {
-    m_modelYaw += delta_yaw;
-    m_modelPitch += delta_pitch;
+    // Use arcball-style rotation that doesn't have gimbal lock issues
+    // The rotation is accumulated in a way that feels natural regardless of current orientation
 
-    // Normalize yaw to [0, 360)
-    while(m_modelYaw >= 360.0f) {
-        m_modelYaw -= 360.0f;
-    }
-    while(m_modelYaw < 0.0f) {
-        m_modelYaw += 360.0f;
-    }
+    // Create incremental rotation quaternions
+    QQuaternion yaw_rotation = QQuaternion::fromAxisAndAngle(QVector3D(0, 1, 0), delta_yaw);
+    QQuaternion pitch_rotation = QQuaternion::fromAxisAndAngle(QVector3D(1, 0, 0), delta_pitch);
 
-    // No pitch clamping needed for model rotation
-    // This allows full 360 degree rotation in all axes
-    // Normalize pitch to [-180, 180)
-    while(m_modelPitch >= 180.0f) {
-        m_modelPitch -= 360.0f;
-    }
-    while(m_modelPitch < -180.0f) {
-        m_modelPitch += 360.0f;
-    }
+    // Apply rotations: pitch first (local), then yaw (world)
+    // This gives intuitive turntable behavior
+    m_modelRotation = yaw_rotation * m_modelRotation * pitch_rotation;
+    m_modelRotation.normalize();
 }
 
 void OpenGLRenderer::setModelRotation(float yaw, float pitch) {
-    m_modelYaw = yaw;
-    m_modelPitch = pitch;
+    // Convert Euler angles to quaternion
+    QQuaternion yaw_q = QQuaternion::fromAxisAndAngle(QVector3D(0, 1, 0), yaw);
+    QQuaternion pitch_q = QQuaternion::fromAxisAndAngle(QVector3D(1, 0, 0), pitch);
+    m_modelRotation = yaw_q * pitch_q;
+    m_modelRotation.normalize();
 }
 
 void OpenGLRenderer::modelRotation(float& yaw, float& pitch) const {
-    yaw = m_modelYaw;
-    pitch = m_modelPitch;
+    // Extract approximate Euler angles from quaternion
+    // Note: This is approximate and may have gimbal lock issues at extreme angles
+    QVector3D euler = m_modelRotation.toEulerAngles();
+    yaw = euler.y();
+    pitch = euler.x();
 }
 
-void OpenGLRenderer::resetModelRotation() {
-    m_modelYaw = 0.0f;
-    m_modelPitch = 0.0f;
-}
+void OpenGLRenderer::resetModelRotation() { m_modelRotation = QQuaternion(); }
 
 void OpenGLRenderer::setModelCenter(const QVector3D& center) { m_modelCenter = center; }
 
@@ -232,13 +226,12 @@ QMatrix4x4 OpenGLRenderer::modelMatrix() const {
     QMatrix4x4 model;
     model.setToIdentity();
 
-    // Rotate around model center:
+    // Rotate around model center using quaternion:
     // 1. Translate model center to origin
-    // 2. Apply rotation
+    // 2. Apply rotation (from quaternion)
     // 3. Translate back
     model.translate(m_modelCenter);
-    model.rotate(m_modelYaw, 0.0f, 1.0f, 0.0f);   // Yaw around Y-axis
-    model.rotate(m_modelPitch, 1.0f, 0.0f, 0.0f); // Pitch around X-axis
+    model.rotate(m_modelRotation);
     model.translate(-m_modelCenter);
 
     return model;
