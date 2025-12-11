@@ -4,6 +4,7 @@ import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
 
 /**
+ * @file RibbonLargeButton.qml
  * @brief A large button component for Ribbon toolbar
  *
  * Displays an SVG icon on top and label text below.
@@ -15,7 +16,7 @@ Rectangle {
     property string iconSource: ""
     property alias text: labelText.text
 
-    // Theme color properties (can be bound to ThemeManager)
+    // Dark theme colors (fixed)
     property color iconColor: "#e1e1e1"
     property color hoverColor: "#3a3f4b"
     property color pressedColor: "#4a5568"

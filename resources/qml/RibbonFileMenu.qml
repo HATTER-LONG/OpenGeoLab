@@ -4,7 +4,11 @@ import QtQuick.Layouts
 import QtQuick.Controls
 
 /**
+ * @file RibbonFileMenu.qml
  * @brief File menu popup for Ribbon toolbar (Office-style backstage)
+ *
+ * Displays file operations (New, Import, Export, Options) in a left panel
+ * with recent files list on the right.
  */
 Popup {
     id: fileMenu
@@ -20,14 +24,16 @@ Popup {
     signal showOptions
     signal exitApp
 
-    // Dark theme colors
-    property color accentColor: "#0d6efd"
-    property color hoverColor: "#3a3f4b"
-    property color menuBackgroundColor: "#1a1d24"
-    property color contentBackgroundColor: "#252830"
-    property color textColor: "#e1e1e1"
-    property color textColorDim: "#a0a0a0"
-    property color separatorColor: "#3a3f4b"
+    // ========================================================================
+    // Dark theme colors (fixed)
+    // ========================================================================
+    readonly property color accentColor: "#0d6efd"
+    readonly property color hoverColor: "#3a3f4b"
+    readonly property color menuBackgroundColor: "#1a1d24"
+    readonly property color contentBackgroundColor: "#252830"
+    readonly property color textColor: "#e1e1e1"
+    readonly property color textColorDim: "#a0a0a0"
+    readonly property color separatorColor: "#3a3f4b"
 
     width: 700
     height: 500

@@ -4,25 +4,25 @@ import QtQuick.Controls
 import QtQuick.Layouts
 
 /**
- * @brief Model Tree View - Hierarchical model structure tree view
+ * @file ModelTreeView.qml
+ * @brief Model Tree View - Hierarchical model structure display
  *
- * Displays the hierarchical structure of the current model for model management and operations.
- * Theme colors can be overridden externally.
+ * Displays the hierarchical structure of the current model for
+ * model management and navigation operations.
  */
 Rectangle {
     id: modelTreeView
 
-    // Theme mode: true = dark, false = light
-    property bool isDarkTheme: true
-
-    // Theme colors - automatically switch based on theme
-    property color headerColor: isDarkTheme ? "#1a1d23" : "#f0f0f0"
-    property color backgroundColor: isDarkTheme ? "#252830" : "#ffffff"
-    property color itemHoverColor: isDarkTheme ? "#3a3f4b" : "#e5f1fb"
-    property color selectedColor: isDarkTheme ? "#0d6efd" : "#0078d4"
-    property color textColor: isDarkTheme ? "#e1e1e1" : "#1a1a1a"
-    property color borderColor: isDarkTheme ? "#363b44" : "#d1d1d1"
-    property color iconColor: isDarkTheme ? "#e1e1e1" : "#333333"
+    // ========================================================================
+    // Dark theme colors (fixed)
+    // ========================================================================
+    readonly property color headerColor: "#1a1d23"
+    readonly property color backgroundColor: "#252830"
+    readonly property color itemHoverColor: "#3a3f4b"
+    readonly property color selectedColor: "#0d6efd"
+    readonly property color textColor: "#e1e1e1"
+    readonly property color borderColor: "#363b44"
+    readonly property color iconColor: "#e1e1e1"
 
     // Currently selected item
     property int selectedIndex: -1

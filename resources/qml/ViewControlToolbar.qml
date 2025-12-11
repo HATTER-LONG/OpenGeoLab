@@ -1,6 +1,8 @@
 /**
- * ViewControlToolbar.qml
- * Provides view control buttons for 3D rendering
+ * @file ViewControlToolbar.qml
+ * @brief Provides view control buttons for 3D rendering
+ *
+ * A floating toolbar with zoom, fit-to-view, reset, and standard view buttons.
  */
 import QtQuick
 import QtQuick.Controls
@@ -12,7 +14,7 @@ Rectangle {
     // Target geometry renderer
     property var targetRenderer: null
 
-    // Modern dark appearance
+    // Dark theme appearance
     color: "#1e2127"
     radius: 6
     border.color: "#3a3f4b"

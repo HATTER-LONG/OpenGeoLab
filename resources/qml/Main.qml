@@ -4,6 +4,16 @@ import QtQuick.Window
 import QtQuick.Dialogs
 import OpenGeoLab
 
+/**
+ * @file Main.qml
+ * @brief Main application window for OpenGeoLab
+ *
+ * This is the root QML component that sets up the main window layout including:
+ * - Ribbon toolbar at the top
+ * - Model tree panel on the left
+ * - 3D geometry viewport in the center
+ * - View control toolbar at the bottom right
+ */
 Window {
     id: root
     visible: true
@@ -12,11 +22,11 @@ Window {
     title: "OpenGeoLab - 3D Geometry Renderer"
 
     // ========================================================================
-    // Theme Manager - controls application-wide theme
+    // Dark Theme Color Constants
     // ========================================================================
-    ThemeManager {
-        id: theme
-    }
+    readonly property color textColor: "#e1e1e1"
+    readonly property color borderColor: "#3a3f4b"
+    readonly property color renderBackground: "#2d3238"
 
     Component.onCompleted: {
         ModelImporter.setTargetRenderer(geometryRenderer);
@@ -76,11 +86,10 @@ Window {
     OperationPanelManager {
         id: panelManager
         anchors.fill: parent
-        z: 1000  // Above other content
+        z: 1000
 
         onPanelApplied: function (panelId, selectionData) {
             console.log("Panel applied:", panelId, "with", selectionData.selectedCount, "selections");
-            // TODO: Handle the actual operation based on panelId
             switch (panelId) {
             case "release":
                 console.log("Executing Release operation...");
@@ -88,7 +97,6 @@ Window {
             case "toggle":
                 console.log("Executing Toggle operation...");
                 break;
-            // Add more cases as needed
             }
         }
 
@@ -98,25 +106,20 @@ Window {
 
         onSelectionRequested: function (panelId) {
             console.log("Selection requested for:", panelId);
-            // TODO: Enter selection mode in the 3D view
-            // For demo, simulate selection after a delay
             Qt.callLater(function () {
-                panelManager.updateSelection(3);  // Simulate 3 entities selected
+                panelManager.updateSelection(3);
             });
         }
     }
 
     // ========================================================================
-    // Ribbon Toolbar at top
+    // Ribbon Toolbar
     // ========================================================================
     RibbonToolBar {
         id: ribbonToolBar
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: parent.top
-
-        // Bind theme
-        isDarkTheme: theme.isDarkTheme
 
         // File operations
         onNewFile: {
@@ -128,7 +131,6 @@ Window {
         onImportModel: fileDialog.open()
         onExportModel: console.log("Export model - TODO")
         onShowOptions: console.log("Show options - TODO")
-        onTheme: theme.toggleTheme()
 
         // Geometry operations - show operation panels
         onToggleRelease: panelManager.togglePanel("release")
@@ -144,7 +146,7 @@ Window {
         onSuppress: panelManager.togglePanel("suppress")
         onSplit: panelManager.togglePanel("split")
 
-        // Simple geometry creation - use OCC-based GeometryCreator
+        // Geometry creation
         onAddBox: createBoxDialog.open()
         onAddPoint: console.log("Add point - TODO")
         onAddPlane: console.log("Add plane - TODO")
@@ -175,7 +177,6 @@ Window {
         anchors.margins: 15
         z: 100
 
-        // Background for better visibility
         Rectangle {
             anchors.fill: parent
             anchors.margins: -5
@@ -185,7 +186,7 @@ Window {
         }
     }
 
-    // 3D Geometry renderer - fills most of the window, leaving space for model tree panel and ribbon
+    // 3D Geometry renderer
     Geometry3D {
         id: geometryRenderer
         anchors.left: modelTreePanel.right
@@ -193,14 +194,11 @@ Window {
         anchors.top: ribbonToolBar.bottom
         anchors.bottom: parent.bottom
 
-        // Default: use vertex colors (alpha = 0)
         color: Qt.rgba(0, 0, 0, 0)
-
-        // Sync background color with current theme
-        backgroundColor: theme.isDarkTheme ? "#2d3238" : "#f0f0f0"
+        backgroundColor: root.renderBackground
     }
 
-    // View Control Toolbar - positioned in bottom-right of the 3D view
+    // View Control Toolbar
     ViewControlToolbar {
         id: viewControlToolbar
         targetRenderer: geometryRenderer
@@ -219,9 +217,6 @@ Window {
         anchors.top: ribbonToolBar.bottom
         anchors.bottom: parent.bottom
 
-        // Bind theme
-        isDarkTheme: theme.isDarkTheme
-
         onItemSelected: function (index, name, type) {
             console.log("Selected:", name, "Type:", type);
             statusText.text = "Selected: " + name;
@@ -235,17 +230,17 @@ Window {
 
     // Information overlay
     Rectangle {
-        color: theme.isDarkTheme ? Qt.rgba(0.12, 0.13, 0.16, 0.85) : Qt.rgba(1, 1, 1, 0.85)
+        color: Qt.rgba(0.12, 0.13, 0.16, 0.85)
         radius: 10
         border.width: 1
-        border.color: theme.isDarkTheme ? "#3a3f4b" : "#d1d1d1"
+        border.color: root.borderColor
         anchors.fill: label
         anchors.margins: -10
     }
 
     Text {
         id: label
-        color: theme.isDarkTheme ? "#e1e1e1" : "#333333"
+        color: root.textColor
         wrapMode: Text.WordWrap
         text: qsTr("OpenGeoLab - CAE Software. Use Ribbon toolbar for geometry modeling, mesh generation and AI assistant.\nDrag with left mouse button to rotate, Shift+drag or middle button to pan, scroll wheel to zoom.")
         anchors.right: parent.right

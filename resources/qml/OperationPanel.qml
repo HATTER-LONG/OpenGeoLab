@@ -4,6 +4,7 @@ import QtQuick.Layouts
 import QtQuick.Controls
 
 /**
+ * @file OperationPanel.qml
  * @brief Generic operation panel for Ribbon toolbar actions
  *
  * This panel appears when a tool button is clicked, providing
@@ -21,17 +22,19 @@ Rectangle {
     property int selectedCount: 0
     property bool hasValidSelection: selectedCount > 0
 
-    // Dark theme colors
-    property color panelBackgroundColor: "#252830"
-    property color titleBarColor: "#1e2127"
-    property color buttonBarColor: "#1a1d24"
-    property color textColor: "#e1e1e1"
-    property color textColorDim: "#a0a0a0"
-    property color borderColor: "#3a3f4b"
-    property color accentColor: "#0d6efd"
-    property color hoverColor: "#3a3f4b"
-    property color selectionValidColor: "#2d4a3e"
-    property color selectionInvalidColor: "#4a4a2d"
+    // ========================================================================
+    // Dark theme colors (fixed)
+    // ========================================================================
+    readonly property color panelBackgroundColor: "#252830"
+    readonly property color titleBarColor: "#1e2127"
+    readonly property color buttonBarColor: "#1a1d24"
+    readonly property color textColor: "#e1e1e1"
+    readonly property color textColorDim: "#a0a0a0"
+    readonly property color borderColor: "#3a3f4b"
+    readonly property color accentColor: "#0d6efd"
+    readonly property color hoverColor: "#3a3f4b"
+    readonly property color selectionValidColor: "#2d4a3e"
+    readonly property color selectionInvalidColor: "#4a4a2d"
 
     // Signals
     signal applyClicked

@@ -3,10 +3,11 @@ import QtQuick
 import Qt5Compat.GraphicalEffects
 
 /**
- * @brief Themed icon component that applies color overlay to SVG icons
+ * @file ThemedIcon.qml
+ * @brief Icon component that applies color overlay to SVG icons
  *
- * Uses ColorOverlay effect to colorize monochrome SVG icons based on current theme.
- * This allows black SVG icons to be visible on both dark and light backgrounds.
+ * Uses ColorOverlay effect to colorize monochrome SVG icons.
+ * This allows black SVG icons to be visible on dark backgrounds.
  */
 Item {
     id: themedIcon

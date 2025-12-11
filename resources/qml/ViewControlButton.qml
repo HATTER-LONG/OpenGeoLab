@@ -1,6 +1,6 @@
 /**
- * ViewControlButton.qml
- * A styled button for view control toolbar
+ * @file ViewControlButton.qml
+ * @brief A styled button for view control toolbar
  */
 import QtQuick
 import QtQuick.Controls

@@ -3,11 +3,11 @@ import QtQuick
 import QtQuick.Layouts
 
 /**
+ * @file RibbonTabContent.qml
  * @brief Dynamic tab content component that renders buttons from configuration
  *
  * This component reads button configurations and dynamically creates
- * button groups from the configuration data. Theme colors are inherited
- * from parent RibbonToolBar.
+ * button groups. Colors are inherited from parent RibbonToolBar.
  */
 Item {
     id: tabContent
@@ -15,7 +15,7 @@ Item {
     // Configuration for this tab (array of groups)
     property var groups: []
 
-    // Theme colors - inherited from parent RibbonToolBar
+    // Dark theme colors - can be inherited from parent RibbonToolBar
     property color iconColor: "#e1e1e1"
     property color textColor: "#ffffff"
     property color textColorDim: "#b8b8b8"

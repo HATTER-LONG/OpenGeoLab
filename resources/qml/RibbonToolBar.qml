@@ -4,10 +4,11 @@ import QtQuick.Layouts
 import QtQuick.Controls
 
 /**
+ * @file RibbonToolBar.qml
  * @brief Ribbon-style toolbar component similar to Microsoft Office
  *
  * Features:
- * - Tab-based navigation (Geometry, Mesh, Interaction, General)
+ * - Tab-based navigation (Geometry, Mesh, AI)
  * - File button opens a popup menu (Office backstage style)
  * - Configuration-driven button generation (see RibbonButtonConfig.qml)
  *
@@ -77,33 +78,30 @@ Rectangle {
 
     // General operations
     signal options
-    signal theme
     signal help
 
     // ========================================================================
     // PROPERTIES
     // ========================================================================
 
-    property int currentTabIndex: 0  // Default to Geometry tab
+    property int currentTabIndex: 0
 
-    // Theme mode: true = dark, false = light
-    property bool isDarkTheme: true
-
-    // Color palette - automatically switches based on theme
-    property color accentColor: isDarkTheme ? "#0d6efd" : "#0078d4"
-    property color hoverColor: isDarkTheme ? "#3a3f4b" : "#d4e6f7"
-    property color selectedColor: isDarkTheme ? "#4a5568" : "#b8d4f0"
-    property color selectedTabColor: isDarkTheme ? "#323842" : "#ffffff"  // More visible selected tab
-    property color borderColor: isDarkTheme ? "#363b44" : "#c0c0c0"
-    property color tabBackgroundColor: isDarkTheme ? "#1e2127" : "#e8e8e8"
-    property color contentBackgroundColor: isDarkTheme ? "#252830" : "#f5f5f5"
-    property color textColor: isDarkTheme ? "#ffffff" : "#1a1a1a"
-    property color textColorDim: isDarkTheme ? "#b8b8b8" : "#555555"
-    property color iconColor: isDarkTheme ? "#e1e1e1" : "#1a1a1a"
+    // ========================================================================
+    // Dark theme color palette (fixed)
+    // ========================================================================
+    readonly property color accentColor: "#0d6efd"
+    readonly property color hoverColor: "#3a3f4b"
+    readonly property color selectedColor: "#4a5568"
+    readonly property color selectedTabColor: "#323842"
+    readonly property color borderColor: "#363b44"
+    readonly property color tabBackgroundColor: "#1e2127"
+    readonly property color contentBackgroundColor: "#252830"
+    readonly property color textColor: "#ffffff"
+    readonly property color textColorDim: "#b8b8b8"
+    readonly property color iconColor: "#e1e1e1"
 
     readonly property var tabNames: ["Geometry", "Mesh", "AI"]
 
-    // Height: tab bar (28) + content area (button 60 + top margin 2 + bottom title 14) + padding
     height: 120
     color: tabBackgroundColor
 
@@ -186,7 +184,7 @@ Rectangle {
                     border.width: ribbonToolBar.currentTabIndex === index ? 1 : 0
                     border.color: ribbonToolBar.currentTabIndex === index ? ribbonToolBar.accentColor : ribbonToolBar.borderColor
 
-                    // Accent line at top of selected tab for better visibility
+                    // Accent line at top of selected tab
                     Rectangle {
                         visible: ribbonToolBar.currentTabIndex === tabDelegate.index
                         anchors.top: parent.top
@@ -378,9 +376,6 @@ Rectangle {
         // General actions
         case "options":
             options();
-            break;
-        case "theme":
-            theme();
             break;
         case "help":
             help();

@@ -1,6 +1,6 @@
 /**
- * CreateBoxDialog.qml
- * Dialog for creating a box with custom dimensions
+ * @file CreateBoxDialog.qml
+ * @brief Dialog for creating a box with custom dimensions
  */
 import QtQuick
 import QtQuick.Controls

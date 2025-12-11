@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 
 /**
+ * @file RibbonButtonConfig.qml
  * @brief Centralized button configuration for Ribbon toolbar
  *
  * This singleton provides all button definitions for the Ribbon toolbar.
@@ -220,12 +221,6 @@ QtObject {
         {
             title: "Settings",
             buttons: [
-                {
-                    id: "theme",
-                    iconSource: iconBasePath + "theme.svg",
-                    text: "Toggle\nTheme",
-                    tooltip: "Switch between dark and light theme"
-                },
                 {
                     id: "options",
                     iconSource: iconBasePath + "options.svg",

@@ -3,9 +3,8 @@ import QtQuick
 import QtQuick.Layouts
 
 /**
+ * @file RibbonGroupSeparator.qml
  * @brief A vertical separator for use within Ribbon groups
- *
- * Color can be customized to match the current theme.
  */
 Rectangle {
     width: 1
