@@ -216,6 +216,23 @@ QtObject {
                     tooltip: "AI design assistant chat"
                 }
             ]
+        },
+        {
+            title: "Settings",
+            buttons: [
+                {
+                    id: "theme",
+                    iconSource: iconBasePath + "theme.svg",
+                    text: "Toggle\nTheme",
+                    tooltip: "Switch between dark and light theme"
+                },
+                {
+                    id: "options",
+                    iconSource: iconBasePath + "options.svg",
+                    text: "Options",
+                    tooltip: "Application settings"
+                }
+            ]
         }
     ]
 

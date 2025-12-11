@@ -189,33 +189,26 @@ void OpenGLRenderer::setColorOverride(const QColor& color) {
 void OpenGLRenderer::setMaterial(const Material& material) { m_material = material; }
 
 void OpenGLRenderer::rotateModel(float delta_yaw, float delta_pitch) {
-    // Use view-space rotation to ensure consistent mouse behavior
-    // regardless of current model orientation.
+    // Use trackball-style rotation for intuitive mouse control.
     //
-    // The key insight: when the user drags left/right, they expect the
-    // model surface facing them to follow the mouse. This requires
-    // rotating around axes that are aligned with the screen, not the world.
+    // The goal: when the user drags the mouse, the model surface under
+    // the cursor should follow the mouse movement naturally, regardless
+    // of the current orientation.
     //
-    // We achieve this by:
-    // 1. Getting the current right vector (screen X axis in model space)
-    // 2. Using world Y for yaw (vertical axis stays consistent)
-    // 3. Using the model's current right vector for pitch
+    // Implementation: Apply rotations in screen space
+    // - Horizontal mouse movement (delta_yaw) -> rotate around screen Y (world Y)
+    // - Vertical mouse movement (delta_pitch) -> rotate around screen X
+    //
+    // By applying the new rotation BEFORE the existing rotation (pre-multiply),
+    // we achieve screen-space rotation that feels natural.
 
-    // Get the current rotation matrix
-    QMatrix4x4 rotation_matrix;
-    rotation_matrix.rotate(m_modelRotation);
+    // Create rotation quaternions for screen-space axes
+    // Negate delta_yaw so dragging right rotates model right (clockwise from above)
+    QQuaternion yaw_rotation = QQuaternion::fromAxisAndAngle(QVector3D(0, 1, 0), -delta_yaw);
+    QQuaternion pitch_rotation = QQuaternion::fromAxisAndAngle(QVector3D(1, 0, 0), -delta_pitch);
 
-    // Extract the right vector from the current rotation
-    // This is the local X axis transformed by the current rotation
-    QVector3D right_vector = rotation_matrix.column(0).toVector3D();
-
-    // Create rotation quaternions:
-    // - Yaw: always around world Y axis (vertical)
-    // - Pitch: around the current right vector (horizontal in screen space)
-    QQuaternion yaw_rotation = QQuaternion::fromAxisAndAngle(QVector3D(0, 1, 0), delta_yaw);
-    QQuaternion pitch_rotation = QQuaternion::fromAxisAndAngle(right_vector, delta_pitch);
-
-    // Apply rotations in order: yaw (world), then pitch (local)
+    // Pre-multiply: new rotation is applied in screen space
+    // This gives intuitive trackball behavior
     m_modelRotation = yaw_rotation * pitch_rotation * m_modelRotation;
     m_modelRotation.normalize();
 }
