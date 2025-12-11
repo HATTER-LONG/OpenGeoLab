@@ -89,7 +89,7 @@ Rectangle {
     // ========================================================================
     // Dark theme color palette (fixed)
     // ========================================================================
-    readonly property color accentColor: "#0d6efd"
+    readonly property color accentColor: '#cacccb'
     readonly property color hoverColor: "#3a3f4b"
     readonly property color selectedColor: "#4a5568"
     readonly property color selectedTabColor: "#323842"
