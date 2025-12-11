@@ -1,17 +1,25 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
+import Qt5Compat.GraphicalEffects
 
 /**
  * @brief A large button component for Ribbon toolbar
  *
- * Displays an SVG icon on top and label text below
+ * Displays an SVG icon on top and label text below.
+ * Uses ColorOverlay to tint icons for visibility on dark backgrounds.
  */
 Rectangle {
     id: ribbonButton
 
     property string iconSource: ""
     property alias text: labelText.text
+
+    // Theme color properties (can be bound to ThemeManager)
+    property color iconColor: "#e1e1e1"
+    property color hoverColor: "#3a3f4b"
+    property color pressedColor: "#4a5568"
+    property color textColor: "#ffffff"
 
     signal clicked
 
@@ -23,11 +31,6 @@ Rectangle {
     Layout.preferredWidth: 48
     Layout.preferredHeight: 60
 
-    // Dark theme colors
-    property color hoverColor: "#3a3f4b"
-    property color pressedColor: "#4a5568"
-    property color textColor: "#e1e1e1"
-
     color: buttonMouseArea.containsMouse ? (buttonMouseArea.pressed ? pressedColor : hoverColor) : "transparent"
     radius: 3
     border.width: buttonMouseArea.containsMouse ? 1 : 0
@@ -37,19 +40,26 @@ Rectangle {
         anchors.centerIn: parent
         spacing: 1
 
-        // Icon area
-        Rectangle {
+        // Icon area with color overlay
+        Item {
             width: 28
             height: 28
             anchors.horizontalCenter: parent.horizontalCenter
-            color: "transparent"
 
             Image {
+                id: iconImage
                 anchors.centerIn: parent
                 width: 22
                 height: 22
                 source: ribbonButton.iconSource
                 fillMode: Image.PreserveAspectFit
+                visible: false
+            }
+
+            ColorOverlay {
+                anchors.fill: iconImage
+                source: iconImage
+                color: ribbonButton.iconColor
             }
         }
 

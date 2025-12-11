@@ -86,15 +86,19 @@ Rectangle {
 
     property int currentTabIndex: 0  // Default to Geometry tab
 
-    // Modern dark theme color palette
-    property color accentColor: "#0d6efd"           // Primary blue accent
-    property color hoverColor: "#3a3f4b"            // Hover state
-    property color selectedColor: "#4a5568"         // Selected state
-    property color borderColor: "#363b44"           // Subtle border
-    property color tabBackgroundColor: "#1e2127"    // Tab bar background
-    property color contentBackgroundColor: "#252830" // Content area background
-    property color textColor: "#e1e1e1"             // Primary text
-    property color textColorDim: "#a0a0a0"          // Secondary text
+    // Theme mode: true = dark, false = light
+    property bool isDarkTheme: true
+
+    // Color palette - automatically switches based on theme
+    property color accentColor: isDarkTheme ? "#0d6efd" : "#0078d4"
+    property color hoverColor: isDarkTheme ? "#3a3f4b" : "#e5f1fb"
+    property color selectedColor: isDarkTheme ? "#4a5568" : "#cce4f7"
+    property color borderColor: isDarkTheme ? "#363b44" : "#d1d1d1"
+    property color tabBackgroundColor: isDarkTheme ? "#1e2127" : "#f0f0f0"
+    property color contentBackgroundColor: isDarkTheme ? "#252830" : "#ffffff"
+    property color textColor: isDarkTheme ? "#ffffff" : "#1a1a1a"
+    property color textColorDim: isDarkTheme ? "#b8b8b8" : "#666666"
+    property color iconColor: isDarkTheme ? "#e1e1e1" : "#333333"
 
     readonly property var tabNames: ["Geometry", "Mesh", "AI"]
 
@@ -228,6 +232,11 @@ Rectangle {
             visible: ribbonToolBar.currentTabIndex === 0
             anchors.fill: parent
             groups: buttonConfig.geometryTab
+            iconColor: ribbonToolBar.iconColor
+            textColor: ribbonToolBar.textColor
+            textColorDim: ribbonToolBar.textColorDim
+            hoverColor: ribbonToolBar.hoverColor
+            separatorColor: ribbonToolBar.borderColor
             onButtonClicked: actionId => ribbonToolBar.dispatchAction(actionId)
         }
 
@@ -236,6 +245,11 @@ Rectangle {
             visible: ribbonToolBar.currentTabIndex === 1
             anchors.fill: parent
             groups: buttonConfig.meshTab
+            iconColor: ribbonToolBar.iconColor
+            textColor: ribbonToolBar.textColor
+            textColorDim: ribbonToolBar.textColorDim
+            hoverColor: ribbonToolBar.hoverColor
+            separatorColor: ribbonToolBar.borderColor
             onButtonClicked: actionId => ribbonToolBar.dispatchAction(actionId)
         }
 
@@ -244,6 +258,11 @@ Rectangle {
             visible: ribbonToolBar.currentTabIndex === 2
             anchors.fill: parent
             groups: buttonConfig.aiTab
+            iconColor: ribbonToolBar.iconColor
+            textColor: ribbonToolBar.textColor
+            textColorDim: ribbonToolBar.textColorDim
+            hoverColor: ribbonToolBar.hoverColor
+            separatorColor: ribbonToolBar.borderColor
             onButtonClicked: actionId => ribbonToolBar.dispatchAction(actionId)
         }
     }

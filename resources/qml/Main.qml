@@ -11,6 +11,13 @@ Window {
     height: 800
     title: "OpenGeoLab - 3D Geometry Renderer"
 
+    // ========================================================================
+    // Theme Manager - controls application-wide theme
+    // ========================================================================
+    ThemeManager {
+        id: theme
+    }
+
     Component.onCompleted: {
         ModelImporter.setTargetRenderer(geometryRenderer);
         GeometryCreator.setTargetRenderer(geometryRenderer);
@@ -108,6 +115,9 @@ Window {
         anchors.right: parent.right
         anchors.top: parent.top
 
+        // Bind theme
+        isDarkTheme: theme.isDarkTheme
+
         // File operations
         onNewFile: {
             console.log("New file - TODO");
@@ -118,6 +128,7 @@ Window {
         onImportModel: fileDialog.open()
         onExportModel: console.log("Export model - TODO")
         onShowOptions: console.log("Show options - TODO")
+        onTheme: theme.toggleTheme()
 
         // Geometry operations - show operation panels
         onToggleRelease: panelManager.togglePanel("release")
@@ -205,6 +216,9 @@ Window {
         anchors.top: ribbonToolBar.bottom
         anchors.bottom: parent.bottom
 
+        // Bind theme
+        isDarkTheme: theme.isDarkTheme
+
         onItemSelected: function (index, name, type) {
             console.log("Selected:", name, "Type:", type);
             statusText.text = "Selected: " + name;
@@ -218,17 +232,17 @@ Window {
 
     // Information overlay
     Rectangle {
-        color: Qt.rgba(0.12, 0.13, 0.16, 0.85)
+        color: theme.isDarkTheme ? Qt.rgba(0.12, 0.13, 0.16, 0.85) : Qt.rgba(1, 1, 1, 0.85)
         radius: 10
         border.width: 1
-        border.color: "#3a3f4b"
+        border.color: theme.isDarkTheme ? "#3a3f4b" : "#d1d1d1"
         anchors.fill: label
         anchors.margins: -10
     }
 
     Text {
         id: label
-        color: "#e1e1e1"
+        color: theme.isDarkTheme ? "#e1e1e1" : "#333333"
         wrapMode: Text.WordWrap
         text: qsTr("OpenGeoLab - CAE Software. Use Ribbon toolbar for geometry modeling, mesh generation and AI assistant.\nDrag with left mouse button to rotate, Shift+drag or middle button to pan, scroll wheel to zoom.")
         anchors.right: parent.right

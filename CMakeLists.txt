@@ -179,6 +179,8 @@ qt_add_qml_module(
   NO_RESOURCE_TARGET_PATH
   QML_FILES
   resources/qml/Main.qml
+  resources/qml/ThemeManager.qml
+  resources/qml/ThemedIcon.qml
   resources/qml/RibbonToolBar.qml
   resources/qml/RibbonLargeButton.qml
   resources/qml/RibbonGroup.qml

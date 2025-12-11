@@ -5,15 +5,16 @@ import QtQuick.Layouts
 /**
  * @brief A group container component for Ribbon toolbar
  *
- * Displays a titled group with a bottom label
+ * Displays a titled group with a bottom label.
+ * Colors are configurable for theme support.
  */
 Rectangle {
     id: ribbonGroup
 
     property string title: "Group"
 
-    // Dark theme colors
-    property color titleColor: "#a0a0a0"
+    // Theme color properties (can be bound to ThemeManager)
+    property color titleColor: "#b8b8b8"            // Brighter for better visibility
     property color separatorColor: "#3a3f4b"
 
     implicitWidth: contentRow.implicitWidth + 16

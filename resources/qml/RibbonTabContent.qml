@@ -6,13 +6,22 @@ import QtQuick.Layouts
  * @brief Dynamic tab content component that renders buttons from configuration
  *
  * This component reads button configurations and dynamically creates
- * button groups from the configuration data.
+ * button groups from the configuration data. Theme colors are inherited
+ * from parent RibbonToolBar.
  */
 Item {
     id: tabContent
 
     // Configuration for this tab (array of groups)
     property var groups: []
+
+    // Theme colors - inherited from parent RibbonToolBar
+    property color iconColor: "#e1e1e1"
+    property color textColor: "#ffffff"
+    property color textColorDim: "#b8b8b8"
+    property color hoverColor: "#3a3f4b"
+    property color pressedColor: "#4a5568"
+    property color separatorColor: "#3a3f4b"
 
     // Signal emitted when any button is clicked, with the button's action ID
     signal buttonClicked(string actionId)
@@ -62,6 +71,11 @@ Item {
                             onLoaded: {
                                 if (item && modelData.type !== "separator") {
                                     item.buttonData = modelData;
+                                    // Pass theme colors to button
+                                    item.iconColor = tabContent.iconColor;
+                                    item.textColor = tabContent.textColor;
+                                    item.hoverColor = tabContent.hoverColor;
+                                    item.pressedColor = tabContent.pressedColor;
                                 }
                             }
                         }
@@ -75,7 +89,7 @@ Item {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: groupContainer.modelData.title || ""
                     font.pixelSize: 10
-                    color: "#666666"
+                    color: tabContent.textColorDim
                 }
 
                 // Right separator line
@@ -86,7 +100,7 @@ Item {
                     anchors.topMargin: 5
                     anchors.bottomMargin: 5
                     width: 1
-                    color: "#D1D1D1"
+                    color: tabContent.separatorColor
                 }
             }
         }
@@ -115,6 +129,8 @@ Item {
     Component {
         id: separatorComponent
 
-        RibbonGroupSeparator {}
+        RibbonGroupSeparator {
+            color: tabContent.separatorColor
+        }
     }
 }

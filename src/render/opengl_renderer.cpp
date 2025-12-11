@@ -189,16 +189,34 @@ void OpenGLRenderer::setColorOverride(const QColor& color) {
 void OpenGLRenderer::setMaterial(const Material& material) { m_material = material; }
 
 void OpenGLRenderer::rotateModel(float delta_yaw, float delta_pitch) {
-    // Use arcball-style rotation that doesn't have gimbal lock issues
-    // The rotation is accumulated in a way that feels natural regardless of current orientation
+    // Use view-space rotation to ensure consistent mouse behavior
+    // regardless of current model orientation.
+    //
+    // The key insight: when the user drags left/right, they expect the
+    // model surface facing them to follow the mouse. This requires
+    // rotating around axes that are aligned with the screen, not the world.
+    //
+    // We achieve this by:
+    // 1. Getting the current right vector (screen X axis in model space)
+    // 2. Using world Y for yaw (vertical axis stays consistent)
+    // 3. Using the model's current right vector for pitch
 
-    // Create incremental rotation quaternions
+    // Get the current rotation matrix
+    QMatrix4x4 rotation_matrix;
+    rotation_matrix.rotate(m_modelRotation);
+
+    // Extract the right vector from the current rotation
+    // This is the local X axis transformed by the current rotation
+    QVector3D right_vector = rotation_matrix.column(0).toVector3D();
+
+    // Create rotation quaternions:
+    // - Yaw: always around world Y axis (vertical)
+    // - Pitch: around the current right vector (horizontal in screen space)
     QQuaternion yaw_rotation = QQuaternion::fromAxisAndAngle(QVector3D(0, 1, 0), delta_yaw);
-    QQuaternion pitch_rotation = QQuaternion::fromAxisAndAngle(QVector3D(1, 0, 0), delta_pitch);
+    QQuaternion pitch_rotation = QQuaternion::fromAxisAndAngle(right_vector, delta_pitch);
 
-    // Apply rotations: pitch first (local), then yaw (world)
-    // This gives intuitive turntable behavior
-    m_modelRotation = yaw_rotation * m_modelRotation * pitch_rotation;
+    // Apply rotations in order: yaw (world), then pitch (local)
+    m_modelRotation = yaw_rotation * pitch_rotation * m_modelRotation;
     m_modelRotation.normalize();
 }
 
