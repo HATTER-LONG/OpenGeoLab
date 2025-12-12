@@ -4,6 +4,7 @@ import QtQuick.Layouts
 import QtQuick.Controls
 
 /**
+ * @file OperationPanel.qml
  * @brief Generic operation panel for Ribbon toolbar actions
  *
  * This panel appears when a tool button is clicked, providing
@@ -21,6 +22,20 @@ Rectangle {
     property int selectedCount: 0
     property bool hasValidSelection: selectedCount > 0
 
+    // ========================================================================
+    // Dark theme colors (fixed)
+    // ========================================================================
+    readonly property color panelBackgroundColor: "#252830"
+    readonly property color titleBarColor: "#1e2127"
+    readonly property color buttonBarColor: "#1a1d24"
+    readonly property color textColor: "#e1e1e1"
+    readonly property color textColorDim: "#a0a0a0"
+    readonly property color borderColor: "#3a3f4b"
+    readonly property color accentColor: "#0d6efd"
+    readonly property color hoverColor: "#3a3f4b"
+    readonly property color selectionValidColor: "#2d4a3e"
+    readonly property color selectionInvalidColor: "#4a4a2d"
+
     // Signals
     signal applyClicked
     signal cancelClicked
@@ -28,8 +43,8 @@ Rectangle {
 
     width: 280
     height: showWorkflowSection ? 180 : 140
-    color: "#FFFFFF"
-    border.color: "#C0C0C0"
+    color: panelBackgroundColor
+    border.color: borderColor
     border.width: 1
     radius: 0
 
@@ -51,8 +66,8 @@ Rectangle {
             id: titleBar
             width: parent.width
             height: 28
-            color: "#F0F0F0"
-            border.color: "#C0C0C0"
+            color: operationPanel.titleBarColor
+            border.color: operationPanel.borderColor
             border.width: 1
 
             // Drag handler for the title bar
@@ -96,7 +111,7 @@ Rectangle {
                     Text {
                         text: "⚡"
                         font.pixelSize: 14
-                        color: "#333333"
+                        color: operationPanel.textColor
                         anchors.verticalCenter: parent.verticalCenter
                     }
 
@@ -104,7 +119,7 @@ Rectangle {
                         text: operationPanel.title
                         font.pixelSize: 12
                         font.bold: false
-                        color: "#333333"
+                        color: operationPanel.textColor
                         anchors.verticalCenter: parent.verticalCenter
                     }
                 }
@@ -121,7 +136,7 @@ Rectangle {
                         anchors.centerIn: parent
                         text: "✕"
                         font.pixelSize: 10
-                        color: closeMouseArea.containsMouse ? "white" : "#666666"
+                        color: closeMouseArea.containsMouse ? "white" : operationPanel.textColorDim
                     }
 
                     MouseArea {
@@ -156,7 +171,7 @@ Rectangle {
                         Text {
                             text: "▼"
                             font.pixelSize: 8
-                            color: "#333333"
+                            color: operationPanel.textColorDim
                             anchors.verticalCenter: parent.verticalCenter
                         }
 
@@ -164,7 +179,7 @@ Rectangle {
                             text: "Selection"
                             font.pixelSize: 12
                             font.bold: true
-                            color: "#333333"
+                            color: operationPanel.textColor
                         }
                     }
 
@@ -172,8 +187,8 @@ Rectangle {
                     Rectangle {
                         width: parent.width
                         height: 24
-                        color: operationPanel.hasValidSelection ? "#90EE90" : "#FFFF00"
-                        border.color: operationPanel.hasValidSelection ? "#228B22" : "#DAA520"
+                        color: operationPanel.hasValidSelection ? operationPanel.selectionValidColor : operationPanel.selectionInvalidColor
+                        border.color: operationPanel.borderColor
                         border.width: 1
                         radius: 2
 
@@ -188,14 +203,14 @@ Rectangle {
                                 width: 16
                                 height: 16
                                 anchors.verticalCenter: parent.verticalCenter
-                                color: selectMouseArea.containsMouse ? "#E0E0E0" : "transparent"
+                                color: selectMouseArea.containsMouse ? operationPanel.hoverColor : "transparent"
                                 radius: 2
 
                                 Text {
                                     anchors.centerIn: parent
                                     text: "▶"
                                     font.pixelSize: 10
-                                    color: "#333333"
+                                    color: operationPanel.textColor
                                 }
 
                                 MouseArea {
@@ -210,7 +225,7 @@ Rectangle {
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: operationPanel.hasValidSelection ? operationPanel.selectedCount + " entities selected" : operationPanel.selectionHint
                                 font.pixelSize: 11
-                                color: "#333333"
+                                color: operationPanel.textColor
                                 elide: Text.ElideRight
                                 width: parent.width - 50
                             }
@@ -220,7 +235,7 @@ Rectangle {
                                 width: 16
                                 height: 16
                                 anchors.verticalCenter: parent.verticalCenter
-                                color: clearMouseArea.containsMouse ? "#FFB6C1" : "transparent"
+                                color: clearMouseArea.containsMouse ? "#4a2d2d" : "transparent"
                                 radius: 2
                                 visible: operationPanel.hasValidSelection
 
@@ -228,7 +243,7 @@ Rectangle {
                                     anchors.centerIn: parent
                                     text: "✕"
                                     font.pixelSize: 10
-                                    color: "#C00000"
+                                    color: "#ff6b6b"
                                 }
 
                                 MouseArea {
@@ -254,7 +269,7 @@ Rectangle {
                         Text {
                             text: "▲"
                             font.pixelSize: 8
-                            color: "#333333"
+                            color: operationPanel.textColorDim
                             anchors.verticalCenter: parent.verticalCenter
                         }
 
@@ -262,7 +277,7 @@ Rectangle {
                             text: "Workflow Instruction"
                             font.pixelSize: 12
                             font.bold: true
-                            color: "#333333"
+                            color: operationPanel.textColor
                         }
                     }
                 }
@@ -273,8 +288,8 @@ Rectangle {
         Rectangle {
             width: parent.width
             height: 40
-            color: "#F5F5F5"
-            border.color: "#E0E0E0"
+            color: operationPanel.buttonBarColor
+            border.color: operationPanel.borderColor
             border.width: 1
 
             Row {
@@ -289,8 +304,8 @@ Rectangle {
                     enabled: operationPanel.hasValidSelection
 
                     background: Rectangle {
-                        color: applyButton.enabled ? (applyButton.hovered ? "#E5F1FB" : "#FFFFFF") : "#F0F0F0"
-                        border.color: applyButton.enabled ? "#0078D4" : "#C0C0C0"
+                        color: applyButton.enabled ? (applyButton.hovered ? operationPanel.accentColor : operationPanel.hoverColor) : operationPanel.titleBarColor
+                        border.color: applyButton.enabled ? operationPanel.accentColor : operationPanel.borderColor
                         border.width: 1
                         radius: 2
                     }
@@ -298,7 +313,7 @@ Rectangle {
                     contentItem: Text {
                         text: applyButton.text
                         font.pixelSize: 11
-                        color: applyButton.enabled ? "#333333" : "#999999"
+                        color: applyButton.enabled ? operationPanel.textColor : operationPanel.textColorDim
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
                     }
@@ -313,8 +328,8 @@ Rectangle {
                     height: 26
 
                     background: Rectangle {
-                        color: cancelButton.hovered ? "#E5F1FB" : "#FFFFFF"
-                        border.color: "#C0C0C0"
+                        color: cancelButton.hovered ? operationPanel.hoverColor : operationPanel.panelBackgroundColor
+                        border.color: operationPanel.borderColor
                         border.width: 1
                         radius: 2
                     }
@@ -322,7 +337,7 @@ Rectangle {
                     contentItem: Text {
                         text: cancelButton.text
                         font.pixelSize: 11
-                        color: "#333333"
+                        color: operationPanel.textColor
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
                     }

@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Controls
 
 /**
+ * @file OperationPanelManager.qml
  * @brief Manager for operation panels triggered by Ribbon toolbar actions
  *
  * This component manages the display of operation panels in a consistent manner.

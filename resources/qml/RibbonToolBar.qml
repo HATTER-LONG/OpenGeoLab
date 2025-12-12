@@ -4,10 +4,11 @@ import QtQuick.Layouts
 import QtQuick.Controls
 
 /**
+ * @file RibbonToolBar.qml
  * @brief Ribbon-style toolbar component similar to Microsoft Office
  *
  * Features:
- * - Tab-based navigation (Geometry, Mesh, Interaction, General)
+ * - Tab-based navigation (Geometry, Mesh, AI)
  * - File button opens a popup menu (Office backstage style)
  * - Configuration-driven button generation (see RibbonButtonConfig.qml)
  *
@@ -77,24 +78,30 @@ Rectangle {
 
     // General operations
     signal options
-    signal theme
     signal help
 
     // ========================================================================
     // PROPERTIES
     // ========================================================================
 
-    property int currentTabIndex: 0  // Default to Geometry tab
-    property color accentColor: "#0078D4"
-    property color hoverColor: "#E5F1FB"
-    property color selectedColor: "#CCE4F7"
-    property color borderColor: "#D1D1D1"
-    property color tabBackgroundColor: "#F3F3F3"
-    property color contentBackgroundColor: "#FCFCFC"
+    property int currentTabIndex: 0
+
+    // ========================================================================
+    // Dark theme color palette (fixed)
+    // ========================================================================
+    readonly property color accentColor: '#cacccb'
+    readonly property color hoverColor: "#3a3f4b"
+    readonly property color selectedColor: "#4a5568"
+    readonly property color selectedTabColor: "#323842"
+    readonly property color borderColor: "#363b44"
+    readonly property color tabBackgroundColor: "#1e2127"
+    readonly property color contentBackgroundColor: "#252830"
+    readonly property color textColor: "#ffffff"
+    readonly property color textColorDim: "#b8b8b8"
+    readonly property color iconColor: "#e1e1e1"
 
     readonly property var tabNames: ["Geometry", "Mesh", "AI"]
 
-    // Height: tab bar (28) + content area (button 60 + top margin 2 + bottom title 14) + padding
     height: 120
     color: tabBackgroundColor
 
@@ -131,7 +138,7 @@ Rectangle {
         anchors.right: parent.right
         anchors.top: parent.top
         height: 28
-        color: "white"
+        color: ribbonToolBar.tabBackgroundColor
 
         RowLayout {
             anchors.left: parent.left
@@ -143,13 +150,13 @@ Rectangle {
             Rectangle {
                 Layout.preferredWidth: 60
                 Layout.preferredHeight: 24
-                color: fileMenu.visible ? ribbonToolBar.accentColor : (fileButtonArea.containsMouse ? ribbonToolBar.accentColor : "transparent")
+                color: fileMenu.visible ? ribbonToolBar.accentColor : (fileButtonArea.containsMouse ? ribbonToolBar.hoverColor : "transparent")
                 radius: 2
 
                 Text {
                     anchors.centerIn: parent
                     text: "File"
-                    color: fileMenu.visible || fileButtonArea.containsMouse ? "white" : "#333333"
+                    color: ribbonToolBar.textColor
                     font.pixelSize: 12
                     font.bold: true
                 }
@@ -173,9 +180,19 @@ Rectangle {
 
                     Layout.preferredWidth: 80
                     Layout.preferredHeight: 24
-                    color: ribbonToolBar.currentTabIndex === index ? ribbonToolBar.contentBackgroundColor : (tabMouseArea.containsMouse ? ribbonToolBar.hoverColor : "transparent")
+                    color: ribbonToolBar.currentTabIndex === index ? ribbonToolBar.selectedTabColor : (tabMouseArea.containsMouse ? ribbonToolBar.hoverColor : "transparent")
                     border.width: ribbonToolBar.currentTabIndex === index ? 1 : 0
-                    border.color: ribbonToolBar.borderColor
+                    border.color: ribbonToolBar.currentTabIndex === index ? ribbonToolBar.accentColor : ribbonToolBar.borderColor
+
+                    // Accent line at top of selected tab
+                    Rectangle {
+                        visible: ribbonToolBar.currentTabIndex === tabDelegate.index
+                        anchors.top: parent.top
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        height: 2
+                        color: ribbonToolBar.accentColor
+                    }
 
                     Rectangle {
                         visible: ribbonToolBar.currentTabIndex === tabDelegate.index
@@ -191,7 +208,7 @@ Rectangle {
                     Text {
                         anchors.centerIn: parent
                         text: tabDelegate.modelData
-                        color: "#333333"
+                        color: ribbonToolBar.textColor
                         font.pixelSize: 12
                     }
 
@@ -224,6 +241,11 @@ Rectangle {
             visible: ribbonToolBar.currentTabIndex === 0
             anchors.fill: parent
             groups: buttonConfig.geometryTab
+            iconColor: ribbonToolBar.iconColor
+            textColor: ribbonToolBar.textColor
+            textColorDim: ribbonToolBar.textColorDim
+            hoverColor: ribbonToolBar.hoverColor
+            separatorColor: ribbonToolBar.borderColor
             onButtonClicked: actionId => ribbonToolBar.dispatchAction(actionId)
         }
 
@@ -232,6 +254,11 @@ Rectangle {
             visible: ribbonToolBar.currentTabIndex === 1
             anchors.fill: parent
             groups: buttonConfig.meshTab
+            iconColor: ribbonToolBar.iconColor
+            textColor: ribbonToolBar.textColor
+            textColorDim: ribbonToolBar.textColorDim
+            hoverColor: ribbonToolBar.hoverColor
+            separatorColor: ribbonToolBar.borderColor
             onButtonClicked: actionId => ribbonToolBar.dispatchAction(actionId)
         }
 
@@ -240,6 +267,11 @@ Rectangle {
             visible: ribbonToolBar.currentTabIndex === 2
             anchors.fill: parent
             groups: buttonConfig.aiTab
+            iconColor: ribbonToolBar.iconColor
+            textColor: ribbonToolBar.textColor
+            textColorDim: ribbonToolBar.textColorDim
+            hoverColor: ribbonToolBar.hoverColor
+            separatorColor: ribbonToolBar.borderColor
             onButtonClicked: actionId => ribbonToolBar.dispatchAction(actionId)
         }
     }
@@ -344,9 +376,6 @@ Rectangle {
         // General actions
         case "options":
             options();
-            break;
-        case "theme":
-            theme();
             break;
         case "help":
             help();

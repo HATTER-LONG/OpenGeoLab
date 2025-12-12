@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 
 /**
+ * @file RibbonButtonConfig.qml
  * @brief Centralized button configuration for Ribbon toolbar
  *
  * This singleton provides all button definitions for the Ribbon toolbar.
@@ -24,7 +25,7 @@ QtObject {
     readonly property string iconBasePath: "qrc:/scenegraph/opengeolab/resources/icons/"
 
     // ========================================================================
-    // GEOMETRY TAB - 几何建模工具
+    // GEOMETRY TAB - Geometry Modeling Tools
     // ========================================================================
     readonly property var geometryTab: [
         {
@@ -34,25 +35,25 @@ QtObject {
                     id: "addPoint",
                     iconSource: iconBasePath + "point.svg",
                     text: "Point",
-                    tooltip: "创建点"
+                    tooltip: "Create a point"
                 },
                 {
                     id: "addLine",
                     iconSource: iconBasePath + "line.svg",
                     text: "Line",
-                    tooltip: "创建线"
+                    tooltip: "Create a line"
                 },
                 {
                     id: "addPlane",
                     iconSource: iconBasePath + "plane.svg",
                     text: "Plane",
-                    tooltip: "创建平面"
+                    tooltip: "Create a plane"
                 },
                 {
                     id: "addBox",
                     iconSource: iconBasePath + "box.svg",
                     text: "Box",
-                    tooltip: "创建立方体"
+                    tooltip: "Create a box"
                 }
             ]
         },
@@ -63,19 +64,19 @@ QtObject {
                     id: "toggleRelease",
                     iconSource: iconBasePath + "release.svg",
                     text: "Extrude",
-                    tooltip: "拉伸几何体"
+                    tooltip: "Extrude geometry"
                 },
                 {
                     id: "toggle",
                     iconSource: iconBasePath + "toggle.svg",
                     text: "Revolve",
-                    tooltip: "旋转几何体"
+                    tooltip: "Revolve geometry"
                 },
                 {
                     id: "toggleStitch",
                     iconSource: iconBasePath + "stitch.svg",
                     text: "Boolean",
-                    tooltip: "布尔运算"
+                    tooltip: "Boolean operations"
                 }
             ]
         },
@@ -86,32 +87,32 @@ QtObject {
                     id: "trim",
                     iconSource: iconBasePath + "trim.svg",
                     text: "Trim",
-                    tooltip: "修剪几何体"
+                    tooltip: "Trim geometry"
                 },
                 {
                     id: "offset",
                     iconSource: iconBasePath + "offset.svg",
                     text: "Offset",
-                    tooltip: "偏移几何体"
+                    tooltip: "Offset geometry"
                 },
                 {
                     id: "fill",
                     iconSource: iconBasePath + "fill.svg",
                     text: "Fill",
-                    tooltip: "填充区域"
+                    tooltip: "Fill region"
                 },
                 {
                     id: "split",
                     iconSource: iconBasePath + "split.svg",
                     text: "Split",
-                    tooltip: "分割几何体"
+                    tooltip: "Split geometry"
                 }
             ]
         }
     ]
 
     // ========================================================================
-    // MESH TAB - 网格划分工具
+    // MESH TAB - Meshing Tools
     // ========================================================================
     readonly property var meshTab: [
         {
@@ -121,19 +122,19 @@ QtObject {
                     id: "generateMesh",
                     iconSource: iconBasePath + "generate_mesh.svg",
                     text: "Auto\nMesh",
-                    tooltip: "自动网格划分"
+                    tooltip: "Automatic mesh generation"
                 },
                 {
                     id: "refineMesh",
                     iconSource: iconBasePath + "refine_mesh.svg",
                     text: "Refine",
-                    tooltip: "网格加密"
+                    tooltip: "Refine mesh"
                 },
                 {
                     id: "simplifyMesh",
                     iconSource: iconBasePath + "simplify_mesh.svg",
                     text: "Coarsen",
-                    tooltip: "网格粗化"
+                    tooltip: "Coarsen mesh"
                 }
             ]
         },
@@ -144,19 +145,19 @@ QtObject {
                     id: "smoothMesh",
                     iconSource: iconBasePath + "smooth_mesh.svg",
                     text: "Triangle",
-                    tooltip: "三角形网格"
+                    tooltip: "Triangle mesh"
                 },
                 {
                     id: "checkMesh",
                     iconSource: iconBasePath + "check_mesh.svg",
                     text: "Quad",
-                    tooltip: "四边形网格"
+                    tooltip: "Quadrilateral mesh"
                 },
                 {
                     id: "repairMesh",
                     iconSource: iconBasePath + "repair_mesh.svg",
                     text: "Tetra",
-                    tooltip: "四面体网格"
+                    tooltip: "Tetrahedral mesh"
                 }
             ]
         },
@@ -167,20 +168,20 @@ QtObject {
                     id: "checkMesh",
                     iconSource: iconBasePath + "check_mesh.svg",
                     text: "Check",
-                    tooltip: "网格质量检查"
+                    tooltip: "Check mesh quality"
                 },
                 {
                     id: "repairMesh",
                     iconSource: iconBasePath + "repair_mesh.svg",
                     text: "Repair",
-                    tooltip: "网格修复"
+                    tooltip: "Repair mesh"
                 }
             ]
         }
     ]
 
     // ========================================================================
-    // AI TAB - AI 辅助设计工具
+    // AI TAB - AI-Assisted Design Tools
     // ========================================================================
     readonly property var aiTab: [
         {
@@ -190,19 +191,19 @@ QtObject {
                     id: "aiSuggest",
                     iconSource: iconBasePath + "ai_suggest.svg",
                     text: "Smart\nSuggest",
-                    tooltip: "智能几何建模建议"
+                    tooltip: "Smart geometry modeling suggestions"
                 },
                 {
                     id: "aiOptimize",
                     iconSource: iconBasePath + "ai_optimize.svg",
                     text: "Auto\nOptimize",
-                    tooltip: "自动网格优化"
+                    tooltip: "Automatic mesh optimization"
                 },
                 {
                     id: "aiExplore",
                     iconSource: iconBasePath + "ai_explore.svg",
                     text: "Design\nExplore",
-                    tooltip: "设计空间探索"
+                    tooltip: "Design space exploration"
                 }
             ]
         },
@@ -213,7 +214,18 @@ QtObject {
                     id: "aiChat",
                     iconSource: iconBasePath + "ai_chat.svg",
                     text: "AI\nAssistant",
-                    tooltip: "AI 设计助手对话"
+                    tooltip: "AI design assistant chat"
+                }
+            ]
+        },
+        {
+            title: "Settings",
+            buttons: [
+                {
+                    id: "options",
+                    iconSource: iconBasePath + "options.svg",
+                    text: "Options",
+                    tooltip: "Application settings"
                 }
             ]
         }

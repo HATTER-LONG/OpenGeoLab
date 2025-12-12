@@ -4,7 +4,11 @@ import QtQuick.Layouts
 import QtQuick.Controls
 
 /**
+ * @file RibbonFileMenu.qml
  * @brief File menu popup for Ribbon toolbar (Office-style backstage)
+ *
+ * Displays file operations (New, Import, Export, Options) in a left panel
+ * with recent files list on the right.
  */
 Popup {
     id: fileMenu
@@ -20,10 +24,16 @@ Popup {
     signal showOptions
     signal exitApp
 
-    property color accentColor: "#0078D4"
-    property color hoverColor: "#E5F1FB"
-    property color menuBackgroundColor: "#2B579A"
-    property color contentBackgroundColor: "#FFFFFF"
+    // ========================================================================
+    // Dark theme colors (fixed)
+    // ========================================================================
+    readonly property color accentColor: "#0d6efd"
+    readonly property color hoverColor: "#3a3f4b"
+    readonly property color menuBackgroundColor: "#1a1d24"
+    readonly property color contentBackgroundColor: "#252830"
+    readonly property color textColor: "#e1e1e1"
+    readonly property color textColorDim: "#a0a0a0"
+    readonly property color separatorColor: "#3a3f4b"
 
     width: 700
     height: 500
@@ -33,7 +43,7 @@ Popup {
 
     background: Rectangle {
         color: fileMenu.contentBackgroundColor
-        border.color: "#D1D1D1"
+        border.color: fileMenu.separatorColor
         border.width: 1
     }
 
@@ -126,13 +136,13 @@ Popup {
                     text: "Recent Files"
                     font.pixelSize: 18
                     font.bold: true
-                    color: "#333333"
+                    color: fileMenu.textColor
                 }
 
                 Rectangle {
                     width: parent.width
                     height: 1
-                    color: "#E0E0E0"
+                    color: fileMenu.separatorColor
                 }
 
                 // Recent files list
@@ -191,7 +201,7 @@ Popup {
 
                         width: recentFilesList.width
                         height: 28
-                        color: recentFileMouseArea.containsMouse ? "#E5F1FB" : "transparent"
+                        color: recentFileMouseArea.containsMouse ? fileMenu.hoverColor : "transparent"
                         radius: 3
 
                         Row {
@@ -203,7 +213,7 @@ Popup {
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: (recentFileDelegate.index + 1).toString()
                                 font.pixelSize: 12
-                                color: "#0078D4"
+                                color: fileMenu.accentColor
                                 width: 20
                             }
 
@@ -211,7 +221,7 @@ Popup {
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: recentFileDelegate.fileName
                                 font.pixelSize: 12
-                                color: "#333333"
+                                color: fileMenu.textColor
                                 elide: Text.ElideMiddle
                                 width: parent.width - 40
                             }

@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 
 /**
+ * @file RibbonGroupSeparator.qml
  * @brief A vertical separator for use within Ribbon groups
  */
 Rectangle {
@@ -13,5 +14,5 @@ Rectangle {
     Layout.fillHeight: true
     Layout.topMargin: 5
     Layout.bottomMargin: 5
-    color: "#D1D1D1"
+    color: "#3a3f4b"
 }

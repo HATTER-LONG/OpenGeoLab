@@ -7,7 +7,6 @@
 #include <geometry/geometry.hpp>
 #include <geometry3d.hpp>
 
-
 #include <QMouseEvent>
 #include <QtCore/QRunnable>
 #include <QtQuick/qquickwindow.h>
@@ -23,7 +22,7 @@ Geometry3D::Geometry3D() {
     LOG_DEBUG("Geometry3D constructor called");
 
     // Enable mouse event handling
-    setAcceptedMouseButtons(Qt::LeftButton);
+    setAcceptedMouseButtons(Qt::LeftButton | Qt::MiddleButton | Qt::RightButton);
     setAcceptHoverEvents(true);
 
     connect(this, &QQuickItem::windowChanged, this, &Geometry3D::handleWindowChanged);
@@ -35,7 +34,7 @@ void Geometry3D::setColor(const QColor& color) {
 
         // Update renderer if it exists
         if(m_renderer) {
-            m_renderer->setColor(color);
+            m_renderer->setColorOverride(color);
         }
 
         emit colorChanged();
@@ -44,39 +43,13 @@ void Geometry3D::setColor(const QColor& color) {
     }
 }
 
-void Geometry3D::setGeometryType(const QString& type) {
-    if(m_geometryType != type) {
-        m_geometryType = type;
+void Geometry3D::setBackgroundColor(const QColor& color) {
+    if(m_backgroundColor != color) {
+        m_backgroundColor = color;
 
-        // Update geometry if renderer exists
+        // Update renderer if it exists
         if(m_renderer) {
-            if(type == "cylinder") {
-                auto cylinder_data = std::make_shared<Geometry::CylinderData>();
-                m_renderer->setGeometryData(cylinder_data);
-                LOG_INFO("Geometry changed to cylinder");
-            } else {
-                auto cube_data = std::make_shared<Geometry::CubeData>();
-                m_renderer->setGeometryData(cube_data);
-                LOG_INFO("Geometry changed to cube");
-            }
-
-            // Trigger repaint
-            if(window()) {
-                window()->update();
-            }
-        }
-
-        emit geometryTypeChanged();
-    }
-}
-
-void Geometry3D::setZoom(qreal zoom) {
-    if(m_zoom != zoom) {
-        m_zoom = zoom;
-
-        // Update renderer zoom
-        if(m_renderer) {
-            m_renderer->setZoom(zoom);
+            m_renderer->setBackgroundColor(color);
         }
 
         // Trigger repaint
@@ -84,71 +57,10 @@ void Geometry3D::setZoom(qreal zoom) {
             window()->update();
         }
 
-        LOG_DEBUG("Zoom set to: {}", m_zoom);
+        emit backgroundColorChanged();
+        LOG_INFO("Geometry3D background color changed to: ({}, {}, {})", color.red(), color.green(),
+                 color.blue());
     }
-}
-
-void Geometry3D::fitToView() {
-    if(!m_renderer) {
-        LOG_DEBUG("Cannot fit to view: renderer not initialized");
-        return;
-    }
-
-    // Get current geometry data
-    auto geometry_data = m_renderer->geometryData();
-    if(!geometry_data) {
-        LOG_DEBUG("Cannot fit to view: no geometry data");
-        return;
-    }
-
-    // Get bounding box
-    float min_point[3], max_point[3];
-    if(!geometry_data->getBoundingBox(min_point, max_point)) {
-        LOG_DEBUG("Cannot fit to view: invalid bounding box");
-        return;
-    }
-
-    // Calculate bounding box size
-    float size_x = max_point[0] - min_point[0];
-    float size_y = max_point[1] - min_point[1];
-    float size_z = max_point[2] - min_point[2];
-    float max_size = std::max({size_x, size_y, size_z});
-
-    // Calculate center
-    float center_x = (min_point[0] + max_point[0]) * 0.5f;
-    float center_y = (min_point[1] + max_point[1]) * 0.5f;
-
-    // Reset rotation
-    m_rotationX = 0.0;
-    m_rotationY = 0.0;
-
-    // Reset pan to center
-    m_panX = -center_x;
-    m_panY = -center_y;
-
-    // Calculate appropriate zoom level
-    // Assume camera distance is 3.0 at zoom = 1.0
-    // We want the model to fit within ~80% of the viewport
-    if(max_size > 0.0001f) {
-        m_zoom = 2.4f / max_size; // 3.0 * 0.8 = 2.4
-        m_zoom = qBound(0.01, m_zoom, 100.0);
-    } else {
-        m_zoom = 1.0;
-    }
-
-    // Update renderer
-    if(m_renderer) {
-        m_renderer->setRotation(m_rotationX, m_rotationY);
-        m_renderer->setZoom(m_zoom);
-        m_renderer->setPan(m_panX, m_panY);
-    }
-
-    // Trigger repaint
-    if(window()) {
-        window()->update();
-    }
-
-    LOG_INFO("Fit to view: zoom={}, pan=({}, {}), bbox_size={}", m_zoom, m_panX, m_panY, max_size);
 }
 
 void Geometry3D::setCustomGeometry(std::shared_ptr<Geometry::GeometryData> geometry_data) {
@@ -157,8 +69,23 @@ void Geometry3D::setCustomGeometry(std::shared_ptr<Geometry::GeometryData> geome
         LOG_INFO("Custom geometry set: {} vertices, {} indices", geometry_data->vertexCount(),
                  geometry_data->indexCount());
 
-        // Auto-fit the view to show the entire model
-        fitToView();
+        // Cache bounding box
+        float min_point[3], max_point[3];
+        if(geometry_data->getBoundingBox(min_point, max_point)) {
+            m_hasBounds = true;
+            m_boundsMin = QVector3D(min_point[0], min_point[1], min_point[2]);
+            m_boundsMax = QVector3D(max_point[0], max_point[1], max_point[2]);
+
+            // Set model center for rotation pivot
+            QVector3D center = (m_boundsMin + m_boundsMax) * 0.5f;
+            m_renderer->setModelCenter(center);
+
+            // Reset model rotation when loading new geometry
+            m_renderer->resetModelRotation();
+
+            // Auto-fit the view to show the entire model
+            fitToView();
+        }
 
         // Trigger repaint
         if(window()) {
@@ -170,6 +97,145 @@ void Geometry3D::setCustomGeometry(std::shared_ptr<Geometry::GeometryData> geome
         LOG_DEBUG("Cannot set custom geometry: null geometry data provided");
     }
 }
+
+// ============================================================================
+// View Control Methods
+// ============================================================================
+
+void Geometry3D::zoomIn(qreal factor) {
+    if(m_renderer && m_renderer->camera()) {
+        m_renderer->camera()->zoom(static_cast<float>(factor));
+        if(window()) {
+            window()->update();
+        }
+        LOG_DEBUG("Zoomed in by factor {}", factor);
+    }
+}
+
+void Geometry3D::zoomOut(qreal factor) {
+    if(m_renderer && m_renderer->camera()) {
+        m_renderer->camera()->zoom(1.0f / static_cast<float>(factor));
+        if(window()) {
+            window()->update();
+        }
+        LOG_DEBUG("Zoomed out by factor {}", factor);
+    }
+}
+
+void Geometry3D::fitToView() {
+    if(!m_renderer || !m_renderer->camera()) {
+        LOG_DEBUG("Cannot fit to view: renderer or camera not initialized");
+        return;
+    }
+
+    if(m_hasBounds) {
+        m_renderer->camera()->fitToBounds(m_boundsMin, m_boundsMax, 1.5f);
+        LOG_INFO("Fit to view: bounds=[({}, {}, {}), ({}, {}, {})]", m_boundsMin.x(),
+                 m_boundsMin.y(), m_boundsMin.z(), m_boundsMax.x(), m_boundsMax.y(),
+                 m_boundsMax.z());
+    } else {
+        // No bounds available, reset to default
+        m_renderer->camera()->reset();
+        LOG_DEBUG("Fit to view: no bounds, reset to default");
+    }
+
+    if(window()) {
+        window()->update();
+    }
+}
+
+void Geometry3D::resetView() {
+    if(m_renderer && m_renderer->camera()) {
+        m_renderer->camera()->reset();
+        m_renderer->resetModelRotation(); // Also reset model rotation
+        if(window()) {
+            window()->update();
+        }
+        LOG_DEBUG("View reset to default");
+    }
+}
+
+void Geometry3D::setViewFront() {
+    if(m_renderer) {
+        // Set model rotation to show front view
+        m_renderer->setModelRotation(0.0f, 0.0f);
+        if(window()) {
+            window()->update();
+        }
+        LOG_DEBUG("Set view to front");
+    }
+}
+
+void Geometry3D::setViewBack() {
+    if(m_renderer) {
+        // Set model rotation to show back view (rotate 180 degrees around Y)
+        m_renderer->setModelRotation(180.0f, 0.0f);
+        if(window()) {
+            window()->update();
+        }
+        LOG_DEBUG("Set view to back");
+    }
+}
+
+void Geometry3D::setViewTop() {
+    if(m_renderer) {
+        // Set model rotation to show top view (rotate -90 degrees around X)
+        m_renderer->setModelRotation(0.0f, -90.0f);
+        if(window()) {
+            window()->update();
+        }
+        LOG_DEBUG("Set view to top");
+    }
+}
+
+void Geometry3D::setViewBottom() {
+    if(m_renderer) {
+        // Set model rotation to show bottom view (rotate 90 degrees around X)
+        m_renderer->setModelRotation(0.0f, 90.0f);
+        if(window()) {
+            window()->update();
+        }
+        LOG_DEBUG("Set view to bottom");
+    }
+}
+
+void Geometry3D::setViewLeft() {
+    if(m_renderer) {
+        // Set model rotation to show left view (rotate 90 degrees around Y)
+        m_renderer->setModelRotation(90.0f, 0.0f);
+        if(window()) {
+            window()->update();
+        }
+        LOG_DEBUG("Set view to left");
+    }
+}
+
+void Geometry3D::setViewRight() {
+    if(m_renderer) {
+        // Set model rotation to show right view (rotate -90 degrees around Y)
+        m_renderer->setModelRotation(-90.0f, 0.0f);
+        if(window()) {
+            window()->update();
+        }
+        LOG_DEBUG("Set view to right");
+    }
+}
+
+void Geometry3D::setViewIsometric() {
+    if(m_renderer) {
+        // Set model rotation to show isometric view
+        // Standard isometric: 45 degrees yaw, ~35.264 degrees pitch
+        m_renderer->setModelRotation(-45.0f, -35.264f);
+        if(window()) {
+            window()->update();
+        }
+        LOG_DEBUG("Set view to isometric");
+    }
+}
+
+// ============================================================================
+// Window and Renderer Setup
+// ============================================================================
 
 void Geometry3D::handleWindowChanged(QQuickWindow* win) {
     if(win) {
@@ -188,34 +254,17 @@ void Geometry3D::handleWindowChanged(QQuickWindow* win) {
     }
 }
 
-void Geometry3D::initializeGeometry() {
-    if(!m_renderer) {
-        return;
-    }
-
-    // Create geometry based on type
-    if(m_geometryType == "cylinder") {
-        auto cylinder_data = std::make_shared<Geometry::CylinderData>();
-        m_renderer->setGeometryData(cylinder_data);
-        LOG_INFO("Default cylinder geometry initialized");
-    } else {
-        auto cube_data = std::make_shared<Geometry::CubeData>();
-        m_renderer->setGeometryData(cube_data);
-        LOG_INFO("Default cube geometry initialized");
-    }
-}
-
 void Geometry3D::sync() {
     if(!m_renderer) {
         LOG_INFO("Creating new OpenGLRenderer");
 
         m_renderer = new Rendering::OpenGLRenderer();
 
-        // Initialize geometry
-        initializeGeometry();
-
         // Set initial color
-        m_renderer->setColor(m_color);
+        m_renderer->setColorOverride(m_color);
+
+        // Set initial background color
+        m_renderer->setBackgroundColor(m_backgroundColor);
 
         // Connect renderer to scene graph signals
         connect(window(), &QQuickWindow::beforeRendering, m_renderer,
@@ -228,71 +277,68 @@ void Geometry3D::sync() {
 
     // Calculate item position and size in window coordinates
     QPointF scene_pos = mapToScene(QPointF(0, 0));
-    QPoint offset(scene_pos.x() * window()->devicePixelRatio(),
-                  scene_pos.y() * window()->devicePixelRatio());
-    QSize size(width() * window()->devicePixelRatio(), height() * window()->devicePixelRatio());
+    QPoint offset(static_cast<int>(scene_pos.x() * window()->devicePixelRatio()),
+                  static_cast<int>(scene_pos.y() * window()->devicePixelRatio()));
+    QSize size(static_cast<int>(width() * window()->devicePixelRatio()),
+               static_cast<int>(height() * window()->devicePixelRatio()));
 
     // Update renderer state
     m_renderer->setViewportSize(size);
     m_renderer->setViewportOffset(offset);
     m_renderer->setWindow(window());
-    m_renderer->setRotation(m_rotationX, m_rotationY);
-    m_renderer->setZoom(m_zoom);
-    m_renderer->setPan(m_panX, m_panY);
 
     LOG_TRACE("Geometry3D sync: offset=({},{}), size=({}x{})", offset.x(), offset.y(), size.width(),
               size.height());
 }
 
+// ============================================================================
+// Mouse Event Handling
+// ============================================================================
+
 void Geometry3D::mousePressEvent(QMouseEvent* event) {
     if(event->button() == Qt::LeftButton) {
         // Check if Shift is pressed for panning
         if(event->modifiers() & Qt::ShiftModifier) {
-            m_isPanning = true;
+            m_dragMode = DragMode::Pan;
         } else {
-            m_isDragging = true;
+            m_dragMode = DragMode::Orbit;
         }
         m_lastMousePos = event->position();
         event->accept();
-        LOG_INFO("Mouse press at ({}, {}), panning={}, rotating={}", m_lastMousePos.x(),
-                 m_lastMousePos.y(), m_isPanning, m_isDragging);
+        LOG_DEBUG("Mouse press at ({}, {}), mode={}", m_lastMousePos.x(), m_lastMousePos.y(),
+                  m_dragMode == DragMode::Orbit ? "Orbit" : "Pan");
+    } else if(event->button() == Qt::MiddleButton) {
+        // Middle button for panning
+        m_dragMode = DragMode::Pan;
+        m_lastMousePos = event->position();
+        event->accept();
+    } else if(event->button() == Qt::RightButton) {
+        // Right button for panning (alternative)
+        m_dragMode = DragMode::Pan;
+        m_lastMousePos = event->position();
+        event->accept();
     } else {
         QQuickItem::mousePressEvent(event);
     }
 }
 
 void Geometry3D::mouseMoveEvent(QMouseEvent* event) {
-    if(m_isDragging || m_isPanning) {
+    if(m_dragMode != DragMode::None && m_renderer && m_renderer->camera()) {
         QPointF current_pos = event->position();
         QPointF delta = current_pos - m_lastMousePos;
 
-        if(m_isPanning) {
-            // Pan the camera (Shift + Left button)
-            // Scale pan speed based on zoom level (pan slower when zoomed in)
-            float pan_speed = 0.003f / m_zoom; // Increased from 0.001f for better responsiveness
-            m_panX -= delta.x() * pan_speed;   // Invert X for natural movement
-            m_panY += delta.y() * pan_speed;   // Invert Y for natural movement
-
-            // Update renderer pan
-            if(m_renderer) {
-                m_renderer->setPan(m_panX, m_panY);
-            }
-
-            LOG_TRACE("Pan updated: X={}, Y={}", m_panX, m_panY);
-        } else if(m_isDragging) {
-            // Rotate the model (Left button only)
-            m_rotationY += delta.x() * 0.5; // Scale factor for sensitivity
-            m_rotationX += delta.y() * 0.5;
-
-            // Clamp X rotation to avoid gimbal lock
-            m_rotationX = qBound(-89.0, m_rotationX, 89.0);
-
-            // Update renderer rotation
-            if(m_renderer) {
-                m_renderer->setRotation(m_rotationX, m_rotationY);
-            }
-
-            LOG_TRACE("Rotation updated: X={}, Y={}", m_rotationX, m_rotationY);
+        if(m_dragMode == DragMode::Pan) {
+            // Pan the camera
+            m_renderer->camera()->pan(static_cast<float>(-delta.x()),
+                                      static_cast<float>(delta.y()));
+            LOG_TRACE("Pan: delta=({}, {})", delta.x(), delta.y());
+        } else if(m_dragMode == DragMode::Orbit) {
+            // Rotate the model using quaternion-based rotation
+            // This avoids gimbal lock and direction inversion issues
+            float sensitivity = 0.3f;
+            m_renderer->rotateModel(static_cast<float>(delta.x()) * sensitivity,
+                                    static_cast<float>(-delta.y()) * sensitivity);
+            LOG_TRACE("Model rotate: delta=({}, {})", delta.x(), delta.y());
         }
 
         m_lastMousePos = current_pos;
@@ -309,9 +355,9 @@ void Geometry3D::mouseMoveEvent(QMouseEvent* event) {
 }
 
 void Geometry3D::mouseReleaseEvent(QMouseEvent* event) {
-    if(event->button() == Qt::LeftButton) {
-        m_isDragging = false;
-        m_isPanning = false;
+    if(event->button() == Qt::LeftButton || event->button() == Qt::MiddleButton ||
+       event->button() == Qt::RightButton) {
+        m_dragMode = DragMode::None;
         event->accept();
         LOG_DEBUG("Mouse released");
     } else {
@@ -320,35 +366,38 @@ void Geometry3D::mouseReleaseEvent(QMouseEvent* event) {
 }
 
 void Geometry3D::wheelEvent(QWheelEvent* event) {
+    if(!m_renderer || !m_renderer->camera()) {
+        QQuickItem::wheelEvent(event);
+        return;
+    }
+
     // Handle mouse wheel for zooming
     QPoint num_degrees = event->angleDelta() / 8;
 
     if(!num_degrees.isNull()) {
-        QPoint num_steps = num_degrees / 15; // Each step is typically 15 degrees
+        QPoint num_steps = num_degrees / 15;
 
-        // Zoom in/out based on wheel direction
+        // Calculate zoom factor based on wheel direction
         // Positive delta = wheel up = zoom in
-        // Negative delta = wheel down = zoom out
-        float zoom_factor = 1.0f + (num_steps.y() * 0.1f); // 10% per step
-        m_zoom *= zoom_factor;
-
-        // Clamp zoom to extended range for better usability
-        m_zoom = qBound(0.01, m_zoom, 100.0); // From 0.01x to 100x        // Update renderer
-        if(m_renderer) {
-            m_renderer->setZoom(m_zoom);
-        }
+        // Use exponential scaling for smooth zoom
+        float zoom_factor = std::pow(1.1f, static_cast<float>(num_steps.y()));
+        m_renderer->camera()->zoom(zoom_factor);
 
         // Trigger repaint
         if(window()) {
             window()->update();
         }
 
-        LOG_INFO("Zoom updated: {}", m_zoom);
+        LOG_DEBUG("Zoom: factor={}, steps={}", zoom_factor, num_steps.y());
         event->accept();
     } else {
         QQuickItem::wheelEvent(event);
     }
 }
+
+// ============================================================================
+// Cleanup
+// ============================================================================
 
 void Geometry3D::cleanup() {
     LOG_INFO("Geometry3D cleanup called");
@@ -378,6 +427,20 @@ void Geometry3D::releaseResources() {
     LOG_INFO("Geometry3D releasing resources");
     window()->scheduleRenderJob(new CleanupJob(m_renderer), QQuickWindow::BeforeSynchronizingStage);
     m_renderer = nullptr;
+}
+
+void Geometry3D::updateCameraFromBounds() {
+    // This method can be called when geometry changes to update camera clipping planes
+    if(m_renderer && m_renderer->camera() && m_hasBounds) {
+        // Update near/far planes based on model size
+        QVector3D size = m_boundsMax - m_boundsMin;
+        float max_size = qMax(qMax(size.x(), size.y()), size.z());
+
+        if(max_size > 0.0001f) {
+            m_renderer->camera()->setNearPlane(max_size * 0.001f);
+            m_renderer->camera()->setFarPlane(max_size * 100.0f);
+        }
+    }
 }
 
 } // namespace UI

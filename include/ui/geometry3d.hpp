@@ -24,16 +24,16 @@ namespace UI {
  * Qt Quick scene graph.
  *
  * Features:
- * - Automatic geometry loading (default: cube)
- * - Color override support via QML property
- * - Mouse interaction for rotation (drag to rotate)
+ * - Mouse interaction for orbit rotation, pan, and zoom
+ * - Dynamic geometry loading from files or programmatic creation
+ * - View control methods (zoom in, zoom out, fit to view, reset)
  * - Integrates with Qt Quick scene graph
  */
 class Geometry3D : public QQuickItem {
     Q_OBJECT
     Q_PROPERTY(QColor color READ color WRITE setColor NOTIFY colorChanged)
-    Q_PROPERTY(
-        QString geometryType READ geometryType WRITE setGeometryType NOTIFY geometryTypeChanged)
+    Q_PROPERTY(QColor backgroundColor READ backgroundColor WRITE setBackgroundColor NOTIFY
+                   backgroundColorChanged)
     QML_ELEMENT
 
 public:
@@ -53,16 +53,16 @@ public:
     void setColor(const QColor& color);
 
     /**
-     * @brief Get current geometry type
-     * @return Geometry type ("cube" or "cylinder")
+     * @brief Get current background color
+     * @return Background color for the 3D viewport
      */
-    QString geometryType() const { return m_geometryType; }
+    QColor backgroundColor() const { return m_backgroundColor; }
 
     /**
-     * @brief Set geometry type to render
-     * @param type Geometry type ("cube" or "cylinder")
+     * @brief Set background color for the 3D viewport
+     * @param color Background color
      */
-    Q_INVOKABLE void setGeometryType(const QString& type);
+    void setBackgroundColor(const QColor& color);
 
     /**
      * @brief Set custom geometry data from external source
@@ -70,26 +70,70 @@ public:
      */
     Q_INVOKABLE void setCustomGeometry(std::shared_ptr<Geometry::GeometryData> geometry_data);
 
-    /**
-     * @brief Get current zoom level
-     * @return Zoom factor
-     */
-    qreal zoom() const { return m_zoom; }
+    // ========================================================================
+    // View Control Methods
+    // ========================================================================
 
     /**
-     * @brief Set zoom level
-     * @param zoom Zoom factor
+     * @brief Zoom in the view
+     * @param factor Zoom factor (default 1.2 = 20% zoom in)
      */
-    void setZoom(qreal zoom);
+    Q_INVOKABLE void zoomIn(qreal factor = 1.2);
+
+    /**
+     * @brief Zoom out the view
+     * @param factor Zoom factor (default 1.2 = 20% zoom out)
+     */
+    Q_INVOKABLE void zoomOut(qreal factor = 1.2);
 
     /**
      * @brief Auto-fit the view to show the entire geometry
      */
     Q_INVOKABLE void fitToView();
 
+    /**
+     * @brief Reset the view to default camera position
+     */
+    Q_INVOKABLE void resetView();
+
+    /**
+     * @brief Set view to front (looking along -Z axis)
+     */
+    Q_INVOKABLE void setViewFront();
+
+    /**
+     * @brief Set view to back (looking along +Z axis)
+     */
+    Q_INVOKABLE void setViewBack();
+
+    /**
+     * @brief Set view to top (looking along -Y axis)
+     */
+    Q_INVOKABLE void setViewTop();
+
+    /**
+     * @brief Set view to bottom (looking along +Y axis)
+     */
+    Q_INVOKABLE void setViewBottom();
+
+    /**
+     * @brief Set view to left (looking along +X axis)
+     */
+    Q_INVOKABLE void setViewLeft();
+
+    /**
+     * @brief Set view to right (looking along -X axis)
+     */
+    Q_INVOKABLE void setViewRight();
+
+    /**
+     * @brief Set view to isometric (standard CAD view)
+     */
+    Q_INVOKABLE void setViewIsometric();
+
 signals:
     void colorChanged();
-    void geometryTypeChanged();
+    void backgroundColorChanged();
     void rendererReady();
     void modelLoadFailed(const QString& error);
 
@@ -115,7 +159,7 @@ protected:
     void mousePressEvent(QMouseEvent* event) override;
 
     /**
-     * @brief Handle mouse move events (for drag rotation)
+     * @brief Handle mouse move events (for drag rotation/pan)
      */
     void mouseMoveEvent(QMouseEvent* event) override;
 
@@ -131,21 +175,21 @@ protected:
 
 private:
     void releaseResources() override;
-    void initializeGeometry();
+    void updateCameraFromBounds();
 
     Rendering::OpenGLRenderer* m_renderer = nullptr;
-    QColor m_color = QColor(0, 0, 0, 0); // Default: use vertex colors
-    QString m_geometryType = "cube";     // Default geometry type
+    QColor m_color = QColor(0, 0, 0, 0);           // Default: use vertex colors
+    QColor m_backgroundColor = QColor(45, 50, 56); // Default: dark gray
 
     // Mouse interaction state
-    bool m_isDragging = false;
-    bool m_isPanning = false; // Panning with Shift+Left button
+    enum class DragMode { None, Orbit, Pan };
+    DragMode m_dragMode = DragMode::None;
     QPointF m_lastMousePos;
-    qreal m_rotationX = 0.0; // Rotation around X axis
-    qreal m_rotationY = 0.0; // Rotation around Y axis
-    qreal m_zoom = 1.0;      // Camera zoom factor
-    qreal m_panX = 0.0;      // Camera horizontal pan
-    qreal m_panY = 0.0;      // Camera vertical pan
+
+    // Cached bounds for fit-to-view
+    bool m_hasBounds = false;
+    QVector3D m_boundsMin;
+    QVector3D m_boundsMax;
 };
 
 } // namespace UI

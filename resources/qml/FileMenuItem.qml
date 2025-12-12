@@ -2,7 +2,8 @@ pragma ComponentBehavior: Bound
 import QtQuick
 
 /**
- * @brief Menu item for File menu in Ribbon toolbar
+ * @file FileMenuItem.qml
+ * @brief Menu item component for File menu in Ribbon toolbar
  */
 Rectangle {
     id: menuItem

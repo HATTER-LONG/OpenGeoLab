@@ -4,33 +4,49 @@ import QtQuick.Controls
 import QtQuick.Layouts
 
 /**
- * @brief Model Tree View - 模型层次结构树视图
+ * @file ModelTreeView.qml
+ * @brief Model Tree View - Hierarchical model structure display
  *
- * 显示当前模型的层次结构，方便用户进行模型管理和操作
+ * Displays the hierarchical structure of the current model for
+ * model management and navigation operations.
  */
 Rectangle {
     id: modelTreeView
 
-    property color headerColor: "#2B579A"
-    property color backgroundColor: Qt.rgba(0.15, 0.15, 0.15, 0.95)
-    property color itemHoverColor: Qt.rgba(0.3, 0.3, 0.3, 0.8)
-    property color selectedColor: "#0078D4"
-    property color textColor: "white"
+    // ========================================================================
+    // Dark theme colors (fixed)
+    // ========================================================================
+    readonly property color headerColor: "#1a1d23"
+    readonly property color backgroundColor: "#252830"
+    readonly property color itemHoverColor: "#3a3f4b"
+    readonly property color selectedColor: "#0d6efd"
+    readonly property color textColor: "#e1e1e1"
+    readonly property color borderColor: "#363b44"
+    readonly property color iconColor: "#e1e1e1"
 
-    // 当前选中的项目
+    // Currently selected item
     property int selectedIndex: -1
 
-    // 信号
+    // Signals
     signal itemSelected(int index, string name, string type)
     signal itemDoubleClicked(int index, string name, string type)
 
     color: backgroundColor
 
-    // 树节点模型
+    // Right border for visual separation
+    Rectangle {
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        width: 1
+        color: modelTreeView.borderColor
+    }
+
+    // Tree node model
     ListModel {
         id: treeModel
 
-        // 默认结构
+        // Default structure
         ListElement {
             name: "Model"
             nodeType: "root"
@@ -93,7 +109,7 @@ Rectangle {
         anchors.fill: parent
         spacing: 0
 
-        // 标题栏
+        // Header bar
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 32
@@ -119,7 +135,7 @@ Rectangle {
                     Layout.fillWidth: true
                 }
 
-                // 刷新按钮
+                // Refresh button
                 Rectangle {
                     Layout.preferredWidth: 22
                     Layout.preferredHeight: 22
@@ -142,7 +158,7 @@ Rectangle {
                     }
                 }
 
-                // 折叠全部按钮
+                // Collapse all button
                 Rectangle {
                     Layout.preferredWidth: 22
                     Layout.preferredHeight: 22
@@ -161,7 +177,7 @@ Rectangle {
                         anchors.fill: parent
                         hoverEnabled: true
                         onClicked: {
-                            // 折叠所有节点
+                            // Collapse all nodes
                             for (let i = 0; i < treeModel.count; i++) {
                                 treeModel.setProperty(i, "expanded", false);
                             }
@@ -171,7 +187,7 @@ Rectangle {
             }
         }
 
-        // 搜索框
+        // Search box
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 28
@@ -214,7 +230,7 @@ Rectangle {
             }
         }
 
-        // 树视图列表
+        // Tree view list
         ListView {
             id: treeListView
             Layout.fillWidth: true
@@ -245,7 +261,7 @@ Rectangle {
                     anchors.rightMargin: 8
                     spacing: 6
 
-                    // 展开/折叠图标
+                    // Expand/collapse icon
                     Rectangle {
                         Layout.preferredWidth: 16
                         Layout.preferredHeight: 16
@@ -267,21 +283,21 @@ Rectangle {
                         }
                     }
 
-                    // 占位符（当没有子节点时）
+                    // Placeholder (when no children)
                     Item {
                         Layout.preferredWidth: 16
                         Layout.preferredHeight: 16
                         visible: !treeItemDelegate.hasChildren
                     }
 
-                    // 节点图标
+                    // Node icon
                     Text {
                         text: modelTreeView.getNodeIcon(treeItemDelegate.nodeType)
                         font.pixelSize: 14
                         color: modelTreeView.getIconColor(treeItemDelegate.nodeType)
                     }
 
-                    // 节点名称
+                    // Node name
                     Text {
                         text: treeItemDelegate.name
                         font.pixelSize: 12
@@ -302,7 +318,7 @@ Rectangle {
                         if (mouse.button === Qt.LeftButton) {
                             modelTreeView.itemSelected(treeItemDelegate.index, treeItemDelegate.name, treeItemDelegate.nodeType);
                         } else if (mouse.button === Qt.RightButton) {
-                            // 右键菜单（TODO）
+                            // Context menu (TODO)
                             console.log("Right click on:", treeItemDelegate.name);
                         }
                     }
@@ -321,7 +337,7 @@ Rectangle {
             }
         }
 
-        // 底部工具栏
+        // Bottom toolbar
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 28
@@ -343,7 +359,7 @@ Rectangle {
                     Layout.fillWidth: true
                 }
 
-                // 添加按钮
+                // Add button
                 Rectangle {
                     Layout.preferredWidth: 22
                     Layout.preferredHeight: 22
@@ -368,7 +384,7 @@ Rectangle {
                     }
                 }
 
-                // 删除按钮
+                // Delete button
                 Rectangle {
                     Layout.preferredWidth: 22
                     Layout.preferredHeight: 22
@@ -396,7 +412,7 @@ Rectangle {
         }
     }
 
-    // 根据节点类型获取图标
+    // Get icon based on node type
     function getNodeIcon(type: string): string {
         switch (type) {
         case "root":
@@ -420,31 +436,31 @@ Rectangle {
         }
     }
 
-    // 根据节点类型获取图标颜色
+    // Get icon color based on node type
     function getIconColor(type: string): color {
         switch (type) {
         case "root":
-            return "#FFD700";  // 金色
+            return "#FFD700";  // Gold
         case "folder":
-            return "#FFA500";  // 橙色
+            return "#FFA500";  // Orange
         case "body":
-            return "#4FC3F7";  // 浅蓝色
+            return "#4FC3F7";  // Light blue
         case "surface":
-            return "#81C784";  // 浅绿色
+            return "#81C784";  // Light green
         case "curve":
-            return "#BA68C8";  // 紫色
+            return "#BA68C8";  // Purple
         case "point":
-            return "#FF8A65";  // 橙红色
+            return "#FF8A65";  // Orange-red
         case "mesh":
-            return "#64B5F6";  // 蓝色
+            return "#64B5F6";  // Blue
         case "material":
-            return "#FFB74D";  // 橙黄色
+            return "#FFB74D";  // Orange-yellow
         default:
             return "white";
         }
     }
 
-    // 公共函数：添加节点
+    // Public function: Add node
     function addNode(name: string, type: string, parentLevel: int): void {
         treeModel.append({
             name: name,
@@ -455,12 +471,12 @@ Rectangle {
         });
     }
 
-    // 公共函数：清空模型树
+    // Public function: Clear model tree
     function clearTree(): void {
         treeModel.clear();
     }
 
-    // 公共函数：重置为默认结构
+    // Public function: Reset to default structure
     function resetToDefault(): void {
         clearTree();
         treeModel.append({
