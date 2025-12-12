@@ -177,35 +177,8 @@ qt_add_qml_module(
   RESOURCE_PREFIX
   /scenegraph/opengeolab
   NO_RESOURCE_TARGET_PATH
-  QML_FILES
-  resources/qml/Main.qml
-  resources/qml/Theme.qml
-  resources/qml/ThemedIcon.qml
-  resources/qml/RibbonToolBar.qml
-  resources/qml/RibbonLargeButton.qml
-  resources/qml/RibbonGroup.qml
-  resources/qml/RibbonGroupSeparator.qml
-  resources/qml/RibbonFileMenu.qml
-  resources/qml/FileMenuItem.qml
-  resources/qml/RibbonButtonConfig.qml
-  resources/qml/RibbonTabContent.qml
-  resources/qml/OperationPanel.qml
-  resources/qml/OperationPanelManager.qml
-  resources/qml/ModelTreeView.qml
-  resources/qml/ViewControlToolbar.qml
-  resources/qml/ViewControlButton.qml
-  resources/qml/CreateBoxDialog.qml
   RESOURCES
   ${ICON_RESOURCES}
-  SOURCES
-  src/ui/geometry3d.cpp
-  include/ui/geometry3d.hpp
-  src/ui/model_importer.cpp
-  include/ui/model_importer.hpp
-  src/geometry/geometry_creator.cpp
-  include/ui/geometry_creator.hpp
-  src/geometry/shape_triangulator.cpp
-  include/geometry/shape_triangulator.hpp
 )
 
 # ==============================================================================

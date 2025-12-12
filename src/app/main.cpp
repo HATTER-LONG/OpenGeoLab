@@ -1,15 +1,4 @@
-/**
- * @file main.cpp
- * @brief Main entry point for the OpenGeoLab application
- *
- * This application demonstrates:
- * - Integration of OpenGL rendering with Qt Quick
- * - Command-line argument parsing with cxxopts
- * - Multi-language greeting system
- * - Performance monitoring with Kangaroo utilities
- */
-
-#include <core/logger.hpp>
+#include <util/logger.hpp>
 
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
@@ -54,21 +43,9 @@ void initQtEnvironment() {
 }
 } // namespace
 
-/**
- * @brief Main application entry point
- *
- * Initializes the Qt application, processes command-line arguments,
- * demonstrates the greeter functionality, and launches the Qt Quick UI.
- *
- * @param argc Number of command-line arguments
- * @param argv Array of command-line argument strings
- * @return Application exit code (0 for success, non-zero for error)
- */
 auto main(int argc, char** argv) -> int {
-    // Performance monitoring for total execution time
     Kangaroo::Util::Stopwatch stopwatch("Total execution time", OpenGeoLab::getLogger());
 
-    // Configure command-line options
     cxxopts::Options options(*argv, "A program to welcome the world!");
 
     std::string language;
@@ -100,8 +77,6 @@ auto main(int argc, char** argv) -> int {
     // Initialize Qt environment for high DPI support
     initQtEnvironment();
 
-    // Set OpenGL as graphics API before creating QGuiApplication
-    // This is required for custom OpenGL rendering in Qt Quick
     QQuickWindow::setGraphicsApi(QSGRendererInterface::OpenGL);
 
     // Use Basic style to avoid native Windows style limitations
