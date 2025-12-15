@@ -165,6 +165,16 @@ public:
     void rotateModel(float delta_yaw, float delta_pitch);
 
     /**
+     * @brief Rotate the model by a quaternion
+     * @param rotation Quaternion representing the incremental rotation
+     *
+     * This method applies the given quaternion rotation to the current model
+     * rotation. The rotation is applied in screen space (pre-multiplied) for
+     * intuitive trackball-style behavior.
+     */
+    void rotateModelByQuaternion(const QQuaternion& rotation);
+
+    /**
      * @brief Set model rotation angles directly
      * @param yaw Horizontal rotation in degrees
      * @param pitch Vertical rotation in degrees

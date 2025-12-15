@@ -232,6 +232,14 @@ void OpenGLRenderer::modelRotation(float& yaw, float& pitch) const {
 
 void OpenGLRenderer::resetModelRotation() { m_modelRotation = QQuaternion(); }
 
+void OpenGLRenderer::rotateModelByQuaternion(const QQuaternion& rotation) {
+    // Apply the quaternion rotation in screen space (pre-multiply)
+    // This gives intuitive trackball behavior where the surface under
+    // the cursor follows the mouse movement
+    m_modelRotation = rotation * m_modelRotation;
+    m_modelRotation.normalize();
+}
+
 void OpenGLRenderer::setModelCenter(const QVector3D& center) { m_modelCenter = center; }
 
 QMatrix4x4 OpenGLRenderer::modelMatrix() const {

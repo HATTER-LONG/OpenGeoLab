@@ -9,6 +9,7 @@
 #pragma once
 
 #include <render/opengl_renderer.hpp>
+#include <render/trackball.hpp>
 
 #include <QColor>
 #include <QtQuick/QQuickItem>
@@ -185,6 +186,9 @@ private:
     enum class DragMode { None, Orbit, Pan };
     DragMode m_dragMode = DragMode::None;
     QPointF m_lastMousePos;
+
+    // Trackball for intuitive rotation
+    Rendering::Trackball m_trackball;
 
     // Cached bounds for fit-to-view
     bool m_hasBounds = false;

@@ -287,6 +287,15 @@ void Geometry3D::sync() {
     m_renderer->setViewportOffset(offset);
     m_renderer->setWindow(window());
 
+    // Update camera viewport size for pan calculations
+    if(m_renderer->camera()) {
+        m_renderer->camera()->setViewportSize(static_cast<int>(width()),
+                                              static_cast<int>(height()));
+    }
+
+    // Update trackball viewport size
+    m_trackball.setViewportSize(QSize(static_cast<int>(width()), static_cast<int>(height())));
+
     LOG_TRACE("Geometry3D sync: offset=({},{}), size=({}x{})", offset.x(), offset.y(), size.width(),
               size.height());
 }
@@ -297,16 +306,30 @@ void Geometry3D::sync() {
 
 void Geometry3D::mousePressEvent(QMouseEvent* event) {
     if(event->button() == Qt::LeftButton) {
-        // Check if Shift is pressed for panning
-        if(event->modifiers() & Qt::ShiftModifier) {
-            m_dragMode = DragMode::Pan;
-        } else {
+        // Ctrl + Left button for rotation (trackball)
+        if(event->modifiers() & Qt::ControlModifier) {
             m_dragMode = DragMode::Orbit;
+            m_lastMousePos = event->position();
+            // Initialize trackball with current mouse position
+            m_trackball.begin(static_cast<int>(m_lastMousePos.x()),
+                              static_cast<int>(m_lastMousePos.y()));
+            event->accept();
+            LOG_DEBUG("Mouse press at ({}, {}), mode=Orbit (Ctrl+LMB)", m_lastMousePos.x(),
+                      m_lastMousePos.y());
         }
-        m_lastMousePos = event->position();
-        event->accept();
-        LOG_DEBUG("Mouse press at ({}, {}), mode={}", m_lastMousePos.x(), m_lastMousePos.y(),
-                  m_dragMode == DragMode::Orbit ? "Orbit" : "Pan");
+        // Shift + Left button for panning
+        else if(event->modifiers() & Qt::ShiftModifier) {
+            m_dragMode = DragMode::Pan;
+            m_lastMousePos = event->position();
+            event->accept();
+            LOG_DEBUG("Mouse press at ({}, {}), mode=Pan (Shift+LMB)", m_lastMousePos.x(),
+                      m_lastMousePos.y());
+        }
+        // Plain left button - reserved for selection (no drag operation)
+        else {
+            m_dragMode = DragMode::None;
+            QQuickItem::mousePressEvent(event);
+        }
     } else if(event->button() == Qt::MiddleButton) {
         // Middle button for panning
         m_dragMode = DragMode::Pan;
@@ -325,23 +348,27 @@ void Geometry3D::mousePressEvent(QMouseEvent* event) {
 void Geometry3D::mouseMoveEvent(QMouseEvent* event) {
     if(m_dragMode != DragMode::None && m_renderer && m_renderer->camera()) {
         QPointF current_pos = event->position();
-        QPointF delta = current_pos - m_lastMousePos;
 
         if(m_dragMode == DragMode::Pan) {
-            // Pan the camera
-            m_renderer->camera()->pan(static_cast<float>(-delta.x()),
-                                      static_cast<float>(delta.y()));
-            LOG_TRACE("Pan: delta=({}, {})", delta.x(), delta.y());
+            // Pan the camera using improved pixel-based algorithm
+            m_renderer->camera()->panByPixel(
+                static_cast<int>(m_lastMousePos.x()), static_cast<int>(m_lastMousePos.y()),
+                static_cast<int>(current_pos.x()), static_cast<int>(current_pos.y()));
+            LOG_TRACE("Pan: from ({}, {}) to ({}, {})", m_lastMousePos.x(), m_lastMousePos.y(),
+                      current_pos.x(), current_pos.y());
+            m_lastMousePos = current_pos;
         } else if(m_dragMode == DragMode::Orbit) {
-            // Rotate the model using quaternion-based rotation
-            // This avoids gimbal lock and direction inversion issues
-            float sensitivity = 0.3f;
-            m_renderer->rotateModel(static_cast<float>(delta.x()) * sensitivity,
-                                    static_cast<float>(-delta.y()) * sensitivity);
-            LOG_TRACE("Model rotate: delta=({}, {})", delta.x(), delta.y());
-        }
+            // Use trackball for intuitive rotation
+            // The trackball projects mouse positions onto a virtual sphere
+            // and computes the rotation quaternion
+            QQuaternion delta_rotation = m_trackball.rotate(static_cast<int>(current_pos.x()),
+                                                            static_cast<int>(current_pos.y()));
 
-        m_lastMousePos = current_pos;
+            // Apply incremental rotation to the renderer
+            m_renderer->rotateModelByQuaternion(delta_rotation);
+
+            LOG_TRACE("Trackball rotate: pos=({}, {})", current_pos.x(), current_pos.y());
+        }
 
         // Trigger repaint
         if(window()) {

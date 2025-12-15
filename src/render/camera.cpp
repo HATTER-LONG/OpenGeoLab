@@ -139,6 +139,47 @@ void Camera::pan(float delta_x, float delta_y) {
     emit cameraChanged();
 }
 
+void Camera::setViewportSize(int width, int height) {
+    m_viewportWidth = width;
+    m_viewportHeight = height;
+}
+
+void Camera::panByPixel(int prev_x, int prev_y, int curr_x, int curr_y) {
+    // Algorithm based on classic CAD pan implementation:
+    // 1. Calculate half FOV tangent for projection
+    // 2. Normalize mouse delta to viewport dimensions
+    // 3. Scale by camera distance and FOV for world-space movement
+
+    if(m_viewportWidth <= 0 || m_viewportHeight <= 0) {
+        return;
+    }
+
+    float fov_rad = qDegreesToRadians(m_fov);
+    float ts = std::tan(0.5f * fov_rad);
+    float aspect = static_cast<float>(m_viewportWidth) / static_cast<float>(m_viewportHeight);
+
+    // Normalize delta to [-1, 1] range
+    float dxs = static_cast<float>(curr_x - prev_x) / static_cast<float>(m_viewportWidth);
+    float dys = -static_cast<float>(curr_y - prev_y) / static_cast<float>(m_viewportHeight);
+
+    // Calculate world-space pan amount based on distance and FOV
+    // This ensures consistent feel regardless of zoom level
+    float pan_x = m_distance * dxs * 2.0f * ts * aspect;
+    float pan_y = m_distance * dys * 2.0f * ts;
+
+    // Calculate right and up vectors in world space
+    float yaw_rad = qDegreesToRadians(m_yaw);
+    QVector3D right(std::cos(yaw_rad), 0.0f, -std::sin(yaw_rad));
+    QVector3D forward = (m_target - position()).normalized();
+    QVector3D up = QVector3D::crossProduct(right, forward).normalized();
+
+    // Move target (camera follows)
+    m_target -= right * pan_x;
+    m_target -= up * pan_y;
+
+    emit cameraChanged();
+}
+
 void Camera::fitToBounds(const QVector3D& min_point, const QVector3D& max_point, float margin) {
     // Calculate bounding box center and size
     QVector3D center = (min_point + max_point) * 0.5f;

@@ -242,7 +242,7 @@ Window {
         id: label
         color: root.textColor
         wrapMode: Text.WordWrap
-        text: qsTr("OpenGeoLab - CAE Software. Use Ribbon toolbar for geometry modeling, mesh generation and AI assistant.\nDrag with left mouse button to rotate, Shift+drag or middle button to pan, scroll wheel to zoom.")
+        text: qsTr("OpenGeoLab - CAE Software. Use Ribbon toolbar for geometry modeling, mesh generation and AI assistant.\nCtrl+drag to rotate (trackball), Shift+drag or middle button to pan, scroll wheel to zoom.")
         anchors.right: parent.right
         anchors.left: modelTreePanel.right
         anchors.leftMargin: 20

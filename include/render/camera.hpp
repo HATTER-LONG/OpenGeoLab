@@ -140,11 +140,30 @@ public:
     // ========================================================================
 
     /**
-     * @brief Pan camera in view space
+     * @brief Pan camera in view space (legacy method)
      * @param delta_x Horizontal pan amount
      * @param delta_y Vertical pan amount
      */
     void pan(float delta_x, float delta_y);
+
+    /**
+     * @brief Pan camera using pixel coordinates (improved method)
+     * @param prev_x Previous mouse x in pixels
+     * @param prev_y Previous mouse y in pixels
+     * @param curr_x Current mouse x in pixels
+     * @param curr_y Current mouse y in pixels
+     *
+     * This method calculates pan amount based on camera FOV and distance,
+     * providing consistent feel regardless of zoom level.
+     */
+    void panByPixel(int prev_x, int prev_y, int curr_x, int curr_y);
+
+    /**
+     * @brief Set viewport size for pan calculations
+     * @param width Viewport width in pixels
+     * @param height Viewport height in pixels
+     */
+    void setViewportSize(int width, int height);
 
     // ========================================================================
     // View Fitting
@@ -221,6 +240,10 @@ private:
     float m_fov = 45.0f;
     float m_nearPlane = 0.01f;
     float m_farPlane = 10000.0f;
+
+    // Viewport size for pan calculations
+    int m_viewportWidth = 800;
+    int m_viewportHeight = 600;
 
     // Constraints
     static constexpr float MIN_PITCH = -89.0f;
