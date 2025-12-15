@@ -14,6 +14,7 @@
 
 #include <algorithm>
 #include <limits>
+#include <string>
 #include <vector>
 
 namespace OpenGeoLab {
@@ -91,6 +92,13 @@ class MeshData : public GeometryData {
 public:
     MeshData() = default;
 
+    struct PartInfo {
+        std::string m_name;
+        int m_solidIndex = -1;
+        int m_faceCount = 0;
+        int m_edgeCount = 0;
+    };
+
     /**
      * @brief Set vertex data (moves data to avoid copying)
      * @param vertex_data Vector containing position, normal, and color data (9 floats per vertex)
@@ -104,6 +112,10 @@ public:
     void setIndexData(std::vector<unsigned int>&& index_data) {
         m_indexData = std::move(index_data);
     }
+
+    void setParts(std::vector<PartInfo>&& parts) { m_parts = std::move(parts); }
+
+    const std::vector<PartInfo>& parts() const { return m_parts; }
 
     const float* vertices() const override { return m_vertexData.data(); }
 
@@ -120,6 +132,7 @@ public:
 private:
     std::vector<float> m_vertexData;       // position(3) + normal(3) + color(3)
     std::vector<unsigned int> m_indexData; // Triangle indices
+    std::vector<PartInfo> m_parts;
 };
 
 } // namespace Geometry

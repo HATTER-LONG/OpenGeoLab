@@ -9,6 +9,7 @@
 #include <model_importer.hpp>
 
 #include <core/logger.hpp>
+#include <geometry/geometry.hpp>
 #include <geometry3d.hpp>
 #include <io/model_reader_registry.hpp>
 
@@ -62,6 +63,28 @@ void ModelImporter::importModel(const QUrl& file_url) {
         m_targetRenderer->setCustomGeometry(geometry_data);
         LOG_INFO("Model loaded successfully: {} vertices, {} indices", geometry_data->vertexCount(),
                  geometry_data->indexCount());
+
+        // Emit optional metadata for UI panels
+        emit modelStatisticsAvailable(geometry_data->vertexCount(),
+                                      geometry_data->indexCount() / 3);
+
+        if(auto mesh_data = std::dynamic_pointer_cast<Geometry::MeshData>(geometry_data)) {
+            QVariantList parts;
+            const auto& mesh_parts = mesh_data->parts();
+            parts.reserve(static_cast<int>(mesh_parts.size()));
+            for(const auto& p : mesh_parts) {
+                QVariantMap item;
+                item.insert("name", QString::fromStdString(p.m_name));
+                item.insert("solidIndex", p.m_solidIndex);
+                item.insert("faceCount", p.m_faceCount);
+                item.insert("edgeCount", p.m_edgeCount);
+                parts.push_back(item);
+            }
+            emit modelPartsAvailable(parts);
+        } else {
+            emit modelPartsAvailable(QVariantList{});
+        }
+
         emit modelLoaded(QFileInfo(file_path).fileName());
     } else {
         LOG_DEBUG("No target renderer set - model loaded but not displayed");

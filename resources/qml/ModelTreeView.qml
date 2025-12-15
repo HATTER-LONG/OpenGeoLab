@@ -27,11 +27,23 @@ Rectangle {
     // Currently selected item
     property int selectedIndex: -1
 
+    property int vertices: 0
+    property int triangles: 0
+
+    property string importedFilename: ""
+    property var importedParts: []
+
     // Signals
     signal itemSelected(int index, string name, string type)
     signal itemDoubleClicked(int index, string name, string type)
 
     color: backgroundColor
+
+    onImportedFilenameChanged: {
+        if (importedFilename && importedFilename.length > 0) {
+            modelTreeView.setImportedModel(importedFilename, modelTreeView.vertices, modelTreeView.triangles, modelTreeView.importedParts);
+        }
+    }
 
     // Right border for visual separation
     Rectangle {
@@ -53,6 +65,10 @@ Rectangle {
             level: 0
             expanded: true
             hasChildren: true
+            parentIndex: -1
+            nodeVisible: true
+            subtitle: ""
+            badgeText: ""
         }
         ListElement {
             name: "Geometry"
@@ -60,6 +76,10 @@ Rectangle {
             level: 1
             expanded: true
             hasChildren: true
+            parentIndex: 0
+            nodeVisible: true
+            subtitle: ""
+            badgeText: ""
         }
         ListElement {
             name: "Bodies"
@@ -67,6 +87,10 @@ Rectangle {
             level: 2
             expanded: false
             hasChildren: true
+            parentIndex: 1
+            nodeVisible: true
+            subtitle: ""
+            badgeText: ""
         }
         ListElement {
             name: "Surfaces"
@@ -74,6 +98,10 @@ Rectangle {
             level: 2
             expanded: false
             hasChildren: false
+            parentIndex: 1
+            nodeVisible: true
+            subtitle: ""
+            badgeText: ""
         }
         ListElement {
             name: "Curves"
@@ -81,6 +109,10 @@ Rectangle {
             level: 2
             expanded: false
             hasChildren: false
+            parentIndex: 1
+            nodeVisible: true
+            subtitle: ""
+            badgeText: ""
         }
         ListElement {
             name: "Points"
@@ -88,6 +120,10 @@ Rectangle {
             level: 2
             expanded: false
             hasChildren: false
+            parentIndex: 1
+            nodeVisible: true
+            subtitle: ""
+            badgeText: ""
         }
         ListElement {
             name: "Mesh"
@@ -95,6 +131,10 @@ Rectangle {
             level: 1
             expanded: false
             hasChildren: true
+            parentIndex: 0
+            nodeVisible: true
+            subtitle: ""
+            badgeText: ""
         }
         ListElement {
             name: "Materials"
@@ -102,6 +142,10 @@ Rectangle {
             level: 1
             expanded: false
             hasChildren: false
+            parentIndex: 0
+            nodeVisible: true
+            subtitle: ""
+            badgeText: ""
         }
     }
 
@@ -128,7 +172,7 @@ Rectangle {
                 }
 
                 Text {
-                    text: "Model Tree"
+                    text: "Part Tree"
                     font.pixelSize: 13
                     font.bold: true
                     color: "white"
@@ -181,6 +225,7 @@ Rectangle {
                             for (let i = 0; i < treeModel.count; i++) {
                                 treeModel.setProperty(i, "expanded", false);
                             }
+                            modelTreeView.recomputeVisibility();
                         }
                     }
                 }
@@ -249,11 +294,18 @@ Rectangle {
                 required property int level
                 required property bool expanded
                 required property bool hasChildren
+                required property int parentIndex
+                required property bool nodeVisible
+                required property string subtitle
+                required property string badgeText
 
                 width: treeListView.width
-                height: 26
+                height: treeItemDelegate.nodeVisible ? 34 : 0
+                opacity: treeItemDelegate.nodeVisible ? 1 : 0
+                visible: treeItemDelegate.nodeVisible
                 color: modelTreeView.selectedIndex === index ? modelTreeView.selectedColor : (itemMouseArea.containsMouse ? modelTreeView.itemHoverColor : "transparent")
                 radius: 3
+                clip: true
 
                 RowLayout {
                     anchors.fill: parent
@@ -279,6 +331,7 @@ Rectangle {
                             anchors.fill: parent
                             onClicked: {
                                 treeModel.setProperty(treeItemDelegate.index, "expanded", !treeItemDelegate.expanded);
+                                modelTreeView.recomputeVisibility();
                             }
                         }
                     }
@@ -298,12 +351,46 @@ Rectangle {
                     }
 
                     // Node name
-                    Text {
-                        text: treeItemDelegate.name
-                        font.pixelSize: 12
-                        color: modelTreeView.textColor
-                        elide: Text.ElideRight
+                    ColumnLayout {
                         Layout.fillWidth: true
+                        spacing: 0
+
+                        Text {
+                            text: treeItemDelegate.name
+                            font.pixelSize: 12
+                            font.bold: treeItemDelegate.nodeType === "root" || treeItemDelegate.nodeType === "folder"
+                            color: modelTreeView.textColor
+                            elide: Text.ElideRight
+                            Layout.fillWidth: true
+                        }
+
+                        Text {
+                            visible: treeItemDelegate.subtitle.length > 0
+                            text: treeItemDelegate.subtitle
+                            font.pixelSize: 10
+                            color: Qt.rgba(modelTreeView.textColor.r, modelTreeView.textColor.g, modelTreeView.textColor.b, 0.7)
+                            elide: Text.ElideRight
+                            Layout.fillWidth: true
+                        }
+                    }
+
+                    // Badge (right aligned)
+                    Rectangle {
+                        visible: treeItemDelegate.badgeText.length > 0
+                        Layout.preferredHeight: 18
+                        Layout.preferredWidth: Math.max(34, badgeLabel.implicitWidth + 10)
+                        radius: 9
+                        color: Qt.rgba(1, 1, 1, 0.08)
+                        border.width: 1
+                        border.color: modelTreeView.borderColor
+
+                        Text {
+                            id: badgeLabel
+                            anchors.centerIn: parent
+                            text: treeItemDelegate.badgeText
+                            font.pixelSize: 10
+                            color: modelTreeView.textColor
+                        }
                     }
                 }
 
@@ -327,6 +414,7 @@ Rectangle {
                         modelTreeView.itemDoubleClicked(treeItemDelegate.index, treeItemDelegate.name, treeItemDelegate.nodeType);
                         if (treeItemDelegate.hasChildren) {
                             treeModel.setProperty(treeItemDelegate.index, "expanded", !treeItemDelegate.expanded);
+                            modelTreeView.recomputeVisibility();
                         }
                     }
                 }
@@ -350,7 +438,7 @@ Rectangle {
                 spacing: 5
 
                 Text {
-                    text: "Items: " + treeModel.count
+                    text: "Items: " + modelTreeView.visibleItemCount() + " / " + treeModel.count
                     font.pixelSize: 11
                     color: Qt.rgba(0.6, 0.6, 0.6, 1)
                 }
@@ -359,54 +447,10 @@ Rectangle {
                     Layout.fillWidth: true
                 }
 
-                // Add button
-                Rectangle {
-                    Layout.preferredWidth: 22
-                    Layout.preferredHeight: 22
-                    color: addArea.containsMouse ? Qt.rgba(0.3, 0.3, 0.3, 1) : "transparent"
-                    radius: 3
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: "+"
-                        font.pixelSize: 14
-                        font.bold: true
-                        color: modelTreeView.textColor
-                    }
-
-                    MouseArea {
-                        id: addArea
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        onClicked: {
-                            console.log("Add new item");
-                        }
-                    }
-                }
-
-                // Delete button
-                Rectangle {
-                    Layout.preferredWidth: 22
-                    Layout.preferredHeight: 22
-                    color: deleteArea.containsMouse ? Qt.rgba(0.5, 0.2, 0.2, 1) : "transparent"
-                    radius: 3
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: "🗑"
-                        font.pixelSize: 12
-                    }
-
-                    MouseArea {
-                        id: deleteArea
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        onClicked: {
-                            if (modelTreeView.selectedIndex >= 0) {
-                                console.log("Delete selected item");
-                            }
-                        }
-                    }
+                Text {
+                    text: modelTreeView.vertices > 0 ? ("V: " + modelTreeView.vertices + "  T: " + modelTreeView.triangles) : ""
+                    font.pixelSize: 11
+                    color: Qt.rgba(0.6, 0.6, 0.6, 1)
                 }
             }
         }
@@ -421,6 +465,8 @@ Rectangle {
             return "📁";
         case "body":
             return "🧊";
+        case "part":
+            return "🧩";
         case "surface":
             return "◻";
         case "curve":
@@ -445,6 +491,8 @@ Rectangle {
             return "#FFA500";  // Orange
         case "body":
             return "#4FC3F7";  // Light blue
+        case "part":
+            return "#4FC3F7";  // Light blue
         case "surface":
             return "#81C784";  // Light green
         case "curve":
@@ -467,13 +515,103 @@ Rectangle {
             nodeType: type,
             level: parentLevel + 1,
             expanded: false,
-            hasChildren: false
+            hasChildren: false,
+            parentIndex: -1,
+            nodeVisible: true,
+            subtitle: "",
+            badgeText: ""
         });
+        modelTreeView.recomputeVisibility();
     }
 
     // Public function: Clear model tree
     function clearTree(): void {
         treeModel.clear();
+        modelTreeView.selectedIndex = -1;
+    }
+
+    function visibleItemCount(): int {
+        let c = 0;
+        for (let i = 0; i < treeModel.count; i++) {
+            if (treeModel.get(i).nodeVisible)
+                c++;
+        }
+        return c;
+    }
+
+    function recomputeVisibility(): void {
+        for (let i = 0; i < treeModel.count; i++) {
+            const node = treeModel.get(i);
+            if (node.parentIndex === -1) {
+                treeModel.setProperty(i, "nodeVisible", true);
+                continue;
+            }
+
+            const parent = treeModel.get(node.parentIndex);
+            const parentVisible = parent.nodeVisible === true;
+            const parentExpanded = parent.expanded === true;
+            treeModel.setProperty(i, "nodeVisible", parentVisible && parentExpanded);
+        }
+    }
+
+    // Public function: Update tree using imported model parts
+    function setImportedModel(filename: string, vertices: int, triangles: int, parts: var): void {
+        modelTreeView.vertices = vertices;
+        modelTreeView.triangles = triangles;
+
+        clearTree();
+
+        // Root
+        treeModel.append({
+            name: filename && filename.length > 0 ? filename : "Model",
+            nodeType: "root",
+            level: 0,
+            expanded: true,
+            hasChildren: true,
+            parentIndex: -1,
+            nodeVisible: true,
+            subtitle: vertices > 0 ? ("Vertices: " + vertices + "  Triangles: " + triangles) : "",
+            badgeText: ""
+        });
+
+        // Parts folder
+        const partsFolderIndex = treeModel.count;
+        const partCount = parts ? parts.length : 0;
+        treeModel.append({
+            name: "Parts",
+            nodeType: "folder",
+            level: 1,
+            expanded: true,
+            hasChildren: partCount > 0,
+            parentIndex: 0,
+            nodeVisible: true,
+            subtitle: partCount > 0 ? (partCount + " items") : "No parts",
+            badgeText: partCount > 0 ? ("" + partCount) : ""
+        });
+
+        // Part nodes
+        if (parts && parts.length) {
+            for (let i = 0; i < parts.length; i++) {
+                const p = parts[i];
+                const faceCount = p.faceCount !== undefined ? p.faceCount : 0;
+                const edgeCount = p.edgeCount !== undefined ? p.edgeCount : 0;
+                const subtitle = "Faces: " + faceCount + "  Edges: " + edgeCount;
+
+                treeModel.append({
+                    name: p.name ? p.name : ("Part " + (i + 1)),
+                    nodeType: "part",
+                    level: 2,
+                    expanded: false,
+                    hasChildren: false,
+                    parentIndex: partsFolderIndex,
+                    nodeVisible: true,
+                    subtitle: subtitle,
+                    badgeText: faceCount > 0 ? ("F " + faceCount) : ""
+                });
+            }
+        }
+
+        recomputeVisibility();
     }
 
     // Public function: Reset to default structure
@@ -484,56 +622,92 @@ Rectangle {
             nodeType: "root",
             level: 0,
             expanded: true,
-            hasChildren: true
+            hasChildren: true,
+            parentIndex: -1,
+            nodeVisible: true,
+            subtitle: "",
+            badgeText: ""
         });
         treeModel.append({
             name: "Geometry",
             nodeType: "folder",
             level: 1,
             expanded: true,
-            hasChildren: true
+            hasChildren: true,
+            parentIndex: 0,
+            nodeVisible: true,
+            subtitle: "",
+            badgeText: ""
         });
         treeModel.append({
             name: "Bodies",
             nodeType: "folder",
             level: 2,
             expanded: false,
-            hasChildren: true
+            hasChildren: true,
+            parentIndex: 1,
+            nodeVisible: true,
+            subtitle: "",
+            badgeText: ""
         });
         treeModel.append({
             name: "Surfaces",
             nodeType: "folder",
             level: 2,
             expanded: false,
-            hasChildren: false
+            hasChildren: false,
+            parentIndex: 1,
+            nodeVisible: true,
+            subtitle: "",
+            badgeText: ""
         });
         treeModel.append({
             name: "Curves",
             nodeType: "folder",
             level: 2,
             expanded: false,
-            hasChildren: false
+            hasChildren: false,
+            parentIndex: 1,
+            nodeVisible: true,
+            subtitle: "",
+            badgeText: ""
         });
         treeModel.append({
             name: "Points",
             nodeType: "folder",
             level: 2,
             expanded: false,
-            hasChildren: false
+            hasChildren: false,
+            parentIndex: 1,
+            nodeVisible: true,
+            subtitle: "",
+            badgeText: ""
         });
         treeModel.append({
             name: "Mesh",
             nodeType: "folder",
             level: 1,
             expanded: false,
-            hasChildren: true
+            hasChildren: true,
+            parentIndex: 0,
+            nodeVisible: true,
+            subtitle: "",
+            badgeText: ""
         });
         treeModel.append({
             name: "Materials",
             nodeType: "folder",
             level: 1,
             expanded: false,
-            hasChildren: false
+            hasChildren: false,
+            parentIndex: 0,
+            nodeVisible: true,
+            subtitle: "",
+            badgeText: ""
         });
+
+        modelTreeView.vertices = 0;
+        modelTreeView.triangles = 0;
+        recomputeVisibility();
     }
 }

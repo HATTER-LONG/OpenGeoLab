@@ -28,6 +28,10 @@ Window {
     readonly property color borderColor: "#3a3f4b"
     readonly property color renderBackground: "#2d3238"
 
+    property int lastVertices: 0
+    property int lastTriangles: 0
+    property var lastParts: []
+
     Component.onCompleted: {
         ModelImporter.setTargetRenderer(geometryRenderer);
         GeometryCreator.setTargetRenderer(geometryRenderer);
@@ -46,13 +50,28 @@ Window {
 
     Connections {
         target: ModelImporter
+        function onModelStatisticsAvailable(vertices, triangles) {
+            root.lastVertices = vertices;
+            root.lastTriangles = triangles;
+        }
+        function onModelPartsAvailable(parts) {
+            root.lastParts = parts;
+        }
         function onModelLoaded(filename) {
             statusText.text = "Loaded: " + filename;
             statusText.color = "lightgreen";
+
+            // Rebuild left panel using imported Part info
+            modelTreePanel.vertices = root.lastVertices;
+            modelTreePanel.triangles = root.lastTriangles;
+            modelTreePanel.importedParts = root.lastParts;
+            modelTreePanel.importedFilename = filename;
         }
         function onModelLoadFailed(error) {
             statusText.text = "Error: " + error;
             statusText.color = "red";
+
+            modelTreePanel.resetToDefault();
         }
     }
 

@@ -19,6 +19,7 @@
 #include <Poly_Array1OfTriangle.hxx>
 #include <Poly_Triangulation.hxx>
 #include <STEPControl_Reader.hxx>
+#include <TopAbs_ShapeEnum.hxx>
 #include <TopExp_Explorer.hxx>
 #include <TopLoc_Location.hxx>
 #include <TopoDS.hxx>
@@ -195,6 +196,58 @@ std::shared_ptr<Geometry::GeometryData> StepReader::read(const std::string& file
             return nullptr;
         }
 
+        // Extract Part information (solids) for UI tree display
+        std::vector<Geometry::MeshData::PartInfo> parts;
+        {
+            int solid_index = 0;
+            for(TopExp_Explorer solid_exp(shape, TopAbs_SOLID); solid_exp.More();
+                solid_exp.Next()) {
+                const TopoDS_Shape solid = solid_exp.Current();
+                Geometry::MeshData::PartInfo part;
+                part.m_solidIndex = solid_index;
+                part.m_name = "Solid " + std::to_string(solid_index + 1);
+
+                int face_count = 0;
+                for(TopExp_Explorer face_exp(solid, TopAbs_FACE); face_exp.More();
+                    face_exp.Next()) {
+                    ++face_count;
+                }
+
+                int edge_count = 0;
+                for(TopExp_Explorer edge_exp(solid, TopAbs_EDGE); edge_exp.More();
+                    edge_exp.Next()) {
+                    ++edge_count;
+                }
+
+                part.m_faceCount = face_count;
+                part.m_edgeCount = edge_count;
+                parts.push_back(std::move(part));
+                ++solid_index;
+            }
+
+            if(parts.empty()) {
+                Geometry::MeshData::PartInfo part;
+                part.m_solidIndex = 0;
+                part.m_name = "Body 1";
+
+                int face_count = 0;
+                for(TopExp_Explorer face_exp(shape, TopAbs_FACE); face_exp.More();
+                    face_exp.Next()) {
+                    ++face_count;
+                }
+
+                int edge_count = 0;
+                for(TopExp_Explorer edge_exp(shape, TopAbs_EDGE); edge_exp.More();
+                    edge_exp.Next()) {
+                    ++edge_count;
+                }
+
+                part.m_faceCount = face_count;
+                part.m_edgeCount = edge_count;
+                parts.push_back(std::move(part));
+            }
+        }
+
         // Step 2: Perform triangulation
         if(!triangulateShape(shape)) {
             return nullptr;
@@ -211,6 +264,7 @@ std::shared_ptr<Geometry::GeometryData> StepReader::read(const std::string& file
         auto mesh_data = std::make_shared<Geometry::MeshData>();
         mesh_data->setVertexData(std::move(vertex_data));
         mesh_data->setIndexData(std::move(index_data));
+        mesh_data->setParts(std::move(parts));
 
         LOG_INFO("STEP loaded: {} vertices, {} triangles", mesh_data->vertexCount(),
                  mesh_data->indexCount() / 3);

@@ -11,6 +11,7 @@
 #include <QObject>
 #include <QQmlEngine>
 #include <QUrl>
+#include <QVariantList>
 
 namespace OpenGeoLab {
 namespace UI {
@@ -60,6 +61,19 @@ signals:
      * @param error Error message describing the failure
      */
     void modelLoadFailed(const QString& error);
+
+    /**
+     * @brief Emitted when basic mesh statistics are available
+     * @param vertices Number of vertices
+     * @param triangles Number of triangles (indexCount/3)
+     */
+    void modelStatisticsAvailable(int vertices, int triangles);
+
+    /**
+     * @brief Emitted when Part information is available for UI tree display
+     * @param parts List of QVariantMap items: { name, solidIndex, faceCount, edgeCount }
+     */
+    void modelPartsAvailable(const QVariantList& parts);
 
 private:
     Geometry3D* m_targetRenderer = nullptr;
