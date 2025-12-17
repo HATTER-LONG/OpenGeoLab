@@ -1,3 +1,8 @@
+/**
+ * @file main.cpp
+ * @brief Application entry point
+ */
+
 #include <util/logger.hpp>
 
 #include <QGuiApplication>
@@ -16,11 +21,7 @@
 
 #ifdef Q_OS_WIN
 /**
- * @brief Export symbols to hint hybrid graphics systems to prefer discrete GPU
- *
- * These exports tell NVIDIA Optimus and AMD PowerXpress systems to use the
- * high-performance discrete GPU instead of the integrated GPU for better
- * OpenGL rendering performance.
+ * @brief Hint hybrid graphics systems to prefer the discrete GPU
  */
 extern "C" {
 Q_DECL_EXPORT unsigned long NvOptimusEnablement = 0x00000001; // NOLINT
@@ -30,10 +31,7 @@ Q_DECL_EXPORT int AmdPowerXpressRequestHighPerformance = 1;   // NOLINT
 
 namespace {
 /**
- * @brief Initialize Qt environment with high DPI support
- *
- * Configures Qt to properly handle high DPI displays by using the PassThrough
- * scaling policy, which provides smooth scaling on all display resolutions.
+ * @brief Configure Qt for high-DPI displays
  */
 void initQtEnvironment() {
 #if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
@@ -62,34 +60,26 @@ auto main(int argc, char** argv) -> int {
 
     auto result = options.parse(argc, argv);
 
-    // Handle help option
     if(result["help"].as<bool>()) {
         std::cout << options.help() << std::endl;
         return 0;
     }
 
-    // Handle version option
     if(result["version"].as<bool>()) {
         std::cout << "Greeter, version " << 0.1 << std::endl;
         return 0;
     }
 
-    // Initialize Qt environment for high DPI support
     initQtEnvironment();
 
     QQuickWindow::setGraphicsApi(QSGRendererInterface::OpenGL);
 
-    // Use Basic style to avoid native Windows style limitations
-    // The Basic style provides more consistent cross-platform behavior
+    // Prefer a consistent cross-platform controls style.
     qputenv("QT_QUICK_CONTROLS_STYLE", "Basic");
 
     QGuiApplication app(argc, argv);
     QQmlApplicationEngine engine;
 
-    // Note: TriangleItem is automatically registered via QML_NAMED_ELEMENT
-    // No explicit qmlRegisterType is needed
-
-    // Handle successful QML object creation
     QObject::connect(
         &engine, &QQmlApplicationEngine::objectCreated, &app,
         [](QObject* obj, const QUrl& obj_url) {
@@ -102,7 +92,6 @@ auto main(int argc, char** argv) -> int {
         },
         Qt::QueuedConnection);
 
-    // Handle QML object creation failure
     QObject::connect(
         &engine, &QQmlApplicationEngine::objectCreationFailed, &app,
         []() {
@@ -111,7 +100,6 @@ auto main(int argc, char** argv) -> int {
         },
         Qt::QueuedConnection);
 
-    // Load main QML file
     engine.load(QUrl("qrc:/scenegraph/opengeolab/resources/qml/Main.qml"));
 
     return app.exec();

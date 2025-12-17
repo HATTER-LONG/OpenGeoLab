@@ -1,6 +1,6 @@
 /**
  * @file logger.cpp
- * @brief Implementation of global logger functions for the OpenGeoLab project
+ * @brief Implementation of the global logger accessor
  */
 
 #include <util/logger.hpp>
