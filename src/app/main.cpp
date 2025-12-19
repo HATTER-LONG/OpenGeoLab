@@ -100,7 +100,7 @@ auto main(int argc, char** argv) -> int {
         },
         Qt::QueuedConnection);
 
-    engine.load(QUrl("qrc:/scenegraph/opengeolab/resources/qml/Main.qml"));
+    engine.load(QUrl("qrc:/opengeolab/resources/qml/Main.qml"));
 
     return app.exec();
 }

@@ -175,7 +175,7 @@ qt_add_qml_module(
   VERSION
   1.0
   RESOURCE_PREFIX
-  /scenegraph/opengeolab
+  /opengeolab
   NO_RESOURCE_TARGET_PATH
   QML_FILES
   resources/qml/Main.qml
