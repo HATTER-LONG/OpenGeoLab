@@ -13,37 +13,21 @@ ApplicationWindow {
         anchors.fill: parent
 
         // Ribbon Menu
-        Rectangle {
+        RibbonMenu {
             id: ribbonMenu
             width: parent.width
-            height: 120
-            color: "#2c3e50"
-            Row {
-                anchors.fill: parent
-                anchors.margins: 10
-                spacing: 20
 
-                // Example Ribbon Buttons
-                Button {
-                    text: "File"
-                    width: 80
-                    height: 40
-                }
-                Button {
-                    text: "Edit"
-                    width: 80
-                    height: 40
-                }
-                Button {
-                    text: "View"
-                    width: 80
-                    height: 40
-                }
-                Button {
-                    text: "Help"
-                    width: 80
-                    height: 40
-                }
+            onFileClicked: {
+                console.log("File menu clicked");
+            }
+            onEditClicked: {
+                console.log("Edit menu clicked");
+            }
+            onViewClicked: {
+                console.log("View menu clicked");
+            }
+            onHelpClicked: {
+                console.log("Help menu clicked");
             }
         }
         // Main Content Area
