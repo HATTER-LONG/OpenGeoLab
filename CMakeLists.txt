@@ -152,9 +152,15 @@ file(GLOB_RECURSE sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c
 
 qt_add_executable(${PROJECT_NAME} ${sources} ${headers})
 
+# Qt Quick Controls 2 configuration file must be available as :/qtquickcontrols2.conf
+qt_add_resources(${PROJECT_NAME} opengeolab_controls_conf PREFIX "/" FILES qtquickcontrols2.conf)
+
 # ==============================================================================
 # QML Module Configuration
 # ==============================================================================
+
+# Ensure Theme is registered as a QML singleton (matches `pragma Singleton` in Theme.qml)
+set_source_files_properties(resources/qml/Theme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 
 # Collect all SVG icon resources automatically (using relative paths)
 file(GLOB ICON_RESOURCES_ABS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/*.svg")
@@ -179,8 +185,10 @@ qt_add_qml_module(
   NO_RESOURCE_TARGET_PATH
   QML_FILES
   resources/qml/Main.qml
-  resources/qml/RibbonMenu.qml
-  resources/qml/RibbonActions.qml
+  resources/qml/Theme.qml
+  resources/qml/RibbonMenu/RibbonMenu.qml
+  resources/qml/RibbonMenu/RibbonActions.qml
+  resources/qml/RibbonMenu/RibbonGroupSeparator.qml
   RESOURCES
   ${ICON_RESOURCES}
 )

@@ -1,7 +1,8 @@
 pragma ComponentBehavior: Bound
 import QtQuick
-import QtQuick.Controls
-import "." as App
+import QtQuick.Controls.Material
+import QtQuick.Layouts
+import OpenGeoLab 1.0
 
 ApplicationWindow {
     id: root
@@ -10,32 +11,31 @@ ApplicationWindow {
     height: Screen.height
     title: qsTr("OpenGeoLab")
 
-    App.RibbonActions {
+    RibbonActions {
         id: ribbonActions
     }
 
-    Column {
+    ColumnLayout {
         anchors.fill: parent
+        spacing: 0
 
         // Ribbon Menu
         RibbonMenu {
             id: ribbonMenu
-            width: parent.width
+            Layout.fillWidth: true
             actions: ribbonActions.defaultActions
         }
         // Main Content Area
         Rectangle {
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.top: ribbonMenu.bottom
-            anchors.bottom: parent.bottom
-            color: "white"
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            color: Theme.ribbonBackgroundColor
 
             Text {
                 text: "Welcome to OpenGeoLab!"
                 anchors.centerIn: parent
                 font.pointSize: 24
-                color: "black"
+                color: Theme.ribbonBackgroundColor
             }
         }
     }

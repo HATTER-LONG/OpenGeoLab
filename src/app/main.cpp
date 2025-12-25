@@ -74,8 +74,7 @@ auto main(int argc, char** argv) -> int {
 
     QQuickWindow::setGraphicsApi(QSGRendererInterface::OpenGL);
 
-    // Prefer a consistent cross-platform controls style.
-    qputenv("QT_QUICK_CONTROLS_STYLE", "Basic");
+    qputenv("QT_QUICK_CONTROLS_CONF", ":/qtquickcontrols2.conf");
 
     QGuiApplication app(argc, argv);
     QQmlApplicationEngine engine;
