@@ -74,7 +74,7 @@ auto main(int argc, char** argv) -> int {
 
     QQuickWindow::setGraphicsApi(QSGRendererInterface::OpenGL);
 
-    qputenv("QT_QUICK_CONTROLS_CONF", ":/qtquickcontrols2.conf");
+    qputenv("QT_QUICK_CONTROLS_STYLE", "Basic");
 
     QGuiApplication app(argc, argv);
     QQmlApplicationEngine engine;

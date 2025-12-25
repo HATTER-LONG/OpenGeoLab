@@ -1,6 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
-import QtQuick.Controls.Material
+import QtQuick.Controls
 import QtQuick.Layouts
 import OpenGeoLab 1.0
 
@@ -69,7 +69,27 @@ Rectangle {
             id: themeToggle
             Layout.alignment: Qt.AlignVCenter
             text: Theme.mode === Theme.dark ? qsTr("Light Theme") : qsTr("Dark Theme")
-            onClicked: Theme.mode = Theme.mode === Theme.dark ? Theme.light : Theme.dark
+            onClicked: Theme.mode = (Theme.mode === Theme.dark) ? Theme.light : Theme.dark
+
+            font.family: Theme.fontFamily
+            font.pointSize: Theme.fontPointSizeBase
+
+            contentItem: Text {
+                text: themeToggle.text
+                color: themeToggle.enabled ? Theme.buttonTextColor : Theme.buttonDisabledTextColor
+                font.family: Theme.fontFamily
+                font.pointSize: Theme.fontPointSizeBase
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+                elide: Text.ElideRight
+            }
+
+            background: Rectangle {
+                radius: 6
+                border.width: 1
+                border.color: Theme.buttonBorderColor
+                color: themeToggle.enabled ? (themeToggle.down ? Theme.buttonPressedColor : (themeToggle.hovered ? Theme.buttonHoverColor : Theme.buttonBackgroundColor)) : Theme.buttonDisabledBackgroundColor
+            }
         }
     }
 
@@ -77,11 +97,32 @@ Rectangle {
         id: defaultButtonDelegate
 
         Button {
+            id: actionButton
             property var modelData
 
             text: modelData.label ?? ""
             width: 96
             height: 40
+
+            font.family: Theme.fontFamily
+            font.pointSize: Theme.fontPointSizeBase
+
+            contentItem: Text {
+                text: actionButton.text
+                color: actionButton.enabled ? Theme.buttonTextColor : Theme.buttonDisabledTextColor
+                font.family: actionButton.font.family
+                font.pointSize: actionButton.font.pointSize
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+                elide: Text.ElideRight
+            }
+
+            background: Rectangle {
+                radius: 6
+                border.width: 1
+                border.color: Theme.buttonBorderColor
+                color: actionButton.enabled ? (actionButton.down ? Theme.buttonPressedColor : (actionButton.hovered ? Theme.buttonHoverColor : Theme.buttonBackgroundColor)) : Theme.buttonDisabledBackgroundColor
+            }
 
             onClicked: {
                 if (typeof modelData.onTriggered === "function") {

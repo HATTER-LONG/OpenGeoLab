@@ -152,9 +152,6 @@ file(GLOB_RECURSE sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c
 
 qt_add_executable(${PROJECT_NAME} ${sources} ${headers})
 
-# Qt Quick Controls 2 configuration file must be available as :/qtquickcontrols2.conf
-qt_add_resources(${PROJECT_NAME} opengeolab_controls_conf PREFIX "/" FILES qtquickcontrols2.conf)
-
 # ==============================================================================
 # QML Module Configuration
 # ==============================================================================
