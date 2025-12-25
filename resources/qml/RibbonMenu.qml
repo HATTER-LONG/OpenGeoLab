@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 
@@ -7,38 +8,42 @@ Rectangle {
     height: 120
     color: "#2c3e50"
 
-    signal fileClicked
-    signal editClicked
-    signal viewClicked
-    signal helpClicked
+    // Generic signal keeps the interface stable while letting callers attach handlers for any action.
+    signal actionTriggered(string actionId, var action)
+
+    // Provide data-driven actions instead of per-button signals.
+    property var actions: []
+
+    // Allow consumers to override how buttons look without rewriting the layout.
+    property Component buttonDelegate: defaultButtonDelegate
+
     Row {
         anchors.fill: parent
         anchors.margins: 10
-        spacing: 20
+        spacing: 12
+
+        Repeater {
+            model: ribbonMenu.actions
+            delegate: ribbonMenu.buttonDelegate
+        }
+    }
+
+    Component {
+        id: defaultButtonDelegate
 
         Button {
-            text: "File"
-            width: 80
+            required property var modelData
+
+            text: modelData.label ?? ""
+            width: 96
             height: 40
-            onClicked: ribbonMenu.fileClicked()
-        }
-        Button {
-            text: "Edit"
-            width: 80
-            height: 40
-            onClicked: ribbonMenu.editClicked()
-        }
-        Button {
-            text: "View"
-            width: 80
-            height: 40
-            onClicked: ribbonMenu.viewClicked()
-        }
-        Button {
-            text: "Help"
-            width: 80
-            height: 40
-            onClicked: ribbonMenu.helpClicked()
+
+            onClicked: {
+                if (typeof modelData.onTriggered === "function") {
+                    modelData.onTriggered(modelData);
+                }
+                ribbonMenu.actionTriggered(modelData.id ?? "", modelData);
+            }
         }
     }
 }

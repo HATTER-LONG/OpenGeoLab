@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
+import "." as App
 
 ApplicationWindow {
     id: root
@@ -9,6 +10,10 @@ ApplicationWindow {
     height: Screen.height
     title: qsTr("OpenGeoLab")
 
+    App.RibbonActions {
+        id: ribbonActions
+    }
+
     Column {
         anchors.fill: parent
 
@@ -16,19 +21,7 @@ ApplicationWindow {
         RibbonMenu {
             id: ribbonMenu
             width: parent.width
-
-            onFileClicked: {
-                console.log("File menu clicked");
-            }
-            onEditClicked: {
-                console.log("Edit menu clicked");
-            }
-            onViewClicked: {
-                console.log("View menu clicked");
-            }
-            onHelpClicked: {
-                console.log("Help menu clicked");
-            }
+            actions: ribbonActions.defaultActions
         }
         // Main Content Area
         Rectangle {

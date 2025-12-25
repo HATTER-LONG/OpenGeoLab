@@ -180,6 +180,7 @@ qt_add_qml_module(
   QML_FILES
   resources/qml/Main.qml
   resources/qml/RibbonMenu.qml
+  resources/qml/RibbonActions.qml
   RESOURCES
   ${ICON_RESOURCES}
 )
