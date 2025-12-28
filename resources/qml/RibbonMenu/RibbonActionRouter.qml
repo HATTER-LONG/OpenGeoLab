@@ -1,6 +1,5 @@
 pragma ComponentBehavior: Bound
 import QtQuick
-import OpenGeoLab 1.0
 
 QtObject {
     id: root

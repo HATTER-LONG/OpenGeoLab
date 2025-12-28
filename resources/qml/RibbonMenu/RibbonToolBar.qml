@@ -1,9 +1,8 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
-import QtQuick.Controls
 
-import "."
+// import "."
 
 /**
  * @brief Ribbon container with dynamic tabs and a single action output.
