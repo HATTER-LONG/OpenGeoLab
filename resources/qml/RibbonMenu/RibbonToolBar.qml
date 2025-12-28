@@ -6,33 +6,31 @@ import QtQuick.Controls
 import "."
 
 /**
- * RibbonToolBarV2.qml
- * -------------------
- * 目标：更易移植、更易扩展的 Ribbon 容器。
+ * @brief Ribbon container with dynamic tabs and a single action output.
  *
- * 关键优化：
- * 1) 统一出口：signal actionTriggered(actionId, payload)
- * 2) Tab 动态化：根据 config.tabs 自动生成 Tab
- * 3) 主题可注入：颜色属性开放给宿主（移植到别的程序不用改 Ribbon 内部）
- * 4) 可选配置校验：启动时 validate()
+ * Design goals:
+ * - A single outbound signal: actionTriggered(actionId, payload)
+ * - Tabs generated from config.tabs
+ * - Theme injected via Theme singleton tokens
+ * - Optional config validation on startup
  */
 Rectangle {
     id: root
 
-    // ===== 对外统一出口（替代大量 signals + switch）=====
+    // Single outbound signal (keeps host logic centralized).
     signal actionTriggered(string actionId, var payload)
 
-    // ===== 配置注入：默认使用 RibbonConfigV2（单例）=====
+    // Default config instance.
     RibbonConfig {
         id: defaultConfig
     }
 
     property var config: defaultConfig
 
-    // 当前选中的 Tab（不含 File）
+    // Current tab index (does not include File).
     property int currentTabIndex: 0
 
-    // ===== 主题/颜色（默认值与你旧版接近）=====
+    // Theme tokens.
     property color accentColor: Theme.ribbonAccentColor
     property color hoverColor: Theme.ribbonHoverColor
     property color selectedTabColor: Theme.ribbonSelectedTabColor
@@ -47,7 +45,7 @@ Rectangle {
     color: tabBackgroundColor
 
     Component.onCompleted: {
-        // 配置校验：移植/维护时非常建议打开
+        // Optional config validation; useful during maintenance.
         if (root.config && root.config.validate) {
             const ok = root.config.validate();
             if (!ok)
@@ -55,13 +53,13 @@ Rectangle {
         }
     }
 
-    // ===== FILE MENU（可选：先做最小版，再慢慢增强）=====
+    // File menu popup.
     RibbonFileMenu {
         id: fileMenu
         x: 0
         y: tabBar.height
 
-        // FileMenu 也走统一出口
+        // Route actions through the single outbound signal.
         onActionTriggered: (actionId, payload) => root.actionTriggered(actionId, payload)
     }
 
@@ -82,7 +80,7 @@ Rectangle {
             anchors.verticalCenter: parent.verticalCenter
             spacing: 0
 
-            // ---- File 按钮（固定）----
+            // File button (fixed).
             Rectangle {
                 Layout.preferredWidth: 60
                 Layout.preferredHeight: 24
@@ -105,7 +103,7 @@ Rectangle {
                 }
             }
 
-            // ---- 动态 Tab（来自 config.tabs）----
+            // Dynamic tabs from config.tabs.
             Repeater {
                 model: (root.config && root.config.tabs) ? root.config.tabs : []
 
@@ -117,13 +115,13 @@ Rectangle {
                     Layout.preferredWidth: 86
                     Layout.preferredHeight: 24
 
-                    // 选中态 / hover 态
+                    // Selected / hover state.
                     color: root.currentTabIndex === index ? root.selectedTabColor : (tabArea.containsMouse ? root.hoverColor : "transparent")
 
                     border.width: root.currentTabIndex === index ? 1 : 0
                     border.color: root.currentTabIndex === index ? root.accentColor : root.borderColor
 
-                    // 顶部选中高亮线
+                    // Top indicator line.
                     Rectangle {
                         visible: root.currentTabIndex === tabBtn.index
                         anchors.top: parent.top
@@ -133,7 +131,7 @@ Rectangle {
                         color: root.accentColor
                     }
 
-                    // 底部遮盖线：让选中 tab 与内容区衔接更像“连在一起”
+                    // Bottom cover line to visually connect tab and content.
                     Rectangle {
                         visible: root.currentTabIndex === tabBtn.index
                         anchors.bottom: parent.bottom
@@ -176,11 +174,11 @@ Rectangle {
         border.width: 1
         border.color: root.borderColor
 
-        // 只保留一个 TabContent：根据 currentTabIndex 切换数据
+        // Single TabContent; data changes with currentTabIndex.
         RibbonTabContent {
             anchors.fill: parent
 
-            // 从 config.tabs[currentTabIndex] 获取 groups
+            // Resolve groups from config.tabs[currentTabIndex].
             groups: {
                 const tabs = (root.config && root.config.tabs) ? root.config.tabs : [];
                 const tab = tabs[root.currentTabIndex];
@@ -198,11 +196,9 @@ Rectangle {
         }
     }
 
-    // =========================
-    // PUBLIC API（保持你旧版能力：Recent Files）
-    // =========================
+    // Public API (kept for compatibility).
     function setRecentFiles(files): void {
-        // files: string[] / var 都可
+        // files: string[] or any model-like array.
         fileMenu.setRecentFiles(files || []);
     }
 }

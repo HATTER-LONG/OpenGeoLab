@@ -29,7 +29,7 @@ ApplicationWindow {
             anchors.right: parent.right
             anchors.top: parent.top
 
-            // 统一处理所有动作（移植时你只需要带走这一段逻辑）
+            // Centralized action handling (keeps migration surface small).
             onActionTriggered: (actionId, payload) => {
                 ribbonActions.handle(actionId, payload);
             }

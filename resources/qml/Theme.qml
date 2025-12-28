@@ -68,4 +68,8 @@ QtObject {
     readonly property color ribbonPressedColor: mode === dark ? "#4A5568" : "#C9DAFF"
 
     readonly property color ribbonFileMenuLeftColor: mode === dark ? "#1A1D24" : "#EEF4FF"
+
+    // Popup surface used by menus (e.g., File menu). Intentionally different from
+    // ribbonContentColor so the popup does not visually merge with the ribbon.
+    readonly property color ribbonPopupBackgroundColor: surfaceAltColor
 }

@@ -4,127 +4,139 @@ import QtQuick.Controls
 import QtQuick.Layouts
 
 /**
- * RibbonFileMenuV2.qml
- * --------------------
- * 目标：先做一个最小可用的 File Popup。
- * 后续你可以把旧版 RibbonFileMenu 的“左侧菜单 + 右侧 Recent”逐步加回来。
+ * @brief Minimal file menu popup.
+ *
+ * Notes:
+ * - Keeps a `setRecentFiles()` API for compatibility, but the UI intentionally
+ *   does not show a Recent section (requested simplification).
  */
 Popup {
     id: root
 
     signal actionTriggered(string actionId, var payload)
 
-    width: 360
-    height: 260
+    width: 260
+    implicitHeight: contentColumn.implicitHeight + padding * 2
     modal: true
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
-    padding: 0
+    padding: 14
 
     property var recentFiles: []
 
+    readonly property int _menuRowHeight: 38
+
+    function trigger(actionId, payload): void {
+        root.close();
+        root.actionTriggered(actionId, payload);
+    }
+
     background: Rectangle {
-        color: Theme.ribbonContentColor
+        radius: 6
+        color: Theme.ribbonPopupBackgroundColor
         border.color: Theme.ribbonBorderColor
         border.width: 1
     }
 
-    contentItem: RowLayout {
+    contentItem: ColumnLayout {
+        id: contentColumn
         anchors.fill: parent
-        spacing: 0
+        spacing: 10
 
-        // 左侧操作区
-        Rectangle {
-            Layout.preferredWidth: 160
-            Layout.fillHeight: true
-            color: Theme.ribbonFileMenuLeftColor
+        readonly property var _primaryItems: ([
+                {
+                    text: qsTr("New"),
+                    id: "newFile"
+                },
+                {
+                    text: qsTr("Open"),
+                    id: "openFile"
+                },
+                {
+                    text: qsTr("Import"),
+                    id: "importModel"
+                },
+                {
+                    text: qsTr("Export"),
+                    id: "exportModel"
+                }
+            ])
 
-            ColumnLayout {
-                anchors.fill: parent
-                anchors.margins: 8
-                spacing: 6
+        readonly property var _secondaryItems: ([
+                {
+                    text: qsTr("Toggle Theme"),
+                    id: "toggleTheme"
+                },
+                {
+                    text: qsTr("Exit"),
+                    id: "exitApp"
+                }
+            ])
 
-                Button {
-                    text: qsTr("New")
-                    onClicked: {
-                        root.close();
-                        root.actionTriggered("newFile", null);
-                    }
+        Repeater {
+            model: contentColumn._primaryItems
+
+            Rectangle {
+                id: primaryRow
+                required property var modelData
+
+                Layout.fillWidth: true
+                height: root._menuRowHeight
+                radius: 8
+                color: mouseArea.pressed ? Theme.ribbonPressedColor : (mouseArea.containsMouse ? Theme.ribbonHoverColor : "transparent")
+
+                Text {
+                    anchors.left: parent.left
+                    anchors.leftMargin: 12
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: primaryRow.modelData.text
+                    color: Theme.ribbonTextColor
+                    font.pixelSize: 13
+                    elide: Text.ElideRight
                 }
-                Button {
-                    text: qsTr("Open")
-                    onClicked: {
-                        root.close();
-                        root.actionTriggered("openFile", null);
-                    }
-                }
-                Button {
-                    text: qsTr("Import")
-                    onClicked: {
-                        root.close();
-                        root.actionTriggered("importModel", null);
-                    }
-                }
-                Button {
-                    text: qsTr("Export")
-                    onClicked: {
-                        root.close();
-                        root.actionTriggered("exportModel", null);
-                    }
-                }
-                Item {
-                    Layout.fillHeight: true
-                }
-                Button {
-                    text: qsTr("Toggle Theme")
-                    onClicked: {
-                        root.close();
-                        root.actionTriggered("toggleTheme", null);
-                    }
-                }
-                Button {
-                    text: qsTr("Exit")
-                    onClicked: {
-                        root.close();
-                        root.actionTriggered("exitApp", null);
-                    }
+
+                MouseArea {
+                    id: mouseArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    onClicked: root.trigger(primaryRow.modelData.id, null)
                 }
             }
         }
 
-        // 右侧 Recent Files（最小版）
         Rectangle {
             Layout.fillWidth: true
-            Layout.fillHeight: true
-            color: Theme.ribbonContentColor
+            height: 1
+            color: Theme.ribbonBorderColor
+            opacity: 0.7
+        }
 
-            ColumnLayout {
-                anchors.fill: parent
-                anchors.margins: 10
-                spacing: 8
+        Repeater {
+            model: contentColumn._secondaryItems
+
+            Rectangle {
+                id: secondaryRow
+                required property var modelData
+
+                Layout.fillWidth: true
+                height: root._menuRowHeight
+                radius: 8
+                color: mouseArea2.pressed ? Theme.ribbonPressedColor : (mouseArea2.containsMouse ? Theme.ribbonHoverColor : "transparent")
 
                 Text {
-                    text: qsTr("Recent Files")
+                    anchors.left: parent.left
+                    anchors.leftMargin: 12
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: secondaryRow.modelData.text
                     color: Theme.ribbonTextColor
-                    font.pixelSize: 12
+                    font.pixelSize: 13
+                    elide: Text.ElideRight
                 }
 
-                ListView {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    model: root.recentFiles
-
-                    delegate: ItemDelegate {
-                        required property var modelData
-                        width: ListView.view.width
-                        text: modelData
-                        onClicked: {
-                            // payload 里把文件路径带出去，业务层决定怎么打开
-                            root.close();
-                            root.actionTriggered("openRecent", {
-                                path: modelData
-                            });
-                        }
-                    }
+                MouseArea {
+                    id: mouseArea2
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    onClicked: root.trigger(secondaryRow.modelData.id, null)
                 }
             }
         }

@@ -27,7 +27,7 @@ Item {
                 id: groupBox
                 required property var modelData
 
-                // groupBox 本身透明，仅做布局容器
+                // Transparent layout container for a group.
                 color: "transparent"
                 height: parent ? parent.height : 90
                 implicitWidth: contentRow.implicitWidth + 14
@@ -35,49 +35,57 @@ Item {
                 Column {
                     anchors.fill: parent
                     anchors.margins: 4
-                    spacing: 4
+                    spacing: 2
 
-                    // 上方按钮行
-                    Row {
-                        id: contentRow
-                        spacing: 4
+                    Item {
+                        id: contentHost
+                        width: parent.width
+                        height: parent.height - titleLabel.implicitHeight - 2
 
-                        Repeater {
-                            model: (groupBox.modelData.items || [])
+                        // Button row centered in the content host.
+                        Row {
+                            id: contentRow
+                            anchors.centerIn: parent
+                            spacing: 4
 
-                            Loader {
-                                required property var modelData
+                            Repeater {
+                                model: (groupBox.modelData.items || [])
 
-                                // 根据 type 选择组件
-                                sourceComponent: {
-                                    const t = (modelData.type || "button");
-                                    if (t === "separator")
-                                        return separatorComponent;
-                                    return buttonComponent;
-                                }
+                                Loader {
+                                    required property var modelData
 
-                                onLoaded: {
-                                    // 把 modelData 注入到实例里（按钮/分隔线）
-                                    if (item && item.hasOwnProperty("itemData")) {
-                                        item.itemData = modelData;
+                                    // Select a component by item type.
+                                    sourceComponent: {
+                                        const t = (modelData.type || "button");
+                                        if (t === "separator")
+                                            return separatorComponent;
+                                        return buttonComponent;
+                                    }
+
+                                    onLoaded: {
+                                        // Inject modelData into the created item (button/separator).
+                                        if (item && item.hasOwnProperty("itemData")) {
+                                            item.itemData = modelData;
+                                        }
                                     }
                                 }
                             }
                         }
                     }
 
-                    // 底部组标题
                     Text {
+                        id: titleLabel
+                        width: contentRow.width
+                        anchors.horizontalCenter: parent.horizontalCenter
                         text: groupBox.modelData.title || ""
                         color: root.textColorDim
                         font.pixelSize: 10
                         horizontalAlignment: Text.AlignHCenter
-                        width: contentRow.width
                         elide: Text.ElideRight
                     }
                 }
 
-                // 组右侧竖线分隔
+                // Right-side separator between groups.
                 Rectangle {
                     anchors.top: parent.top
                     anchors.bottom: parent.bottom
@@ -90,38 +98,38 @@ Item {
         }
     }
 
-    // ===== 按钮模板 =====
+    // ===== Button template =====
     Component {
         id: buttonComponent
 
         RibbonLargeButton {
             id: btn
 
-            // Loader 会注入
+            // Loader injects itemData.
             property var itemData: ({})
             iconColor: root.iconColor
             textColor: root.textColor
             hoverColor: root.hoverColor
             pressedColor: root.pressedColor
 
-            // 容错：字段缺失也不崩
+            // Defensive defaults.
             iconSource: itemData.iconSource || ""
             text: itemData.text || qsTr("Unnamed")
             tooltipText: itemData.tooltip || ""
 
             onClicked: {
-                // 统一向外发动作（payload 可用于扩展参数）
+                // Emit a single action signal for the host to handle.
                 root.actionTriggered(itemData.id || "", itemData.payload);
             }
         }
     }
 
-    // ===== 分隔线模板 =====
+    // ===== Separator template =====
     Component {
         id: separatorComponent
 
         Rectangle {
-            // 分隔线不需要 itemData，但为了 Loader 结构一致可留着
+            // Keep itemData for structural symmetry with the button delegate.
             property var itemData: ({})
             width: 1
             height: 60
