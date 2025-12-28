@@ -18,7 +18,7 @@ AbstractButton {
 
     // 统一尺寸（也可改成 Layout.preferredXXX 以适应容器）
     implicitWidth: 52
-    implicitHeight: 64
+    implicitHeight: 60
 
     hoverEnabled: true
     focusPolicy: Qt.TabFocus
@@ -32,12 +32,13 @@ AbstractButton {
     }
 
     contentItem: Column {
+        width: root.width
         anchors.centerIn: parent
         spacing: 2
 
         Item {
-            width: 28
-            height: 28
+            width: 26
+            height: 26
             anchors.horizontalCenter: parent.horizontalCenter
 
             // 原图隐藏，用 ColorOverlay 着色
@@ -73,7 +74,8 @@ AbstractButton {
             color: root.textColor
             font.pixelSize: 10
             horizontalAlignment: Text.AlignHCenter
-            width: root.width - 6
+            width: parent.width
+            anchors.horizontalCenter: parent.horizontalCenter
             wrapMode: Text.WordWrap
             maximumLineCount: 2
             elide: Text.ElideRight

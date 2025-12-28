@@ -70,14 +70,14 @@ QtObject {
                                 type: "button",
                                 id: "generateMesh",
                                 text: qsTr("Generate"),
-                                iconSource: iconBasePath + "mesh.svg",
+                                iconSource: iconBasePath + "generate_mesh.svg",
                                 tooltip: qsTr("Generate Mesh")
                             },
                             {
                                 type: "button",
                                 id: "smoothMesh",
                                 text: qsTr("Smooth"),
-                                iconSource: iconBasePath + "smooth.svg",
+                                iconSource: iconBasePath + "smooth_mesh.svg",
                                 tooltip: qsTr("Smooth Mesh")
                             }
                         ]
@@ -95,14 +95,14 @@ QtObject {
                                 type: "button",
                                 id: "aiSuggest",
                                 text: qsTr("Suggest"),
-                                iconSource: iconBasePath + "ai.svg",
+                                iconSource: iconBasePath + "ai_suggest.svg",
                                 tooltip: qsTr("AI Suggest")
                             },
                             {
                                 type: "button",
                                 id: "aiChat",
                                 text: qsTr("Chat"),
-                                iconSource: iconBasePath + "chat.svg",
+                                iconSource: iconBasePath + "ai_chat.svg",
                                 tooltip: qsTr("AI Chat")
                             }
                         ]

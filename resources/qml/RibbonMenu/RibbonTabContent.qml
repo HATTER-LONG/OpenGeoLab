@@ -17,7 +17,7 @@ Item {
     signal actionTriggered(string actionId, var params)
     Row {
         anchors.fill: parent
-        anchors.margins: 6
+        anchors.margins: 4
         spacing: 6
 
         Repeater {
@@ -34,7 +34,7 @@ Item {
 
                 Column {
                     anchors.fill: parent
-                    anchors.margins: 6
+                    anchors.margins: 4
                     spacing: 4
 
                     // 上方按钮行

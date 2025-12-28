@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import OpenGeoLab 1.0
 
 QtObject {
     id: root
@@ -24,6 +25,9 @@ QtObject {
     property var _handlers: ({
             "exitApp": function (_payload) {
                 root.exitApp();
+            },
+            "toggleTheme": function (_payload) {
+                Theme.mode = (Theme.mode === Theme.dark) ? Theme.light : Theme.dark;
             }
             // "importModel": function(payload) { root.importModelRequested(payload); }
         })

@@ -62,7 +62,7 @@ QtObject {
     readonly property color ribbonTextDimColor: textSecondaryColor
     readonly property color ribbonIconColor: mode === dark ? "#E1E1E1" : textPrimaryColor
 
-    readonly property color ribbonAccentColor: primaryColor
+    readonly property color ribbonAccentColor: highlightColor
     readonly property color ribbonSelectedTabColor: mode === dark ? "#323842" : "#E7EFFD"
     readonly property color ribbonHoverColor: mode === dark ? "#3A3F4B" : "#DCE8FF"
     readonly property color ribbonPressedColor: mode === dark ? "#4A5568" : "#C9DAFF"

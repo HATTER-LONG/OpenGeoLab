@@ -75,6 +75,13 @@ Popup {
                     Layout.fillHeight: true
                 }
                 Button {
+                    text: qsTr("Toggle Theme")
+                    onClicked: {
+                        root.close();
+                        root.actionTriggered("toggleTheme", null);
+                    }
+                }
+                Button {
                     text: qsTr("Exit")
                     onClicked: {
                         root.close();

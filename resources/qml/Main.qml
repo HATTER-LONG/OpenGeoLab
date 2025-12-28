@@ -14,7 +14,6 @@ ApplicationWindow {
     RibbonActionRouter {
         id: ribbonActions
 
-        // 应用级动作落点（后续接入 C++/业务模块时，优先改这里）
         onExitApp: Qt.quit()
     }
 
