@@ -10,15 +10,6 @@ QtObject {
     property int mode: light
 
     // =========================================================================
-    // Base typography (keeps system default font family)
-    // =========================================================================
-    // Empty string means: use the control/text's default (system) font family.
-    // This avoids relying on Qt.application.font, which is not available in all QML type setups.
-    readonly property string fontFamily: ""
-    readonly property int fontPointSizeBase: 10
-    readonly property int fontPointSizeTitle: 16
-
-    // =========================================================================
     // Core colors (Light: blue / tech; Dark: near-black / tech with cyan accents)
     // Notes:
     // - backgroundColor: app-level background

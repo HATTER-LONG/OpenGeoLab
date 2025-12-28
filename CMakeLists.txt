@@ -183,9 +183,11 @@ qt_add_qml_module(
   QML_FILES
   resources/qml/Main.qml
   resources/qml/Theme.qml
-  resources/qml/RibbonMenu/RibbonMenu.qml
-  resources/qml/RibbonMenu/RibbonActions.qml
-  resources/qml/RibbonMenu/RibbonGroupSeparator.qml
+  resources/qml/RibbonMenu/RibbonConfig.qml
+  resources/qml/RibbonMenu/RibbonFileMenu.qml
+  resources/qml/RibbonMenu/RibbonToolBar.qml
+  resources/qml/RibbonMenu/RibbonTabContent.qml
+  resources/qml/RibbonMenu/RibbonLargeButton.qml
   RESOURCES
   ${ICON_RESOURCES}
 )
