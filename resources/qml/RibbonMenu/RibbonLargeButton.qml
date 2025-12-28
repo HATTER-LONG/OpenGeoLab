@@ -11,10 +11,10 @@ AbstractButton {
     property string tooltipText: ""
 
     // 主题可注入
-    property color iconColor: "#e1e1e1"
-    property color textColor: "#ffffff"
-    property color hoverColor: "#3a3f4b"
-    property color pressedColor: "#4a5568"
+    property color iconColor: Theme.ribbonIconColor
+    property color textColor: Theme.ribbonTextColor
+    property color hoverColor: Theme.ribbonHoverColor
+    property color pressedColor: Theme.ribbonPressedColor
 
     // 统一尺寸（也可改成 Layout.preferredXXX 以适应容器）
     implicitWidth: 52

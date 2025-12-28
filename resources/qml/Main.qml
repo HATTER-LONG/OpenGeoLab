@@ -11,6 +11,13 @@ ApplicationWindow {
     height: 720
     title: qsTr("OpenGeoLab")
 
+    RibbonActionRouter {
+        id: ribbonActions
+
+        // 应用级动作落点（后续接入 C++/业务模块时，优先改这里）
+        onExitApp: Qt.quit()
+    }
+
     ColumnLayout {
         anchors.fill: parent
         spacing: 0
@@ -25,20 +32,7 @@ ApplicationWindow {
 
             // 统一处理所有动作（移植时你只需要带走这一段逻辑）
             onActionTriggered: (actionId, payload) => {
-                console.log("[Ribbon] action:", actionId, "payload:", JSON.stringify(payload));
-
-                switch (actionId) {
-                case "addBox":
-                    break;
-                case "importModel":
-                    break;
-                case "exitApp":
-                    Qt.quit();
-                    break;
-                default:
-                    // TODO: 把旧 Main.qml 里对应的 onAddPoint/onGenerateMesh 等逻辑迁移到这里
-                    break;
-                }
+                ribbonActions.handle(actionId, payload);
             }
         }
         // Main Content Area

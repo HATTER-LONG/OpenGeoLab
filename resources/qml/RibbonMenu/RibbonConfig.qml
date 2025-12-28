@@ -4,7 +4,8 @@ import QtQuick
 QtObject {
     id: ribbonConfig
 
-    readonly property string iconBasePath: "qrc:/scenegraph/opengeolab/resources/icons/"
+    // QML module is registered with RESOURCE_PREFIX /opengeolab (see CMakeLists.txt)
+    readonly property string iconBasePath: "qrc:/opengeolab/resources/icons/"
 
     readonly property var tabs: ([
             {
@@ -157,5 +158,7 @@ QtObject {
                 }
             }
         }
+
+        return ok;
     }
 }

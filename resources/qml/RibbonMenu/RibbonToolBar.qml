@@ -23,21 +23,25 @@ Rectangle {
     signal actionTriggered(string actionId, var payload)
 
     // ===== 配置注入：默认使用 RibbonConfigV2（单例）=====
-    property var config: RibbonConfig
+    RibbonConfig {
+        id: defaultConfig
+    }
+
+    property var config: defaultConfig
 
     // 当前选中的 Tab（不含 File）
     property int currentTabIndex: 0
 
     // ===== 主题/颜色（默认值与你旧版接近）=====
-    property color accentColor: "#cacccb"
-    property color hoverColor: "#3a3f4b"
-    property color selectedTabColor: "#323842"
-    property color borderColor: "#363b44"
-    property color tabBackgroundColor: "#1e2127"
-    property color contentBackgroundColor: "#252830"
-    property color textColor: "#ffffff"
-    property color textColorDim: "#b8b8b8"
-    property color iconColor: "#e1e1e1"
+    property color accentColor: Theme.ribbonAccentColor
+    property color hoverColor: Theme.ribbonHoverColor
+    property color selectedTabColor: Theme.ribbonSelectedTabColor
+    property color borderColor: Theme.ribbonBorderColor
+    property color tabBackgroundColor: Theme.ribbonTabBarColor
+    property color contentBackgroundColor: Theme.ribbonContentColor
+    property color textColor: Theme.ribbonTextColor
+    property color textColorDim: Theme.ribbonTextDimColor
+    property color iconColor: Theme.ribbonIconColor
 
     height: 120
     color: tabBackgroundColor
@@ -187,7 +191,7 @@ Rectangle {
             textColor: root.textColor
             textColorDim: root.textColorDim
             hoverColor: root.hoverColor
-            pressedColor: "#4a5568"
+            pressedColor: Theme.ribbonPressedColor
             separatorColor: root.borderColor
 
             onActionTriggered: (actionId, payload) => root.actionTriggered(actionId, payload)

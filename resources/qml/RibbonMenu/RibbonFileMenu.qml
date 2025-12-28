@@ -23,8 +23,8 @@ Popup {
     property var recentFiles: []
 
     background: Rectangle {
-        color: "#252830"
-        border.color: "#3a3f4b"
+        color: Theme.ribbonContentColor
+        border.color: Theme.ribbonBorderColor
         border.width: 1
     }
 
@@ -36,7 +36,7 @@ Popup {
         Rectangle {
             Layout.preferredWidth: 160
             Layout.fillHeight: true
-            color: "#1a1d24"
+            color: Theme.ribbonFileMenuLeftColor
 
             ColumnLayout {
                 anchors.fill: parent
@@ -88,7 +88,7 @@ Popup {
         Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            color: "#252830"
+            color: Theme.ribbonContentColor
 
             ColumnLayout {
                 anchors.fill: parent
@@ -97,7 +97,7 @@ Popup {
 
                 Text {
                     text: qsTr("Recent Files")
-                    color: "#e1e1e1"
+                    color: Theme.ribbonTextColor
                     font.pixelSize: 12
                 }
 
@@ -107,6 +107,7 @@ Popup {
                     model: root.recentFiles
 
                     delegate: ItemDelegate {
+                        required property var modelData
                         width: ListView.view.width
                         text: modelData
                         onClicked: {

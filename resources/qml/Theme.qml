@@ -48,4 +48,24 @@ QtObject {
     // =========================================================================
     readonly property color ribbonBackgroundColor: surfaceColor
     readonly property color ribbonSeparatorColor: borderColor
+
+    // =========================================================================
+    // Ribbon tokens (UI-specific)
+    // - Used by RibbonToolBar / RibbonTabContent / RibbonFileMenu
+    // - Keep all Ribbon hex values centralized here for light/dark theming
+    // =========================================================================
+    readonly property color ribbonTabBarColor: mode === dark ? "#1E2127" : surfaceAltColor
+    readonly property color ribbonContentColor: mode === dark ? "#252830" : surfaceColor
+    readonly property color ribbonBorderColor: mode === dark ? "#363B44" : borderColor
+
+    readonly property color ribbonTextColor: textPrimaryColor
+    readonly property color ribbonTextDimColor: textSecondaryColor
+    readonly property color ribbonIconColor: mode === dark ? "#E1E1E1" : textPrimaryColor
+
+    readonly property color ribbonAccentColor: primaryColor
+    readonly property color ribbonSelectedTabColor: mode === dark ? "#323842" : "#E7EFFD"
+    readonly property color ribbonHoverColor: mode === dark ? "#3A3F4B" : "#DCE8FF"
+    readonly property color ribbonPressedColor: mode === dark ? "#4A5568" : "#C9DAFF"
+
+    readonly property color ribbonFileMenuLeftColor: mode === dark ? "#1A1D24" : "#EEF4FF"
 }

@@ -7,12 +7,12 @@ Item {
 
     property var groups: []
 
-    property color iconColor: "#e1e1e1"
-    property color textColor: "#ffffff"
-    property color textColorDim: "#b8b8b8"
-    property color hoverColor: "#3a3f4b"
-    property color pressedColor: "#4a5568"
-    property color separatorColor: "#3a3f4b"
+    property color iconColor: Theme.ribbonIconColor
+    property color textColor: Theme.ribbonTextColor
+    property color textColorDim: Theme.ribbonTextDimColor
+    property color hoverColor: Theme.ribbonHoverColor
+    property color pressedColor: Theme.ribbonPressedColor
+    property color separatorColor: Theme.ribbonBorderColor
 
     signal actionTriggered(string actionId, var params)
     Row {
