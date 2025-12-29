@@ -4,6 +4,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import OpenGeoLab 1.0
 import "RibbonMenu" as RibbonMenu
+import "Pages" as Pages
 
 ApplicationWindow {
     id: root
@@ -20,10 +21,15 @@ ApplicationWindow {
         id: progressOverlay
     }
 
+    Pages.ImportModel {
+        id: importModelDialog
+    }
+
     RibbonActionRouter {
         id: ribbonActions
 
         dialogHost: dialogHost
+        importModelDialog: importModelDialog
 
         onExitApp: Qt.quit()
     }

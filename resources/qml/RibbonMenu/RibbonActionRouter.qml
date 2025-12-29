@@ -1,44 +1,55 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 
-import "Actions" as Actions
-
 QtObject {
     id: root
 
     signal exitApp
 
     // Injected by the app host (e.g., Main.qml) so actions can open dialogs.
-    property QtObject dialogHost: null
+    property var dialogHost: null
 
-    // Action modules keep RibbonActionRouter small and maintainable.
-    property list<QtObject> modules: [
-        Actions.AppActions {
-            router: root
-        },
-        Actions.GeometryActions {
-            dialogHost: root.dialogHost
-        },
-        Actions.MeshActions {
-            dialogHost: root.dialogHost
-        },
-        Actions.AIActions {
-            dialogHost: root.dialogHost
-        }
-    ]
+    // Injected by the app host; normal FileDialog instance for importing models.
+    property var importModelDialog: null
+
+    // Central mapping: actionId -> dialog component
+    property RibbonDialogRegistry dialogRegistry: RibbonDialogRegistry {}
 
     function handle(actionId, payload): void {
-        for (let i = 0; i < root.modules.length; i++) {
-            const m = root.modules[i];
-            if (!m || !m.canHandle || !m.handle)
-                continue;
-
-            if (m.canHandle(actionId)) {
-                m.handle(actionId, payload);
-                return;
-            }
+        // Global / non-dialog actions
+        switch (actionId) {
+        case "exitApp":
+            root.exitApp();
+            return;
+        case "toggleTheme":
+            Theme.mode = (Theme.mode === Theme.dark) ? Theme.light : Theme.dark;
+            return;
+        case "importModel":
+            if (importModelDialog && importModelDialog.open)
+                importModelDialog.open();
+            else
+                console.warn("[RibbonActionRouter] importModelDialog is null or missing open()");
+            return;
+        default:
+            break;
         }
 
-        console.warn("[RibbonActionRouter] Unhandled action:", actionId, "payload:", payload);
+        // Dialog actions
+        if (!dialogHost || !dialogHost.openComponent) {
+            console.error("[RibbonActionRouter] dialogHost is null or missing openComponent()");
+            return;
+        }
+
+        const comp = dialogRegistry.componentFor(actionId);
+        if (!comp) {
+            console.warn("[RibbonActionRouter] Unhandled action:", actionId, "payload:", payload);
+            return;
+        }
+
+        dialogHost.openComponent(comp, {
+            actionId: actionId,
+            title: dialogRegistry.titleFor(actionId) || actionId,
+            initialParams: payload || ({})
+        });
     }
 }

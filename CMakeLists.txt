@@ -158,9 +158,6 @@ qt_add_executable(${PROJECT_NAME} ${sources} ${headers})
 
 # Ensure Theme is registered as a QML singleton (matches `pragma Singleton` in Theme.qml)
 set_source_files_properties(resources/qml/Theme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
-set_source_files_properties(
-  resources/qml/Pages/ImportModel.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE
-)
 
 # Collect all SVG icon resources automatically (using relative paths)
 file(GLOB ICON_RESOURCES_ABS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/*.svg")
@@ -195,13 +192,19 @@ qt_add_qml_module(
   resources/qml/RibbonMenu/RibbonTabContent.qml
   resources/qml/RibbonMenu/RibbonLargeButton.qml
   resources/qml/RibbonMenu/RibbonActionRouter.qml
+  resources/qml/RibbonMenu/RibbonDialogRegistry.qml
   resources/qml/RibbonMenu/RibbonDialogHost.qml
   resources/qml/RibbonMenu/RibbonProgressOverlay.qml
-  resources/qml/RibbonMenu/Dialogs/ActionParamsDialog.qml
-  resources/qml/RibbonMenu/Actions/AppActions.qml
-  resources/qml/RibbonMenu/Actions/GeometryActions.qml
-  resources/qml/RibbonMenu/Actions/MeshActions.qml
-  resources/qml/RibbonMenu/Actions/AIActions.qml
+  resources/qml/Pages/Dialogs/ActionParamsDialog.qml
+  resources/qml/Pages/Dialogs/AddPointDialog.qml
+  resources/qml/Pages/Dialogs/AddLineDialog.qml
+  resources/qml/Pages/Dialogs/AddBoxDialog.qml
+  resources/qml/Pages/Dialogs/TrimDialog.qml
+  resources/qml/Pages/Dialogs/OffsetDialog.qml
+  resources/qml/Pages/Dialogs/GenerateMeshDialog.qml
+  resources/qml/Pages/Dialogs/SmoothMeshDialog.qml
+  resources/qml/Pages/Dialogs/AISuggestDialog.qml
+  resources/qml/Pages/Dialogs/AIChatDialog.qml
   resources/qml/Pages/ImportModel.qml
   RESOURCES
   ${ICON_RESOURCES}
