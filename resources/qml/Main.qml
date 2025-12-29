@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import OpenGeoLab 1.0
+import "RibbonMenu" as RibbonMenu
 
 ApplicationWindow {
     id: root
@@ -11,8 +12,18 @@ ApplicationWindow {
     height: 720
     title: qsTr("OpenGeoLab")
 
+    RibbonMenu.RibbonDialogHost {
+        id: dialogHost
+    }
+
+    RibbonMenu.RibbonProgressOverlay {
+        id: progressOverlay
+    }
+
     RibbonActionRouter {
         id: ribbonActions
+
+        dialogHost: dialogHost
 
         onExitApp: Qt.quit()
     }

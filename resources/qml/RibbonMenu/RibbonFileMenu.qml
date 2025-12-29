@@ -21,8 +21,6 @@ Popup {
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
     padding: 14
 
-    property var recentFiles: []
-
     readonly property int _menuRowHeight: 38
 
     function trigger(actionId, payload): void {
@@ -44,19 +42,15 @@ Popup {
 
         readonly property var _primaryItems: ([
                 {
-                    text: qsTr("New"),
+                    text: qsTr("New Model"),
                     id: "newFile"
                 },
                 {
-                    text: qsTr("Open"),
-                    id: "openFile"
-                },
-                {
-                    text: qsTr("Import"),
+                    text: qsTr("Import Model"),
                     id: "importModel"
                 },
                 {
-                    text: qsTr("Export"),
+                    text: qsTr("Export Model"),
                     id: "exportModel"
                 }
             ])
@@ -140,9 +134,5 @@ Popup {
                 }
             }
         }
-    }
-
-    function setRecentFiles(files): void {
-        root.recentFiles = files || [];
     }
 }

@@ -158,6 +158,9 @@ qt_add_executable(${PROJECT_NAME} ${sources} ${headers})
 
 # Ensure Theme is registered as a QML singleton (matches `pragma Singleton` in Theme.qml)
 set_source_files_properties(resources/qml/Theme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
+set_source_files_properties(
+  resources/qml/Pages/ImportModel.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE
+)
 
 # Collect all SVG icon resources automatically (using relative paths)
 file(GLOB ICON_RESOURCES_ABS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/*.svg")
@@ -180,6 +183,9 @@ qt_add_qml_module(
   RESOURCE_PREFIX
   /opengeolab
   NO_RESOURCE_TARGET_PATH
+  SOURCES
+  include/app/backend_service.hpp
+  src/app/backend_service.cpp
   QML_FILES
   resources/qml/Main.qml
   resources/qml/Theme.qml
@@ -189,6 +195,14 @@ qt_add_qml_module(
   resources/qml/RibbonMenu/RibbonTabContent.qml
   resources/qml/RibbonMenu/RibbonLargeButton.qml
   resources/qml/RibbonMenu/RibbonActionRouter.qml
+  resources/qml/RibbonMenu/RibbonDialogHost.qml
+  resources/qml/RibbonMenu/RibbonProgressOverlay.qml
+  resources/qml/RibbonMenu/Dialogs/ActionParamsDialog.qml
+  resources/qml/RibbonMenu/Actions/AppActions.qml
+  resources/qml/RibbonMenu/Actions/GeometryActions.qml
+  resources/qml/RibbonMenu/Actions/MeshActions.qml
+  resources/qml/RibbonMenu/Actions/AIActions.qml
+  resources/qml/Pages/ImportModel.qml
   RESOURCES
   ${ICON_RESOURCES}
 )
@@ -238,7 +252,7 @@ target_link_libraries(
 target_include_directories(
   ${PROJECT_NAME}
   PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include"
-          "${CMAKE_CURRENT_SOURCE_DIR}/include/ui" # For Qt moc generated code
+          "${CMAKE_CURRENT_SOURCE_DIR}/include/app" # For Qt moc generated code
           "${CMAKE_CURRENT_SOURCE_DIR}/src"
 )
 

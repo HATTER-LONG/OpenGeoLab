@@ -2,8 +2,6 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 
-// import "."
-
 /**
  * @brief Ribbon container with dynamic tabs and a single action output.
  *
@@ -193,11 +191,5 @@ Rectangle {
 
             onActionTriggered: (actionId, payload) => root.actionTriggered(actionId, payload)
         }
-    }
-
-    // Public API (kept for compatibility).
-    function setRecentFiles(files): void {
-        // files: string[] or any model-like array.
-        fileMenu.setRecentFiles(files || []);
     }
 }
