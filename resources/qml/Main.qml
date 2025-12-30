@@ -13,7 +13,7 @@ ApplicationWindow {
     height: 720
     title: qsTr("OpenGeoLab")
 
-    RibbonMenu.RibbonDialogHost {
+    RibbonMenu.DialogHost {
         id: dialogHost
     }
 
@@ -25,7 +25,7 @@ ApplicationWindow {
         id: importModelDialog
     }
 
-    RibbonActionRouter {
+    RibbonMenu.ActionRouter {
         id: ribbonActions
 
         dialogHost: dialogHost

@@ -191,20 +191,19 @@ qt_add_qml_module(
   resources/qml/RibbonMenu/RibbonToolBar.qml
   resources/qml/RibbonMenu/RibbonTabContent.qml
   resources/qml/RibbonMenu/RibbonLargeButton.qml
-  resources/qml/RibbonMenu/RibbonActionRouter.qml
-  resources/qml/RibbonMenu/RibbonDialogRegistry.qml
-  resources/qml/RibbonMenu/RibbonDialogHost.qml
+  resources/qml/RibbonMenu/ActionRouter.qml
+  resources/qml/RibbonMenu/DialogHost.qml
   resources/qml/RibbonMenu/RibbonProgressOverlay.qml
-  resources/qml/Pages/Dialogs/ActionParamsDialog.qml
-  resources/qml/Pages/Dialogs/AddPointDialog.qml
-  resources/qml/Pages/Dialogs/AddLineDialog.qml
-  resources/qml/Pages/Dialogs/AddBoxDialog.qml
-  resources/qml/Pages/Dialogs/TrimDialog.qml
-  resources/qml/Pages/Dialogs/OffsetDialog.qml
-  resources/qml/Pages/Dialogs/GenerateMeshDialog.qml
-  resources/qml/Pages/Dialogs/SmoothMeshDialog.qml
-  resources/qml/Pages/Dialogs/AISuggestDialog.qml
-  resources/qml/Pages/Dialogs/AIChatDialog.qml
+  resources/qml/Pages/BaseDialog.qml
+  resources/qml/Pages/AddPointDialog.qml
+  resources/qml/Pages/AddLineDialog.qml
+  resources/qml/Pages/AddBoxDialog.qml
+  resources/qml/Pages/TrimDialog.qml
+  resources/qml/Pages/OffsetDialog.qml
+  resources/qml/Pages/GenerateMeshDialog.qml
+  resources/qml/Pages/SmoothMeshDialog.qml
+  resources/qml/Pages/AISuggestDialog.qml
+  resources/qml/Pages/AIChatDialog.qml
   resources/qml/Pages/ImportModel.qml
   RESOURCES
   ${ICON_RESOURCES}
