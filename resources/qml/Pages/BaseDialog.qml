@@ -9,11 +9,11 @@ import Qt5Compat.GraphicalEffects
  *
  * Provides:
  * - Styled header with title and close button
- * - Content area for derived dialogs
+ * - Content area for derived dialogs (auto-sizing with scroll)
  * - Standard OK/Cancel buttons with customizable text
- * - Consistent theming and animations
+ * - Consistent theming for light/dark modes
  *
- * @note Subclasses should override the `contentItem` default property.
+ * @note Subclasses should place their UI inside the default content property.
  */
 Item {
     id: root
@@ -38,8 +38,9 @@ Item {
     signal rejected
     signal closeRequested
 
-    implicitWidth: 480
-    implicitHeight: mainLayout.implicitHeight + 32
+    // Auto-sizing: width fixed, height adapts to content with max limit.
+    implicitWidth: 520
+    implicitHeight: Math.min(mainLayout.implicitHeight, 600)
 
     // Main container with shadow effect.
     Rectangle {
@@ -112,7 +113,6 @@ Item {
                     id: closeBtn
                     Layout.preferredWidth: 32
                     Layout.preferredHeight: 32
-
                     hoverEnabled: true
 
                     background: Rectangle {
@@ -137,20 +137,34 @@ Item {
         }
 
         // =====================================================================
-        // Content Area
+        // Content Area (scrollable for overflow)
         // =====================================================================
-        Item {
-            id: contentArea
+        ScrollView {
+            id: scrollView
             Layout.fillWidth: true
             Layout.fillHeight: true
             Layout.margins: 16
-            Layout.minimumHeight: 80
+            Layout.minimumHeight: 100
+            Layout.maximumHeight: 400
+
+            clip: true
+            contentWidth: availableWidth
+
+            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+            ScrollBar.vertical.policy: ScrollBar.AsNeeded
+
+            Item {
+                id: contentArea
+                width: scrollView.availableWidth
+                implicitHeight: childrenRect.height
+            }
         }
 
         // =====================================================================
         // Footer with action buttons
         // =====================================================================
         Rectangle {
+            id: footer
             Layout.fillWidth: true
             Layout.preferredHeight: 56
             color: Theme.surfaceAltColor
@@ -193,7 +207,7 @@ Item {
                         implicitWidth: 90
                         implicitHeight: 36
                         radius: 6
-                        color: cancelButton.pressed ? Theme.buttonPressedColor : (cancelButton.hovered ? Theme.buttonHoverColor : "transparent")
+                        color: cancelButton.pressed ? Theme.buttonHoverColor : (cancelButton.hovered ? Qt.lighter(Theme.surfaceAltColor, 1.1) : "transparent")
                         border.width: 1
                         border.color: Theme.borderColor
                     }

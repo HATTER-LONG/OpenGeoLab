@@ -20,7 +20,7 @@ Pages.BaseDialog {
 
     onAccepted: {
         const params = {
-            iterations: parseInt(iterationsInput.text) || 3,
+            iterations: iterationsInput.value,
             factor: parseFloat(factorInput.text) || 0.5,
             preserveBoundary: preserveBoundaryCheck.checked
         };

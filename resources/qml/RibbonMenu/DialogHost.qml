@@ -67,8 +67,8 @@ Item {
         padding: 0
 
         // Auto-size based on content.
-        width: _activeDialog ? _activeDialog.implicitWidth : 480
-        height: _activeDialog ? _activeDialog.implicitHeight : 300
+        width: host._activeDialog ? host._activeDialog.implicitWidth : 480
+        height: host._activeDialog ? host._activeDialog.implicitHeight : 300
 
         background: Item {}
 

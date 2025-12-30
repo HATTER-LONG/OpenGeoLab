@@ -119,6 +119,7 @@ Pages.BaseDialog {
             }
 
             Button {
+                id: sendBtn
                 text: qsTr("Send")
                 enabled: !OGL.BackendService.busy && inputField.text.trim().length > 0
                 onClicked: root.sendMessage()
@@ -127,12 +128,12 @@ Pages.BaseDialog {
                     implicitWidth: 70
                     implicitHeight: 36
                     radius: 6
-                    color: parent.enabled ? (parent.pressed ? Theme.buttonPressedColor : (parent.hovered ? Theme.buttonHoverColor : Theme.buttonBackgroundColor)) : Theme.buttonDisabledBackgroundColor
+                    color: sendBtn.enabled ? (sendBtn.pressed ? Theme.buttonPressedColor : (sendBtn.hovered ? Theme.buttonHoverColor : Theme.buttonBackgroundColor)) : Theme.buttonDisabledBackgroundColor
                 }
 
                 contentItem: Text {
-                    text: parent.text
-                    color: parent.enabled ? Theme.buttonTextColor : Theme.buttonDisabledTextColor
+                    text: sendBtn.text
+                    color: sendBtn.enabled ? Theme.buttonTextColor : Theme.buttonDisabledTextColor
                     font.pixelSize: 13
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
