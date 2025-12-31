@@ -71,7 +71,7 @@ auto main(int argc, char** argv) -> int {
     }
 
     initQtEnvironment();
-    OpenGeoLab::App::registeServices();
+    OpenGeoLab::App::registerServices();
     QQuickWindow::setGraphicsApi(QSGRendererInterface::OpenGL);
 
     qputenv("QT_QUICK_CONTROLS_STYLE", "Basic");
