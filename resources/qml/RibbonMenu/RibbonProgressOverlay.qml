@@ -7,17 +7,13 @@ import OpenGeoLab 1.0 as OGL
 /**
  * Non-blocking progress indicator displayed in the bottom-right corner.
  * Shows operation status without capturing input or freezing the UI.
+ * Parent should set anchors for positioning.
  */
 Item {
     id: root
 
-    // Anchored to bottom-right, non-blocking overlay
-    anchors.right: parent.right
-    anchors.bottom: parent.bottom
-    anchors.margins: 16
-
     width: 320
-    height: content.height + 20
+    height: visible ? content.height + 20 : 0
 
     visible: OGL.BackendService.busy
     opacity: visible ? 1.0 : 0.0
@@ -35,18 +31,6 @@ Item {
         color: Theme.surfaceColor
         border.width: 1
         border.color: Theme.borderColor
-
-        // Subtle shadow effect
-        layer.enabled: true
-        layer.effect: Item {
-            Rectangle {
-                anchors.fill: parent
-                anchors.margins: -4
-                radius: 12
-                color: "#20000000"
-                z: -1
-            }
-        }
     }
 
     ColumnLayout {
@@ -97,51 +81,6 @@ Item {
             color: Theme.textSecondaryColor
             horizontalAlignment: Text.AlignRight
             font.pixelSize: 11
-        }
-    }
-
-    // Error notification popup
-    Rectangle {
-        id: errorPopup
-        anchors.bottom: parent.top
-        anchors.right: parent.right
-        anchors.bottomMargin: 8
-        width: 320
-        height: errorContent.height + 16
-        radius: 6
-        color: "#FFEBEE"
-        border.color: "#EF5350"
-        border.width: 1
-        visible: OGL.BackendService.lastError.length > 0
-
-        RowLayout {
-            id: errorContent
-            anchors.fill: parent
-            anchors.margins: 8
-            spacing: 8
-
-            Label {
-                Layout.fillWidth: true
-                text: OGL.BackendService.lastError
-                color: "#C62828"
-                wrapMode: Text.WordWrap
-                font.pixelSize: 12
-            }
-
-            Button {
-                implicitWidth: 20
-                implicitHeight: 20
-                flat: true
-                text: "✕"
-                onClicked: OGL.BackendService.clearError()
-            }
-        }
-
-        // Auto-hide error after 5 seconds
-        Timer {
-            running: errorPopup.visible
-            interval: 5000
-            onTriggered: OGL.BackendService.clearError()
         }
     }
 }
