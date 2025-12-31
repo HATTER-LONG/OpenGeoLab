@@ -196,6 +196,7 @@ qt_add_qml_module(
   resources/qml/RibbonMenu/ActionRouter.qml
   resources/qml/RibbonMenu/DialogHost.qml
   resources/qml/RibbonMenu/RibbonProgressOverlay.qml
+  resources/qml/RibbonMenu/ResultDialog.qml
   resources/qml/Pages/BaseDialog.qml
   resources/qml/Pages/AddPointDialog.qml
   resources/qml/Pages/AddLineDialog.qml

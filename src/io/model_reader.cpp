@@ -21,6 +21,8 @@ nlohmann::json ModelReader::processRequest(const std::string& action_id,
     if(action_id == "read_model") {
         if(!params.contains("file_path") || !params["file_path"].is_string()) {
             result["error"] = "Missing or invalid 'file_path' parameter";
+            result["title"] = "Import Failed";
+            result["message"] = "No file path provided.";
             if(reporter) {
                 reporter->reportError(result["error"].get<std::string>());
             }
@@ -33,13 +35,22 @@ nlohmann::json ModelReader::processRequest(const std::string& action_id,
         result["success"] = success;
         result["file_path"] = file_path;
 
-        if(!success) {
+        if(success) {
+            result["title"] = "Import Successful";
+            result["message"] = "3D model loaded successfully.";
+            result["details"] = {
+                {"File", file_path}, {"Format", "STEP/BREP"}, {"Status", "Ready for processing"}};
+        } else {
             result["error"] = "Failed to read model file";
+            result["title"] = "Import Failed";
+            result["message"] = "Could not load the model file.";
         }
         return result;
     }
 
     result["error"] = "Unknown action: " + action_id;
+    result["title"] = "Error";
+    result["message"] = "Unknown action requested.";
     return result;
 }
 
