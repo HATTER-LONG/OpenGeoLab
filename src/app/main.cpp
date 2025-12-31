@@ -2,7 +2,7 @@
  * @file main.cpp
  * @brief Application entry point
  */
-
+#include "service.hpp"
 #include <util/logger.hpp>
 
 #include <QGuiApplication>
@@ -71,7 +71,7 @@ auto main(int argc, char** argv) -> int {
     }
 
     initQtEnvironment();
-
+    OpenGeoLab::App::registeServices();
     QQuickWindow::setGraphicsApi(QSGRendererInterface::OpenGL);
 
     qputenv("QT_QUICK_CONTROLS_STYLE", "Basic");

@@ -91,6 +91,8 @@ CPMAddPackage(
   OPTIONS "HIGHFIVE_UNIT_TESTS OFF" "HIGHFIVE_EXAMPLES OFF" "HIGHFIVE_BUILD_DOCS OFF"
 )
 
+CPMAddPackage("gh:nlohmann/json@3.12.0")
+
 # ------------------------------------------------------------------------------
 # Pre-installed Dependencies
 # ------------------------------------------------------------------------------
@@ -244,6 +246,7 @@ target_link_libraries(
           cxxopts
           fmt::fmt
           HighFive::HighFive
+          nlohmann_json::nlohmann_json
           ${OpenCASCADE_LIBS}
 )
 

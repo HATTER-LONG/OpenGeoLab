@@ -1,4 +1,6 @@
-#include <app/backend_service.hpp>
+#include "backend_service.hpp"
+#include "kangaroo/util/component_factory.hpp"
+#include "service.hpp"
 
 #include <algorithm>
 
@@ -50,7 +52,10 @@ void BackendService::request(const QString& action_id, const QVariantMap& params
         if(!m_timer) {
             return;
         }
-
+        auto reader = g_ComponentFactory.getInstanceObjectWithID<App::ServiceBaseSingletonFactory>(
+            "ModelReader");
+        nlohmann::json json_params = nlohmann::json::object();
+        reader->processRequest(m_currentActionId.toStdString(), json_params);
         m_tick = std::min(m_tick + 1, m_totalTicks);
         const double p = static_cast<double>(m_tick) / static_cast<double>(m_totalTicks);
 
