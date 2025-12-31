@@ -17,7 +17,7 @@ nlohmann::json ModelReader::processRequest(const std::string& action_id,
     nlohmann::json result;
     result["success"] = false;
     result["action_id"] = action_id;
-
+    result["show"] = true;
     if(action_id == "read_model") {
         if(!params.contains("file_path") || !params["file_path"].is_string()) {
             result["error"] = "Missing or invalid 'file_path' parameter";

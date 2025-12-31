@@ -5,15 +5,18 @@ import QtQuick.Layouts
 import OpenGeoLab 1.0 as OGL
 
 /**
- * Generic result dialog for displaying operation outcomes.
- * Automatically listens to BackendService signals.
+ * Result dialog for displaying operation outcomes.
+ * Only shows when result.show is true.
  */
 Dialog {
     id: root
     anchors.centerIn: parent
     modal: true
-    standardButtons: Dialog.Ok
+    padding: 0
+
+    // Auto-size based on content
     width: 420
+    height: contentColumn.implicitHeight + headerRect.height + footerRect.height
 
     property string dialogMessage: ""
     property bool isError: false
@@ -25,6 +28,10 @@ Dialog {
 
         function onOperationFinished(actionId: string, result: var): void {
             console.log("[ResultDialog] Operation finished:", actionId, JSON.stringify(result));
+            // Only show if result.show is true
+            if (result.show !== true) {
+                return;
+            }
             root.resultData = result;
             root.isError = false;
             root.title = result.title || qsTr("Operation Successful");
@@ -47,63 +54,80 @@ Dialog {
 
     background: Rectangle {
         color: Theme.surfaceColor
-        radius: 8
+        radius: 12
         border.width: 1
         border.color: Theme.borderColor
     }
 
     header: Rectangle {
-        width: parent ? parent.width : 0
-        height: 44
-        color: root.isError ? "#FFEBEE" : "#E8F5E9"
-        radius: 8
+        id: headerRect
+        width: parent ? parent.width : 420
+        height: 48
+        color: root.isError ? "#EF5350" : "#4CAF50"
+        radius: 12
 
-        Label {
-            anchors.centerIn: parent
-            text: root.title
-            font.bold: true
-            font.pixelSize: 14
-            color: root.isError ? "#C62828" : "#2E7D32"
-        }
-
-        // Mask bottom corners
+        // Square bottom corners
         Rectangle {
             anchors.bottom: parent.bottom
             width: parent.width
-            height: 8
+            height: 12
             color: parent.color
+        }
+
+        RowLayout {
+            anchors.fill: parent
+            anchors.leftMargin: 16
+            anchors.rightMargin: 16
+            spacing: 8
+
+            Label {
+                text: root.isError ? "✕" : "✓"
+                font.pixelSize: 18
+                font.bold: true
+                color: "#FFFFFF"
+            }
+
+            Label {
+                Layout.fillWidth: true
+                text: root.title
+                font.bold: true
+                font.pixelSize: 15
+                color: "#FFFFFF"
+                elide: Text.ElideRight
+            }
         }
     }
 
     contentItem: ColumnLayout {
-        spacing: 12
+        id: contentColumn
+        spacing: 0
 
         Label {
             Layout.fillWidth: true
+            Layout.margins: 16
             text: root.dialogMessage
             wrapMode: Text.WordWrap
-            padding: 8
             color: Theme.textPrimaryColor
+            font.pixelSize: 13
         }
 
-        // Show additional details if available
+        // Details section
         Rectangle {
             Layout.fillWidth: true
-            Layout.preferredHeight: detailsColumn.height + 16
+            Layout.leftMargin: 16
+            Layout.rightMargin: 16
+            Layout.preferredHeight: detailsCol.implicitHeight + 16
             color: Theme.mode === Theme.dark ? "#2A2A2A" : "#F5F5F5"
-            radius: 4
+            radius: 8
             visible: root.resultData.details !== undefined
 
             ColumnLayout {
-                id: detailsColumn
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.top: parent.top
+                id: detailsCol
+                anchors.fill: parent
                 anchors.margins: 8
-                spacing: 4
+                spacing: 6
 
                 Repeater {
-                    id: detailsRepeater
                     model: {
                         if (!root.resultData.details)
                             return [];
@@ -124,6 +148,7 @@ Dialog {
                             font.bold: true
                             font.pixelSize: 12
                             color: Theme.textSecondaryColor
+                            Layout.preferredWidth: 60
                         }
 
                         Label {
@@ -135,6 +160,72 @@ Dialog {
                         }
                     }
                 }
+            }
+        }
+
+        Item {
+            Layout.preferredHeight: 8
+        }
+    }
+
+    footer: Rectangle {
+        id: footerRect
+        width: parent ? parent.width : 420
+        height: 60
+        color: Theme.surfaceAltColor
+        radius: 12
+
+        // Square top corners
+        Rectangle {
+            anchors.top: parent.top
+            width: parent.width
+            height: 12
+            color: parent.color
+        }
+
+        // Separator
+        Rectangle {
+            anchors.top: parent.top
+            width: parent.width
+            height: 1
+            color: Theme.borderColor
+        }
+
+        RowLayout {
+            anchors.fill: parent
+            anchors.margins: 12
+
+            Item {
+                Layout.fillWidth: true
+            }
+
+            Button {
+                id: okButton
+                text: qsTr("OK")
+
+                background: Rectangle {
+                    implicitWidth: 100
+                    implicitHeight: 36
+                    radius: 8
+                    color: okButton.pressed ? (root.isError ? "#C62828" : "#388E3C") : (okButton.hovered ? (root.isError ? "#E53935" : "#43A047") : (root.isError ? "#EF5350" : "#4CAF50"))
+
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: 100
+                        }
+                    }
+                }
+
+                contentItem: Text {
+                    text: okButton.text
+                    color: "#FFFFFF"
+                    font.pixelSize: 13
+                    font.bold: true
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+
+                onClicked: root.close()
             }
         }
     }
