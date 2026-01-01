@@ -133,8 +133,8 @@ Pages.BaseDialog {
     Connections {
         target: OGL.BackendService
 
-        function onOperationFinished(actionId, _result) {
-            if (actionId === "smoothMesh")
+        function onOperationFinished(moduleName: string, _result: var): void {
+            if (moduleName === "SmoothMesh")
                 root.closeRequested();
         }
     }

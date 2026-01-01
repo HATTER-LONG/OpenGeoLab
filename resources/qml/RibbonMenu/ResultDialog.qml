@@ -26,8 +26,8 @@ Dialog {
     Connections {
         target: OGL.BackendService
 
-        function onOperationFinished(actionId: string, result: var): void {
-            console.log("[ResultDialog] Operation finished:", actionId, JSON.stringify(result));
+        function onOperationFinished(moduleName: string, result: var): void {
+            console.log("[ResultDialog] Operation finished:", moduleName, JSON.stringify(result));
             // Only show if result.show is true
             if (result.show !== true) {
                 return;
@@ -38,22 +38,22 @@ Dialog {
             root.dialogMessage = result.message || qsTr("Operation completed successfully.");
 
             // Load model data if this is a successful import
-            if (actionId === "ModelReader" && result.success === true) {
+            if (moduleName === "ModelReader" && result.success === true) {
                 OGL.ModelManager.loadFromResult(result);
             }
 
             root.open();
         }
 
-        function onOperationFailed(actionId: string, error: string): void {
-            console.log("[ResultDialog] Operation failed:", actionId, error);
+        function onOperationFailed(moduleName: string, error: string): void {
+            console.log("[ResultDialog] Operation failed:", moduleName, error);
             root.resultData = {
-                action_id: actionId,
+                moduleName: moduleName,
                 error: error
             };
             root.isError = true;
             root.title = qsTr("Operation Failed");
-            root.dialogMessage = qsTr("Action: %1\nError: %2").arg(actionId).arg(error);
+            root.dialogMessage = qsTr("Module: %1\nError: %2").arg(moduleName).arg(error);
             root.open();
         }
     }

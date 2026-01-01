@@ -30,37 +30,37 @@ bool QtProgressReporter::isCancelled() const { return m_cancelled.load(); }
 
 // --- ServiceWorker Implementation ---
 
-ServiceWorker::ServiceWorker(const QString& module,
-                             const QString& action_id,
+ServiceWorker::ServiceWorker(const QString& module_name,
                              const nlohmann::json& params,
                              std::atomic<bool>& cancelled)
-    : m_module(module), m_actionId(action_id), m_params(params), m_cancelled(cancelled) {}
+    : m_moduleName(module_name), m_params(params), m_cancelled(cancelled) {}
 
 void ServiceWorker::process() {
     try {
         auto service = g_ComponentFactory.getInstanceObjectWithID<App::ServiceBaseSingletonFactory>(
-            m_module.toStdString());
+            m_moduleName.toStdString());
 
         if(!service) {
-            emit error(m_actionId, QStringLiteral("Service module not found: %1").arg(m_module));
+            emit error(m_moduleName,
+                       QStringLiteral("Service module not found: %1").arg(m_moduleName));
             return;
         }
 
         auto reporter = std::make_shared<QtProgressReporter>(this, m_cancelled);
         nlohmann::json result =
-            service->processRequest(m_actionId.toStdString(), m_params, reporter);
+            service->processRequest(m_moduleName.toStdString(), m_params, reporter);
 
         if(m_cancelled.load()) {
-            emit error(m_actionId, QStringLiteral("Operation cancelled"));
+            emit error(m_moduleName, QStringLiteral("Operation cancelled"));
             return;
         }
 
         QVariantMap result_map = BackendService::jsonToVariantMap(result);
-        emit finished(m_actionId, result_map);
+        emit finished(m_moduleName, result_map);
 
     } catch(const std::exception& e) {
         LOG_ERROR("Service request failed: {}", e.what());
-        emit error(m_actionId, QString::fromStdString(e.what()));
+        emit error(m_moduleName, QString::fromStdString(e.what()));
     }
 }
 
@@ -94,11 +94,7 @@ void BackendService::request(const QString& module_name, const QVariantMap& para
         return;
     }
 
-    // Extract action_id from params, default to "process"
-    QString action_id =
-        params.value(QStringLiteral("action_id"), QStringLiteral("process")).toString();
-
-    m_currentActionId = module_name;
+    m_currentModuleName = module_name;
     m_currentParams = params;
     m_cancelled.store(false);
 
@@ -115,7 +111,7 @@ void BackendService::request(const QString& module_name, const QVariantMap& para
     cleanupWorker();
 
     m_workerThread = new QThread(this);
-    m_worker = new ServiceWorker(module_name, action_id, json_params, m_cancelled);
+    m_worker = new ServiceWorker(module_name, json_params, m_cancelled);
     m_worker->moveToThread(m_workerThread);
 
     connect(m_workerThread, &QThread::started, m_worker, &ServiceWorker::process);
@@ -135,29 +131,29 @@ void BackendService::onWorkerProgress(double progress, const QString& message) {
     if(!message.isEmpty()) {
         setMessage(message);
     }
-    emit operationProgress(m_currentActionId, progress, m_message);
+    emit operationProgress(m_currentModuleName, progress, m_message);
 }
 
-void BackendService::onWorkerFinished(const QString& action_id, const QVariantMap& result) {
+void BackendService::onWorkerFinished(const QString& module_name, const QVariantMap& result) {
     setBusyInternal(false);
     setProgressInternal(1.0);
     setMessage(QString());
 
-    emit operationFinished(action_id, result);
+    emit operationFinished(module_name, result);
 
-    m_currentActionId.clear();
+    m_currentModuleName.clear();
     m_currentParams.clear();
 }
 
-void BackendService::onWorkerError(const QString& action_id, const QString& error) {
+void BackendService::onWorkerError(const QString& module_name, const QString& error) {
     setBusyInternal(false);
     setProgressInternal(-1.0);
     setMessage(QString());
     setLastError(error);
 
-    emit operationFailed(action_id, error);
+    emit operationFailed(module_name, error);
 
-    m_currentActionId.clear();
+    m_currentModuleName.clear();
     m_currentParams.clear();
 }
 
@@ -169,7 +165,7 @@ void BackendService::setBusy(bool busy, const QString& message) {
 
     if(!busy) {
         cleanupWorker();
-        m_currentActionId.clear();
+        m_currentModuleName.clear();
         m_currentParams.clear();
     }
 }
@@ -194,7 +190,7 @@ void BackendService::cancel() {
         return;
     }
 
-    const auto action_id = m_currentActionId;
+    const auto module_name = m_currentModuleName;
     m_cancelled.store(true);
 
     // Wait for worker to finish gracefully
@@ -212,9 +208,9 @@ void BackendService::cancel() {
     const auto err = QStringLiteral("Cancelled");
     setLastError(err);
 
-    emit operationFailed(action_id, err);
+    emit operationFailed(module_name, err);
 
-    m_currentActionId.clear();
+    m_currentModuleName.clear();
     m_currentParams.clear();
 }
 

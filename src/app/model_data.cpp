@@ -1,11 +1,10 @@
 /**
  * @file model_data.cpp
- * @brief QML-exposed model data implementation
+ * @brief QML-exposed model data implementation.
  */
 #include "app/model_data.hpp"
+#include "geometry/geometry_model.hpp"
 #include "util/logger.hpp"
-
-#include <nlohmann/json.hpp>
 
 namespace OpenGeoLab::App {
 
@@ -30,26 +29,24 @@ void ModelPartData::setData(
     emit vertexCountChanged();
 }
 
-void ModelPartData::updateFromGeometry(const IO::ModelPart& part,
-                                       const IO::GeometryData& geometry) {
+void ModelPartData::updateFromPart(const Geometry::Part& part,
+                                   const Geometry::GeometryModel& model) {
     m_id = part.id;
     m_name = QString::fromStdString(part.name);
-    m_solidCount = part.solid_ids.size();
+    m_solidCount = static_cast<int>(part.solid_ids.size());
 
-    // Count faces, edges, vertices in this part's solids
-    int faces = 0, edges = 0, vertices = 0;
+    // Count faces in this part's solids
+    int faces = 0;
     for(uint32_t solid_id : part.solid_ids) {
-        for(const auto& solid : geometry.solids) {
-            if(solid.id == solid_id) {
-                faces += solid.face_ids.size();
-                break;
-            }
+        const Geometry::Solid* solid = model.getSolidById(solid_id);
+        if(solid) {
+            faces += static_cast<int>(solid->face_ids.size());
         }
     }
 
     m_faceCount = faces;
-    m_edgeCount = geometry.edges.size();
-    m_vertexCount = geometry.vertices.size();
+    m_edgeCount = static_cast<int>(model.edgeCount());
+    m_vertexCount = static_cast<int>(model.vertexCount());
 
     emit idChanged();
     emit nameChanged();
@@ -65,35 +62,32 @@ ModelManager::ModelManager(QObject* parent) : QObject(parent) {}
 
 QList<QObject*> ModelManager::parts() const { return m_parts; }
 
-void ModelManager::loadFromResult(const QVariantMap& result) {
+void ModelManager::refreshFromStore() {
     clear();
 
-    // Extract geometry data from result
-    // For now, we store summary info in the result
-    int partCount = result.value("parts", 0).toInt();
-    int solidCount = result.value("solids", 0).toInt();
-    int faceCount = result.value("faces", 0).toInt();
-    int edgeCount = result.value("edges", 0).toInt();
-    int vertexCount = result.value("vertices", 0).toInt();
-
-    if(partCount == 0) {
-        LOG_WARN("No parts in geometry data");
-        emit hasModelChanged();
+    auto model = Geometry::GeometryStore::instance().getModel();
+    if(!model || model->isEmpty()) {
+        LOG_WARN("No geometry data in GeometryStore");
         return;
     }
 
-    // Create sample part entry with statistics
-    auto partData = new ModelPartData(this);
-    partData->setData(1, QString::fromStdString("Part 1"), solidCount, faceCount, edgeCount,
-                      vertexCount);
+    const auto& model_parts = model->getParts();
+    for(const auto& part : model_parts) {
+        auto* part_data = new ModelPartData(this);
+        part_data->updateFromPart(part, *model);
+        m_parts.append(part_data);
+    }
 
-    m_parts.append(partData);
-
-    LOG_INFO("Loaded model data: {} parts, {} solids, {} faces, {} edges, {} vertices", partCount,
-             solidCount, faceCount, edgeCount, vertexCount);
+    LOG_INFO("Refreshed model data from GeometryStore: {} parts, {} solids, {} faces",
+             model->partCount(), model->solidCount(), model->faceCount());
 
     emit partsChanged();
     emit hasModelChanged();
+}
+
+void ModelManager::loadFromResult(const QVariantMap& /* result */) {
+    // Data is now stored in GeometryStore by IO layer
+    refreshFromStore();
 }
 
 void ModelManager::clear() {

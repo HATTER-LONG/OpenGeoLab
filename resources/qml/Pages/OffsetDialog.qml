@@ -109,8 +109,8 @@ Pages.BaseDialog {
     Connections {
         target: OGL.BackendService
 
-        function onOperationFinished(actionId, _result) {
-            if (actionId === "offset")
+        function onOperationFinished(moduleName: string, _result: var): void {
+            if (moduleName === "Offset")
                 root.closeRequested();
         }
     }

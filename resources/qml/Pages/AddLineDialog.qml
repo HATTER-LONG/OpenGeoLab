@@ -167,8 +167,8 @@ Pages.BaseDialog {
     Connections {
         target: OGL.BackendService
 
-        function onOperationFinished(actionId, _result) {
-            if (actionId === "addLine")
+        function onOperationFinished(moduleName: string, _result: var): void {
+            if (moduleName === "AddLine")
                 root.closeRequested();
         }
     }

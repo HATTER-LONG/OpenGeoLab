@@ -1,21 +1,21 @@
 /**
  * @file model_data.hpp
- * @brief QML-exposed model data for UI display
+ * @brief QML-exposed model data for UI display.
+ *
+ * Provides QML bridge to access geometry data stored in Geometry module.
+ * This layer only handles QML property binding; actual data is in GeometryStore.
  */
 #pragma once
 
-#include "io/geometry_data.hpp"
+#include "geometry/geometry_model.hpp"
 
 #include <QObject>
 #include <QtQml/qqml.h>
 
-#include <memory>
-#include <vector>
-
 namespace OpenGeoLab::App {
 
 /**
- * @brief QML wrapper for model part information
+ * @brief QML wrapper for model part information.
  */
 class ModelPartData : public QObject {
     Q_OBJECT
@@ -38,10 +38,15 @@ public:
     [[nodiscard]] int edgeCount() const { return m_edgeCount; }
     [[nodiscard]] int vertexCount() const { return m_vertexCount; }
 
-    /// Set part data directly (used by ModelManager)
+    /**
+     * @brief Set part data directly.
+     */
     void setData(uint id, const QString& name, int solids, int faces, int edges, int vertices);
 
-    void updateFromGeometry(const IO::ModelPart& part, const IO::GeometryData& geometry);
+    /**
+     * @brief Update from geometry part data.
+     */
+    void updateFromPart(const Geometry::Part& part, const Geometry::GeometryModel& model);
 
 signals:
     void idChanged();
@@ -61,7 +66,9 @@ private:
 };
 
 /**
- * @brief QML-exposed model manager for displaying geometry hierarchy
+ * @brief QML-exposed model manager for displaying geometry hierarchy.
+ *
+ * Reads from GeometryStore and provides QML-bindable properties.
  */
 class ModelManager : public QObject {
     Q_OBJECT
@@ -78,13 +85,21 @@ public:
     [[nodiscard]] bool hasModel() const { return !m_parts.isEmpty(); }
 
     /**
-     * @brief Load geometry data from import result
-     * @param result JSON result from backend service
+     * @brief Refresh model data from GeometryStore.
+     *
+     * Call this after import completes to update QML bindings.
+     */
+    Q_INVOKABLE void refreshFromStore();
+
+    /**
+     * @brief Load geometry data from import result (legacy).
+     *
+     * Calls refreshFromStore() internally since data is now in GeometryStore.
      */
     Q_INVOKABLE void loadFromResult(const QVariantMap& result);
 
     /**
-     * @brief Clear all model data
+     * @brief Clear all model data.
      */
     Q_INVOKABLE void clear();
 

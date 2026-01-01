@@ -8,8 +8,8 @@ import "." as Pages
 /**
  * @brief Dialog for adding a point with X, Y, Z coordinates.
  *
- * NOTE: BackendService.request() now takes module_name as first parameter:
- *   BackendService.request("ModuleName", { action_id: "action", param1: value1, ... })
+ * NOTE: BackendService.request() uses module name as first parameter:
+ *   BackendService.request("ModuleName", { param1: value1, ... })
  *
  * TODO: Update to use actual service module when implemented.
  */
@@ -131,8 +131,8 @@ Pages.BaseDialog {
     Connections {
         target: OGL.BackendService
 
-        function onOperationFinished(actionId, _result) {
-            if (actionId === "addPoint")
+        function onOperationFinished(moduleName: string, _result: var): void {
+            if (moduleName === "AddPoint")
                 root.closeRequested();
         }
     }

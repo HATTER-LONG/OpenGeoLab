@@ -108,8 +108,8 @@ Pages.BaseDialog {
     Connections {
         target: OGL.BackendService
 
-        function onOperationFinished(actionId, _result) {
-            if (actionId === "trim")
+        function onOperationFinished(moduleName: string, _result: var): void {
+            if (moduleName === "Trim")
                 root.closeRequested();
         }
     }

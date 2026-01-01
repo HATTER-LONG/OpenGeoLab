@@ -54,7 +54,7 @@ void registerServices();
  * @brief Base interface for all backend service components
  *
  * Services handle specific domain operations (e.g., IO, mesh processing).
- * Each service processes requests identified by action_id strings.
+ * Each service processes requests identified by module name.
  */
 class ServiceBase {
 public:
@@ -62,13 +62,13 @@ public:
     virtual ~ServiceBase() = default;
 
     /**
-     * @brief Process a service request
-     * @param action_id Identifier for the specific action to perform
-     * @param params JSON parameters for the action
-     * @param reporter Optional progress reporter for long operations
-     * @return JSON result object with operation outcome
+     * @brief Process a service request.
+     * @param module_name Identifier of the service module.
+     * @param params JSON parameters for the operation.
+     * @param reporter Optional progress reporter for long operations.
+     * @return JSON result object with operation outcome.
      */
-    virtual nlohmann::json processRequest(const std::string& action_id,
+    virtual nlohmann::json processRequest(const std::string& module_name,
                                           const nlohmann::json& params,
                                           ProgressReporterPtr reporter) = 0;
 };

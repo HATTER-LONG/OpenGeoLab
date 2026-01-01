@@ -1,6 +1,6 @@
 /**
  * @file model_reader.cpp
- * @brief 3D model file import service implementation
+ * @brief 3D model file import service implementation.
  */
 #include "io/model_reader.hpp"
 #include "io/brep_reader.hpp"
@@ -8,14 +8,12 @@
 #include "util/logger.hpp"
 
 #include <algorithm>
-#include <chrono>
 #include <filesystem>
-#include <thread>
 
 namespace OpenGeoLab {
 namespace IO {
 
-nlohmann::json ModelReader::processRequest(const std::string& action_id,
+nlohmann::json ModelReader::processRequest(const std::string& /* module_name */,
                                            const nlohmann::json& params,
                                            App::ProgressReporterPtr reporter) {
     nlohmann::json result;
@@ -40,8 +38,20 @@ nlohmann::json ModelReader::processRequest(const std::string& action_id,
     result["file_path"] = file_path;
 
     if(success) {
+        // Store geometry in GeometryStore for other modules to access
+        geometry->storeToGeometryStore();
+
         result["title"] = "Import Successful";
         result["message"] = "3D model loaded successfully.";
+
+        // Top-level geometry summary for QML ModelManager
+        result["parts"] = static_cast<int>(geometry->parts.size());
+        result["solids"] = static_cast<int>(geometry->solids.size());
+        result["faces"] = static_cast<int>(geometry->faces.size());
+        result["edges"] = static_cast<int>(geometry->edges.size());
+        result["vertices"] = static_cast<int>(geometry->vertices.size());
+
+        // Formatted details for ResultDialog display
         result["details"] = {{"File", file_path},
                              {"Parts", geometry->parts.size()},
                              {"Solids", geometry->solids.size()},
@@ -112,7 +122,9 @@ std::string ModelReader::detectFileFormat(const std::string& file_path) const {
 
     if(ext == ".brep" || ext == ".brp") {
         return "brep";
-    } else if(ext == ".step" || ext == ".stp") {
+    }
+
+    if(ext == ".step" || ext == ".stp") {
         return "step";
     }
 

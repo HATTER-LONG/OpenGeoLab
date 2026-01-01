@@ -65,15 +65,15 @@ signals:
     void messageChanged();
     void lastErrorChanged();
 
-    void operationStarted(const QString& action_id);
-    void operationProgress(const QString& action_id, double progress, const QString& message);
-    void operationFinished(const QString& action_id, const QVariantMap& result);
-    void operationFailed(const QString& action_id, const QString& error);
+    void operationStarted(const QString& moduleName);
+    void operationProgress(const QString& moduleName, double progress, const QString& message);
+    void operationFinished(const QString& moduleName, const QVariantMap& result);
+    void operationFailed(const QString& moduleName, const QString& error);
 
 private slots:
     void onWorkerProgress(double progress, const QString& message);
-    void onWorkerFinished(const QString& action_id, const QVariantMap& result);
-    void onWorkerError(const QString& action_id, const QString& error);
+    void onWorkerFinished(const QString& moduleName, const QVariantMap& result);
+    void onWorkerError(const QString& moduleName, const QString& error);
 
 public:
     /**
@@ -102,7 +102,7 @@ private:
     QString m_message;
     QString m_lastError;
 
-    QString m_currentActionId;
+    QString m_currentModuleName;
     QVariantMap m_currentParams;
 
     std::atomic<bool> m_cancelled{false};
@@ -117,8 +117,7 @@ class ServiceWorker : public QObject {
     Q_OBJECT
 
 public:
-    ServiceWorker(const QString& module,
-                  const QString& action_id,
+    ServiceWorker(const QString& moduleName,
                   const nlohmann::json& params,
                   std::atomic<bool>& cancelled);
 
@@ -127,12 +126,11 @@ public slots:
 
 signals:
     void progress(double progress, const QString& message);
-    void finished(const QString& action_id, const QVariantMap& result);
-    void error(const QString& action_id, const QString& error);
+    void finished(const QString& moduleName, const QVariantMap& result);
+    void error(const QString& moduleName, const QString& error);
 
 private:
-    QString m_module;
-    QString m_actionId;
+    QString m_moduleName;
     nlohmann::json m_params;
     std::atomic<bool>& m_cancelled;
 };

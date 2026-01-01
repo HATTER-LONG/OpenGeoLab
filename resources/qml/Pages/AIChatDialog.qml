@@ -165,8 +165,8 @@ Pages.BaseDialog {
     Connections {
         target: OGL.BackendService
 
-        function onOperationFinished(actionId, result) {
-            if (actionId === "aiChat" && result && result.response) {
+        function onOperationFinished(moduleName: string, result: var): void {
+            if (moduleName === "AIChat" && result && result.response) {
                 const newMessages = root.messages.slice();
                 newMessages.push({
                     role: "assistant",

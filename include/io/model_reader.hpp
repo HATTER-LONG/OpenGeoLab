@@ -26,14 +26,14 @@ public:
     virtual ~ModelReader() = default;
 
     /**
-     * @brief Process model reading requests
-     * @param action_id Action identifier (e.g., "read_model")
-     * @param params Must contain "file_path" string
-     * @param reporter Optional progress reporter
-     * @return JSON with geometry summary on success
-     * @note Auto-detects file format (.brep, .step, .stp) and routes to appropriate reader
+     * @brief Process model reading requests.
+     * @param module_name Module name (ModelReader).
+     * @param params Must contain "file_path" string.
+     * @param reporter Optional progress reporter.
+     * @return JSON with geometry summary on success.
+     * @note Auto-detects file format (.brep, .step, .stp) and routes to appropriate reader.
      */
-    nlohmann::json processRequest(const std::string& action_id,
+    nlohmann::json processRequest(const std::string& module_name,
                                   const nlohmann::json& params,
                                   App::ProgressReporterPtr reporter) override;
 
