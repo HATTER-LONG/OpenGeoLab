@@ -2,7 +2,7 @@
  * @file brep_reader.cpp
  * @brief BREP format reader implementation
  */
-#include "io/brep_reader.hpp"
+#include "brep_reader.hpp"
 #include "util/logger.hpp"
 
 #include <fstream>
@@ -32,28 +32,28 @@ bool BrepReader::parseBrepFile(const std::string& file_path, GeometryData& data)
         return false;
     }
 
-    // TODO: Implement actual BREP parsing using OpenCASCADE or similar
+    // TODO(Admin): Implement actual BREP parsing using OpenCASCADE or similar
     // For now, create dummy geometry data
 
     // Create sample part
     ModelPart part;
-    part.id = 1;
-    part.name = "BREP_Part_1";
-    part.solid_ids = {1};
-    data.parts.push_back(part);
+    part.m_id = 1;
+    part.m_name = "BREP_Part_1";
+    part.m_solidIds = {1};
+    data.m_parts.push_back(part);
 
     // Create sample solid
     GeometrySolid solid;
-    solid.id = 1;
-    solid.face_ids = {1, 2, 3, 4, 5, 6}; // Example: 6 faces for a box
-    data.solids.push_back(solid);
+    solid.m_id = 1;
+    solid.m_faceIds = {1, 2, 3, 4, 5, 6}; // Example: 6 faces for a box
+    data.m_solids.push_back(solid);
 
     // Create sample faces (simplified)
     for(uint32_t i = 1; i <= 6; ++i) {
         GeometryFace face;
-        face.id = i;
+        face.m_id = i;
         // Add dummy mesh vertices and indices
-        data.faces.push_back(face);
+        data.m_faces.push_back(face);
     }
 
     LOG_INFO("BrepReader: Created placeholder geometry (actual parsing not yet implemented)");

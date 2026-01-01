@@ -12,8 +12,13 @@ namespace OpenGeoLab::App {
 
 ModelPartData::ModelPartData(QObject* parent) : QObject(parent) {}
 
-void ModelPartData::setData(
-    uint id, const QString& name, int solids, int faces, int edges, int vertices) {
+void ModelPartData::setData( // NOLINT
+    uint id,
+    const QString& name,
+    int solids,
+    int faces,
+    int edges,
+    int vertices) {
     m_id = id;
     m_name = name;
     m_solidCount = solids;
@@ -31,16 +36,16 @@ void ModelPartData::setData(
 
 void ModelPartData::updateFromPart(const Geometry::Part& part,
                                    const Geometry::GeometryModel& model) {
-    m_id = part.id;
-    m_name = QString::fromStdString(part.name);
-    m_solidCount = static_cast<int>(part.solid_ids.size());
+    m_id = part.m_id;
+    m_name = QString::fromStdString(part.m_name);
+    m_solidCount = static_cast<int>(part.m_solidIds.size());
 
     // Count faces in this part's solids
     int faces = 0;
-    for(uint32_t solid_id : part.solid_ids) {
+    for(uint32_t solid_id : part.m_solidIds) {
         const Geometry::Solid* solid = model.getSolidById(solid_id);
         if(solid) {
-            faces += static_cast<int>(solid->face_ids.size());
+            faces += static_cast<int>(solid->m_faceIds.size());
         }
     }
 

@@ -17,7 +17,7 @@ namespace OpenGeoLab {
 // Forward declarations
 namespace Geometry {
 class GeometryStore;
-}
+} // namespace Geometry
 
 namespace IO {
 
@@ -38,11 +38,11 @@ using ModelPart = Geometry::Part;
  * and downstream mesh generation.
  */
 struct GeometryData {
-    std::vector<ModelPart> parts;         ///< Top-level parts/assemblies.
-    std::vector<GeometrySolid> solids;    ///< 3D solid bodies.
-    std::vector<GeometryFace> faces;      ///< 2D surface faces.
-    std::vector<GeometryEdge> edges;      ///< 1D curves/edges.
-    std::vector<GeometryVertex> vertices; ///< 0D points/vertices.
+    std::vector<ModelPart> m_parts;         ///< Top-level parts/assemblies.
+    std::vector<GeometrySolid> m_solids;    ///< 3D solid bodies.
+    std::vector<GeometryFace> m_faces;      ///< 2D surface faces.
+    std::vector<GeometryEdge> m_edges;      ///< 1D curves/edges.
+    std::vector<GeometryVertex> m_vertices; ///< 0D points/vertices.
 
     /**
      * @brief Get summary statistics of the geometry.

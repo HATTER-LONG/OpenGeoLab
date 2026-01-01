@@ -17,7 +17,7 @@ void GeometryModel::clear() {
     m_faces.clear();
     m_edges.clear();
     m_vertices.clear();
-    sourcePath.clear();
+    m_sourcePath.clear();
 }
 
 bool GeometryModel::isEmpty() const {
@@ -38,16 +38,16 @@ BoundingBox GeometryModel::computeBoundingBox() const {
     constexpr double max_val = std::numeric_limits<double>::max();
     constexpr double min_val = std::numeric_limits<double>::lowest();
 
-    box.min = Point3D(max_val, max_val, max_val);
-    box.max = Point3D(min_val, min_val, min_val);
+    box.m_min = Point3D(max_val, max_val, max_val);
+    box.m_max = Point3D(min_val, min_val, min_val);
 
     for(const auto& v : m_vertices) {
-        box.min.x = std::min(box.min.x, v.position.x);
-        box.min.y = std::min(box.min.y, v.position.y);
-        box.min.z = std::min(box.min.z, v.position.z);
-        box.max.x = std::max(box.max.x, v.position.x);
-        box.max.y = std::max(box.max.y, v.position.y);
-        box.max.z = std::max(box.max.z, v.position.z);
+        box.m_min.m_x = std::min(box.m_min.m_x, v.m_position.m_x);
+        box.m_min.m_y = std::min(box.m_min.m_y, v.m_position.m_y);
+        box.m_min.m_z = std::min(box.m_min.m_z, v.m_position.m_z);
+        box.m_max.m_x = std::max(box.m_max.m_x, v.m_position.m_x);
+        box.m_max.m_y = std::max(box.m_max.m_y, v.m_position.m_y);
+        box.m_max.m_z = std::max(box.m_max.m_z, v.m_position.m_z);
     }
 
     return box;
@@ -57,15 +57,15 @@ void GeometryModel::addPart(Part part) { m_parts.push_back(std::move(part)); }
 
 const Part* GeometryModel::getPartById(uint32_t id) const {
     auto it =
-        std::find_if(m_parts.begin(), m_parts.end(), [id](const Part& p) { return p.id == id; });
+        std::find_if(m_parts.begin(), m_parts.end(), [id](const Part& p) { return p.m_id == id; });
     return (it != m_parts.end()) ? &(*it) : nullptr;
 }
 
 void GeometryModel::addSolid(Solid solid) { m_solids.push_back(std::move(solid)); }
 
 const Solid* GeometryModel::getSolidById(uint32_t id) const {
-    auto it =
-        std::find_if(m_solids.begin(), m_solids.end(), [id](const Solid& s) { return s.id == id; });
+    auto it = std::find_if(m_solids.begin(), m_solids.end(),
+                           [id](const Solid& s) { return s.m_id == id; });
     return (it != m_solids.end()) ? &(*it) : nullptr;
 }
 
@@ -73,7 +73,7 @@ void GeometryModel::addFace(Face face) { m_faces.push_back(std::move(face)); }
 
 const Face* GeometryModel::getFaceById(uint32_t id) const {
     auto it =
-        std::find_if(m_faces.begin(), m_faces.end(), [id](const Face& f) { return f.id == id; });
+        std::find_if(m_faces.begin(), m_faces.end(), [id](const Face& f) { return f.m_id == id; });
     return (it != m_faces.end()) ? &(*it) : nullptr;
 }
 
@@ -81,7 +81,7 @@ void GeometryModel::addEdge(Edge edge) { m_edges.push_back(std::move(edge)); }
 
 const Edge* GeometryModel::getEdgeById(uint32_t id) const {
     auto it =
-        std::find_if(m_edges.begin(), m_edges.end(), [id](const Edge& e) { return e.id == id; });
+        std::find_if(m_edges.begin(), m_edges.end(), [id](const Edge& e) { return e.m_id == id; });
     return (it != m_edges.end()) ? &(*it) : nullptr;
 }
 
@@ -89,7 +89,7 @@ void GeometryModel::addVertex(Vertex vertex) { m_vertices.push_back(std::move(ve
 
 const Vertex* GeometryModel::getVertexById(uint32_t id) const {
     auto it = std::find_if(m_vertices.begin(), m_vertices.end(),
-                           [id](const Vertex& v) { return v.id == id; });
+                           [id](const Vertex& v) { return v.m_id == id; });
     return (it != m_vertices.end()) ? &(*it) : nullptr;
 }
 

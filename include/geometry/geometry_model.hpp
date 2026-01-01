@@ -89,7 +89,7 @@ public:
     /**
      * @brief Source file path of the imported model.
      */
-    std::string sourcePath;
+    std::string m_sourcePath;
 
 private:
     std::vector<Part> m_parts;

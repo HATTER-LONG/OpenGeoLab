@@ -3,8 +3,7 @@
  * @brief 3D model file import service implementation.
  */
 #include "io/model_reader.hpp"
-#include "io/brep_reader.hpp"
-#include "io/step_reader.hpp"
+#include "io/reader.hpp"
 #include "util/logger.hpp"
 
 #include <algorithm>
@@ -45,19 +44,19 @@ nlohmann::json ModelReader::processRequest(const std::string& /* module_name */,
         result["message"] = "3D model loaded successfully.";
 
         // Top-level geometry summary for QML ModelManager
-        result["parts"] = static_cast<int>(geometry->parts.size());
-        result["solids"] = static_cast<int>(geometry->solids.size());
-        result["faces"] = static_cast<int>(geometry->faces.size());
-        result["edges"] = static_cast<int>(geometry->edges.size());
-        result["vertices"] = static_cast<int>(geometry->vertices.size());
+        result["parts"] = static_cast<int>(geometry->m_parts.size());
+        result["solids"] = static_cast<int>(geometry->m_solids.size());
+        result["faces"] = static_cast<int>(geometry->m_faces.size());
+        result["edges"] = static_cast<int>(geometry->m_edges.size());
+        result["vertices"] = static_cast<int>(geometry->m_vertices.size());
 
         // Formatted details for ResultDialog display
         result["details"] = {{"File", file_path},
-                             {"Parts", geometry->parts.size()},
-                             {"Solids", geometry->solids.size()},
-                             {"Faces", geometry->faces.size()},
-                             {"Edges", geometry->edges.size()},
-                             {"Vertices", geometry->vertices.size()}};
+                             {"Parts", geometry->m_parts.size()},
+                             {"Solids", geometry->m_solids.size()},
+                             {"Faces", geometry->m_faces.size()},
+                             {"Edges", geometry->m_edges.size()},
+                             {"Vertices", geometry->m_vertices.size()}};
     } else {
         result["error"] = "Failed to read model file";
         result["title"] = "Import Failed";
@@ -71,8 +70,8 @@ GeometryDataPtr ModelReader::readModel(const std::string& file_path,
     LOG_INFO("Reading model from file: {}", file_path);
 
     // Detect file format
-    std::string format = detectFileFormat(file_path);
-    if(format.empty()) {
+    std::string reader_name = detectFileFormat(file_path);
+    if(reader_name.empty()) {
         LOG_ERROR("Unsupported file format: {}", file_path);
         if(reporter) {
             reporter->reportError("Unsupported file format");
@@ -80,25 +79,16 @@ GeometryDataPtr ModelReader::readModel(const std::string& file_path,
         return nullptr;
     }
 
-    LOG_INFO("Detected file format: {}", format);
+    LOG_INFO("Detected file format: {}", reader_name);
 
     // Route to appropriate reader
     GeometryDataPtr geometry = nullptr;
 
-    if(format == "brep") {
-        auto reader = g_ComponentFactory.getInstanceObjectWithID<BrepReaderFactory>("BrepReader");
-        if(reader) {
-            geometry = reader->read(file_path);
-        } else {
-            LOG_ERROR("BrepReader component not available");
-        }
-    } else if(format == "step") {
-        auto reader = g_ComponentFactory.getInstanceObjectWithID<StepReaderFactory>("StepReader");
-        if(reader) {
-            geometry = reader->read(file_path);
-        } else {
-            LOG_ERROR("StepReader component not available");
-        }
+    auto reader = g_ComponentFactory.createObjectWithID<ReaderFactory>(reader_name);
+    if(reader) {
+        geometry = reader->read(file_path);
+    } else {
+        LOG_ERROR("{} component not available", reader_name);
     }
 
     // Report progress
@@ -121,11 +111,11 @@ std::string ModelReader::detectFileFormat(const std::string& file_path) const {
     std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
 
     if(ext == ".brep" || ext == ".brp") {
-        return "brep";
+        return "BrepReader";
     }
 
     if(ext == ".step" || ext == ".stp") {
-        return "step";
+        return "StepReader";
     }
 
     return ""; // Unknown format

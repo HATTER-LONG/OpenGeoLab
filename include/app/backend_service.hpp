@@ -65,15 +65,15 @@ signals:
     void messageChanged();
     void lastErrorChanged();
 
-    void operationStarted(const QString& moduleName);
-    void operationProgress(const QString& moduleName, double progress, const QString& message);
-    void operationFinished(const QString& moduleName, const QVariantMap& result);
-    void operationFailed(const QString& moduleName, const QString& error);
+    void operationStarted(const QString& module_name);
+    void operationProgress(const QString& module_name, double progress, const QString& message);
+    void operationFinished(const QString& module_name, const QVariantMap& result);
+    void operationFailed(const QString& module_name, const QString& error);
 
 private slots:
     void onWorkerProgress(double progress, const QString& message);
-    void onWorkerFinished(const QString& moduleName, const QVariantMap& result);
-    void onWorkerError(const QString& moduleName, const QString& error);
+    void onWorkerFinished(const QString& module_name, const QVariantMap& result);
+    void onWorkerError(const QString& module_name, const QString& error);
 
 public:
     /**
@@ -117,7 +117,7 @@ class ServiceWorker : public QObject {
     Q_OBJECT
 
 public:
-    ServiceWorker(const QString& moduleName,
+    ServiceWorker(const QString& module_name,
                   const nlohmann::json& params,
                   std::atomic<bool>& cancelled);
 
@@ -126,8 +126,8 @@ public slots:
 
 signals:
     void progress(double progress, const QString& message);
-    void finished(const QString& moduleName, const QVariantMap& result);
-    void error(const QString& moduleName, const QString& error);
+    void finished(const QString& module_name, const QVariantMap& result);
+    void error(const QString& module_name, const QString& error);
 
 private:
     QString m_moduleName;
