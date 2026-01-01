@@ -5,6 +5,7 @@
 #pragma once
 
 #include "app/service.hpp"
+#include "geometry_data.hpp"
 
 #include <kangaroo/util/component_factory.hpp>
 
@@ -26,10 +27,11 @@ public:
 
     /**
      * @brief Process model reading requests
-     * @param action_id Must be "read_model" for this service
+     * @param action_id Action identifier (e.g., "read_model")
      * @param params Must contain "file_path" string
      * @param reporter Optional progress reporter
-     * @return JSON with "success" bool and "file_path" on success
+     * @return JSON with geometry summary on success
+     * @note Auto-detects file format (.brep, .step, .stp) and routes to appropriate reader
      */
     nlohmann::json processRequest(const std::string& action_id,
                                   const nlohmann::json& params,
@@ -40,9 +42,16 @@ private:
      * @brief Internal model reading implementation
      * @param file_path Path to the model file
      * @param reporter Progress reporter for long operations
-     * @return true on success
+     * @return Geometry data on success, nullptr on failure
      */
-    bool readModel(const std::string& file_path, App::ProgressReporterPtr reporter);
+    GeometryDataPtr readModel(const std::string& file_path, App::ProgressReporterPtr reporter);
+
+    /**
+     * @brief Detect file format from extension
+     * @param file_path Input file path
+     * @return File format string ("brep", "step", or empty on unknown)
+     */
+    std::string detectFileFormat(const std::string& file_path) const;
 };
 
 /**

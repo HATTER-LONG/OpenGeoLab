@@ -78,39 +78,35 @@ QString BackendService::message() const { return m_message; }
 
 QString BackendService::lastError() const { return m_lastError; }
 
-void BackendService::request(const QString& action_id, const QVariantMap& params) {
+void BackendService::request(const QString& module_name, const QVariantMap& params) {
     clearError();
 
-    if(action_id.trimmed().isEmpty()) {
-        setLastError(QStringLiteral("action_id is empty"));
-        emit operationFailed(action_id, m_lastError);
+    if(module_name.trimmed().isEmpty()) {
+        setLastError(QStringLiteral("module_name is empty"));
+        emit operationFailed(module_name, m_lastError);
         return;
     }
 
     if(m_busy) {
         const auto err = QStringLiteral("BackendService is busy");
         setLastError(err);
-        emit operationFailed(action_id, err);
+        emit operationFailed(module_name, err);
         return;
     }
 
-    // Extract module from params for routing
-    QString module = params.value(QStringLiteral("module")).toString();
-    if(module.isEmpty()) {
-        setLastError(QStringLiteral("Missing 'module' parameter for routing"));
-        emit operationFailed(action_id, m_lastError);
-        return;
-    }
+    // Extract action_id from params, default to "process"
+    QString action_id =
+        params.value(QStringLiteral("action_id"), QStringLiteral("process")).toString();
 
-    m_currentActionId = action_id;
+    m_currentActionId = module_name;
     m_currentParams = params;
     m_cancelled.store(false);
 
     setBusyInternal(true);
     setProgressInternal(-1.0); // Indeterminate initially
-    setMessage(QStringLiteral("%1...").arg(action_id));
+    setMessage(QStringLiteral("%1...").arg(module_name));
 
-    emit operationStarted(action_id);
+    emit operationStarted(module_name);
 
     // Convert QVariantMap to JSON for service layer
     nlohmann::json json_params = variantMapToJson(params);
@@ -119,7 +115,7 @@ void BackendService::request(const QString& action_id, const QVariantMap& params
     cleanupWorker();
 
     m_workerThread = new QThread(this);
-    m_worker = new ServiceWorker(module, action_id, json_params, m_cancelled);
+    m_worker = new ServiceWorker(module_name, action_id, json_params, m_cancelled);
     m_worker->moveToThread(m_workerThread);
 
     connect(m_workerThread, &QThread::started, m_worker, &ServiceWorker::process);

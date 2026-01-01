@@ -49,11 +49,10 @@ public:
 
     /**
      * @brief Process a backend request asynchronously
-     * @param action_id Action identifier (e.g., "read_model")
-     * @param params Parameters including "module" key for routing
-     * @note Expects params["module"] to specify target service component
+     * @param module_name Module/service name for routing (e.g., "ModelReader")
+     * @param params Request parameters specific to the module
      */
-    Q_INVOKABLE void request(const QString& action_id, const QVariantMap& params);
+    Q_INVOKABLE void request(const QString& module_name, const QVariantMap& params);
 
     Q_INVOKABLE void setBusy(bool busy, const QString& message = QString());
     Q_INVOKABLE void setProgress(double progress, const QString& message = QString());

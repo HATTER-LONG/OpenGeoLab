@@ -7,6 +7,11 @@ import "." as Pages
 
 /**
  * @brief Dialog for adding a point with X, Y, Z coordinates.
+ *
+ * NOTE: BackendService.request() now takes module_name as first parameter:
+ *   BackendService.request("ModuleName", { action_id: "action", param1: value1, ... })
+ *
+ * TODO: Update to use actual service module when implemented.
  */
 Pages.BaseDialog {
     id: root

@@ -185,9 +185,13 @@ qt_add_qml_module(
   SOURCES
   include/app/backend_service.hpp
   src/app/backend_service.cpp
+  include/app/model_data.hpp
+  src/app/model_data.cpp
   QML_FILES
   resources/qml/Main.qml
   resources/qml/Theme.qml
+  resources/qml/ModelTreeSidebar.qml
+  resources/qml/OpenGLViewport.qml
   resources/qml/RibbonMenu/RibbonConfig.qml
   resources/qml/RibbonMenu/RibbonFileMenu.qml
   resources/qml/RibbonMenu/RibbonToolBar.qml

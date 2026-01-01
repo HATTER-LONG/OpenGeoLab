@@ -16,9 +16,8 @@ FileDialog {
         const filePath = selectedFile.toString().replace("file:///", "");
         console.log("[ImportModel] Selected model file:", filePath);
 
-        // Call backend service with module routing
-        OGL.BackendService.request("read_model", {
-            "module": "ModelReader",
+        // Call backend service with module name and file path
+        OGL.BackendService.request("ModelReader", {
             "file_path": filePath
         });
     }

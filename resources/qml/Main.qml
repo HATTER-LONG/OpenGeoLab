@@ -47,31 +47,39 @@ ApplicationWindow {
         // Ribbon Menu
         RibbonToolBar {
             id: ribbon
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.top: parent.top
+            Layout.fillWidth: true
             onActionTriggered: (actionId, payload) => ribbonActions.handle(actionId, payload)
         }
 
         // Main Content Area
-        Rectangle {
+        SplitView {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            color: Theme.backgroundColor
+            orientation: Qt.Horizontal
 
-            Text {
-                text: qsTr("Welcome to OpenGeoLab!")
-                anchors.centerIn: parent
-                font.pointSize: 24
-                color: Theme.textPrimaryColor
+            // Left sidebar - Model tree
+            ModelTreeSidebar {
+                SplitView.minimumWidth: 200
+                SplitView.preferredWidth: 250
+                SplitView.maximumWidth: 400
             }
 
-            // Progress overlay in bottom-right corner
-            RibbonMenu.RibbonProgressOverlay {
-                id: progressOverlay
-                anchors.right: parent.right
-                anchors.bottom: parent.bottom
-                anchors.margins: 16
+            // Right area - OpenGL viewport
+            OpenGLViewport {
+                SplitView.fillWidth: true
+                SplitView.minimumWidth: 400
+            }
+
+            // Handle styling
+            handle: Rectangle {
+                implicitWidth: 6
+                color: SplitHandle.hovered ? Theme.accentColor : Theme.borderColor
+
+                Behavior on color {
+                    ColorAnimation {
+                        duration: 150
+                    }
+                }
             }
         }
     }

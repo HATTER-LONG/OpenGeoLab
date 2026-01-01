@@ -36,6 +36,12 @@ Dialog {
             root.isError = false;
             root.title = result.title || qsTr("Operation Successful");
             root.dialogMessage = result.message || qsTr("Operation completed successfully.");
+
+            // Load model data if this is a successful import
+            if (actionId === "ModelReader" && result.success === true) {
+                OGL.ModelManager.loadFromResult(result);
+            }
+
             root.open();
         }
 
@@ -63,7 +69,7 @@ Dialog {
         id: headerRect
         width: parent ? parent.width : 420
         height: 48
-        color: root.isError ? "#EF5350" : "#4CAF50"
+        color: root.isError ? Theme.dialogErrorColor : Theme.dialogSuccessColor
         radius: 12
 
         // Square bottom corners
@@ -117,7 +123,7 @@ Dialog {
             Layout.leftMargin: 16
             Layout.rightMargin: 16
             Layout.preferredHeight: detailsCol.implicitHeight + 16
-            color: Theme.mode === Theme.dark ? "#2A2A2A" : "#F5F5F5"
+            color: Theme.dialogDetailsBgColor
             radius: 8
             visible: root.resultData.details !== undefined
 
@@ -139,12 +145,13 @@ Dialog {
                     }
 
                     delegate: RowLayout {
+                        id: detailRow
                         required property var modelData
                         Layout.fillWidth: true
                         spacing: 8
 
                         Label {
-                            text: modelData.key + ":"
+                            text: detailRow.modelData.key + ":"
                             font.bold: true
                             font.pixelSize: 12
                             color: Theme.textSecondaryColor
@@ -153,7 +160,7 @@ Dialog {
 
                         Label {
                             Layout.fillWidth: true
-                            text: String(modelData.value)
+                            text: String(detailRow.modelData.value)
                             font.pixelSize: 12
                             color: Theme.textPrimaryColor
                             elide: Text.ElideMiddle
@@ -207,7 +214,7 @@ Dialog {
                     implicitWidth: 100
                     implicitHeight: 36
                     radius: 8
-                    color: okButton.pressed ? (root.isError ? "#C62828" : "#388E3C") : (okButton.hovered ? (root.isError ? "#E53935" : "#43A047") : (root.isError ? "#EF5350" : "#4CAF50"))
+                    color: okButton.pressed ? (root.isError ? Theme.dialogErrorPressedColor : Theme.dialogSuccessPressedColor) : (okButton.hovered ? (root.isError ? Theme.dialogErrorHoverColor : Theme.dialogSuccessHoverColor) : (root.isError ? Theme.dialogErrorColor : Theme.dialogSuccessColor))
 
                     Behavior on color {
                         ColorAnimation {

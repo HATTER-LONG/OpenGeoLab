@@ -3,9 +3,13 @@
  * @brief 3D model file import service implementation
  */
 #include "io/model_reader.hpp"
+#include "io/brep_reader.hpp"
+#include "io/step_reader.hpp"
 #include "util/logger.hpp"
 
+#include <algorithm>
 #include <chrono>
+#include <filesystem>
 #include <thread>
 
 namespace OpenGeoLab {
@@ -16,66 +20,103 @@ nlohmann::json ModelReader::processRequest(const std::string& action_id,
                                            App::ProgressReporterPtr reporter) {
     nlohmann::json result;
     result["success"] = false;
-    result["action_id"] = action_id;
     result["show"] = true;
-    if(action_id == "read_model") {
-        if(!params.contains("file_path") || !params["file_path"].is_string()) {
-            result["error"] = "Missing or invalid 'file_path' parameter";
-            result["title"] = "Import Failed";
-            result["message"] = "No file path provided.";
-            if(reporter) {
-                reporter->reportError(result["error"].get<std::string>());
-            }
-            return result;
-        }
 
-        const std::string file_path = params["file_path"].get<std::string>();
-        const bool success = readModel(file_path, reporter);
-
-        result["success"] = success;
-        result["file_path"] = file_path;
-
-        if(success) {
-            result["title"] = "Import Successful";
-            result["message"] = "3D model loaded successfully.";
-            result["details"] = {
-                {"File", file_path}, {"Format", "STEP/BREP"}, {"Status", "Ready for processing"}};
-        } else {
-            result["error"] = "Failed to read model file";
-            result["title"] = "Import Failed";
-            result["message"] = "Could not load the model file.";
+    if(!params.contains("file_path") || !params["file_path"].is_string()) {
+        result["error"] = "Missing or invalid 'file_path' parameter";
+        result["title"] = "Import Failed";
+        result["message"] = "No file path provided.";
+        if(reporter) {
+            reporter->reportError(result["error"].get<std::string>());
         }
         return result;
     }
 
-    result["error"] = "Unknown action: " + action_id;
-    result["title"] = "Error";
-    result["message"] = "Unknown action requested.";
+    const std::string file_path = params["file_path"].get<std::string>();
+    GeometryDataPtr geometry = readModel(file_path, reporter);
+
+    const bool success = (geometry != nullptr);
+    result["success"] = success;
+    result["file_path"] = file_path;
+
+    if(success) {
+        result["title"] = "Import Successful";
+        result["message"] = "3D model loaded successfully.";
+        result["details"] = {{"File", file_path},
+                             {"Parts", geometry->parts.size()},
+                             {"Solids", geometry->solids.size()},
+                             {"Faces", geometry->faces.size()},
+                             {"Edges", geometry->edges.size()},
+                             {"Vertices", geometry->vertices.size()}};
+    } else {
+        result["error"] = "Failed to read model file";
+        result["title"] = "Import Failed";
+        result["message"] = "Could not load the model file.";
+    }
     return result;
 }
 
-bool ModelReader::readModel(const std::string& file_path, App::ProgressReporterPtr reporter) {
+GeometryDataPtr ModelReader::readModel(const std::string& file_path,
+                                       App::ProgressReporterPtr reporter) {
     LOG_INFO("Reading model from file: {}", file_path);
 
-    // Simulate reading progress for demonstration
-    const int total_steps = 10;
-    for(int i = 0; i <= total_steps; ++i) {
+    // Detect file format
+    std::string format = detectFileFormat(file_path);
+    if(format.empty()) {
+        LOG_ERROR("Unsupported file format: {}", file_path);
         if(reporter) {
-            if(reporter->isCancelled()) {
-                LOG_INFO("Model reading cancelled");
-                return false;
-            }
-
-            const double progress = static_cast<double>(i) / static_cast<double>(total_steps);
-            reporter->reportProgress(progress, "Reading model: " + std::to_string(i * 10) + "%");
+            reporter->reportError("Unsupported file format");
         }
-
-        // Simulate work (replace with actual model loading logic)
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        return nullptr;
     }
 
-    LOG_INFO("Model loaded successfully: {}", file_path);
-    return true;
+    LOG_INFO("Detected file format: {}", format);
+
+    // Route to appropriate reader
+    GeometryDataPtr geometry = nullptr;
+
+    if(format == "brep") {
+        auto reader = g_ComponentFactory.getInstanceObjectWithID<BrepReaderFactory>("BrepReader");
+        if(reader) {
+            geometry = reader->read(file_path);
+        } else {
+            LOG_ERROR("BrepReader component not available");
+        }
+    } else if(format == "step") {
+        auto reader = g_ComponentFactory.getInstanceObjectWithID<StepReaderFactory>("StepReader");
+        if(reader) {
+            geometry = reader->read(file_path);
+        } else {
+            LOG_ERROR("StepReader component not available");
+        }
+    }
+
+    // Report progress
+    if(reporter) {
+        if(geometry) {
+            reporter->reportProgress(1.0, "Model loaded: " + geometry->getSummary());
+        } else {
+            reporter->reportError("Failed to read model file");
+        }
+    }
+
+    return geometry;
+}
+
+std::string ModelReader::detectFileFormat(const std::string& file_path) const {
+    std::filesystem::path path(file_path);
+    std::string ext = path.extension().string();
+
+    // Convert to lowercase
+    std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+
+    if(ext == ".brep" || ext == ".brp") {
+        return "brep";
+    } else if(ext == ".step" || ext == ".stp") {
+        return "step";
+    }
+
+    return ""; // Unknown format
 }
 
 ModelReaderFactory::tObjectSharedPtr ModelReaderFactory::instance() const {
