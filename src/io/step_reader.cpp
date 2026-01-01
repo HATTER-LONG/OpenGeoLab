@@ -1,11 +1,15 @@
 /**
  * @file step_reader.cpp
- * @brief STEP format reader implementation
+ * @brief STEP format reader implementation using OpenCASCADE.
  */
 #include "io/step_reader.hpp"
+#include "geometry/occ_converter.hpp"
 #include "util/logger.hpp"
 
-#include <fstream>
+#include <STEPControl_Reader.hxx>
+#include <TopoDS_Shape.hxx>
+
+#include <filesystem>
 
 namespace OpenGeoLab {
 namespace IO {
@@ -26,37 +30,77 @@ GeometryDataPtr StepReader::read(const std::string& file_path) {
 
 bool StepReader::parseStepFile(const std::string& file_path, GeometryData& data) {
     // Check file exists
-    std::ifstream file(file_path);
-    if(!file.is_open()) {
-        LOG_ERROR("StepReader: Cannot open file: {}", file_path);
+    if(!std::filesystem::exists(file_path)) {
+        LOG_ERROR("StepReader: File does not exist: {}", file_path);
         return false;
     }
 
-    // TODO: Implement actual STEP parsing using OpenCASCADE or similar
-    // For now, create dummy geometry data
+    // Read STEP file using OpenCASCADE
+    STEPControl_Reader reader;
+    IFSelect_ReturnStatus status = reader.ReadFile(file_path.c_str());
 
-    // Create sample part
-    ModelPart part;
-    part.m_id = 1;
-    part.m_name = "STEP_Part_1";
-    part.m_solidIds = {1};
-    data.m_parts.push_back(part);
-
-    // Create sample solid
-    GeometrySolid solid;
-    solid.m_id = 1;
-    solid.m_faceIds = {1, 2, 3, 4, 5, 6, 7, 8}; // Example: 8 faces
-    data.m_solids.push_back(solid);
-
-    // Create sample faces (simplified)
-    for(uint32_t i = 1; i <= 8; ++i) {
-        GeometryFace face;
-        face.m_id = i;
-        // Add dummy mesh vertices and indices
-        data.m_faces.push_back(face);
+    if(status != IFSelect_RetDone) {
+        LOG_ERROR("StepReader: Failed to read STEP file, status: {}", static_cast<int>(status));
+        return false;
     }
 
-    LOG_INFO("StepReader: Created placeholder geometry (actual parsing not yet implemented)");
+    // Transfer all roots
+    int numRoots = reader.NbRootsForTransfer();
+    LOG_INFO("StepReader: Found {} roots in STEP file", numRoots);
+
+    reader.TransferRoots();
+    int numShapes = reader.NbShapes();
+    LOG_INFO("StepReader: Transferred {} shapes from STEP file", numShapes);
+
+    if(numShapes == 0) {
+        LOG_ERROR("StepReader: No shapes found in STEP file");
+        return false;
+    }
+
+    // Get the shape (combine all shapes if multiple)
+    TopoDS_Shape shape = reader.OneShape();
+
+    if(shape.IsNull()) {
+        LOG_ERROR("StepReader: Combined shape is null");
+        return false;
+    }
+
+    LOG_INFO("StepReader: Successfully read STEP shape from file");
+
+    // Convert OCC shape to our geometry format
+    Geometry::OccConverter converter;
+    Geometry::OccConverter::TessellationParams params;
+    params.linearDeflection = 0.1;
+    params.angularDeflection = 0.5;
+
+    // Extract filename for part name
+    std::filesystem::path path(file_path);
+    std::string partName = path.stem().string();
+
+    auto model = converter.convertShape(shape, partName, params);
+    if(!model) {
+        LOG_ERROR("StepReader: Failed to convert OCC shape");
+        return false;
+    }
+
+    // Copy data from model to GeometryData
+    for(const auto& part : model->getParts()) {
+        data.m_parts.push_back(part);
+    }
+    for(const auto& solid : model->getSolids()) {
+        data.m_solids.push_back(solid);
+    }
+    for(const auto& face : model->getFaces()) {
+        data.m_faces.push_back(face);
+    }
+    for(const auto& edge : model->getEdges()) {
+        data.m_edges.push_back(edge);
+    }
+    for(const auto& vertex : model->getVertices()) {
+        data.m_vertices.push_back(vertex);
+    }
+
+    LOG_INFO("StepReader: Converted STEP geometry - {}", data.getSummary());
     return true;
 }
 

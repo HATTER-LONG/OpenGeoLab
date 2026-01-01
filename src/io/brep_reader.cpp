@@ -1,11 +1,16 @@
 /**
  * @file brep_reader.cpp
- * @brief BREP format reader implementation
+ * @brief BREP format reader implementation using OpenCASCADE.
  */
 #include "brep_reader.hpp"
+#include "geometry/occ_converter.hpp"
 #include "util/logger.hpp"
 
-#include <fstream>
+#include <BRepTools.hxx>
+#include <BRep_Builder.hxx>
+#include <TopoDS_Shape.hxx>
+
+#include <filesystem>
 
 namespace OpenGeoLab {
 namespace IO {
@@ -26,37 +31,61 @@ GeometryDataPtr BrepReader::read(const std::string& file_path) {
 
 bool BrepReader::parseBrepFile(const std::string& file_path, GeometryData& data) {
     // Check file exists
-    std::ifstream file(file_path);
-    if(!file.is_open()) {
-        LOG_ERROR("BrepReader: Cannot open file: {}", file_path);
+    if(!std::filesystem::exists(file_path)) {
+        LOG_ERROR("BrepReader: File does not exist: {}", file_path);
         return false;
     }
 
-    // TODO(Admin): Implement actual BREP parsing using OpenCASCADE or similar
-    // For now, create dummy geometry data
+    // Read BREP file using OpenCASCADE
+    TopoDS_Shape shape;
+    BRep_Builder builder;
 
-    // Create sample part
-    ModelPart part;
-    part.m_id = 1;
-    part.m_name = "BREP_Part_1";
-    part.m_solidIds = {1};
-    data.m_parts.push_back(part);
-
-    // Create sample solid
-    GeometrySolid solid;
-    solid.m_id = 1;
-    solid.m_faceIds = {1, 2, 3, 4, 5, 6}; // Example: 6 faces for a box
-    data.m_solids.push_back(solid);
-
-    // Create sample faces (simplified)
-    for(uint32_t i = 1; i <= 6; ++i) {
-        GeometryFace face;
-        face.m_id = i;
-        // Add dummy mesh vertices and indices
-        data.m_faces.push_back(face);
+    if(!BRepTools::Read(shape, file_path.c_str(), builder)) {
+        LOG_ERROR("BrepReader: BRepTools::Read failed for: {}", file_path);
+        return false;
     }
 
-    LOG_INFO("BrepReader: Created placeholder geometry (actual parsing not yet implemented)");
+    if(shape.IsNull()) {
+        LOG_ERROR("BrepReader: Loaded shape is null");
+        return false;
+    }
+
+    LOG_INFO("BrepReader: Successfully read BREP shape from file");
+
+    // Convert OCC shape to our geometry format
+    Geometry::OccConverter converter;
+    Geometry::OccConverter::TessellationParams params;
+    params.linearDeflection = 0.1;
+    params.angularDeflection = 0.5;
+
+    // Extract filename for part name
+    std::filesystem::path path(file_path);
+    std::string partName = path.stem().string();
+
+    auto model = converter.convertShape(shape, partName, params);
+    if(!model) {
+        LOG_ERROR("BrepReader: Failed to convert OCC shape");
+        return false;
+    }
+
+    // Copy data from model to GeometryData
+    for(const auto& part : model->getParts()) {
+        data.m_parts.push_back(part);
+    }
+    for(const auto& solid : model->getSolids()) {
+        data.m_solids.push_back(solid);
+    }
+    for(const auto& face : model->getFaces()) {
+        data.m_faces.push_back(face);
+    }
+    for(const auto& edge : model->getEdges()) {
+        data.m_edges.push_back(edge);
+    }
+    for(const auto& vertex : model->getVertices()) {
+        data.m_vertices.push_back(vertex);
+    }
+
+    LOG_INFO("BrepReader: Converted BREP geometry - {}", data.getSummary());
     return true;
 }
 

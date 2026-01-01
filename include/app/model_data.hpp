@@ -4,6 +4,7 @@
  *
  * Provides QML bridge to access geometry data stored in Geometry module.
  * This layer only handles QML property binding; actual data is in GeometryStore.
+ * Automatically refreshes when GeometryStore notifies of changes.
  */
 #pragma once
 
@@ -16,6 +17,8 @@ namespace OpenGeoLab::App {
 
 /**
  * @brief QML wrapper for model part information.
+ *
+ * Exposes part data (ID, name, entity counts) to QML for display in the model tree.
  */
 class ModelPartData : public QObject {
     Q_OBJECT
@@ -40,11 +43,19 @@ public:
 
     /**
      * @brief Set part data directly.
+     * @param id Part identifier.
+     * @param name Part display name.
+     * @param solids Number of solids in part.
+     * @param faces Number of faces in part.
+     * @param edges Number of edges in part.
+     * @param vertices Number of vertices in part.
      */
     void setData(uint id, const QString& name, int solids, int faces, int edges, int vertices);
 
     /**
      * @brief Update from geometry part data.
+     * @param part Source part from GeometryModel.
+     * @param model Parent model for entity count lookups.
      */
     void updateFromPart(const Geometry::Part& part, const Geometry::GeometryModel& model);
 
@@ -69,6 +80,8 @@ private:
  * @brief QML-exposed model manager for displaying geometry hierarchy.
  *
  * Reads from GeometryStore and provides QML-bindable properties.
+ * Automatically subscribes to GeometryStore change notifications
+ * and refreshes QML bindings when geometry data changes.
  */
 class ModelManager : public QObject {
     Q_OBJECT
@@ -77,17 +90,27 @@ class ModelManager : public QObject {
 
     Q_PROPERTY(QList<QObject*> parts READ parts NOTIFY partsChanged)
     Q_PROPERTY(bool hasModel READ hasModel NOTIFY hasModelChanged)
+    Q_PROPERTY(int totalSolids READ totalSolids NOTIFY modelStatsChanged)
+    Q_PROPERTY(int totalFaces READ totalFaces NOTIFY modelStatsChanged)
+    Q_PROPERTY(int totalEdges READ totalEdges NOTIFY modelStatsChanged)
+    Q_PROPERTY(int totalVertices READ totalVertices NOTIFY modelStatsChanged)
 
 public:
     explicit ModelManager(QObject* parent = nullptr);
+    ~ModelManager() override;
 
     [[nodiscard]] QList<QObject*> parts() const;
     [[nodiscard]] bool hasModel() const { return !m_parts.isEmpty(); }
+    [[nodiscard]] int totalSolids() const { return m_totalSolids; }
+    [[nodiscard]] int totalFaces() const { return m_totalFaces; }
+    [[nodiscard]] int totalEdges() const { return m_totalEdges; }
+    [[nodiscard]] int totalVertices() const { return m_totalVertices; }
 
     /**
      * @brief Refresh model data from GeometryStore.
      *
      * Call this after import completes to update QML bindings.
+     * Also called automatically when GeometryStore notifies of changes.
      */
     Q_INVOKABLE void refreshFromStore();
 
@@ -95,6 +118,7 @@ public:
      * @brief Load geometry data from import result (legacy).
      *
      * Calls refreshFromStore() internally since data is now in GeometryStore.
+     * @param result Import operation result (unused).
      */
     Q_INVOKABLE void loadFromResult(const QVariantMap& result);
 
@@ -106,9 +130,28 @@ public:
 signals:
     void partsChanged();
     void hasModelChanged();
+    void modelStatsChanged();
+
+    /**
+     * @brief Emitted when geometry data has been updated.
+     *
+     * Connect to this signal to perform actions after geometry changes.
+     */
+    void geometryUpdated();
 
 private:
+    /**
+     * @brief Internal handler for GeometryStore change notifications.
+     */
+    void onGeometryChanged();
+
     QList<QObject*> m_parts;
+    int m_totalSolids = 0;
+    int m_totalFaces = 0;
+    int m_totalEdges = 0;
+    int m_totalVertices = 0;
+
+    size_t m_callbackId = 0; ///< Registered callback ID for GeometryStore notifications.
 };
 
 } // namespace OpenGeoLab::App

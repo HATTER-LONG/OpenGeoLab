@@ -28,7 +28,7 @@ Pages.BaseDialog {
             height: parseFloat(heightInput.text) || 1,
             depth: parseFloat(depthInput.text) || 1
         };
-        OGL.BackendService.request("addBox", params);
+        OGL.BackendService.request("AddBox", params);
     }
 
     ColumnLayout {

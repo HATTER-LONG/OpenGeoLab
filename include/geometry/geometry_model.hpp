@@ -4,11 +4,13 @@
  *
  * Provides the central data storage for geometry imported from CAD files.
  * IO readers populate this structure, and App layer queries it for QML display.
+ * Includes a global signal mechanism to notify listeners when geometry data changes.
  */
 #pragma once
 
 #include "geometry/geometry_types.hpp"
 
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -21,7 +23,8 @@ namespace Geometry {
  * @brief Complete geometry data structure from model import.
  *
  * Contains hierarchical topology (parts -> solids -> faces -> edges -> vertices)
- * and rendering data (tessellated meshes).
+ * and rendering data (tessellated meshes). Supports OCC-based model import and
+ * programmatic geometry creation (e.g., creating boxes).
  */
 class GeometryModel {
 public:
@@ -41,18 +44,27 @@ public:
 
     /**
      * @brief Check if geometry data is empty.
+     * @return True if no geometry entities exist.
      */
     bool isEmpty() const;
 
     /**
      * @brief Get summary statistics of the geometry.
+     * @return Human-readable summary string.
      */
     std::string getSummary() const;
 
     /**
      * @brief Compute bounding box of all geometry.
+     * @return Bounding box encompassing all vertices.
      */
     BoundingBox computeBoundingBox() const;
+
+    /**
+     * @brief Generate next unique ID for geometry entities.
+     * @return Unique ID for a new entity.
+     */
+    uint32_t generateNextId();
 
     // Part accessors
     const std::vector<Part>& getParts() const { return m_parts; }
@@ -97,45 +109,87 @@ private:
     std::vector<Face> m_faces;
     std::vector<Edge> m_edges;
     std::vector<Vertex> m_vertices;
+
+    uint32_t m_nextId = 1; ///< Counter for generating unique IDs.
 };
 
 using GeometryModelPtr = std::shared_ptr<GeometryModel>;
+
+/**
+ * @brief Callback type for geometry change notifications.
+ *
+ * Listeners receive this callback when geometry data is modified.
+ */
+using GeometryChangedCallback = std::function<void()>;
 
 /**
  * @brief Singleton geometry store for the application.
  *
  * Provides thread-safe access to the current geometry model.
  * IO layer populates this, App layer reads from it.
+ * Supports callback registration for change notifications.
  */
 class GeometryStore {
 public:
+    /**
+     * @brief Get singleton instance.
+     * @return Reference to the global GeometryStore.
+     */
     static GeometryStore& instance();
 
     /**
-     * @brief Set the current geometry model.
+     * @brief Set the current geometry model and notify listeners.
+     * @param model New geometry model (may be nullptr to clear).
      */
     void setModel(GeometryModelPtr model);
 
     /**
-     * @brief Get the current geometry model (may be nullptr).
+     * @brief Get the current geometry model.
+     * @return Shared pointer to current model (may be nullptr).
      */
     GeometryModelPtr getModel() const;
 
     /**
-     * @brief Clear the current model.
+     * @brief Clear the current model and notify listeners.
      */
     void clear();
 
     /**
-     * @brief Check if a model is loaded.
+     * @brief Check if a non-empty model is loaded.
+     * @return True if model exists and contains geometry.
      */
     bool hasModel() const;
+
+    /**
+     * @brief Register a callback for geometry change notifications.
+     * @param callback Function to call when geometry changes.
+     * @return Unique ID for the registered callback (for unregistration).
+     * @note Callbacks are invoked synchronously after model changes.
+     */
+    size_t registerChangeCallback(GeometryChangedCallback callback);
+
+    /**
+     * @brief Unregister a previously registered callback.
+     * @param callbackId ID returned from registerChangeCallback().
+     */
+    void unregisterChangeCallback(size_t callbackId);
+
+    /**
+     * @brief Manually notify all listeners of geometry changes.
+     * @note Called automatically by setModel() and clear().
+     *       Use this when modifying the model directly.
+     */
+    void notifyGeometryChanged();
 
 private:
     GeometryStore() = default;
 
     mutable std::mutex m_mutex;
     GeometryModelPtr m_model;
+
+    std::mutex m_callbackMutex;
+    std::vector<std::pair<size_t, GeometryChangedCallback>> m_callbacks;
+    size_t m_nextCallbackId = 1; ///< Counter for callback IDs.
 };
 
 } // namespace Geometry

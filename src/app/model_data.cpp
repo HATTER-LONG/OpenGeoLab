@@ -1,10 +1,15 @@
 /**
  * @file model_data.cpp
  * @brief QML-exposed model data implementation.
+ *
+ * Implements the bridge between GeometryStore and QML UI.
+ * Subscribes to GeometryStore change notifications for automatic updates.
  */
 #include "app/model_data.hpp"
 #include "geometry/geometry_model.hpp"
 #include "util/logger.hpp"
+
+#include <QMetaObject>
 
 namespace OpenGeoLab::App {
 
@@ -63,9 +68,31 @@ void ModelPartData::updateFromPart(const Geometry::Part& part,
 
 // --- ModelManager Implementation ---
 
-ModelManager::ModelManager(QObject* parent) : QObject(parent) {}
+ModelManager::ModelManager(QObject* parent) : QObject(parent) {
+    // Register callback for geometry change notifications
+    m_callbackId = Geometry::GeometryStore::instance().registerChangeCallback([this]() {
+        // Use Qt's thread-safe mechanism to invoke on the main thread
+        QMetaObject::invokeMethod(this, &ModelManager::onGeometryChanged, Qt::QueuedConnection);
+    });
+
+    LOG_INFO("ModelManager initialized with GeometryStore callback ID: {}", m_callbackId);
+}
+
+ModelManager::~ModelManager() {
+    // Unregister callback when destroyed
+    if(m_callbackId != 0) {
+        Geometry::GeometryStore::instance().unregisterChangeCallback(m_callbackId);
+        LOG_INFO("ModelManager unregistered GeometryStore callback ID: {}", m_callbackId);
+    }
+}
 
 QList<QObject*> ModelManager::parts() const { return m_parts; }
+
+void ModelManager::onGeometryChanged() {
+    LOG_DEBUG("ModelManager received geometry change notification");
+    refreshFromStore();
+    emit geometryUpdated();
+}
 
 void ModelManager::refreshFromStore() {
     clear();
@@ -73,8 +100,19 @@ void ModelManager::refreshFromStore() {
     auto model = Geometry::GeometryStore::instance().getModel();
     if(!model || model->isEmpty()) {
         LOG_WARN("No geometry data in GeometryStore");
+        m_totalSolids = 0;
+        m_totalFaces = 0;
+        m_totalEdges = 0;
+        m_totalVertices = 0;
+        emit modelStatsChanged();
         return;
     }
+
+    // Update total statistics
+    m_totalSolids = static_cast<int>(model->solidCount());
+    m_totalFaces = static_cast<int>(model->faceCount());
+    m_totalEdges = static_cast<int>(model->edgeCount());
+    m_totalVertices = static_cast<int>(model->vertexCount());
 
     const auto& model_parts = model->getParts();
     for(const auto& part : model_parts) {
@@ -88,6 +126,7 @@ void ModelManager::refreshFromStore() {
 
     emit partsChanged();
     emit hasModelChanged();
+    emit modelStatsChanged();
 }
 
 void ModelManager::loadFromResult(const QVariantMap& /* result */) {

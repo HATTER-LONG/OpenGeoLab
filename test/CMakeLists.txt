@@ -28,14 +28,19 @@ CPMAddPackage(
 # ==============================================================================
 # Test Sources Collection
 # ==============================================================================
+# Test Sources Collection
+# ==============================================================================
 
 file(GLOB_RECURSE test_sources CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/source/*.cpp)
+
+# Include geometry module sources for testing
+set(geometry_sources ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/geometry_model.cpp)
 
 # ==============================================================================
 # Test Executable
 # ==============================================================================
 
-add_executable(${PROJECT_NAME} ${test_sources})
+add_executable(${PROJECT_NAME} ${test_sources} ${geometry_sources})
 
 target_link_libraries(
   ${PROJECT_NAME} PRIVATE Catch2::Catch2WithMain Kangaroo::Kangaroo HighFive::HighFive

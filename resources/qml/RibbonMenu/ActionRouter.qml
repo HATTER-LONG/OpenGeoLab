@@ -66,7 +66,7 @@ QtObject {
             return addPointDialog;
         case "addLine":
             return addLineDialog;
-        case "addBox":
+        case "AddBox":
             return addBoxDialog;
         case "trim":
             return trimDialog;

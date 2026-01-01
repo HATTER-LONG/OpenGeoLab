@@ -31,7 +31,7 @@ QtObject {
                             },
                             {
                                 type: "button",
-                                id: "addBox",
+                                id: "AddBox",
                                 text: qsTr("Box"),
                                 iconSource: iconBasePath + "box.svg",
                                 tooltip: qsTr("Add Box")

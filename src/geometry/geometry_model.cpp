@@ -18,6 +18,7 @@ void GeometryModel::clear() {
     m_edges.clear();
     m_vertices.clear();
     m_sourcePath.clear();
+    m_nextId = 1;
 }
 
 bool GeometryModel::isEmpty() const {
@@ -52,6 +53,8 @@ BoundingBox GeometryModel::computeBoundingBox() const {
 
     return box;
 }
+
+uint32_t GeometryModel::generateNextId() { return m_nextId++; }
 
 void GeometryModel::addPart(Part part) { m_parts.push_back(std::move(part)); }
 
@@ -101,8 +104,11 @@ GeometryStore& GeometryStore::instance() {
 }
 
 void GeometryStore::setModel(GeometryModelPtr model) {
-    std::lock_guard<std::mutex> lock(m_mutex);
-    m_model = std::move(model);
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_model = std::move(model);
+    }
+    notifyGeometryChanged();
 }
 
 GeometryModelPtr GeometryStore::getModel() const {
@@ -111,13 +117,49 @@ GeometryModelPtr GeometryStore::getModel() const {
 }
 
 void GeometryStore::clear() {
-    std::lock_guard<std::mutex> lock(m_mutex);
-    m_model.reset();
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_model.reset();
+    }
+    notifyGeometryChanged();
 }
 
 bool GeometryStore::hasModel() const {
     std::lock_guard<std::mutex> lock(m_mutex);
     return m_model != nullptr && !m_model->isEmpty();
+}
+
+size_t GeometryStore::registerChangeCallback(GeometryChangedCallback callback) {
+    std::lock_guard<std::mutex> lock(m_callbackMutex);
+    size_t id = m_nextCallbackId++;
+    m_callbacks.emplace_back(id, std::move(callback));
+    return id;
+}
+
+void GeometryStore::unregisterChangeCallback(size_t callbackId) {
+    std::lock_guard<std::mutex> lock(m_callbackMutex);
+    m_callbacks.erase(
+        std::remove_if(m_callbacks.begin(), m_callbacks.end(),
+                       [callbackId](const auto& pair) { return pair.first == callbackId; }),
+        m_callbacks.end());
+}
+
+void GeometryStore::notifyGeometryChanged() {
+    std::vector<GeometryChangedCallback> callbacks_copy;
+    {
+        std::lock_guard<std::mutex> lock(m_callbackMutex);
+        callbacks_copy.reserve(m_callbacks.size());
+        for(const auto& pair : m_callbacks) {
+            callbacks_copy.push_back(pair.second);
+        }
+    }
+
+    // Invoke callbacks outside the lock to prevent deadlock
+    for(const auto& callback : callbacks_copy) {
+        if(callback) {
+            callback();
+        }
+    }
 }
 
 } // namespace Geometry
