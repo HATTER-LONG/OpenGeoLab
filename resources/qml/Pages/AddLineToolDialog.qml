@@ -39,13 +39,14 @@ Pages.ToolDialog {
 
         // Start point section
         GroupBox {
+            id: startPointGroup
             Layout.fillWidth: true
             title: qsTr("Start Point")
 
             background: Rectangle {
-                y: parent.topPadding - parent.bottomPadding
+                y: startPointGroup.topPadding - startPointGroup.bottomPadding
                 width: parent.width
-                height: parent.height - parent.topPadding + parent.bottomPadding
+                height: parent.height - startPointGroup.topPadding + startPointGroup.bottomPadding
                 color: Theme.surfaceAltColor
                 radius: 6
                 border.width: 1
@@ -68,6 +69,15 @@ Pages.ToolDialog {
                     text: "0"
                     validator: DoubleValidator {}
                     enabled: !OGL.BackendService.busy
+                    color: Theme.textPrimaryColor
+                    placeholderTextColor: Theme.textSecondaryColor
+                    background: Rectangle {
+                        implicitHeight: 32
+                        radius: 6
+                        color: startXInput.enabled ? Theme.surfaceColor : Theme.surfaceAltColor
+                        border.width: 1
+                        border.color: startXInput.activeFocus ? Theme.primaryColor : Theme.borderColor
+                    }
                 }
 
                 Label {
@@ -80,6 +90,15 @@ Pages.ToolDialog {
                     text: "0"
                     validator: DoubleValidator {}
                     enabled: !OGL.BackendService.busy
+                    color: Theme.textPrimaryColor
+                    placeholderTextColor: Theme.textSecondaryColor
+                    background: Rectangle {
+                        implicitHeight: 32
+                        radius: 6
+                        color: startYInput.enabled ? Theme.surfaceColor : Theme.surfaceAltColor
+                        border.width: 1
+                        border.color: startYInput.activeFocus ? Theme.primaryColor : Theme.borderColor
+                    }
                 }
 
                 Label {
@@ -92,19 +111,29 @@ Pages.ToolDialog {
                     text: "0"
                     validator: DoubleValidator {}
                     enabled: !OGL.BackendService.busy
+                    color: Theme.textPrimaryColor
+                    placeholderTextColor: Theme.textSecondaryColor
+                    background: Rectangle {
+                        implicitHeight: 32
+                        radius: 6
+                        color: startZInput.enabled ? Theme.surfaceColor : Theme.surfaceAltColor
+                        border.width: 1
+                        border.color: startZInput.activeFocus ? Theme.primaryColor : Theme.borderColor
+                    }
                 }
             }
         }
 
         // End point section
         GroupBox {
+            id: endPointGroup
             Layout.fillWidth: true
             title: qsTr("End Point")
 
             background: Rectangle {
-                y: parent.topPadding - parent.bottomPadding
+                y: endPointGroup.topPadding - endPointGroup.bottomPadding
                 width: parent.width
-                height: parent.height - parent.topPadding + parent.bottomPadding
+                height: parent.height - endPointGroup.topPadding + endPointGroup.bottomPadding
                 color: Theme.surfaceAltColor
                 radius: 6
                 border.width: 1
@@ -127,6 +156,15 @@ Pages.ToolDialog {
                     text: "10"
                     validator: DoubleValidator {}
                     enabled: !OGL.BackendService.busy
+                    color: Theme.textPrimaryColor
+                    placeholderTextColor: Theme.textSecondaryColor
+                    background: Rectangle {
+                        implicitHeight: 32
+                        radius: 6
+                        color: endXInput.enabled ? Theme.surfaceColor : Theme.surfaceAltColor
+                        border.width: 1
+                        border.color: endXInput.activeFocus ? Theme.primaryColor : Theme.borderColor
+                    }
                 }
 
                 Label {
@@ -139,6 +177,15 @@ Pages.ToolDialog {
                     text: "0"
                     validator: DoubleValidator {}
                     enabled: !OGL.BackendService.busy
+                    color: Theme.textPrimaryColor
+                    placeholderTextColor: Theme.textSecondaryColor
+                    background: Rectangle {
+                        implicitHeight: 32
+                        radius: 6
+                        color: endYInput.enabled ? Theme.surfaceColor : Theme.surfaceAltColor
+                        border.width: 1
+                        border.color: endYInput.activeFocus ? Theme.primaryColor : Theme.borderColor
+                    }
                 }
 
                 Label {
@@ -151,6 +198,15 @@ Pages.ToolDialog {
                     text: "0"
                     validator: DoubleValidator {}
                     enabled: !OGL.BackendService.busy
+                    color: Theme.textPrimaryColor
+                    placeholderTextColor: Theme.textSecondaryColor
+                    background: Rectangle {
+                        implicitHeight: 32
+                        radius: 6
+                        color: endZInput.enabled ? Theme.surfaceColor : Theme.surfaceAltColor
+                        border.width: 1
+                        border.color: endZInput.activeFocus ? Theme.primaryColor : Theme.borderColor
+                    }
                 }
             }
         }

@@ -39,37 +39,38 @@ QtObject {
     /**
      * @brief Application-level background color
      */
-    readonly property color backgroundColor: mode === dark ? "#0B0F1A" : "#F5F8FF"
+    // Dark theme is intentionally neutral (avoid deep-blue cast).
+    readonly property color backgroundColor: mode === dark ? "#0D0F14" : "#F5F8FF"
 
     /**
      * @brief Surface color for panels, cards, and containers
      */
-    readonly property color surfaceColor: mode === dark ? "#101827" : "#FFFFFF"
+    readonly property color surfaceColor: mode === dark ? "#151821" : "#FFFFFF"
 
     /**
      * @brief Alternative surface color for visual hierarchy
      */
-    readonly property color surfaceAltColor: mode === dark ? "#0F172A" : "#EEF4FF"
+    readonly property color surfaceAltColor: mode === dark ? "#1B1F2A" : "#EEF4FF"
 
     /**
      * @brief Primary text color for main content
      */
-    readonly property color textPrimaryColor: mode === dark ? "#E6EDF7" : "#0B1220"
+    readonly property color textPrimaryColor: mode === dark ? "#E7EAF0" : "#0B1220"
 
     /**
      * @brief Secondary text color for labels and hints
      */
-    readonly property color textSecondaryColor: mode === dark ? "#9AA7BD" : "#44546A"
+    readonly property color textSecondaryColor: mode === dark ? "#A3ACBD" : "#44546A"
 
     /**
      * @brief Border color for UI elements
      */
-    readonly property color borderColor: mode === dark ? "#273246" : "#D7E1F2"
+    readonly property color borderColor: mode === dark ? "#303646" : "#D7E1F2"
 
     /**
      * @brief Primary brand/theme color
      */
-    readonly property color primaryColor: mode === dark ? "#3B82F6" : "#1D66FF"
+    readonly property color primaryColor: mode === dark ? "#3D7FF0" : "#1D66FF"
 
     /**
      * @brief Accent color for emphasis and highlights
@@ -79,12 +80,46 @@ QtObject {
     /**
      * @brief Highlight color for selection states
      */
-    readonly property color highlightColor: mode === dark ? "#60A5FA" : "#7AA7FF"
+    readonly property color highlightColor: mode === dark ? "#6AA6FF" : "#7AA7FF"
 
     /**
      * @brief Error/danger indicator color
      */
     readonly property color errorColor: "#EF5350"
+
+    // =========================================================================
+    // Input Tokens (TextField / TextArea / SpinBox / ComboBox)
+    // =========================================================================
+
+    /**
+     * @brief Input background color
+     */
+    readonly property color inputBackgroundColor: mode === dark ? "#11141B" : "#FFFFFF"
+
+    /**
+     * @brief Input background color when disabled
+     */
+    readonly property color inputDisabledBackgroundColor: mode === dark ? "#0F1218" : "#EEF4FF"
+
+    /**
+     * @brief Input border color
+     */
+    readonly property color inputBorderColor: borderColor
+
+    /**
+     * @brief Input border color when focused
+     */
+    readonly property color inputBorderFocusColor: primaryColor
+
+    /**
+     * @brief Input text color
+     */
+    readonly property color inputTextColor: textPrimaryColor
+
+    /**
+     * @brief Input placeholder text color
+     */
+    readonly property color inputPlaceholderColor: textSecondaryColor
 
     // =========================================================================
     // Button Tokens

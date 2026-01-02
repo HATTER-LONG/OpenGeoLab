@@ -183,6 +183,7 @@ Item {
                     spacing: 4
 
                     Button {
+                        id: pickButton
                         Layout.preferredWidth: 32
                         Layout.preferredHeight: 32
                         flat: true
@@ -191,20 +192,21 @@ Item {
                         icon.color: Theme.textPrimaryColor
 
                         ToolTip.text: root.isSelecting ? qsTr("Cancel") : qsTr("Pick from viewport")
-                        ToolTip.visible: hovered
+                        ToolTip.visible: pickButton.hovered
 
                         onClicked: {
                             root.isSelecting = !root.isSelecting;
                         }
 
                         background: Rectangle {
-                            color: parent.hovered ? Theme.accentColor : "transparent"
+                            color: pickButton.hovered ? Theme.accentColor : "transparent"
                             radius: 4
                             opacity: 0.2
                         }
                     }
 
                     Button {
+                        id: clearButton
                         Layout.preferredWidth: 32
                         Layout.preferredHeight: 32
                         flat: true
@@ -220,7 +222,7 @@ Item {
                         }
 
                         background: Rectangle {
-                            color: parent.hovered ? Theme.errorColor : "transparent"
+                            color: clearButton.hovered ? Theme.errorColor : "transparent"
                             radius: 4
                             opacity: 0.2
                         }

@@ -122,6 +122,14 @@ Pages.ToolDialog {
                 model: [qsTr("Auto"), qsTr("By Plane"), qsTr("By Surface")]
                 enabled: !OGL.BackendService.busy
 
+                contentItem: Text {
+                    text: modeCombo.displayText
+                    color: Theme.textPrimaryColor
+                    verticalAlignment: Text.AlignVCenter
+                    elide: Text.ElideRight
+                    leftPadding: 10
+                }
+
                 background: Rectangle {
                     implicitWidth: 100
                     implicitHeight: 32
@@ -168,9 +176,9 @@ Pages.ToolDialog {
 
         function onSelectionChanged(id: int, type: int): void {
             if (trimTargetSelector.isSelecting) {
-                trimTargetSelector.setSelection(id, getSelectionInfo(id, type));
+                trimTargetSelector.setSelection(id, root.getSelectionInfo(id, type));
             } else if (trimToolSelector.isSelecting) {
-                trimToolSelector.setSelection(id, getSelectionInfo(id, type));
+                trimToolSelector.setSelection(id, root.getSelectionInfo(id, type));
             }
         }
     }

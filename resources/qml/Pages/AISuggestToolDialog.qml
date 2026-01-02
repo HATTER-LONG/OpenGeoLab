@@ -54,6 +54,14 @@ Pages.ToolDialog {
                 model: [qsTr("Geometry"), qsTr("Mesh"), qsTr("All")]
                 enabled: !OGL.BackendService.busy
 
+                contentItem: Text {
+                    text: contextCombo.displayText
+                    color: Theme.textPrimaryColor
+                    verticalAlignment: Text.AlignVCenter
+                    elide: Text.ElideRight
+                    leftPadding: 10
+                }
+
                 background: Rectangle {
                     implicitWidth: 100
                     implicitHeight: 32
@@ -73,8 +81,11 @@ Pages.ToolDialog {
             wrapMode: TextArea.Wrap
             enabled: !OGL.BackendService.busy
 
+            color: Theme.textPrimaryColor
+            placeholderTextColor: Theme.textSecondaryColor
+
             background: Rectangle {
-                color: Theme.surfaceAltColor
+                color: promptInput.enabled ? Theme.surfaceColor : Theme.surfaceAltColor
                 radius: 6
                 border.width: 1
                 border.color: promptInput.activeFocus ? Theme.primaryColor : Theme.borderColor

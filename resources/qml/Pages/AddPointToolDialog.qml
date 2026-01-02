@@ -60,6 +60,15 @@ Pages.ToolDialog {
                 text: root.initialParams.x !== undefined ? String(root.initialParams.x) : "0"
                 validator: DoubleValidator {}
                 enabled: !OGL.BackendService.busy
+                color: Theme.textPrimaryColor
+                placeholderTextColor: Theme.textSecondaryColor
+                background: Rectangle {
+                    implicitHeight: 32
+                    radius: 6
+                    color: xInput.enabled ? Theme.surfaceColor : Theme.surfaceAltColor
+                    border.width: 1
+                    border.color: xInput.activeFocus ? Theme.primaryColor : Theme.borderColor
+                }
             }
 
             Label {
@@ -74,6 +83,15 @@ Pages.ToolDialog {
                 text: root.initialParams.y !== undefined ? String(root.initialParams.y) : "0"
                 validator: DoubleValidator {}
                 enabled: !OGL.BackendService.busy
+                color: Theme.textPrimaryColor
+                placeholderTextColor: Theme.textSecondaryColor
+                background: Rectangle {
+                    implicitHeight: 32
+                    radius: 6
+                    color: yInput.enabled ? Theme.surfaceColor : Theme.surfaceAltColor
+                    border.width: 1
+                    border.color: yInput.activeFocus ? Theme.primaryColor : Theme.borderColor
+                }
             }
 
             Label {
@@ -88,6 +106,15 @@ Pages.ToolDialog {
                 text: root.initialParams.z !== undefined ? String(root.initialParams.z) : "0"
                 validator: DoubleValidator {}
                 enabled: !OGL.BackendService.busy
+                color: Theme.textPrimaryColor
+                placeholderTextColor: Theme.textSecondaryColor
+                background: Rectangle {
+                    implicitHeight: 32
+                    radius: 6
+                    color: zInput.enabled ? Theme.surfaceColor : Theme.surfaceAltColor
+                    border.width: 1
+                    border.color: zInput.activeFocus ? Theme.primaryColor : Theme.borderColor
+                }
             }
         }
 

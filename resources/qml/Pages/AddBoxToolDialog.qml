@@ -55,6 +55,15 @@ Pages.ToolDialog {
                 placeholderText: qsTr("Box")
                 text: ""
                 enabled: !OGL.BackendService.busy
+                color: Theme.textPrimaryColor
+                placeholderTextColor: Theme.textSecondaryColor
+                background: Rectangle {
+                    implicitHeight: 32
+                    radius: 6
+                    color: nameInput.enabled ? Theme.surfaceColor : Theme.surfaceAltColor
+                    border.width: 1
+                    border.color: nameInput.activeFocus ? Theme.primaryColor : Theme.borderColor
+                }
             }
         }
 
@@ -90,6 +99,15 @@ Pages.ToolDialog {
                     text: "0"
                     validator: DoubleValidator {}
                     enabled: !OGL.BackendService.busy
+                    color: Theme.textPrimaryColor
+                    placeholderTextColor: Theme.textSecondaryColor
+                    background: Rectangle {
+                        implicitHeight: 32
+                        radius: 6
+                        color: originXInput.enabled ? Theme.surfaceColor : Theme.surfaceAltColor
+                        border.width: 1
+                        border.color: originXInput.activeFocus ? Theme.primaryColor : Theme.borderColor
+                    }
                 }
 
                 Label {
@@ -102,6 +120,15 @@ Pages.ToolDialog {
                     text: "0"
                     validator: DoubleValidator {}
                     enabled: !OGL.BackendService.busy
+                    color: Theme.textPrimaryColor
+                    placeholderTextColor: Theme.textSecondaryColor
+                    background: Rectangle {
+                        implicitHeight: 32
+                        radius: 6
+                        color: originYInput.enabled ? Theme.surfaceColor : Theme.surfaceAltColor
+                        border.width: 1
+                        border.color: originYInput.activeFocus ? Theme.primaryColor : Theme.borderColor
+                    }
                 }
 
                 Label {
@@ -114,6 +141,15 @@ Pages.ToolDialog {
                     text: "0"
                     validator: DoubleValidator {}
                     enabled: !OGL.BackendService.busy
+                    color: Theme.textPrimaryColor
+                    placeholderTextColor: Theme.textSecondaryColor
+                    background: Rectangle {
+                        implicitHeight: 32
+                        radius: 6
+                        color: originZInput.enabled ? Theme.surfaceColor : Theme.surfaceAltColor
+                        border.width: 1
+                        border.color: originZInput.activeFocus ? Theme.primaryColor : Theme.borderColor
+                    }
                 }
             }
         }
@@ -152,6 +188,15 @@ Pages.ToolDialog {
                         bottom: 0.001
                     }
                     enabled: !OGL.BackendService.busy
+                    color: Theme.textPrimaryColor
+                    placeholderTextColor: Theme.textSecondaryColor
+                    background: Rectangle {
+                        implicitHeight: 32
+                        radius: 6
+                        color: widthInput.enabled ? Theme.surfaceColor : Theme.surfaceAltColor
+                        border.width: 1
+                        border.color: widthInput.activeFocus ? Theme.primaryColor : Theme.borderColor
+                    }
                 }
 
                 Label {
@@ -166,6 +211,15 @@ Pages.ToolDialog {
                         bottom: 0.001
                     }
                     enabled: !OGL.BackendService.busy
+                    color: Theme.textPrimaryColor
+                    placeholderTextColor: Theme.textSecondaryColor
+                    background: Rectangle {
+                        implicitHeight: 32
+                        radius: 6
+                        color: heightInput.enabled ? Theme.surfaceColor : Theme.surfaceAltColor
+                        border.width: 1
+                        border.color: heightInput.activeFocus ? Theme.primaryColor : Theme.borderColor
+                    }
                 }
 
                 Label {
@@ -180,6 +234,15 @@ Pages.ToolDialog {
                         bottom: 0.001
                     }
                     enabled: !OGL.BackendService.busy
+                    color: Theme.textPrimaryColor
+                    placeholderTextColor: Theme.textSecondaryColor
+                    background: Rectangle {
+                        implicitHeight: 32
+                        radius: 6
+                        color: depthInput.enabled ? Theme.surfaceColor : Theme.surfaceAltColor
+                        border.width: 1
+                        border.color: depthInput.activeFocus ? Theme.primaryColor : Theme.borderColor
+                    }
                 }
             }
         }

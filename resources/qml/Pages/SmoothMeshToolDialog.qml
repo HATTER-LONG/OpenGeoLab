@@ -58,6 +58,24 @@ Pages.ToolDialog {
                 to: 100
                 value: 3
                 enabled: !OGL.BackendService.busy
+                contentItem: TextInput {
+                    text: iterationsInput.displayText
+                    color: Theme.textPrimaryColor
+                    selectionColor: Theme.highlightColor
+                    selectedTextColor: Theme.buttonTextColor
+                    horizontalAlignment: Text.AlignLeft
+                    verticalAlignment: Text.AlignVCenter
+                    leftPadding: 10
+                    readOnly: !iterationsInput.editable
+                    validator: iterationsInput.validator
+                }
+                background: Rectangle {
+                    implicitHeight: 32
+                    radius: 6
+                    color: iterationsInput.enabled ? Theme.surfaceColor : Theme.surfaceAltColor
+                    border.width: 1
+                    border.color: iterationsInput.activeFocus ? Theme.primaryColor : Theme.borderColor
+                }
             }
 
             Label {
@@ -92,6 +110,15 @@ Pages.ToolDialog {
                         if (!isNaN(v) && v >= 0 && v <= 1) {
                             factorSlider.value = v;
                         }
+                    }
+                    color: Theme.textPrimaryColor
+                    placeholderTextColor: Theme.textSecondaryColor
+                    background: Rectangle {
+                        implicitHeight: 32
+                        radius: 6
+                        color: factorInput.enabled ? Theme.surfaceColor : Theme.surfaceAltColor
+                        border.width: 1
+                        border.color: factorInput.activeFocus ? Theme.primaryColor : Theme.borderColor
                     }
                 }
             }

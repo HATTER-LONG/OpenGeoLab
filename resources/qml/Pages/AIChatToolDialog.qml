@@ -121,6 +121,16 @@ Pages.ToolDialog {
                 placeholderText: qsTr("Type your message...")
                 enabled: !OGL.BackendService.busy
 
+                color: Theme.textPrimaryColor
+                placeholderTextColor: Theme.textSecondaryColor
+                background: Rectangle {
+                    implicitHeight: 32
+                    radius: 6
+                    color: inputField.enabled ? Theme.surfaceColor : Theme.surfaceAltColor
+                    border.width: 1
+                    border.color: inputField.activeFocus ? Theme.primaryColor : Theme.borderColor
+                }
+
                 Keys.onReturnPressed: root.sendMessage()
                 Keys.onEnterPressed: root.sendMessage()
             }

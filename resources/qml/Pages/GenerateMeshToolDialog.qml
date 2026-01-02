@@ -58,6 +58,14 @@ Pages.ToolDialog {
                 model: [qsTr("Delaunay"), qsTr("Frontal"), qsTr("Automatic")]
                 enabled: !OGL.BackendService.busy
 
+                contentItem: Text {
+                    text: algorithmCombo.displayText
+                    color: Theme.textPrimaryColor
+                    verticalAlignment: Text.AlignVCenter
+                    elide: Text.ElideRight
+                    leftPadding: 10
+                }
+
                 background: Rectangle {
                     implicitWidth: 100
                     implicitHeight: 32
@@ -81,6 +89,15 @@ Pages.ToolDialog {
                     bottom: 0.001
                 }
                 enabled: !OGL.BackendService.busy
+                color: Theme.textPrimaryColor
+                placeholderTextColor: Theme.textSecondaryColor
+                background: Rectangle {
+                    implicitHeight: 32
+                    radius: 6
+                    color: elementSizeInput.enabled ? Theme.surfaceColor : Theme.surfaceAltColor
+                    border.width: 1
+                    border.color: elementSizeInput.activeFocus ? Theme.primaryColor : Theme.borderColor
+                }
             }
 
             Label {
