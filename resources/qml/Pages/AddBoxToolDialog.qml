@@ -6,15 +6,18 @@ import OpenGeoLab 1.0 as OGL
 import "." as Pages
 
 /**
- * @brief Dialog for adding a box with origin, dimensions, and optional name.
+ * @file AddBoxToolDialog.qml
+ * @brief Non-modal tool dialog for adding a box with origin and dimensions
+ *
+ * Allows users to create a new box geometry by specifying origin coordinates
+ * and dimensions (width, height, depth).
+ * The dialog is non-modal, enabling viewport interaction during input.
  */
-Pages.BaseDialog {
+Pages.ToolDialog {
     id: root
 
     title: qsTr("Add Box")
     okButtonText: qsTr("Create")
-
-    property var initialParams: ({})
 
     okEnabled: !OGL.BackendService.busy && parseFloat(widthInput.text) > 0 && parseFloat(heightInput.text) > 0 && parseFloat(depthInput.text) > 0
 
@@ -35,7 +38,7 @@ Pages.BaseDialog {
         anchors.fill: parent
         spacing: 12
 
-        // Name input.
+        // Name input
         RowLayout {
             Layout.fillWidth: true
             spacing: 12
@@ -43,7 +46,7 @@ Pages.BaseDialog {
             Label {
                 text: qsTr("Name:")
                 color: Theme.textPrimaryColor
-                Layout.preferredWidth: 60
+                Layout.preferredWidth: 50
             }
             TextField {
                 id: nameInput
@@ -54,10 +57,21 @@ Pages.BaseDialog {
             }
         }
 
-        // Origin section.
+        // Origin section
         GroupBox {
+            id: originGroup
             Layout.fillWidth: true
             title: qsTr("Origin")
+
+            background: Rectangle {
+                y: originGroup.topPadding - originGroup.bottomPadding
+                width: parent.width
+                height: parent.height - originGroup.topPadding + originGroup.bottomPadding
+                color: Theme.surfaceAltColor
+                radius: 6
+                border.width: 1
+                border.color: Theme.borderColor
+            }
 
             GridLayout {
                 anchors.fill: parent
@@ -103,19 +117,29 @@ Pages.BaseDialog {
             }
         }
 
-        // Dimensions section.
+        // Dimensions section
         GroupBox {
             Layout.fillWidth: true
             title: qsTr("Dimensions")
 
+            background: Rectangle {
+                y: parent.topPadding - parent.bottomPadding
+                width: parent.width
+                height: parent.height - parent.topPadding + parent.bottomPadding
+                color: Theme.surfaceAltColor
+                radius: 6
+                border.width: 1
+                border.color: Theme.borderColor
+            }
+
             GridLayout {
                 anchors.fill: parent
-                columns: 6
-                columnSpacing: 8
+                columns: 2
+                columnSpacing: 12
                 rowSpacing: 8
 
                 Label {
-                    text: qsTr("W:")
+                    text: qsTr("Width:")
                     color: Theme.textPrimaryColor
                 }
                 TextField {
@@ -129,7 +153,7 @@ Pages.BaseDialog {
                 }
 
                 Label {
-                    text: qsTr("H:")
+                    text: qsTr("Height:")
                     color: Theme.textPrimaryColor
                 }
                 TextField {
@@ -143,7 +167,7 @@ Pages.BaseDialog {
                 }
 
                 Label {
-                    text: qsTr("D:")
+                    text: qsTr("Depth:")
                     color: Theme.textPrimaryColor
                 }
                 TextField {
@@ -158,29 +182,29 @@ Pages.BaseDialog {
             }
         }
 
-        // Status area.
-        Item {
+        // Status area
+        RowLayout {
             Layout.fillWidth: true
-            Layout.fillHeight: true
+            spacing: 8
+            visible: OGL.BackendService.busy
 
-            RowLayout {
-                anchors.fill: parent
-                spacing: 8
-                visible: OGL.BackendService.busy
-
-                BusyIndicator {
-                    Layout.preferredWidth: 24
-                    Layout.preferredHeight: 24
-                    running: true
-                }
-
-                Label {
-                    Layout.fillWidth: true
-                    text: OGL.BackendService.message
-                    color: Theme.textSecondaryColor
-                    elide: Text.ElideRight
-                }
+            BusyIndicator {
+                Layout.preferredWidth: 20
+                Layout.preferredHeight: 20
+                running: true
             }
+
+            Label {
+                Layout.fillWidth: true
+                text: OGL.BackendService.message
+                color: Theme.textSecondaryColor
+                font.pixelSize: 12
+                elide: Text.ElideRight
+            }
+        }
+
+        Item {
+            Layout.fillHeight: true
         }
     }
 
@@ -188,8 +212,9 @@ Pages.BaseDialog {
         target: OGL.BackendService
 
         function onOperationFinished(moduleName: string, _result: var): void {
-            if (moduleName === "AddBox")
+            if (moduleName === "AddBox") {
                 root.closeRequested();
+            }
         }
     }
 }

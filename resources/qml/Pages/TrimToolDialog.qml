@@ -6,93 +6,36 @@ import OpenGeoLab 1.0 as OGL
 import "." as Pages
 
 /**
- * @brief Non-modal dialog for trimming geometry
+ * @file TrimToolDialog.qml
+ * @brief Non-modal tool dialog for trimming geometry
  *
- * This dialog allows users to:
- * - Select geometry to trim using the GeometrySelector component
- * - Choose trim mode and options
- * - Apply trim operation while still interacting with the main viewport
+ * Allows users to trim geometry by selecting a target and a trim tool.
+ * Integrates with the viewport for geometry selection.
  */
-Item {
+Pages.ToolDialog {
     id: root
 
-    property var initialParams: ({})
-    property bool isVisible: false
+    title: qsTr("Trim Geometry")
+    okButtonText: qsTr("Apply")
 
-    // Reference to viewport for selection integration
-    property var viewport: null
+    okEnabled: !OGL.BackendService.busy && trimTargetSelector.selectedId > 0
 
-    // Signals
-    signal closeRequested
-
-    visible: isVisible
-    width: 320
-    height: contentColumn.implicitHeight + 32
-
-    // Dialog container
-    Rectangle {
-        anchors.fill: parent
-        color: Theme.surfaceColor
-        radius: 10
-        border.width: 1
-        border.color: Theme.borderColor
-
-        // Drop shadow effect
-        layer.enabled: true
-        layer.effect: Item {
-            Rectangle {
-                anchors.fill: parent
-                anchors.margins: -4
-                color: Qt.rgba(0, 0, 0, 0.15)
-                radius: 14
-                z: -1
-            }
-        }
+    onAccepted: {
+        const params = {
+            targetId: trimTargetSelector.selectedId,
+            targetType: trimTargetSelector.selectionType,
+            toolId: trimToolSelector.selectedId,
+            toolType: trimToolSelector.selectionType,
+            mode: modeCombo.currentText,
+            keepOriginal: keepOriginalCheck.checked
+        };
+        OGL.BackendService.request("Trim", params);
     }
 
     ColumnLayout {
-        id: contentColumn
         anchors.fill: parent
-        anchors.margins: 16
         spacing: 12
 
-        // Header
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: 8
-
-            Label {
-                Layout.fillWidth: true
-                text: qsTr("Trim Geometry")
-                font.pixelSize: 16
-                font.bold: true
-                color: Theme.textPrimaryColor
-            }
-
-            Button {
-                Layout.preferredWidth: 28
-                Layout.preferredHeight: 28
-                flat: true
-                icon.source: "qrc:/opengeolab/resources/icons/close.svg"
-                icon.color: Theme.textSecondaryColor
-                onClicked: root.closeRequested()
-
-                background: Rectangle {
-                    color: parent.hovered ? Theme.errorColor : "transparent"
-                    radius: 4
-                    opacity: 0.2
-                }
-            }
-        }
-
-        // Separator
-        Rectangle {
-            Layout.fillWidth: true
-            Layout.preferredHeight: 1
-            color: Theme.borderColor
-        }
-
-        // Description
         Label {
             Layout.fillWidth: true
             text: qsTr("Select geometry to trim and configure options:")
@@ -122,6 +65,13 @@ Item {
             }
         }
 
+        // Separator
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 1
+            color: Theme.borderColor
+        }
+
         // Geometry selector for the trim tool (plane/surface)
         Pages.GeometrySelector {
             id: trimToolSelector
@@ -149,6 +99,7 @@ Item {
             Layout.fillWidth: true
             Layout.preferredHeight: 1
             color: Theme.borderColor
+            visible: modeCombo.currentIndex !== 0
         }
 
         // Trim options
@@ -209,60 +160,8 @@ Item {
             }
         }
 
-        // Buttons
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: 8
-
-            Item {
-                Layout.fillWidth: true
-            }
-
-            Button {
-                text: qsTr("Cancel")
-                onClicked: root.closeRequested()
-
-                background: Rectangle {
-                    implicitWidth: 80
-                    implicitHeight: 32
-                    color: parent.hovered ? Theme.surfaceAltColor : Theme.surfaceColor
-                    border.width: 1
-                    border.color: Theme.borderColor
-                    radius: 4
-                }
-            }
-
-            Button {
-                text: qsTr("Apply")
-                enabled: !OGL.BackendService.busy && trimTargetSelector.selectedId > 0
-                onClicked: {
-                    const params = {
-                        targetId: trimTargetSelector.selectedId,
-                        targetType: trimTargetSelector.selectionType,
-                        toolId: trimToolSelector.selectedId,
-                        toolType: trimToolSelector.selectionType,
-                        mode: modeCombo.currentText,
-                        keepOriginal: keepOriginalCheck.checked
-                    };
-                    OGL.BackendService.request("Trim", params);
-                }
-
-                background: Rectangle {
-                    implicitWidth: 80
-                    implicitHeight: 32
-                    color: parent.enabled ? Theme.accentColor : Theme.surfaceAltColor
-                    border.width: 1
-                    border.color: parent.enabled ? Theme.accentColor : Theme.borderColor
-                    radius: 4
-                }
-
-                contentItem: Text {
-                    text: parent.text
-                    color: parent.enabled ? "white" : Theme.textSecondaryColor
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                }
-            }
+        Item {
+            Layout.fillHeight: true
         }
     }
 
@@ -306,16 +205,13 @@ Item {
         }
     }
 
-    function show() {
-        root.isVisible = true;
-    }
-
-    function hide() {
-        root.isVisible = false;
-        trimTargetSelector.stopSelection();
-        trimToolSelector.stopSelection();
-        if (root.viewport) {
-            root.viewport.selectionMode = 0;
+    onIsVisibleChanged: {
+        if (!isVisible) {
+            trimTargetSelector.stopSelection();
+            trimToolSelector.stopSelection();
+            if (root.viewport) {
+                root.viewport.selectionMode = 0;
+            }
         }
     }
 }

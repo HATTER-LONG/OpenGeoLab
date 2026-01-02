@@ -4,34 +4,61 @@ import QtQuick.Controls
 import QtQuick.Layouts
 
 /**
+ * @file GeometrySelector.qml
  * @brief Geometry selector component for picking geometry elements
  *
- * Provides a UI control for selecting geometry elements (vertices, edges, faces, parts).
- * Integrates with the 3D viewport for visual picking.
+ * Provides a UI control for selecting geometry elements from the 3D viewport.
+ * Supports selection of vertices, edges, faces, and parts.
+ *
+ * Features:
+ * - Type selection dropdown (Vertex/Edge/Face/Part)
+ * - Visual feedback for selection state
+ * - Integration with viewport selection mode
+ * - Clear selection functionality
  */
 Item {
     id: root
 
-    // Selection mode: 0=None, 1=Vertex, 2=Edge, 3=Face, 4=Part
+    /**
+     * @brief Selection type (1=Vertex, 2=Edge, 3=Face, 4=Part)
+     */
     property int selectionType: 1
 
-    // Selected geometry information
+    /**
+     * @brief ID of the currently selected geometry element
+     */
     property int selectedId: 0
+
+    /**
+     * @brief Display text for the selected element
+     */
     property string selectedInfo: ""
 
-    // Whether selection is active
+    /**
+     * @brief Whether the selector is actively listening for viewport selection
+     */
     property bool isSelecting: false
 
-    // Label text
+    /**
+     * @brief Label text displayed above the selector
+     */
     property string label: qsTr("Select Geometry:")
 
-    // Placeholder text when nothing is selected
+    /**
+     * @brief Placeholder text when nothing is selected
+     */
     property string placeholder: qsTr("Click to select...")
 
-    // Read-only mode
+    /**
+     * @brief Read-only mode disables selection
+     */
     property bool readOnly: false
 
-    // Signal emitted when selection changes
+    /**
+     * @brief Emitted when selection changes
+     * @param id Selected element ID
+     * @param type Selection type
+     */
     signal selectionChanged(int id, int type)
 
     implicitWidth: 300

@@ -6,15 +6,16 @@ import OpenGeoLab 1.0 as OGL
 import "." as Pages
 
 /**
- * @brief Dialog for AI suggestions on geometry operations.
+ * @file AISuggestToolDialog.qml
+ * @brief Non-modal tool dialog for AI geometry suggestions
+ *
+ * Allows users to describe operations and receive AI-generated suggestions.
  */
-Pages.BaseDialog {
+Pages.ToolDialog {
     id: root
 
     title: qsTr("AI Suggest")
     okButtonText: qsTr("Get Suggestions")
-
-    property var initialParams: ({})
 
     okEnabled: !OGL.BackendService.busy && promptInput.text.trim().length > 0
 
@@ -28,13 +29,14 @@ Pages.BaseDialog {
 
     ColumnLayout {
         anchors.fill: parent
-        spacing: 16
+        spacing: 12
 
         Label {
             Layout.fillWidth: true
             text: qsTr("Describe what you want to achieve:")
             color: Theme.textSecondaryColor
             wrapMode: Text.Wrap
+            font.pixelSize: 12
         }
 
         RowLayout {
@@ -50,14 +52,22 @@ Pages.BaseDialog {
                 Layout.fillWidth: true
                 model: [qsTr("Geometry"), qsTr("Mesh"), qsTr("All")]
                 enabled: !OGL.BackendService.busy
+
+                background: Rectangle {
+                    implicitWidth: 100
+                    implicitHeight: 32
+                    color: contextCombo.enabled ? Theme.surfaceColor : Theme.surfaceAltColor
+                    border.width: 1
+                    border.color: contextCombo.pressed ? Theme.accentColor : Theme.borderColor
+                    radius: 4
+                }
             }
         }
 
         TextArea {
             id: promptInput
             Layout.fillWidth: true
-            Layout.fillHeight: true
-            Layout.minimumHeight: 80
+            Layout.preferredHeight: 100
             placeholderText: qsTr("e.g., Create a cylinder with radius 5 and height 10...")
             wrapMode: TextArea.Wrap
             enabled: !OGL.BackendService.busy
@@ -70,33 +80,42 @@ Pages.BaseDialog {
             }
         }
 
-        // Results area (placeholder).
+        // Results area
         Rectangle {
             Layout.fillWidth: true
-            Layout.preferredHeight: 60
+            Layout.preferredHeight: 80
             color: Theme.surfaceAltColor
             radius: 6
             border.width: 1
             border.color: Theme.borderColor
-            visible: !OGL.BackendService.busy
 
-            Label {
-                anchors.centerIn: parent
-                text: qsTr("Suggestions will appear here...")
-                color: Theme.textSecondaryColor
-                font.italic: true
+            ScrollView {
+                anchors.fill: parent
+                anchors.margins: 8
+                clip: true
+
+                Label {
+                    id: resultLabel
+                    width: parent.width
+                    text: resultLabel.resultText || qsTr("Suggestions will appear here...")
+                    color: resultLabel.resultText ? Theme.textPrimaryColor : Theme.textSecondaryColor
+                    font.italic: !resultLabel.resultText
+                    wrapMode: Text.Wrap
+
+                    property string resultText: ""
+                }
             }
         }
 
-        // Status area.
+        // Status area
         RowLayout {
             Layout.fillWidth: true
             spacing: 8
             visible: OGL.BackendService.busy
 
             BusyIndicator {
-                Layout.preferredWidth: 24
-                Layout.preferredHeight: 24
+                Layout.preferredWidth: 20
+                Layout.preferredHeight: 20
                 running: true
             }
 
@@ -104,17 +123,22 @@ Pages.BaseDialog {
                 Layout.fillWidth: true
                 text: OGL.BackendService.message
                 color: Theme.textSecondaryColor
+                font.pixelSize: 12
                 elide: Text.ElideRight
             }
+        }
+
+        Item {
+            Layout.fillHeight: true
         }
     }
 
     Connections {
         target: OGL.BackendService
 
-        function onOperationFinished(moduleName: string, _result: var): void {
+        function onOperationFinished(moduleName: string, result: var): void {
             if (moduleName === "AISuggest") {
-                // Keep dialog open to show results.
+                resultLabel.resultText = result.suggestion || qsTr("No suggestions available.");
             }
         }
     }

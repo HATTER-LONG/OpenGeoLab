@@ -38,18 +38,12 @@ set(CMAKE_AUTOMOC ON)
 file(GLOB_RECURSE test_sources CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/source/*.cpp)
 
 # Include module sources for testing (with Qt classes needing MOC)
-set(module_sources
-    ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/geometry_model.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/mesh_types.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../src/render/camera.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../src/render/trackball.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../src/render/render_data.cpp
+set(module_sources ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/geometry_model.cpp
+                   ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/mesh_types.cpp
 )
 
 # Include header files for AUTOMOC to find Q_OBJECT macros
-set(module_headers ${CMAKE_CURRENT_SOURCE_DIR}/../include/render/camera.hpp
-                   ${CMAKE_CURRENT_SOURCE_DIR}/../include/render/trackball.hpp
-)
+set(module_headers "")
 
 # ==============================================================================
 # Test Executable
@@ -58,8 +52,14 @@ set(module_headers ${CMAKE_CURRENT_SOURCE_DIR}/../include/render/camera.hpp
 add_executable(${PROJECT_NAME} ${test_sources} ${module_sources} ${module_headers})
 
 target_link_libraries(
-  ${PROJECT_NAME} PRIVATE Catch2::Catch2WithMain Kangaroo::Kangaroo HighFive::HighFive Qt6::Core
-                          Qt6::Gui ${OpenCASCADE_LIBS}
+  ${PROJECT_NAME}
+  PRIVATE Catch2::Catch2WithMain
+          Kangaroo::Kangaroo
+          HighFive::HighFive
+          Qt6::Core
+          Qt6::Gui
+          nlohmann_json::nlohmann_json
+          ${OpenCASCADE_LIBS}
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 17)

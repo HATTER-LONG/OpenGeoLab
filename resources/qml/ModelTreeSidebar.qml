@@ -1,10 +1,18 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import OpenGeoLab 1.0 as OGL
 
 /**
- * Model tree sidebar displaying geometry hierarchy.
- * Shows parts, solids, faces, edges, and vertices counts.
+ * @file ModelTreeSidebar.qml
+ * @brief Model tree sidebar displaying geometry hierarchy
+ *
+ * Shows hierarchical structure of loaded models including:
+ * - Parts with their names
+ * - Solid counts
+ * - Face, edge, and vertex counts
+ *
+ * @note Displays placeholder content when no model is loaded.
  */
 Item {
     id: root
@@ -121,11 +129,25 @@ Item {
         }
     }
 
-    // Tree item component
+    /**
+     * @brief Tree item component for displaying hierarchy entries
+     */
     component TreeItem: Rectangle {
         id: treeItem
+
+        /**
+         * @brief Display text for the item
+         */
         property string text: ""
+
+        /**
+         * @brief Icon emoji/character for the item
+         */
         property string icon: ""
+
+        /**
+         * @brief Indentation level (0 = root)
+         */
         property int indent: 0
 
         width: parent ? parent.width : 200

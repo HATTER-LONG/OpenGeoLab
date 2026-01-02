@@ -171,8 +171,6 @@ foreach(icon_file ${ICON_RESOURCES_ABS})
   list(APPEND ICON_RESOURCES "${icon_rel}")
 endforeach()
 
-# Register QML module with custom OpenGL 3D rendering components Only UI-related files (with
-# QML_ELEMENT) need to be listed here
 qt_add_qml_module(
   ${PROJECT_NAME}
   URI
@@ -187,8 +185,6 @@ qt_add_qml_module(
   src/app/backend_service.cpp
   include/app/model_data.hpp
   src/app/model_data.cpp
-  include/render/viewport_item.hpp
-  src/render/viewport_item.cpp
   QML_FILES
   resources/qml/Main.qml
   resources/qml/Theme.qml
@@ -199,21 +195,20 @@ qt_add_qml_module(
   resources/qml/RibbonMenu/RibbonToolBar.qml
   resources/qml/RibbonMenu/RibbonTabContent.qml
   resources/qml/RibbonMenu/RibbonLargeButton.qml
-  resources/qml/RibbonMenu/ActionRouter.qml
-  resources/qml/RibbonMenu/DialogHost.qml
   resources/qml/RibbonMenu/RibbonProgressOverlay.qml
   resources/qml/RibbonMenu/ResultDialog.qml
-  resources/qml/Pages/BaseDialog.qml
-  resources/qml/Pages/AddPointDialog.qml
-  resources/qml/Pages/AddLineDialog.qml
-  resources/qml/Pages/AddBoxDialog.qml
-  resources/qml/Pages/TrimDialog.qml
+  resources/qml/Pages/ToolDialog.qml
+  resources/qml/Pages/ToolDialogHost.qml
+  resources/qml/Pages/AddPointToolDialog.qml
+  resources/qml/Pages/AddLineToolDialog.qml
+  resources/qml/Pages/AddBoxToolDialog.qml
+  resources/qml/Pages/TrimToolDialog.qml
   resources/qml/Pages/GeometrySelector.qml
-  resources/qml/Pages/OffsetDialog.qml
-  resources/qml/Pages/GenerateMeshDialog.qml
-  resources/qml/Pages/SmoothMeshDialog.qml
-  resources/qml/Pages/AISuggestDialog.qml
-  resources/qml/Pages/AIChatDialog.qml
+  resources/qml/Pages/OffsetToolDialog.qml
+  resources/qml/Pages/GenerateMeshToolDialog.qml
+  resources/qml/Pages/SmoothMeshToolDialog.qml
+  resources/qml/Pages/AISuggestToolDialog.qml
+  resources/qml/Pages/AIChatToolDialog.qml
   resources/qml/Pages/ImportModel.qml
   RESOURCES
   ${ICON_RESOURCES}
@@ -267,8 +262,6 @@ target_include_directories(
   ${PROJECT_NAME}
   PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include"
           "${CMAKE_CURRENT_SOURCE_DIR}/include/app" # For Qt moc generated code
-          "${CMAKE_CURRENT_SOURCE_DIR}/include/geometry" # Geometry data types
-          "${CMAKE_CURRENT_SOURCE_DIR}/include/render" # Render module
           "${CMAKE_CURRENT_SOURCE_DIR}/src"
 )
 

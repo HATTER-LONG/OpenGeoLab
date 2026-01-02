@@ -6,22 +6,18 @@ import OpenGeoLab 1.0 as OGL
 import "." as Pages
 
 /**
- * @brief Dialog for adding a point with X, Y, Z coordinates.
+ * @file AddPointToolDialog.qml
+ * @brief Non-modal tool dialog for adding a point with X, Y, Z coordinates
  *
- * NOTE: BackendService.request() uses module name as first parameter:
- *   BackendService.request("ModuleName", { param1: value1, ... })
- *
- * TODO: Update to use actual service module when implemented.
+ * Allows users to create a new point geometry by specifying 3D coordinates.
+ * The dialog is non-modal, enabling viewport interaction during input.
  */
-Pages.BaseDialog {
+Pages.ToolDialog {
     id: root
 
     title: qsTr("Add Point")
     okButtonText: qsTr("Create")
 
-    property var initialParams: ({})
-
-    // Validation: all coordinates must be valid numbers.
     okEnabled: !OGL.BackendService.busy && !isNaN(parseFloat(xInput.text)) && !isNaN(parseFloat(yInput.text)) && !isNaN(parseFloat(zInput.text))
 
     onAccepted: {
@@ -42,6 +38,7 @@ Pages.BaseDialog {
             text: qsTr("Enter the coordinates for the new point:")
             color: Theme.textSecondaryColor
             wrapMode: Text.Wrap
+            font.pixelSize: 12
         }
 
         GridLayout {
@@ -53,7 +50,7 @@ Pages.BaseDialog {
             Label {
                 text: qsTr("X:")
                 color: Theme.textPrimaryColor
-                Layout.preferredWidth: 60
+                Layout.preferredWidth: 40
             }
             TextField {
                 id: xInput
@@ -67,7 +64,7 @@ Pages.BaseDialog {
             Label {
                 text: qsTr("Y:")
                 color: Theme.textPrimaryColor
-                Layout.preferredWidth: 60
+                Layout.preferredWidth: 40
             }
             TextField {
                 id: yInput
@@ -81,7 +78,7 @@ Pages.BaseDialog {
             Label {
                 text: qsTr("Z:")
                 color: Theme.textPrimaryColor
-                Layout.preferredWidth: 60
+                Layout.preferredWidth: 40
             }
             TextField {
                 id: zInput
@@ -93,38 +90,29 @@ Pages.BaseDialog {
             }
         }
 
-        // Status area.
-        Item {
+        // Status area
+        RowLayout {
             Layout.fillWidth: true
-            Layout.fillHeight: true
-            Layout.minimumHeight: 20
+            spacing: 8
+            visible: OGL.BackendService.busy
 
-            RowLayout {
-                anchors.fill: parent
-                spacing: 8
-                visible: OGL.BackendService.busy
-
-                BusyIndicator {
-                    Layout.preferredWidth: 24
-                    Layout.preferredHeight: 24
-                    running: true
-                }
-
-                Label {
-                    Layout.fillWidth: true
-                    text: OGL.BackendService.message
-                    color: Theme.textSecondaryColor
-                    elide: Text.ElideRight
-                }
+            BusyIndicator {
+                Layout.preferredWidth: 20
+                Layout.preferredHeight: 20
+                running: true
             }
 
             Label {
-                anchors.fill: parent
-                visible: OGL.BackendService.lastError.length > 0 && !OGL.BackendService.busy
-                text: OGL.BackendService.lastError
-                color: "#E74C3C"
-                wrapMode: Text.Wrap
+                Layout.fillWidth: true
+                text: OGL.BackendService.message
+                color: Theme.textSecondaryColor
+                font.pixelSize: 12
+                elide: Text.ElideRight
             }
+        }
+
+        Item {
+            Layout.fillHeight: true
         }
     }
 
@@ -132,8 +120,9 @@ Pages.BaseDialog {
         target: OGL.BackendService
 
         function onOperationFinished(moduleName: string, _result: var): void {
-            if (moduleName === "AddPoint")
+            if (moduleName === "addPoint") {
                 root.closeRequested();
+            }
         }
     }
 }

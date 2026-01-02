@@ -6,15 +6,16 @@ import OpenGeoLab 1.0 as OGL
 import "." as Pages
 
 /**
- * @brief Dialog for smoothing mesh.
+ * @file SmoothMeshToolDialog.qml
+ * @brief Non-modal tool dialog for smoothing mesh
+ *
+ * Allows users to configure and apply mesh smoothing operations.
  */
-Pages.BaseDialog {
+Pages.ToolDialog {
     id: root
 
     title: qsTr("Smooth Mesh")
     okButtonText: qsTr("Apply")
-
-    property var initialParams: ({})
 
     okEnabled: !OGL.BackendService.busy
 
@@ -36,6 +37,7 @@ Pages.BaseDialog {
             text: qsTr("Configure mesh smoothing parameters:")
             color: Theme.textSecondaryColor
             wrapMode: Text.Wrap
+            font.pixelSize: 12
         }
 
         GridLayout {
@@ -79,45 +81,34 @@ Pages.BaseDialog {
                     id: factorInput
                     Layout.preferredWidth: 60
                     text: factorSlider.value.toFixed(2)
-                    validator: DoubleValidator {
-                        bottom: 0
-                        top: 1
-                    }
+                    validator: DoubleValidator { bottom: 0; top: 1 }
                     enabled: !OGL.BackendService.busy
                     onTextChanged: {
                         const v = parseFloat(text);
-                        if (!isNaN(v) && v >= 0 && v <= 1)
+                        if (!isNaN(v) && v >= 0 && v <= 1) {
                             factorSlider.value = v;
+                        }
                     }
                 }
             }
-
-            Label {
-                text: qsTr("Options:")
-                color: Theme.textPrimaryColor
-            }
-            CheckBox {
-                id: preserveBoundaryCheck
-                text: qsTr("Preserve boundary")
-                checked: true
-                enabled: !OGL.BackendService.busy
-            }
         }
 
-        Item {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
+        CheckBox {
+            id: preserveBoundaryCheck
+            text: qsTr("Preserve boundary")
+            checked: true
+            enabled: !OGL.BackendService.busy
         }
 
-        // Status area.
+        // Status area
         RowLayout {
             Layout.fillWidth: true
             spacing: 8
             visible: OGL.BackendService.busy
 
             BusyIndicator {
-                Layout.preferredWidth: 24
-                Layout.preferredHeight: 24
+                Layout.preferredWidth: 20
+                Layout.preferredHeight: 20
                 running: true
             }
 
@@ -125,17 +116,21 @@ Pages.BaseDialog {
                 Layout.fillWidth: true
                 text: OGL.BackendService.message
                 color: Theme.textSecondaryColor
+                font.pixelSize: 12
                 elide: Text.ElideRight
             }
         }
+
+        Item { Layout.fillHeight: true }
     }
 
     Connections {
         target: OGL.BackendService
 
         function onOperationFinished(moduleName: string, _result: var): void {
-            if (moduleName === "SmoothMesh")
+            if (moduleName === "SmoothMesh") {
                 root.closeRequested();
+            }
         }
     }
 }

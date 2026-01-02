@@ -6,15 +6,16 @@ import OpenGeoLab 1.0 as OGL
 import "." as Pages
 
 /**
- * @brief Dialog for offsetting geometry.
+ * @file OffsetToolDialog.qml
+ * @brief Non-modal tool dialog for offsetting geometry
+ *
+ * Allows users to offset geometry by a specified distance and direction.
  */
-Pages.BaseDialog {
+Pages.ToolDialog {
     id: root
 
     title: qsTr("Offset")
     okButtonText: qsTr("Apply")
-
-    property var initialParams: ({})
 
     okEnabled: !OGL.BackendService.busy && !isNaN(parseFloat(distanceInput.text))
 
@@ -36,6 +37,7 @@ Pages.BaseDialog {
             text: qsTr("Configure offset parameters:")
             color: Theme.textSecondaryColor
             wrapMode: Text.Wrap
+            font.pixelSize: 12
         }
 
         GridLayout {
@@ -66,34 +68,34 @@ Pages.BaseDialog {
                 Layout.fillWidth: true
                 model: [qsTr("Normal"), qsTr("Inward"), qsTr("Outward")]
                 enabled: !OGL.BackendService.busy
-            }
 
-            Label {
-                text: qsTr("Options:")
-                color: Theme.textPrimaryColor
-            }
-            CheckBox {
-                id: keepOriginalCheck
-                text: qsTr("Keep original geometry")
-                checked: true
-                enabled: !OGL.BackendService.busy
+                background: Rectangle {
+                    implicitWidth: 100
+                    implicitHeight: 32
+                    color: directionCombo.enabled ? Theme.surfaceColor : Theme.surfaceAltColor
+                    border.width: 1
+                    border.color: directionCombo.pressed ? Theme.accentColor : Theme.borderColor
+                    radius: 4
+                }
             }
         }
 
-        Item {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
+        CheckBox {
+            id: keepOriginalCheck
+            text: qsTr("Keep original geometry")
+            checked: true
+            enabled: !OGL.BackendService.busy
         }
 
-        // Status area.
+        // Status area
         RowLayout {
             Layout.fillWidth: true
             spacing: 8
             visible: OGL.BackendService.busy
 
             BusyIndicator {
-                Layout.preferredWidth: 24
-                Layout.preferredHeight: 24
+                Layout.preferredWidth: 20
+                Layout.preferredHeight: 20
                 running: true
             }
 
@@ -101,8 +103,13 @@ Pages.BaseDialog {
                 Layout.fillWidth: true
                 text: OGL.BackendService.message
                 color: Theme.textSecondaryColor
+                font.pixelSize: 12
                 elide: Text.ElideRight
             }
+        }
+
+        Item {
+            Layout.fillHeight: true
         }
     }
 
@@ -110,8 +117,9 @@ Pages.BaseDialog {
         target: OGL.BackendService
 
         function onOperationFinished(moduleName: string, _result: var): void {
-            if (moduleName === "Offset")
+            if (moduleName === "Offset") {
                 root.closeRequested();
+            }
         }
     }
 }

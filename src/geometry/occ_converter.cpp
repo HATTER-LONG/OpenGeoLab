@@ -77,7 +77,7 @@ bool OccConverter::tessellateShape(const TopoDS_Shape& shape, const Tessellation
     }
 }
 
-void OccConverter::extractGeometry(const TopoDS_Shape& shape,
+void OccConverter::extractGeometry(const TopoDS_Shape& shape, // NOLINT
                                    const std::string& part_name,
                                    GeometryModel& model) {
     // Maps to track OCC shape to our ID mapping

@@ -7,13 +7,16 @@ import "RibbonMenu" as RibbonMenu
 import "Pages" as Pages
 
 /**
+ * @file Main.qml
  * @brief Main application window
  *
  * Provides the primary UI structure with:
  * - Ribbon toolbar for commands
  * - Model tree sidebar
- * - OpenGL viewport for 3D rendering
- * - Non-modal tool dialogs
+ * - 3D viewport placeholder (pending render refactoring)
+ * - Non-modal tool dialogs positioned beside the model tree
+ *
+ * @note The render module is temporarily disabled for restructuring.
  */
 ApplicationWindow {
     id: root
@@ -21,11 +24,6 @@ ApplicationWindow {
     width: 1280
     height: 720
     title: qsTr("OpenGeoLab")
-
-    // Dialog host for modal dialogs
-    RibbonMenu.DialogHost {
-        id: dialogHost
-    }
 
     // File dialog for importing models
     Pages.ImportModel {
@@ -37,18 +35,29 @@ ApplicationWindow {
         id: resultDialog
     }
 
-    // Action router for ribbon toolbar
-    RibbonMenu.ActionRouter {
-        id: ribbonActions
-        dialogHost: dialogHost
-        importModelDialog: importModelDialog
-        onExitApp: Qt.quit()
-
-        // Handle trim action specially for non-modal dialog
-        onTrimRequested: {
-            trimDialog.viewport = glViewport;
-            trimDialog.show();
+    /**
+     * @brief Handle ribbon action routing
+     * @param actionId Action identifier from ribbon
+     * @param payload Optional action parameters
+     */
+    function handleAction(actionId: string, payload: var): void {
+        // Handle global actions first
+        switch (actionId) {
+        case "exitApp":
+            Qt.quit();
+            return;
+        case "toggleTheme":
+            Theme.mode = (Theme.mode === Theme.dark) ? Theme.light : Theme.dark;
+            return;
+        case "importModel":
+            if (importModelDialog && importModelDialog.open) {
+                importModelDialog.open();
+            }
+            return;
         }
+
+        // Open tool dialog for the action
+        toolDialogHost.openDialog(actionId, payload || {});
     }
 
     ColumnLayout {
@@ -56,10 +65,10 @@ ApplicationWindow {
         spacing: 0
 
         // Ribbon Menu
-        RibbonToolBar {
+        RibbonMenu.RibbonToolBar {
             id: ribbon
             Layout.fillWidth: true
-            onActionTriggered: (actionId, payload) => ribbonActions.handle(actionId, payload)
+            onActionTriggered: (actionId, payload) => root.handleAction(actionId, payload)
         }
 
         // Main Content Area
@@ -76,28 +85,21 @@ ApplicationWindow {
                 SplitView.maximumWidth: 400
             }
 
-            // Right area - OpenGL viewport with overlays
+            // Right area - Viewport with tool dialogs overlay
             Item {
                 SplitView.fillWidth: true
                 SplitView.minimumWidth: 400
 
-                // OpenGL viewport
+                // Viewport placeholder
                 OpenGLViewport {
                     id: glViewport
                     anchors.fill: parent
                 }
 
-                // Non-modal Trim dialog (positioned over viewport)
-                Pages.TrimDialog {
-                    id: trimDialog
-                    anchors.right: parent.right
-                    anchors.top: parent.top
-                    anchors.margins: 16
+                // Tool dialog host - positioned at top-left of viewport
+                Pages.ToolDialogHost {
+                    id: toolDialogHost
                     viewport: glViewport
-
-                    onCloseRequested: {
-                        hide();
-                    }
                 }
             }
 

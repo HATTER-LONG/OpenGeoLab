@@ -6,15 +6,17 @@ import OpenGeoLab 1.0 as OGL
 import "." as Pages
 
 /**
- * @brief Dialog for adding a line with start and end points.
+ * @file AddLineToolDialog.qml
+ * @brief Non-modal tool dialog for adding a line with start and end points
+ *
+ * Allows users to create a new line geometry by specifying start and end coordinates.
+ * The dialog is non-modal, enabling viewport interaction during input.
  */
-Pages.BaseDialog {
+Pages.ToolDialog {
     id: root
 
     title: qsTr("Add Line")
     okButtonText: qsTr("Create")
-
-    property var initialParams: ({})
 
     okEnabled: !OGL.BackendService.busy
 
@@ -34,10 +36,20 @@ Pages.BaseDialog {
         anchors.fill: parent
         spacing: 12
 
-        // Start point section.
+        // Start point section
         GroupBox {
             Layout.fillWidth: true
             title: qsTr("Start Point")
+
+            background: Rectangle {
+                y: parent.topPadding - parent.bottomPadding
+                width: parent.width
+                height: parent.height - parent.topPadding + parent.bottomPadding
+                color: Theme.surfaceAltColor
+                radius: 6
+                border.width: 1
+                border.color: Theme.borderColor
+            }
 
             GridLayout {
                 anchors.fill: parent
@@ -52,7 +64,6 @@ Pages.BaseDialog {
                 TextField {
                     id: startXInput
                     Layout.fillWidth: true
-                    placeholderText: "0.0"
                     text: "0"
                     validator: DoubleValidator {}
                     enabled: !OGL.BackendService.busy
@@ -65,7 +76,6 @@ Pages.BaseDialog {
                 TextField {
                     id: startYInput
                     Layout.fillWidth: true
-                    placeholderText: "0.0"
                     text: "0"
                     validator: DoubleValidator {}
                     enabled: !OGL.BackendService.busy
@@ -78,7 +88,6 @@ Pages.BaseDialog {
                 TextField {
                     id: startZInput
                     Layout.fillWidth: true
-                    placeholderText: "0.0"
                     text: "0"
                     validator: DoubleValidator {}
                     enabled: !OGL.BackendService.busy
@@ -86,10 +95,20 @@ Pages.BaseDialog {
             }
         }
 
-        // End point section.
+        // End point section
         GroupBox {
             Layout.fillWidth: true
             title: qsTr("End Point")
+
+            background: Rectangle {
+                y: parent.topPadding - parent.bottomPadding
+                width: parent.width
+                height: parent.height - parent.topPadding + parent.bottomPadding
+                color: Theme.surfaceAltColor
+                radius: 6
+                border.width: 1
+                border.color: Theme.borderColor
+            }
 
             GridLayout {
                 anchors.fill: parent
@@ -104,7 +123,6 @@ Pages.BaseDialog {
                 TextField {
                     id: endXInput
                     Layout.fillWidth: true
-                    placeholderText: "0.0"
                     text: "10"
                     validator: DoubleValidator {}
                     enabled: !OGL.BackendService.busy
@@ -117,7 +135,6 @@ Pages.BaseDialog {
                 TextField {
                     id: endYInput
                     Layout.fillWidth: true
-                    placeholderText: "0.0"
                     text: "0"
                     validator: DoubleValidator {}
                     enabled: !OGL.BackendService.busy
@@ -130,7 +147,6 @@ Pages.BaseDialog {
                 TextField {
                     id: endZInput
                     Layout.fillWidth: true
-                    placeholderText: "0.0"
                     text: "0"
                     validator: DoubleValidator {}
                     enabled: !OGL.BackendService.busy
@@ -138,29 +154,29 @@ Pages.BaseDialog {
             }
         }
 
-        // Status area.
-        Item {
+        // Status area
+        RowLayout {
             Layout.fillWidth: true
-            Layout.fillHeight: true
+            spacing: 8
+            visible: OGL.BackendService.busy
 
-            RowLayout {
-                anchors.fill: parent
-                spacing: 8
-                visible: OGL.BackendService.busy
-
-                BusyIndicator {
-                    Layout.preferredWidth: 24
-                    Layout.preferredHeight: 24
-                    running: true
-                }
-
-                Label {
-                    Layout.fillWidth: true
-                    text: OGL.BackendService.message
-                    color: Theme.textSecondaryColor
-                    elide: Text.ElideRight
-                }
+            BusyIndicator {
+                Layout.preferredWidth: 20
+                Layout.preferredHeight: 20
+                running: true
             }
+
+            Label {
+                Layout.fillWidth: true
+                text: OGL.BackendService.message
+                color: Theme.textSecondaryColor
+                font.pixelSize: 12
+                elide: Text.ElideRight
+            }
+        }
+
+        Item {
+            Layout.fillHeight: true
         }
     }
 
@@ -168,8 +184,9 @@ Pages.BaseDialog {
         target: OGL.BackendService
 
         function onOperationFinished(moduleName: string, _result: var): void {
-            if (moduleName === "AddLine")
+            if (moduleName === "addLine") {
                 root.closeRequested();
+            }
         }
     }
 }
