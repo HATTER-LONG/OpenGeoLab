@@ -45,14 +45,14 @@ bool StepReader::parseStepFile(const std::string& file_path, GeometryData& data)
     }
 
     // Transfer all roots
-    int numRoots = reader.NbRootsForTransfer();
-    LOG_INFO("StepReader: Found {} roots in STEP file", numRoots);
+    int num_roots = reader.NbRootsForTransfer();
+    LOG_INFO("StepReader: Found {} roots in STEP file", num_roots);
 
     reader.TransferRoots();
-    int numShapes = reader.NbShapes();
-    LOG_INFO("StepReader: Transferred {} shapes from STEP file", numShapes);
+    int num_shapes = reader.NbShapes();
+    LOG_INFO("StepReader: Transferred {} shapes from STEP file", num_shapes);
 
-    if(numShapes == 0) {
+    if(num_shapes == 0) {
         LOG_ERROR("StepReader: No shapes found in STEP file");
         return false;
     }
@@ -75,9 +75,9 @@ bool StepReader::parseStepFile(const std::string& file_path, GeometryData& data)
 
     // Extract filename for part name
     std::filesystem::path path(file_path);
-    std::string partName = path.stem().string();
+    std::string part_name = path.stem().string();
 
-    auto model = converter.convertShape(shape, partName, params);
+    auto model = converter.convertShape(shape, part_name, params);
     if(!model) {
         LOG_ERROR("StepReader: Failed to convert OCC shape");
         return false;

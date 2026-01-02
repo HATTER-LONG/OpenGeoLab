@@ -170,9 +170,9 @@ public:
 
     /**
      * @brief Unregister a previously registered callback.
-     * @param callbackId ID returned from registerChangeCallback().
+     * @param callback_id ID returned from registerChangeCallback().
      */
-    void unregisterChangeCallback(size_t callbackId);
+    void unregisterChangeCallback(size_t callback_id);
 
     /**
      * @brief Manually notify all listeners of geometry changes.

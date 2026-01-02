@@ -50,15 +50,15 @@ nlohmann::json GeometryBuilder::createBox(const nlohmann::json& params) {
     try {
         // Extract parameters with defaults
         std::string name = params.value("name", "Box");
-        double originX = params.value("originX", 0.0);
-        double originY = params.value("originY", 0.0);
-        double originZ = params.value("originZ", 0.0);
+        double origin_x = params.value("originX", 0.0);
+        double origin_y = params.value("originY", 0.0);
+        double origin_z = params.value("originZ", 0.0);
         double width = params.value("width", 10.0);
         double height = params.value("height", 10.0);
         double depth = params.value("depth", 10.0);
 
         LOG_INFO("GeometryBuilder: Creating box '{}' at ({}, {}, {}) with size ({}, {}, {})", name,
-                 originX, originY, originZ, width, height, depth);
+                 origin_x, origin_y, origin_z, width, height, depth);
 
         // Validate dimensions
         if(width <= 0 || height <= 0 || depth <= 0) {
@@ -68,23 +68,23 @@ nlohmann::json GeometryBuilder::createBox(const nlohmann::json& params) {
         }
 
         // Create box using OpenCASCADE
-        gp_Pnt origin(originX, originY, originZ);
-        BRepPrimAPI_MakeBox boxMaker(origin, width, height, depth);
-        boxMaker.Build();
+        gp_Pnt origin(origin_x, origin_y, origin_z);
+        BRepPrimAPI_MakeBox box_maker(origin, width, height, depth);
+        box_maker.Build();
 
-        if(!boxMaker.IsDone()) {
+        if(!box_maker.IsDone()) {
             result["message"] = "Failed to create box shape";
             LOG_ERROR("GeometryBuilder: BRepPrimAPI_MakeBox failed");
             return result;
         }
 
-        TopoDS_Shape boxShape = boxMaker.Shape();
+        TopoDS_Shape box_shape = box_maker.Shape();
 
         // Convert to our geometry format
         OccConverter converter;
-        OccConverter::TessellationParams tessParams;
-        tessParams.linearDeflection = 0.1;
-        tessParams.angularDeflection = 0.5;
+        OccConverter::TessellationParams tess_params;
+        tess_params.linearDeflection = 0.1;
+        tess_params.angularDeflection = 0.5;
 
         // Get or create model in GeometryStore
         auto& store = GeometryStore::instance();
@@ -95,7 +95,7 @@ nlohmann::json GeometryBuilder::createBox(const nlohmann::json& params) {
         }
 
         // Add box to model
-        if(!converter.addShapeToModel(boxShape, name, *model, tessParams)) {
+        if(!converter.addShapeToModel(box_shape, name, *model, tess_params)) {
             result["message"] = "Failed to convert box shape";
             LOG_ERROR("GeometryBuilder: Shape conversion failed");
             return result;

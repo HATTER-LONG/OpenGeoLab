@@ -24,11 +24,11 @@ namespace OpenGeoLab {
 namespace Geometry {
 
 GeometryModelPtr OccConverter::convertShape(const TopoDS_Shape& shape,
-                                            const std::string& partName,
+                                            const std::string& part_name,
                                             const TessellationParams& params) {
     auto model = std::make_shared<GeometryModel>();
 
-    if(!addShapeToModel(shape, partName, *model, params)) {
+    if(!addShapeToModel(shape, part_name, *model, params)) {
         LOG_ERROR("OccConverter: Failed to convert shape");
         return nullptr;
     }
@@ -37,7 +37,7 @@ GeometryModelPtr OccConverter::convertShape(const TopoDS_Shape& shape,
 }
 
 bool OccConverter::addShapeToModel(const TopoDS_Shape& shape,
-                                   const std::string& partName,
+                                   const std::string& part_name,
                                    GeometryModel& model,
                                    const TessellationParams& params) {
     if(shape.IsNull()) {
@@ -52,9 +52,9 @@ bool OccConverter::addShapeToModel(const TopoDS_Shape& shape,
     }
 
     // Extract geometry data
-    extractGeometry(shape, partName, model);
+    extractGeometry(shape, part_name, model);
 
-    LOG_INFO("OccConverter: Converted shape '{}' - {}", partName, model.getSummary());
+    LOG_INFO("OccConverter: Converted shape '{}' - {}", part_name, model.getSummary());
     return true;
 }
 
@@ -78,59 +78,59 @@ bool OccConverter::tessellateShape(const TopoDS_Shape& shape, const Tessellation
 }
 
 void OccConverter::extractGeometry(const TopoDS_Shape& shape,
-                                   const std::string& partName,
+                                   const std::string& part_name,
                                    GeometryModel& model) {
     // Maps to track OCC shape to our ID mapping
-    std::unordered_map<size_t, uint32_t> vertexMap;
-    std::unordered_map<size_t, uint32_t> edgeMap;
-    std::unordered_map<size_t, uint32_t> faceMap;
-    std::unordered_map<size_t, uint32_t> solidMap;
+    std::unordered_map<size_t, uint32_t> vertex_map;
+    std::unordered_map<size_t, uint32_t> edge_map;
+    std::unordered_map<size_t, uint32_t> face_map;
+    std::unordered_map<size_t, uint32_t> solid_map;
 
     // Create the part
     Part part;
     part.m_id = model.generateNextId();
-    part.m_name = partName;
+    part.m_name = part_name;
 
     // Extract solids
-    for(TopExp_Explorer solidExp(shape, TopAbs_SOLID); solidExp.More(); solidExp.Next()) {
-        const TopoDS_Solid& occSolid = TopoDS::Solid(solidExp.Current());
-        size_t solidHash = std::hash<TopoDS_Solid>{}(occSolid);
+    for(TopExp_Explorer solid_exp(shape, TopAbs_SOLID); solid_exp.More(); solid_exp.Next()) {
+        const TopoDS_Solid& occ_solid = TopoDS::Solid(solid_exp.Current());
+        size_t solid_hash = std::hash<TopoDS_Solid>{}(occ_solid);
 
-        if(solidMap.find(solidHash) != solidMap.end()) {
+        if(solid_map.find(solid_hash) != solid_map.end()) {
             continue; // Already processed
         }
 
         Solid solid;
         solid.m_id = model.generateNextId();
-        solidMap[solidHash] = solid.m_id;
+        solid_map[solid_hash] = solid.m_id;
         part.m_solidIds.push_back(solid.m_id);
 
         // Extract faces for this solid
-        for(TopExp_Explorer faceExp(occSolid, TopAbs_FACE); faceExp.More(); faceExp.Next()) {
-            const TopoDS_Face& occFace = TopoDS::Face(faceExp.Current());
-            size_t faceHash = std::hash<TopoDS_Face>{}(occFace);
+        for(TopExp_Explorer face_exp(occ_solid, TopAbs_FACE); face_exp.More(); face_exp.Next()) {
+            const TopoDS_Face& occ_face = TopoDS::Face(face_exp.Current());
+            size_t face_hash = std::hash<TopoDS_Face>{}(occ_face);
 
-            uint32_t faceId;
-            if(faceMap.find(faceHash) != faceMap.end()) {
-                faceId = faceMap[faceHash];
+            uint32_t face_id;
+            if(face_map.find(face_hash) != face_map.end()) {
+                face_id = face_map[face_hash];
             } else {
                 Face face;
                 face.m_id = model.generateNextId();
-                faceId = face.m_id;
-                faceMap[faceHash] = faceId;
+                face_id = face.m_id;
+                face_map[face_hash] = face_id;
 
                 // Get tessellation
                 TopLoc_Location loc;
-                Handle(Poly_Triangulation) triangulation = BRep_Tool::Triangulation(occFace, loc);
+                Handle(Poly_Triangulation) triangulation = BRep_Tool::Triangulation(occ_face, loc);
 
                 if(!triangulation.IsNull()) {
                     const gp_Trsf& trsf = loc.Transformation();
-                    int numNodes = triangulation->NbNodes();
-                    int numTris = triangulation->NbTriangles();
+                    int num_nodes = triangulation->NbNodes();
+                    int num_tris = triangulation->NbTriangles();
 
                     // Extract vertices with normals
-                    face.m_meshVertices.reserve(numNodes);
-                    for(int i = 1; i <= numNodes; ++i) {
+                    face.m_meshVertices.reserve(num_nodes);
+                    for(int i = 1; i <= num_nodes; ++i) {
                         gp_Pnt pt = triangulation->Node(i).Transformed(trsf);
 
                         RenderVertex rv;
@@ -146,8 +146,8 @@ void OccConverter::extractGeometry(const TopoDS_Shape& shape,
                     }
 
                     // Extract triangle indices
-                    face.m_meshIndices.reserve(numTris * 3);
-                    for(int i = 1; i <= numTris; ++i) {
+                    face.m_meshIndices.reserve(num_tris * 3);
+                    for(int i = 1; i <= num_tris; ++i) {
                         const Poly_Triangle& tri = triangulation->Triangle(i);
                         int n1, n2, n3;
                         tri.Get(n1, n2, n3);
@@ -160,38 +160,40 @@ void OccConverter::extractGeometry(const TopoDS_Shape& shape,
                 }
 
                 // Extract edges for this face
-                for(TopExp_Explorer edgeExp(occFace, TopAbs_EDGE); edgeExp.More(); edgeExp.Next()) {
-                    const TopoDS_Edge& occEdge = TopoDS::Edge(edgeExp.Current());
-                    size_t edgeHash = std::hash<TopoDS_Edge>{}(occEdge);
+                for(TopExp_Explorer edge_exp(occ_face, TopAbs_EDGE); edge_exp.More();
+                    edge_exp.Next()) {
+                    const TopoDS_Edge& occ_edge = TopoDS::Edge(edge_exp.Current());
+                    size_t edge_hash = std::hash<TopoDS_Edge>{}(occ_edge);
 
-                    uint32_t edgeId;
-                    if(edgeMap.find(edgeHash) != edgeMap.end()) {
-                        edgeId = edgeMap[edgeHash];
+                    uint32_t edge_id;
+                    if(edge_map.find(edge_hash) != edge_map.end()) {
+                        edge_id = edge_map[edge_hash];
                     } else {
                         Edge edge;
                         edge.m_id = model.generateNextId();
-                        edgeId = edge.m_id;
-                        edgeMap[edgeHash] = edgeId;
+                        edge_id = edge.m_id;
+                        edge_map[edge_hash] = edge_id;
 
                         // Get edge vertices
                         TopoDS_Vertex v1, v2;
-                        TopExp_Explorer vertExp(occEdge, TopAbs_VERTEX);
-                        if(vertExp.More()) {
-                            v1 = TopoDS::Vertex(vertExp.Current());
-                            vertExp.Next();
-                            if(vertExp.More()) {
-                                v2 = TopoDS::Vertex(vertExp.Current());
+                        TopExp_Explorer vert_exp(occ_edge, TopAbs_VERTEX);
+                        if(vert_exp.More()) {
+                            v1 = TopoDS::Vertex(vert_exp.Current());
+                            vert_exp.Next();
+                            if(vert_exp.More()) {
+                                v2 = TopoDS::Vertex(vert_exp.Current());
                             }
                         }
 
                         // Get or create vertex IDs
-                        auto getVertexId = [&](const TopoDS_Vertex& v) -> uint32_t {
-                            if(v.IsNull())
+                        auto get_vertex_id = [&](const TopoDS_Vertex& v) -> uint32_t {
+                            if(v.IsNull()) {
                                 return 0;
+                            }
 
-                            size_t vHash = std::hash<TopoDS_Vertex>{}(v);
-                            auto it = vertexMap.find(vHash);
-                            if(it != vertexMap.end()) {
+                            size_t v_hash = std::hash<TopoDS_Vertex>{}(v);
+                            auto it = vertex_map.find(v_hash);
+                            if(it != vertex_map.end()) {
                                 return it->second;
                             }
 
@@ -199,69 +201,69 @@ void OccConverter::extractGeometry(const TopoDS_Shape& shape,
                             Vertex vert;
                             vert.m_id = model.generateNextId();
                             vert.m_position = Point3D(pt.X(), pt.Y(), pt.Z());
-                            vertexMap[vHash] = vert.m_id;
+                            vertex_map[v_hash] = vert.m_id;
                             model.addVertex(vert);
                             return vert.m_id;
                         };
 
-                        edge.m_startVertexId = getVertexId(v1);
-                        edge.m_endVertexId = getVertexId(v2);
+                        edge.m_startVertexId = get_vertex_id(v1);
+                        edge.m_endVertexId = get_vertex_id(v2);
 
                         // Get curve points for visualization
-                        TopLoc_Location edgeLoc;
-                        Handle(Poly_Polygon3D) polygon = BRep_Tool::Polygon3D(occEdge, edgeLoc);
+                        TopLoc_Location edge_loc;
+                        Handle(Poly_Polygon3D) polygon = BRep_Tool::Polygon3D(occ_edge, edge_loc);
                         if(!polygon.IsNull()) {
                             const TColgp_Array1OfPnt& nodes = polygon->Nodes();
-                            const gp_Trsf& edgeTrsf = edgeLoc.Transformation();
+                            const gp_Trsf& edge_trsf = edge_loc.Transformation();
                             edge.m_curvePoints.reserve(nodes.Length());
                             for(int i = nodes.Lower(); i <= nodes.Upper(); ++i) {
-                                gp_Pnt pt = nodes(i).Transformed(edgeTrsf);
+                                gp_Pnt pt = nodes(i).Transformed(edge_trsf);
                                 edge.m_curvePoints.emplace_back(pt.X(), pt.Y(), pt.Z());
                             }
                         }
 
                         model.addEdge(edge);
                     }
-                    face.m_edgeIds.push_back(edgeId);
+                    face.m_edgeIds.push_back(edge_id);
                 }
 
                 model.addFace(face);
             }
-            solid.m_faceIds.push_back(faceId);
+            solid.m_faceIds.push_back(face_id);
         }
 
         model.addSolid(solid);
     }
 
     // Handle case where shape has no solids but has faces (sheet body)
-    if(solidMap.empty()) {
-        Solid sheetSolid;
-        sheetSolid.m_id = model.generateNextId();
-        part.m_solidIds.push_back(sheetSolid.m_id);
+    if(solid_map.empty()) {
+        Solid sheet_solid;
+        sheet_solid.m_id = model.generateNextId();
+        part.m_solidIds.push_back(sheet_solid.m_id);
 
-        for(TopExp_Explorer faceExp(shape, TopAbs_FACE); faceExp.More(); faceExp.Next()) {
-            const TopoDS_Face& occFace = TopoDS::Face(faceExp.Current());
-            size_t faceHash = std::hash<TopoDS_Face>{}(occFace);
+        for(TopExp_Explorer face_exp(shape, TopAbs_FACE); face_exp.More(); face_exp.Next()) {
+            const TopoDS_Face& occ_face = TopoDS::Face(face_exp.Current());
+            size_t face_hash = std::hash<TopoDS_Face>{}(occ_face);
 
-            if(faceMap.find(faceHash) != faceMap.end()) {
-                sheetSolid.m_faceIds.push_back(faceMap[faceHash]);
+            if(face_map.find(face_hash) != face_map.end()) {
+                sheet_solid.m_faceIds.push_back(face_map[face_hash]);
                 continue;
             }
 
             Face face;
             face.m_id = model.generateNextId();
-            faceMap[faceHash] = face.m_id;
+            face_map[face_hash] = face.m_id;
 
             TopLoc_Location loc;
-            Handle(Poly_Triangulation) triangulation = BRep_Tool::Triangulation(occFace, loc);
+            Handle(Poly_Triangulation) triangulation = BRep_Tool::Triangulation(occ_face, loc);
 
             if(!triangulation.IsNull()) {
                 const gp_Trsf& trsf = loc.Transformation();
-                int numNodes = triangulation->NbNodes();
-                int numTris = triangulation->NbTriangles();
+                int num_nodes = triangulation->NbNodes();
+                int num_tris = triangulation->NbTriangles();
 
-                face.m_meshVertices.reserve(numNodes);
-                for(int i = 1; i <= numNodes; ++i) {
+                face.m_meshVertices.reserve(num_nodes);
+                for(int i = 1; i <= num_nodes; ++i) {
                     gp_Pnt pt = triangulation->Node(i).Transformed(trsf);
                     RenderVertex rv;
                     rv.m_position = Point3D(pt.X(), pt.Y(), pt.Z());
@@ -272,8 +274,8 @@ void OccConverter::extractGeometry(const TopoDS_Shape& shape,
                     face.m_meshVertices.push_back(rv);
                 }
 
-                face.m_meshIndices.reserve(numTris * 3);
-                for(int i = 1; i <= numTris; ++i) {
+                face.m_meshIndices.reserve(num_tris * 3);
+                for(int i = 1; i <= num_tris; ++i) {
                     const Poly_Triangle& tri = triangulation->Triangle(i);
                     int n1, n2, n3;
                     tri.Get(n1, n2, n3);
@@ -284,11 +286,11 @@ void OccConverter::extractGeometry(const TopoDS_Shape& shape,
             }
 
             model.addFace(face);
-            sheetSolid.m_faceIds.push_back(face.m_id);
+            sheet_solid.m_faceIds.push_back(face.m_id);
         }
 
-        if(!sheetSolid.m_faceIds.empty()) {
-            model.addSolid(sheetSolid);
+        if(!sheet_solid.m_faceIds.empty()) {
+            model.addSolid(sheet_solid);
         }
     }
 

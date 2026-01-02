@@ -136,11 +136,11 @@ size_t GeometryStore::registerChangeCallback(GeometryChangedCallback callback) {
     return id;
 }
 
-void GeometryStore::unregisterChangeCallback(size_t callbackId) {
+void GeometryStore::unregisterChangeCallback(size_t callback_id) {
     std::lock_guard<std::mutex> lock(m_callbackMutex);
     m_callbacks.erase(
         std::remove_if(m_callbacks.begin(), m_callbacks.end(),
-                       [callbackId](const auto& pair) { return pair.first == callbackId; }),
+                       [callback_id](const auto& pair) { return pair.first == callback_id; }),
         m_callbacks.end());
 }
 

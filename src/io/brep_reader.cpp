@@ -60,9 +60,9 @@ bool BrepReader::parseBrepFile(const std::string& file_path, GeometryData& data)
 
     // Extract filename for part name
     std::filesystem::path path(file_path);
-    std::string partName = path.stem().string();
+    std::string part_name = path.stem().string();
 
-    auto model = converter.convertShape(shape, partName, params);
+    auto model = converter.convertShape(shape, part_name, params);
     if(!model) {
         LOG_ERROR("BrepReader: Failed to convert OCC shape");
         return false;
