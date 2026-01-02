@@ -12,6 +12,7 @@ QtObject {
     id: root
 
     signal exitApp
+    signal trimRequested
 
     // Dialog host for opening modal dialogs.
     property var dialogHost: null
@@ -36,6 +37,10 @@ QtObject {
         case "importModel":
             if (importModelDialog && importModelDialog.open)
                 importModelDialog.open();
+            return;
+        case "trim":
+            // Trim uses non-modal dialog
+            root.trimRequested();
             return;
         }
 
@@ -68,8 +73,6 @@ QtObject {
             return addLineDialog;
         case "AddBox":
             return addBoxDialog;
-        case "trim":
-            return trimDialog;
         case "offset":
             return offsetDialog;
         case "generateMesh":
@@ -94,9 +97,6 @@ QtObject {
     }
     readonly property Component addBoxDialog: Component {
         Pages.AddBoxDialog {}
-    }
-    readonly property Component trimDialog: Component {
-        Pages.TrimDialog {}
     }
     readonly property Component offsetDialog: Component {
         Pages.OffsetDialog {}

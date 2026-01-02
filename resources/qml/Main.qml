@@ -7,8 +7,13 @@ import "RibbonMenu" as RibbonMenu
 import "Pages" as Pages
 
 /**
- * Main application window.
- * Provides the primary UI structure with ribbon toolbar and content area.
+ * @brief Main application window
+ *
+ * Provides the primary UI structure with:
+ * - Ribbon toolbar for commands
+ * - Model tree sidebar
+ * - OpenGL viewport for 3D rendering
+ * - Non-modal tool dialogs
  */
 ApplicationWindow {
     id: root
@@ -38,6 +43,12 @@ ApplicationWindow {
         dialogHost: dialogHost
         importModelDialog: importModelDialog
         onExitApp: Qt.quit()
+
+        // Handle trim action specially for non-modal dialog
+        onTrimRequested: {
+            trimDialog.viewport = glViewport;
+            trimDialog.show();
+        }
     }
 
     ColumnLayout {
@@ -53,6 +64,7 @@ ApplicationWindow {
 
         // Main Content Area
         SplitView {
+            id: mainSplitView
             Layout.fillWidth: true
             Layout.fillHeight: true
             orientation: Qt.Horizontal
@@ -64,10 +76,29 @@ ApplicationWindow {
                 SplitView.maximumWidth: 400
             }
 
-            // Right area - OpenGL viewport
-            OpenGLViewport {
+            // Right area - OpenGL viewport with overlays
+            Item {
                 SplitView.fillWidth: true
                 SplitView.minimumWidth: 400
+
+                // OpenGL viewport
+                OpenGLViewport {
+                    id: glViewport
+                    anchors.fill: parent
+                }
+
+                // Non-modal Trim dialog (positioned over viewport)
+                Pages.TrimDialog {
+                    id: trimDialog
+                    anchors.right: parent.right
+                    anchors.top: parent.top
+                    anchors.margins: 16
+                    viewport: glViewport
+
+                    onCloseRequested: {
+                        hide();
+                    }
+                }
             }
 
             // Handle styling

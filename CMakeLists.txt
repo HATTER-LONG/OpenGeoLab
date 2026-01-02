@@ -132,7 +132,7 @@ set(OpenCASCADE_LIBS
 )
 
 # Qt 6: GUI framework with QML support
-find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui Qml Quick)
+find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui Qml Quick OpenGL)
 qt_standard_project_setup(REQUIRES 6.8)
 
 # ==============================================================================
@@ -187,6 +187,8 @@ qt_add_qml_module(
   src/app/backend_service.cpp
   include/app/model_data.hpp
   src/app/model_data.cpp
+  include/render/viewport_item.hpp
+  src/render/viewport_item.cpp
   QML_FILES
   resources/qml/Main.qml
   resources/qml/Theme.qml
@@ -206,6 +208,7 @@ qt_add_qml_module(
   resources/qml/Pages/AddLineDialog.qml
   resources/qml/Pages/AddBoxDialog.qml
   resources/qml/Pages/TrimDialog.qml
+  resources/qml/Pages/GeometrySelector.qml
   resources/qml/Pages/OffsetDialog.qml
   resources/qml/Pages/GenerateMeshDialog.qml
   resources/qml/Pages/SmoothMeshDialog.qml
@@ -247,6 +250,7 @@ target_link_libraries(
           Qt6::Gui
           Qt6::Qml
           Qt6::Quick
+          Qt6::OpenGL
           Kangaroo::Kangaroo
           cxxopts
           fmt::fmt
@@ -264,6 +268,7 @@ target_include_directories(
   PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include"
           "${CMAKE_CURRENT_SOURCE_DIR}/include/app" # For Qt moc generated code
           "${CMAKE_CURRENT_SOURCE_DIR}/include/geometry" # Geometry data types
+          "${CMAKE_CURRENT_SOURCE_DIR}/include/render" # Render module
           "${CMAKE_CURRENT_SOURCE_DIR}/src"
 )
 

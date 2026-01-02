@@ -5,10 +5,12 @@
  * Provides the central data storage for geometry imported from CAD files.
  * IO readers populate this structure, and App layer queries it for QML display.
  * Includes a global signal mechanism to notify listeners when geometry data changes.
+ * Supports mesh data storage for mesh generation workflows.
  */
 #pragma once
 
 #include "geometry/geometry_types.hpp"
+#include "geometry/mesh_types.hpp"
 
 #include <functional>
 #include <memory>
@@ -98,6 +100,30 @@ public:
     size_t edgeCount() const { return m_edges.size(); }
     size_t vertexCount() const { return m_vertices.size(); }
 
+    // Mesh data accessors
+    /**
+     * @brief Get mesh data for this model
+     * @return Pointer to mesh data (may be null if no mesh generated)
+     */
+    const Mesh::MeshData* getMeshData() const { return m_meshData.get(); }
+
+    /**
+     * @brief Set mesh data for this model
+     * @param meshData Mesh data to set
+     */
+    void setMeshData(std::shared_ptr<Mesh::MeshData> meshData) { m_meshData = std::move(meshData); }
+
+    /**
+     * @brief Check if mesh data exists
+     * @return True if mesh has been generated
+     */
+    bool hasMesh() const { return m_meshData && !m_meshData->isEmpty(); }
+
+    /**
+     * @brief Clear mesh data
+     */
+    void clearMesh() { m_meshData.reset(); }
+
     /**
      * @brief Source file path of the imported model.
      */
@@ -109,6 +135,8 @@ private:
     std::vector<Face> m_faces;
     std::vector<Edge> m_edges;
     std::vector<Vertex> m_vertices;
+
+    std::shared_ptr<Mesh::MeshData> m_meshData; ///< Optional mesh data
 
     uint32_t m_nextId = 1; ///< Counter for generating unique IDs.
 };

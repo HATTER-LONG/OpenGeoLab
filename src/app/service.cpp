@@ -6,6 +6,7 @@
  */
 #include "service.hpp"
 #include "geometry/geometry_builder.hpp"
+#include "geometry/geometry_editor.hpp"
 #include "io/brep_reader.hpp"
 #include "io/model_reader.hpp"
 #include "io/step_reader.hpp"
@@ -22,6 +23,10 @@ void registerServices() {
 
     // Geometry creation services
     g_ComponentFactory.registInstanceFactoryWithID<Geometry::GeometryBuilderFactory>("AddBox");
+
+    // Geometry editing services
+    g_ComponentFactory.registInstanceFactoryWithID<Geometry::GeometryEditorFactory>("Trim");
+    g_ComponentFactory.registInstanceFactoryWithID<Geometry::GeometryEditorFactory>("Offset");
 }
 
 } // namespace OpenGeoLab::App
