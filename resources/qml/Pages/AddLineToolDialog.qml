@@ -17,6 +17,7 @@ Pages.ToolDialog {
 
     title: qsTr("Add Line")
     okButtonText: qsTr("Create")
+    preferredContentHeight: 260
 
     okEnabled: !OGL.BackendService.busy
 
@@ -33,7 +34,7 @@ Pages.ToolDialog {
     }
 
     ColumnLayout {
-        anchors.fill: parent
+        width: parent.width
         spacing: 12
 
         // Start point section
@@ -173,10 +174,6 @@ Pages.ToolDialog {
                 font.pixelSize: 12
                 elide: Text.ElideRight
             }
-        }
-
-        Item {
-            Layout.fillHeight: true
         }
     }
 

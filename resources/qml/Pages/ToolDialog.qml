@@ -72,6 +72,17 @@ Item {
     property var viewport: null
 
     /**
+     * @brief Preferred content height (fallback when auto-sizing fails)
+     * Set this in subclasses to ensure minimum visible height
+     */
+    property real preferredContentHeight: 300
+
+    /**
+     * @brief Maximum content height before scrolling
+     */
+    property real maxContentHeight: 600
+
+    /**
      * @brief Emitted when OK button is clicked
      */
     signal accepted
@@ -88,7 +99,12 @@ Item {
 
     visible: isVisible
     width: 360
-    height: Math.min(mainLayout.implicitHeight + 100, 10000)
+    // Height = header(44) + content margins(32) + content + footer(56)
+    height: {
+        var contentH = Math.max(contentArea.childrenRect.height, root.preferredContentHeight);
+        var totalH = 44 + 32 + Math.min(contentH, root.maxContentHeight) + 56;
+        return Math.min(totalH, parent ? parent.height - 20 : 800);
+    }
 
     // Main container with shadow
     Rectangle {
@@ -216,18 +232,22 @@ Item {
             id: scrollView
             Layout.fillWidth: true
             Layout.fillHeight: true
-            Layout.margins: 16
-            Layout.minimumHeight: 80
-            Layout.maximumHeight: 400
+            Layout.leftMargin: 16
+            Layout.rightMargin: 16
+            Layout.topMargin: 16
+            Layout.bottomMargin: 16
 
             clip: true
             ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
             ScrollBar.vertical.policy: ScrollBar.AsNeeded
 
+            contentWidth: availableWidth
+            contentHeight: contentArea.childrenRect.height
+
             Item {
                 id: contentArea
-                width: scrollView.width
-                implicitHeight: childrenRect.height
+                width: scrollView.availableWidth
+                height: childrenRect.height
             }
         }
 

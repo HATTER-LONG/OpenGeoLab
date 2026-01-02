@@ -16,6 +16,7 @@ Pages.ToolDialog {
 
     title: qsTr("Generate Mesh")
     okButtonText: qsTr("Generate")
+    preferredContentHeight: 280
 
     okEnabled: !OGL.BackendService.busy
 
@@ -30,7 +31,7 @@ Pages.ToolDialog {
     }
 
     ColumnLayout {
-        anchors.fill: parent
+        width: parent.width
         spacing: 16
 
         Label {
@@ -134,10 +135,6 @@ Pages.ToolDialog {
                 font.pixelSize: 12
                 elide: Text.ElideRight
             }
-        }
-
-        Item {
-            Layout.fillHeight: true
         }
     }
 

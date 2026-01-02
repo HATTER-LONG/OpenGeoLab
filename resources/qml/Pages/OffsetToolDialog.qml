@@ -16,6 +16,7 @@ Pages.ToolDialog {
 
     title: qsTr("Offset")
     okButtonText: qsTr("Apply")
+    preferredContentHeight: 220
 
     okEnabled: !OGL.BackendService.busy && !isNaN(parseFloat(distanceInput.text))
 
@@ -29,7 +30,7 @@ Pages.ToolDialog {
     }
 
     ColumnLayout {
-        anchors.fill: parent
+        width: parent.width
         spacing: 16
 
         Label {
@@ -106,10 +107,6 @@ Pages.ToolDialog {
                 font.pixelSize: 12
                 elide: Text.ElideRight
             }
-        }
-
-        Item {
-            Layout.fillHeight: true
         }
     }
 

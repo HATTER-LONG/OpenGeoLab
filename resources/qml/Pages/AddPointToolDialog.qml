@@ -17,6 +17,7 @@ Pages.ToolDialog {
 
     title: qsTr("Add Point")
     okButtonText: qsTr("Create")
+    preferredContentHeight: 200
 
     okEnabled: !OGL.BackendService.busy && !isNaN(parseFloat(xInput.text)) && !isNaN(parseFloat(yInput.text)) && !isNaN(parseFloat(zInput.text))
 
@@ -30,7 +31,7 @@ Pages.ToolDialog {
     }
 
     ColumnLayout {
-        anchors.fill: parent
+        width: parent.width
         spacing: 16
 
         Label {
@@ -109,10 +110,6 @@ Pages.ToolDialog {
                 font.pixelSize: 12
                 elide: Text.ElideRight
             }
-        }
-
-        Item {
-            Layout.fillHeight: true
         }
     }
 

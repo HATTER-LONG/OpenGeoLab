@@ -17,6 +17,8 @@ Pages.ToolDialog {
     title: qsTr("AI Chat")
     showOkButton: false
     cancelButtonText: qsTr("Close")
+    preferredContentHeight: 400
+    maxContentHeight: 500
 
     /**
      * @brief Chat messages model
@@ -49,7 +51,7 @@ Pages.ToolDialog {
     }
 
     ColumnLayout {
-        anchors.fill: parent
+        width: parent.width
         spacing: 12
 
         // Chat history

@@ -16,6 +16,7 @@ Pages.ToolDialog {
 
     title: qsTr("Smooth Mesh")
     okButtonText: qsTr("Apply")
+    preferredContentHeight: 260
 
     okEnabled: !OGL.BackendService.busy
 
@@ -29,7 +30,7 @@ Pages.ToolDialog {
     }
 
     ColumnLayout {
-        anchors.fill: parent
+        width: parent.width
         spacing: 16
 
         Label {
@@ -81,7 +82,10 @@ Pages.ToolDialog {
                     id: factorInput
                     Layout.preferredWidth: 60
                     text: factorSlider.value.toFixed(2)
-                    validator: DoubleValidator { bottom: 0; top: 1 }
+                    validator: DoubleValidator {
+                        bottom: 0
+                        top: 1
+                    }
                     enabled: !OGL.BackendService.busy
                     onTextChanged: {
                         const v = parseFloat(text);
@@ -120,8 +124,6 @@ Pages.ToolDialog {
                 elide: Text.ElideRight
             }
         }
-
-        Item { Layout.fillHeight: true }
     }
 
     Connections {

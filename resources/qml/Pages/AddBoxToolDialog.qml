@@ -18,6 +18,7 @@ Pages.ToolDialog {
 
     title: qsTr("Add Box")
     okButtonText: qsTr("Create")
+    preferredContentHeight: 320
 
     okEnabled: !OGL.BackendService.busy && parseFloat(widthInput.text) > 0 && parseFloat(heightInput.text) > 0 && parseFloat(depthInput.text) > 0
 
@@ -35,7 +36,7 @@ Pages.ToolDialog {
     }
 
     ColumnLayout {
-        anchors.fill: parent
+        width: parent.width
         spacing: 12
 
         // Name input
@@ -119,13 +120,14 @@ Pages.ToolDialog {
 
         // Dimensions section
         GroupBox {
+            id: dimensionsGroup
             Layout.fillWidth: true
             title: qsTr("Dimensions")
 
             background: Rectangle {
-                y: parent.topPadding - parent.bottomPadding
+                y: dimensionsGroup.topPadding - dimensionsGroup.bottomPadding
                 width: parent.width
-                height: parent.height - parent.topPadding + parent.bottomPadding
+                height: parent.height - dimensionsGroup.topPadding + dimensionsGroup.bottomPadding
                 color: Theme.surfaceAltColor
                 radius: 6
                 border.width: 1
@@ -201,10 +203,6 @@ Pages.ToolDialog {
                 font.pixelSize: 12
                 elide: Text.ElideRight
             }
-        }
-
-        Item {
-            Layout.fillHeight: true
         }
     }
 

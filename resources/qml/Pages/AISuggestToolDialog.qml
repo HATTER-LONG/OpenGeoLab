@@ -16,6 +16,7 @@ Pages.ToolDialog {
 
     title: qsTr("AI Suggest")
     okButtonText: qsTr("Get Suggestions")
+    preferredContentHeight: 340
 
     okEnabled: !OGL.BackendService.busy && promptInput.text.trim().length > 0
 
@@ -28,7 +29,7 @@ Pages.ToolDialog {
     }
 
     ColumnLayout {
-        anchors.fill: parent
+        width: parent.width
         spacing: 12
 
         Label {
@@ -126,10 +127,6 @@ Pages.ToolDialog {
                 font.pixelSize: 12
                 elide: Text.ElideRight
             }
-        }
-
-        Item {
-            Layout.fillHeight: true
         }
     }
 

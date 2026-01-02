@@ -17,6 +17,7 @@ Pages.ToolDialog {
 
     title: qsTr("Trim Geometry")
     okButtonText: qsTr("Apply")
+    preferredContentHeight: 380
 
     okEnabled: !OGL.BackendService.busy && trimTargetSelector.selectedId > 0
 
@@ -33,7 +34,7 @@ Pages.ToolDialog {
     }
 
     ColumnLayout {
-        anchors.fill: parent
+        width: parent.width
         spacing: 12
 
         Label {
@@ -158,10 +159,6 @@ Pages.ToolDialog {
                 font.pixelSize: 12
                 elide: Text.ElideRight
             }
-        }
-
-        Item {
-            Layout.fillHeight: true
         }
     }
 
