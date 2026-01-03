@@ -1,275 +1,166 @@
 pragma Singleton
 import QtQuick
 
-/**
- * @file Theme.qml
- * @brief Application theme singleton for consistent styling
- *
- * Provides centralized color definitions and theme tokens for light/dark modes.
- * All UI components should reference these properties for consistent theming.
- *
- * @note This is a QML singleton - use Theme.propertyName to access values.
- */
 QtObject {
     id: theme
 
-    // =========================================================================
-    // Theme Mode Constants
-    // =========================================================================
-
-    /**
-     * @brief Light theme mode identifier
-     */
+    // =========================================================
+    // Mode
+    // =========================================================
     readonly property int light: 0
-
-    /**
-     * @brief Dark theme mode identifier
-     */
     readonly property int dark: 1
 
-    /**
-     * @brief Current theme mode (light or dark)
-     */
     property int mode: light
+    readonly property bool isDark: mode === dark
 
-    // =========================================================================
-    // Core Colors
-    // =========================================================================
+    // =========================================================
+    // Raw Tokens
+    // =========================================================
+    readonly property color black: "#000000"
+    readonly property color white: "#ffffff"
 
-    /**
-     * @brief Application-level background color
-     */
-    // Dark theme is intentionally neutral (avoid deep-blue cast).
-    readonly property color backgroundColor: mode === dark ? "#0D0F14" : "#F5F8FF"
+    readonly property color gray100: "#f5f5f5"
+    readonly property color gray200: "#eeeeee"
+    readonly property color gray300: "#e0e0e0"
+    readonly property color gray400: "#bdbdbd"
+    readonly property color gray500: "#9e9e9e"
+    readonly property color gray600: "#757575"
+    readonly property color gray700: "#616161"
+    readonly property color gray800: "#424242"
+    readonly property color gray900: "#212121"
 
-    /**
-     * @brief Surface color for panels, cards, and containers
-     */
-    readonly property color surfaceColor: mode === dark ? "#151821" : "#FFFFFF"
+    readonly property color blueLight: "#4FA3FF"
+    readonly property color blueDark: "#0067C0"
 
-    /**
-     * @brief Alternative surface color for visual hierarchy
-     */
-    readonly property color surfaceAltColor: mode === dark ? "#1B1F2A" : "#EEF4FF"
+    readonly property color redLight: "#D32F2F"
+    readonly property color redDark: "#821212"
 
-    /**
-     * @brief Primary text color for main content
-     */
-    readonly property color textPrimaryColor: mode === dark ? "#E7EAF0" : "#0B1220"
+    // =========================================================
+    // Semantic Tokens
+    // =========================================================
 
-    /**
-     * @brief Secondary text color for labels and hints
-     */
-    readonly property color textSecondaryColor: mode === dark ? "#A3ACBD" : "#44546A"
+    // Text
+    readonly property color textPrimary: isDark ? white : black
 
-    /**
-     * @brief Border color for UI elements
-     */
-    readonly property color borderColor: mode === dark ? "#303646" : "#D7E1F2"
+    readonly property color textSecondary: isDark ? gray400 : gray600
 
-    /**
-     * @brief Primary brand/theme color
-     */
-    readonly property color primaryColor: mode === dark ? "#3D7FF0" : "#1D66FF"
+    readonly property color textDisabled: isDark ? gray600 : gray400
 
-    /**
-     * @brief Accent color for emphasis and highlights
-     */
-    readonly property color accentColor: mode === dark ? "#22D3EE" : "#00D4FF"
+    // Surface
+    readonly property color surface: isDark ? gray900 : white
 
-    /**
-     * @brief Highlight color for selection states
-     */
-    readonly property color highlightColor: mode === dark ? "#6AA6FF" : "#7AA7FF"
+    readonly property color surfaceAlt: isDark ? gray800 : gray100
 
-    /**
-     * @brief Error/danger indicator color
-     */
-    readonly property color errorColor: "#EF5350"
+    // Border
+    readonly property color border: isDark ? gray700 : gray400
 
-    // =========================================================================
-    // Input Tokens (TextField / TextArea / SpinBox / ComboBox)
-    // =========================================================================
+    // Accent
+    readonly property color accent: isDark ? blueDark : blueLight
 
-    /**
-     * @brief Input background color
-     */
-    readonly property color inputBackgroundColor: mode === dark ? "#11141B" : "#FFFFFF"
+    // Status
+    readonly property color danger: isDark ? redDark : redLight
 
-    /**
-     * @brief Input background color when disabled
-     */
-    readonly property color inputDisabledBackgroundColor: mode === dark ? "#0F1218" : "#EEF4FF"
+    // =========================================================
+    // Palette
+    // =========================================================
 
-    /**
-     * @brief Input border color
-     */
-    readonly property color inputBorderColor: borderColor
+    readonly property Palette palette: Palette {
 
-    /**
-     * @brief Input border color when focused
-     */
-    readonly property color inputBorderFocusColor: primaryColor
+        // ================= ACTIVE =================
+        window: theme.surface
+        windowText: theme.textPrimary
 
-    /**
-     * @brief Input text color
-     */
-    readonly property color inputTextColor: textPrimaryColor
+        base: theme.surfaceAlt
+        alternateBase: theme.gray200
+        text: theme.textPrimary
+        placeholderText: theme.textSecondary
 
-    /**
-     * @brief Input placeholder text color
-     */
-    readonly property color inputPlaceholderColor: textSecondaryColor
+        button: theme.surfaceAlt
+        buttonText: theme.textPrimary
 
-    // =========================================================================
-    // Button Tokens
-    // =========================================================================
+        highlight: theme.accent
+        highlightedText: theme.white
 
-    /**
-     * @brief Button text color (typically white)
-     */
-    readonly property color buttonTextColor: "#FFFFFF"
+        brightText: theme.danger
 
-    /**
-     * @brief Button background color (uses primary)
-     */
-    readonly property color buttonBackgroundColor: primaryColor
+        light: theme.gray300
+        midlight: theme.gray400
+        mid: theme.border
+        dark: theme.gray700
+        shadow: theme.black
 
-    /**
-     * @brief Button hover state background
-     */
-    readonly property color buttonHoverColor: mode === dark ? "#4F93FF" : "#2D75FF"
+        link: theme.accent
+        linkVisited: theme.accent
 
-    /**
-     * @brief Button pressed state background
-     */
-    readonly property color buttonPressedColor: mode === dark ? "#2563EB" : "#1553D6"
+        toolTipBase: theme.surfaceAlt
+        toolTipText: theme.textPrimary
 
-    /**
-     * @brief Disabled button background
-     */
-    readonly property color buttonDisabledBackgroundColor: mode === dark ? "#2B3445" : "#AAB8D6"
+        // ================= DISABLED =================
 
-    /**
-     * @brief Disabled button text color
-     */
-    readonly property color buttonDisabledTextColor: mode === dark ? "#6C7A92" : "#F2F4F8"
+        disabled.window: theme.palette.window
+        disabled.windowText: theme.textDisabled
 
-    /**
-     * @brief Button border color
-     */
-    readonly property color buttonBorderColor: mode === dark ? "#2A3A55" : "#B8C7E6"
+        disabled.base: theme.palette.base
+        disabled.alternateBase: theme.palette.alternateBase
+        disabled.text: theme.textDisabled
+        disabled.placeholderText: theme.textDisabled
 
-    // =========================================================================
-    // Ribbon Colors
-    // =========================================================================
+        disabled.button: theme.palette.button
+        disabled.buttonText: theme.textDisabled
 
-    /**
-     * @brief Ribbon toolbar background
-     */
-    readonly property color ribbonBackgroundColor: surfaceColor
+        disabled.highlight: theme.gray500
+        disabled.highlightedText: theme.textDisabled
+        disabled.brightText: theme.textDisabled
 
-    /**
-     * @brief Ribbon separator line color
-     */
-    readonly property color ribbonSeparatorColor: borderColor
+        disabled.light: theme.gray500
+        disabled.midlight: theme.gray600
+        disabled.mid: theme.gray600
+        disabled.dark: theme.gray700
+        disabled.shadow: theme.black
 
-    /**
-     * @brief Ribbon tab bar background
-     */
-    readonly property color ribbonTabBarColor: mode === dark ? "#1E2127" : surfaceAltColor
+        disabled.link: theme.textDisabled
+        disabled.linkVisited: theme.textDisabled
+        disabled.toolTipBase: theme.palette.toolTipBase
+        disabled.toolTipText: theme.textDisabled
 
-    /**
-     * @brief Ribbon content area background
-     */
-    readonly property color ribbonContentColor: mode === dark ? "#252830" : surfaceColor
+        // ================= INACTIVE =================
 
-    /**
-     * @brief Ribbon border color
-     */
-    readonly property color ribbonBorderColor: mode === dark ? "#363B44" : borderColor
+        inactive.window: theme.palette.active.window
+        inactive.windowText: theme.textSecondary
 
-    /**
-     * @brief Ribbon text color
-     */
-    readonly property color ribbonTextColor: textPrimaryColor
+        inactive.base: theme.palette.active.base
+        inactive.alternateBase: theme.palette.active.alternateBase
+        inactive.text: theme.textSecondary
+        inactive.placeholderText: theme.textSecondary
 
-    /**
-     * @brief Ribbon dimmed text color
-     */
-    readonly property color ribbonTextDimColor: textSecondaryColor
+        inactive.button: theme.palette.active.button
+        inactive.buttonText: theme.textSecondary
 
-    /**
-     * @brief Ribbon icon color
-     */
-    readonly property color ribbonIconColor: mode === dark ? "#E1E1E1" : textPrimaryColor
+        inactive.highlight: theme.palette.active.highlight
+        inactive.highlightedText: theme.palette.active.highlightedText
+        inactive.brightText: theme.palette.active.brightText
 
-    /**
-     * @brief Ribbon accent/highlight color
-     */
-    readonly property color ribbonAccentColor: highlightColor
+        inactive.light: theme.palette.active.light
+        inactive.midlight: theme.palette.active.midlight
+        inactive.mid: theme.palette.active.mid
+        inactive.dark: theme.palette.active.dark
+        inactive.shadow: theme.palette.active.shadow
 
-    /**
-     * @brief Selected ribbon tab background
-     */
-    readonly property color ribbonSelectedTabColor: mode === dark ? "#323842" : "#E7EFFD"
+        inactive.link: theme.palette.active.link
+        inactive.linkVisited: theme.palette.active.linkVisited
+        inactive.toolTipBase: theme.palette.active.toolTipBase
+        inactive.toolTipText: theme.textSecondary
+    }
 
-    /**
-     * @brief Ribbon hover state background
-     */
-    readonly property color ribbonHoverColor: mode === dark ? "#3A3F4B" : "#DCE8FF"
+    // =========================================================
+    // API
+    // =========================================================
+    function toggleMode() {
+        mode = isDark ? light : dark;
+    }
 
-    /**
-     * @brief Ribbon pressed state background
-     */
-    readonly property color ribbonPressedColor: mode === dark ? "#4A5568" : "#C9DAFF"
-
-    /**
-     * @brief Ribbon file menu left panel color
-     */
-    readonly property color ribbonFileMenuLeftColor: mode === dark ? "#1A1D24" : "#EEF4FF"
-
-    /**
-     * @brief Ribbon popup background color
-     */
-    readonly property color ribbonPopupBackgroundColor: mode === dark ? '#191d28' : '#ebf5ff'
-
-    // =========================================================================
-    // Dialog Colors
-    // =========================================================================
-
-    /**
-     * @brief Success indicator color
-     */
-    readonly property color dialogSuccessColor: "#4CAF50"
-
-    /**
-     * @brief Success hover state color
-     */
-    readonly property color dialogSuccessHoverColor: "#43A047"
-
-    /**
-     * @brief Success pressed state color
-     */
-    readonly property color dialogSuccessPressedColor: "#388E3C"
-
-    /**
-     * @brief Error indicator color
-     */
-    readonly property color dialogErrorColor: "#EF5350"
-
-    /**
-     * @brief Error hover state color
-     */
-    readonly property color dialogErrorHoverColor: "#E53935"
-
-    /**
-     * @brief Error pressed state color
-     */
-    readonly property color dialogErrorPressedColor: "#C62828"
-
-    /**
-     * @brief Dialog details panel background
-     */
-    readonly property color dialogDetailsBgColor: mode === dark ? "#2A2A2A" : "#F5F5F5"
+    function setMode(nextMode) {
+        if (nextMode === light || nextMode === dark)
+            mode = nextMode;
+    }
 }
