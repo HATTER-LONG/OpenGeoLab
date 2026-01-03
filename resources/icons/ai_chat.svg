@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-  <!-- Chat bubble with AI brain -->
-  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-  <!-- AI brain pattern inside -->
-  <circle cx="12" cy="10" r="3"/>
-  <path d="M12 7v-1M12 14v1M15 10h1M8 10h1"/>
-</svg>

@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import OpenGeoLab 1.0
+import "RibbonMenu" as RibbonMenu
 
 /**
  * @file Main.qml
@@ -17,23 +18,8 @@ ApplicationWindow {
 
     palette: Theme.palette
 
-    header: ToolBar {
-        RowLayout {
-            anchors.fill: parent
-            spacing: 8
-
-            Label {
-                text: qsTr("OpenGeoLab")
-                font.pixelSize: 14
-                elide: Label.ElideRight
-                Layout.fillWidth: true
-            }
-
-            Button {
-                text: Theme.isDark ? qsTr("浅色") : qsTr("深色")
-                onClicked: Theme.toggleMode()
-            }
-        }
+    header: RibbonMenu.RibbonToolBar {
+        id: ribbonToolBar
     }
 
     // Hello World

@@ -28,9 +28,13 @@ QtObject {
     readonly property color gray700: "#616161"
     readonly property color gray800: "#424242"
     readonly property color gray900: "#212121"
+    readonly property color bluegray: "#1E2127"
+    readonly property color bluegrayMid: '#252830'
+    readonly property color bluegrayDark: '#1e2025'
 
-    readonly property color blueLight: "#4FA3FF"
-    readonly property color blueDark: "#0067C0"
+    readonly property color blueLight: '#2c7aa6ff'
+    readonly property color blueMid: '#8b7aa6ff'
+    readonly property color blueDark: '#b57aa6ff'
 
     readonly property color redLight: "#D32F2F"
     readonly property color redDark: "#821212"
@@ -60,6 +64,11 @@ QtObject {
     // Status
     readonly property color danger: isDark ? redDark : redLight
 
+    // Ribbon
+    readonly property color ribbonBackground: isDark ? bluegrayMid : gray100
+    readonly property color ribbonTabBackground: isDark ? bluegray : blueLight
+    readonly property color ribbonFileMenuBackground: isDark ? bluegrayDark : blueMid
+    readonly property color ribbonHoverColor: isDark ? gray800 : blueMid
     // =========================================================
     // Palette
     // =========================================================

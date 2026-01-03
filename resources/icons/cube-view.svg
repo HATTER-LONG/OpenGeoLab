@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-  <!-- Front face -->
-  <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-  <!-- Left face -->
-  <path d="M2 7v10l10 5V12L2 7z"/>
-  <!-- Right face -->
-  <path d="M22 7v10l-10 5V12l10-5z"/>
-</svg>

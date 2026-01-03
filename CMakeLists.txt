@@ -177,6 +177,10 @@ qt_add_qml_module(
   QML_FILES
   resources/qml/Main.qml
   resources/qml/Theme.qml
+  resources/qml/ThemedIcon.qml
+  resources/qml/RibbonMenu/RibbonToolBar.qml
+  resources/qml/RibbonMenu/RibbonFileMenu.qml
+  resources/qml/RibbonMenu/RibbonFileMenuButton.qml
   RESOURCES
   ${ICON_RESOURCES}
 )
