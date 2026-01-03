@@ -56,13 +56,6 @@ include(./cmake/CPM.cmake)
 # CPM-managed Dependencies
 # ------------------------------------------------------------------------------
 
-# cxxopts: Command-line argument parsing library
-CPMAddPackage(
-  GITHUB_REPOSITORY jarro2783/cxxopts
-  VERSION 3.0.0
-  OPTIONS "CXXOPTS_BUILD_EXAMPLES NO" "CXXOPTS_BUILD_TESTS NO" "CXXOPTS_ENABLE_INSTALL YES"
-)
-
 # Kangaroo: Infrastructure and utility library Check for local version first, otherwise download
 # from GitHub
 set(LOCAL_KANGAROO_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../Kangaroo")
@@ -158,9 +151,6 @@ qt_add_executable(${PROJECT_NAME} ${sources} ${headers})
 # QML Module Configuration
 # ==============================================================================
 
-# Ensure Theme is registered as a QML singleton (matches `pragma Singleton` in Theme.qml)
-set_source_files_properties(resources/qml/Theme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
-
 # Collect all SVG icon resources automatically (using relative paths)
 file(GLOB ICON_RESOURCES_ABS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/*.svg")
 
@@ -181,35 +171,9 @@ qt_add_qml_module(
   /opengeolab
   NO_RESOURCE_TARGET_PATH
   SOURCES
-  include/app/backend_service.hpp
-  src/app/backend_service.cpp
-  include/app/model_data.hpp
-  src/app/model_data.cpp
   QML_FILES
   resources/qml/Main.qml
   resources/qml/Theme.qml
-  resources/qml/ModelTreeSidebar.qml
-  resources/qml/OpenGLViewport.qml
-  resources/qml/RibbonMenu/RibbonConfig.qml
-  resources/qml/RibbonMenu/RibbonFileMenu.qml
-  resources/qml/RibbonMenu/RibbonToolBar.qml
-  resources/qml/RibbonMenu/RibbonTabContent.qml
-  resources/qml/RibbonMenu/RibbonLargeButton.qml
-  resources/qml/RibbonMenu/RibbonProgressOverlay.qml
-  resources/qml/RibbonMenu/ResultDialog.qml
-  resources/qml/Pages/ToolDialog.qml
-  resources/qml/Pages/ToolDialogHost.qml
-  resources/qml/Pages/AddPointToolDialog.qml
-  resources/qml/Pages/AddLineToolDialog.qml
-  resources/qml/Pages/AddBoxToolDialog.qml
-  resources/qml/Pages/TrimToolDialog.qml
-  resources/qml/Pages/GeometrySelector.qml
-  resources/qml/Pages/OffsetToolDialog.qml
-  resources/qml/Pages/GenerateMeshToolDialog.qml
-  resources/qml/Pages/SmoothMeshToolDialog.qml
-  resources/qml/Pages/AISuggestToolDialog.qml
-  resources/qml/Pages/AIChatToolDialog.qml
-  resources/qml/Pages/ImportModel.qml
   RESOURCES
   ${ICON_RESOURCES}
 )
@@ -247,7 +211,6 @@ target_link_libraries(
           Qt6::Quick
           Qt6::OpenGL
           Kangaroo::Kangaroo
-          cxxopts
           fmt::fmt
           HighFive::HighFive
           nlohmann_json::nlohmann_json
