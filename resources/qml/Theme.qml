@@ -32,8 +32,9 @@ QtObject {
     readonly property color bluegrayMid: '#252830'
     readonly property color bluegrayDark: '#1e2025'
 
-    readonly property color blueLight: '#2c7aa6ff'
-    readonly property color blueMid: '#8b7aa6ff'
+    readonly property color blue: '#578fff'
+    readonly property color blueLight: '#3a6e9dfb'
+    readonly property color blueMid: '#657aa6ff'
     readonly property color blueDark: '#b57aa6ff'
 
     readonly property color redLight: "#D32F2F"
@@ -59,10 +60,12 @@ QtObject {
     readonly property color border: isDark ? gray700 : gray400
 
     // Accent
-    readonly property color accent: isDark ? blueDark : blueLight
+    readonly property color accent: isDark ? blueDark : blue
 
     // Status
     readonly property color danger: isDark ? redDark : redLight
+    readonly property color hovered: isDark ? gray700 : gray300
+    readonly property color clicked: isDark ? gray600 : gray400
 
     // Ribbon
     readonly property color ribbonBackground: isDark ? bluegrayMid : gray100

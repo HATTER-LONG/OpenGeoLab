@@ -1,7 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
-import QtQuick.Controls
 import OpenGeoLab 1.0
 
 Rectangle {
@@ -9,12 +8,17 @@ Rectangle {
     width: parent.width
     height: 120
     color: Theme.ribbonBackground
-
+    property int currentTabIndex: 0
     RibbonFileMenu {
         id: fileMenu
         x: ribbonToolBar.x + 4
         y: ribbonToolBar.y + tabBar.height + 4
     }
+
+    RibbonConfig {
+        id: defaultConfig
+    }
+    property var config: defaultConfig
     Rectangle {
         id: tabBar
         anchors.top: parent.top
@@ -22,13 +26,13 @@ Rectangle {
         anchors.right: parent.right
         height: 28
         color: Theme.ribbonTabBackground
-
         RowLayout {
             id: tabLayout
-            anchors.fill: parent
-            anchors.margins: 4
+            anchors.left: parent.left
+            anchors.leftMargin: 6
+            anchors.verticalCenter: parent.verticalCenter
             spacing: 0
-
+            Layout.alignment: Qt.AlignLeft
             Rectangle {
                 Layout.preferredWidth: 60
                 Layout.fillHeight: true
@@ -51,6 +55,73 @@ Rectangle {
                     onClicked: fileMenu.open()
                 }
             }
+
+            Repeater {
+                model: config.tabs
+                Rectangle {
+                    id: tabBtn
+                    required property int index
+                    required property var modelData
+
+                    Layout.preferredWidth: 86
+                    Layout.preferredHeight: 24
+                    color: (ribbonToolBar.currentTabIndex === index) ? Theme.ribbonBackground : (tabArea.containsMouse ? Theme.ribbonHoverColor : "transparent")
+                    radius: 2
+                    Text {
+                        anchors.centerIn: parent
+                        text: tabBtn.modelData.title || qsTr("Tab")
+                        color: Theme.palette.text
+                        font.pixelSize: 12
+                    }
+                    Rectangle {
+                        visible: ribbonToolBar.currentTabIndex === tabBtn.index
+                        anchors.bottom: parent.bottom
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.leftMargin: 10
+                        anchors.rightMargin: 10
+                        height: 2
+                        color: Theme.accent
+                    }
+                    MouseArea {
+                        id: tabArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        onClicked: ribbonToolBar.currentTabIndex = tabBtn.index
+                    }
+                }
+            }
+        }
+    }
+    Rectangle {
+        id: contentArea
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: tabBar.bottom
+        anchors.bottom: parent.bottom
+        color: "transparent"
+        border.width: 1
+        // border.color: root.borderColor
+
+        // Single TabContent; data changes with currentTabIndex.
+        RibbonTabContent {
+            anchors.fill: parent
+
+            // Resolve groups from config.tabs[currentTabIndex].
+            groups: {
+                const tabs = (ribbonToolBar.config && ribbonToolBar.config.tabs) ? ribbonToolBar.config.tabs : [];
+                const tab = tabs[ribbonToolBar.currentTabIndex];
+                return tab ? (tab.groups || []) : [];
+            }
+
+            // iconColor: root.iconColor
+            // textColor: root.textColor
+            // textColorDim: root.textColorDim
+            // hoverColor: root.hoverColor
+            // pressedColor: Theme.ribbonPressedColor
+            // separatorColor: root.borderColor
+
+            // onActionTriggered: (actionId, payload) => root.actionTriggered(actionId, payload)
         }
     }
 }

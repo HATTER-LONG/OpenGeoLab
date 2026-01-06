@@ -22,16 +22,12 @@ Button {
     background: Rectangle {
         radius: 6
         color: {
-            if (!control.enabled)
-                return control.palette.button;
             if (control.down)
-                return control.palette.highlight;
+                return Theme.clicked;
             if (control.hovered)
-                return control.palette.midlight;
-            return "transparent";
+                return Theme.hovered;
+            return Theme.palette.button;
         }
-        border.width: 1
-        border.color: Theme.border
     }
 
     // ===== Content =====
@@ -45,14 +41,6 @@ Button {
             source: control.iconSource
             color: control.hovered ? control.palette.highlight : control.palette.buttonText
         }
-        // Image {
-        //     source: control.iconSource
-        //     width: control.iconSize
-        //     height: control.iconSize
-        //     fillMode: Image.PreserveAspectFit
-        //     Layout.alignment: Qt.AlignVCenter
-        //     opacity: control.enabled ? 1.0 : 0.5
-        // }
 
         Label {
             text: control.text

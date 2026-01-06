@@ -1,0 +1,38 @@
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <!-- original shape -->
+  <rect x="7" y="9" width="8" height="8"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.6"/>
+
+  <!-- offset shape -->
+  <rect x="10" y="6" width="8" height="8"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.6"
+        opacity="0.6"/>
+
+  <!-- offset arrow top-left -->
+  <path d="M6.5 7L9.5 4"
+        stroke="currentColor"
+        stroke-width="0.9"
+        stroke-linecap="butt"/>
+
+  <path d="M8.3 4.6L9.5 4L8.9 5.2"
+        stroke="currentColor"
+        stroke-width="0.9"
+        fill="none"
+        stroke-linejoin="miter"/>
+
+  <!-- offset arrow bottom-right (symmetric) -->
+  <path d="M17.5 17L14.5 20"
+        stroke="currentColor"
+        stroke-width="0.9"
+        stroke-linecap="butt"/>
+
+  <path d="M15.7 19.4L14.5 20L15.1 18.8"
+        stroke="currentColor"
+        stroke-width="0.9"
+        fill="none"
+        stroke-linejoin="miter"/>
+</svg>
