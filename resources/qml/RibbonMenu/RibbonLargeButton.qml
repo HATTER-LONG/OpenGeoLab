@@ -20,7 +20,7 @@ AbstractButton {
         border.width: root.hovered || root.activeFocus ? 1 : 0
         border.color: Theme.ribbonHoverColor
 
-        color: root.pressed ? Theme.clicked : (root.hovered ? Theme.ribbonHoverColor : "transparent")
+        color: root.pressed ? Theme.clicked : (root.hovered ? Theme.hovered : "transparent")
     }
 
     contentItem: Column {

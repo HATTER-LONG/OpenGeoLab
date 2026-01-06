@@ -1,38 +1,28 @@
-<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-  <!-- original shape -->
-  <rect x="7" y="9" width="8" height="8"
-        fill="none"
-        stroke="currentColor"
+<svg width="24" height="24" viewBox="0 0 24 24"
+     xmlns="http://www.w3.org/2000/svg"
+     fill="none"
+     stroke="currentColor"
+     stroke-linecap="butt"
+     stroke-linejoin="miter">
+
+  <!-- Original shape (18x18 boundary) -->
+  <rect x="3" y="6" width="13" height="13"
         stroke-width="1.6"/>
 
-  <!-- offset shape -->
-  <rect x="10" y="6" width="8" height="8"
-        fill="none"
-        stroke="currentColor"
+  <!-- Offset shape (shifted right+up by 3 units) -->
+  <rect x="6" y="3" width="13" height="13"
         stroke-width="1.6"
-        opacity="0.6"/>
+        opacity="0.65"
+        stroke-dasharray="3 2"/>
 
-  <!-- offset arrow top-left -->
-  <path d="M6.5 7L9.5 4"
-        stroke="currentColor"
-        stroke-width="0.9"
-        stroke-linecap="butt"/>
-
-  <path d="M8.3 4.6L9.5 4L8.9 5.2"
-        stroke="currentColor"
-        stroke-width="0.9"
-        fill="none"
-        stroke-linejoin="miter"/>
-
-  <!-- offset arrow bottom-right (symmetric) -->
-  <path d="M17.5 17L14.5 20"
-        stroke="currentColor"
-        stroke-width="0.9"
-        stroke-linecap="butt"/>
-
-  <path d="M15.7 19.4L14.5 20L15.1 18.8"
-        stroke="currentColor"
-        stroke-width="0.9"
-        fill="none"
-        stroke-linejoin="miter"/>
+  <!-- Offset direction arrows -->
+  <g stroke-width="1.1" opacity="0.9">
+    <!-- Top-left arrow -->
+    <path d="M4.5 5 L5.5 4" stroke-linecap="round"/>
+    <path d="M5.2 4.8 L5.5 4 L4.7 4.3" fill="none"/>
+    
+    <!-- Bottom-right arrow -->
+    <path d="M17.5 17 L18.5 16" stroke-linecap="round"/>
+    <path d="M18.2 16.8 L18.5 16 L17.7 16.3" fill="none"/>
+  </g>
 </svg>

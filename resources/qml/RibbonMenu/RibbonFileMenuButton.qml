@@ -28,6 +28,8 @@ Button {
                 return Theme.hovered;
             return Theme.palette.button;
         }
+        border.color: Theme.border
+        border.width: 1
     }
 
     // ===== Content =====

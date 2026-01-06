@@ -54,7 +54,7 @@ QtObject {
     // Surface
     readonly property color surface: isDark ? gray900 : white
 
-    readonly property color surfaceAlt: isDark ? gray800 : gray100
+    readonly property color surfaceAlt: isDark ? bluegray : gray100
 
     // Border
     readonly property color border: isDark ? gray700 : gray400
@@ -64,7 +64,7 @@ QtObject {
 
     // Status
     readonly property color danger: isDark ? redDark : redLight
-    readonly property color hovered: isDark ? gray700 : gray300
+    readonly property color hovered: isDark ? gray800 : gray300
     readonly property color clicked: isDark ? gray600 : gray400
 
     // Ribbon

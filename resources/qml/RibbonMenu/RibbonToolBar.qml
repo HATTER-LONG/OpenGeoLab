@@ -57,7 +57,7 @@ Rectangle {
             }
 
             Repeater {
-                model: config.tabs
+                model: ribbonToolBar.config.tabs
                 Rectangle {
                     id: tabBtn
                     required property int index
@@ -101,7 +101,7 @@ Rectangle {
         anchors.bottom: parent.bottom
         color: "transparent"
         border.width: 1
-        // border.color: root.borderColor
+        border.color: Theme.border
 
         // Single TabContent; data changes with currentTabIndex.
         RibbonTabContent {
