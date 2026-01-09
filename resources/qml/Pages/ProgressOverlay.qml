@@ -19,8 +19,6 @@ Item {
     property bool shown: false
     /// Current message text with fallback
     readonly property string messageText: OGL.BackendService.message.length > 0 ? OGL.BackendService.message : qsTr("Working...")
-    /// Heuristic for long messages needing details popup
-    readonly property bool messageLikelyLong: messageText.length > 80
     /// True when in delayed-close phase (waiting to fade out)
     readonly property bool isInDelayedClose: hideSequence.running && !root.busy
 
@@ -153,16 +151,6 @@ Item {
                 maximumLineCount: 2
             }
 
-            Button {
-                visible: root.messageLikelyLong
-                implicitHeight: 24
-                flat: true
-                text: qsTr("Details")
-                onClicked: messagePopup.open()
-                ToolTip.visible: hovered
-                ToolTip.text: qsTr("Show full message")
-            }
-
             // Cancel / Close button
             Button {
                 implicitWidth: 24
@@ -201,120 +189,6 @@ Item {
                 color: Theme.palette.placeholderText
                 horizontalAlignment: Text.AlignRight
                 font.pixelSize: 11
-            }
-        }
-    }
-
-    /// Popup for displaying full message details
-    Popup {
-        id: messagePopup
-        modal: true
-        focus: true
-        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
-        width: Math.min(480, Math.max(320, root.width))
-        parent: Overlay.overlay
-        anchors.centerIn: parent
-        padding: 0
-
-        background: Rectangle {
-            radius: 8
-            color: Theme.surface
-            border.width: 1
-            border.color: Theme.border
-
-            layer.enabled: true
-            layer.effect: Item {
-                // Subtle shadow effect placeholder
-            }
-        }
-
-        contentItem: ColumnLayout {
-            spacing: 0
-
-            /// Compact header with title and close icon button
-            Rectangle {
-                Layout.fillWidth: true
-                Layout.preferredHeight: 36
-                color: Theme.surface
-                radius: 8
-
-                // Mask bottom corners to align with content area
-                Rectangle {
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    anchors.bottom: parent.bottom
-                    height: 8
-                    color: parent.color
-                }
-
-                RowLayout {
-                    anchors.fill: parent
-                    anchors.leftMargin: 12
-                    anchors.rightMargin: 6
-                    spacing: 8
-
-                    Label {
-                        text: qsTr("Details")
-                        font.pixelSize: 13
-                        font.weight: Font.Medium
-                        color: Theme.textPrimary
-                        Layout.fillWidth: true
-                    }
-
-                    /// Icon close button
-                    AbstractButton {
-                        id: closeBtn
-                        implicitWidth: 24
-                        implicitHeight: 24
-                        hoverEnabled: true
-
-                        background: Rectangle {
-                            radius: 4
-                            color: closeBtn.hovered ? Theme.hovered : "transparent"
-                        }
-
-                        contentItem: Text {
-                            text: "✕"
-                            font.pixelSize: 14
-                            color: closeBtn.hovered ? Theme.danger : Theme.textSecondary
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                        }
-
-                        onClicked: messagePopup.close()
-
-                        ToolTip.visible: hovered
-                        ToolTip.text: qsTr("Close")
-                        ToolTip.delay: 500
-                    }
-                }
-            }
-
-            /// Message content area with scroll support
-            ScrollView {
-                Layout.fillWidth: true
-                Layout.preferredHeight: Math.min(200, popupContent.implicitHeight + 24)
-                Layout.margins: 12
-                clip: true
-
-                TextArea {
-                    id: popupContent
-                    text: root.messageText
-                    readOnly: true
-                    wrapMode: TextArea.Wrap
-                    selectByMouse: true
-                    color: root.messageColor
-                    font.pixelSize: 13
-                    padding: 8
-
-                    background: Rectangle {
-                        radius: 6
-                        color: Theme.surfaceAlt
-                        border.width: 1
-                        border.color: Theme.border
-                        opacity: 0.6
-                    }
-                }
             }
         }
     }
