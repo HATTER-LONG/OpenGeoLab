@@ -31,6 +31,7 @@ QtObject {
     readonly property color bluegray: "#1E2127"
     readonly property color bluegrayMid: '#252830'
     readonly property color bluegrayDark: '#1e2025'
+    readonly property color bluegraySur: '#222429'
 
     readonly property color blue: '#578fff'
     readonly property color blueLight: '#3a6e9dfb'
@@ -39,6 +40,8 @@ QtObject {
 
     readonly property color redLight: "#D32F2F"
     readonly property color redDark: "#821212"
+    readonly property color greenLight: "#2e7d32"
+    readonly property color greenDark: "#145214"
 
     // =========================================================
     // Semantic Tokens
@@ -52,7 +55,7 @@ QtObject {
     readonly property color textDisabled: isDark ? gray600 : gray400
 
     // Surface
-    readonly property color surface: isDark ? gray900 : white
+    readonly property color surface: isDark ? bluegraySur : white
 
     readonly property color surfaceAlt: isDark ? bluegray : gray100
 
@@ -64,6 +67,7 @@ QtObject {
 
     // Status
     readonly property color danger: isDark ? redDark : redLight
+    readonly property color success: isDark ? greenDark : greenLight
     readonly property color hovered: isDark ? gray800 : gray300
     readonly property color clicked: isDark ? gray600 : gray400
 

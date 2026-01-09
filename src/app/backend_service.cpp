@@ -1,3 +1,8 @@
+/**
+ * @file backend_service.cpp
+ * @brief Implementation of BackendService and worker components
+ */
+
 #include "backend_service.hpp"
 #include "nlohmann/json.hpp"
 #include "service.hpp"

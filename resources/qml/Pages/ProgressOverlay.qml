@@ -4,26 +4,65 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import OpenGeoLab 1.0 as OGL
 
+/**
+ * @brief Progress overlay component for displaying backend operation status
+ *
+ * Shows progress bar, message, and cancel button. Supports fade-in/out animations,
+ * error state (red, 10s timeout) and success state (green, normal timeout).
+ */
 Item {
     id: root
 
+    /// Tracks BackendService.busy state
     property bool busy: OGL.BackendService.busy
+    /// Controls overlay visibility (separate from busy for delayed hide)
     property bool shown: false
+    /// Current message text with fallback
     readonly property string messageText: OGL.BackendService.message.length > 0 ? OGL.BackendService.message : qsTr("Working...")
+    /// Heuristic for long messages needing details popup
     readonly property bool messageLikelyLong: messageText.length > 80
+    /// True when in delayed-close phase (waiting to fade out)
+    readonly property bool isInDelayedClose: hideSequence.running && !root.busy
+
+    /// Operation result state: "normal", "success", "error"
+    property string resultState: "normal"
+    /// Hide delay in ms: 10000 for error, 4000 for success/normal
+    readonly property int hideDelay: resultState === "error" ? 10000 : 4000
+
+    /// Message color based on result state
+    readonly property color messageColor: {
+        if (resultState === "error")
+            return Theme.danger;
+        if (resultState === "success")
+            return Theme.success;
+        return Theme.palette.text;
+    }
 
     width: 320
     height: visible ? content.implicitHeight + 20 : 0
 
-    visible: shown || hideSequence.running
+    visible: shown || hideSequence.running || showSequence.running
     opacity: 0.0
 
+    /// Fade-in animation when showing
+    NumberAnimation {
+        id: showSequence
+        target: root
+        property: "opacity"
+        from: 0.0
+        to: 1.0
+        duration: 250
+        easing.type: Easing.OutQuad
+    }
+
+    /// Delayed fade-out animation sequence
     SequentialAnimation {
         id: hideSequence
         running: false
 
         PauseAnimation {
-            duration: 4000
+            id: hideDelayPause
+            duration: root.hideDelay
         }
         NumberAnimation {
             target: root
@@ -36,9 +75,21 @@ Item {
             script: {
                 if (!root.busy) {
                     root.shown = false;
+                    root.resultState = "normal";
                 }
             }
         }
+    }
+
+    /**
+     * @brief Immediately closes the overlay, skipping any delay
+     */
+    function closeImmediately() {
+        hideSequence.stop();
+        showSequence.stop();
+        root.opacity = 0.0;
+        root.shown = false;
+        root.resultState = "normal";
     }
 
     Connections {
@@ -47,12 +98,26 @@ Item {
             if (root.busy) {
                 hideSequence.stop();
                 root.shown = true;
-                root.opacity = 1.0;
+                root.resultState = "normal";
+                showSequence.restart();
             } else {
                 if (root.shown) {
                     hideSequence.restart();
                 }
             }
+        }
+    }
+
+    /// Listen to BackendService operation events for success/error states
+    Connections {
+        target: OGL.BackendService
+
+        function onOperationFinished(moduleName, result) {
+            root.resultState = "success";
+        }
+
+        function onOperationFailed(moduleName, error) {
+            root.resultState = "error";
         }
     }
 
@@ -81,7 +146,7 @@ Item {
                 id: messageLabel
                 Layout.fillWidth: true
                 text: root.messageText
-                color: Theme.palette.text
+                color: root.messageColor
                 elide: Text.ElideRight
                 font.weight: Font.Medium
                 wrapMode: Text.WrapAtWordBoundaryOrAnywhere
@@ -98,17 +163,23 @@ Item {
                 ToolTip.text: qsTr("Show full message")
             }
 
-            // Cancel button
+            // Cancel / Close button
             Button {
                 implicitWidth: 24
                 implicitHeight: 24
                 flat: true
                 text: "✕"
-                onClicked: OGL.BackendService.cancel()
+                onClicked: {
+                    if (root.isInDelayedClose) {
+                        root.closeImmediately();
+                    } else {
+                        OGL.BackendService.cancel();
+                    }
+                }
                 Layout.alignment: Qt.AlignTop
 
                 ToolTip.visible: hovered
-                ToolTip.text: qsTr("Cancel operation")
+                ToolTip.text: root.isInDelayedClose ? qsTr("Close notification") : qsTr("Cancel operation")
             }
         }
         RowLayout {

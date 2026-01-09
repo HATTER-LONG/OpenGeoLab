@@ -1,3 +1,8 @@
+/**
+ * @file backend_service.hpp
+ * @brief QML-exposed backend service for asynchronous module operations
+ */
+
 #pragma once
 
 #include "service.hpp"
@@ -11,6 +16,12 @@
 namespace OpenGeoLab::App {
 class ServiceWorker;
 
+/**
+ * @brief QML singleton service for executing backend operations asynchronously
+ *
+ * Provides progress reporting, cancellation support, and error handling.
+ * Operations run in a separate worker thread to avoid blocking the UI.
+ */
 class BackendService final : public QObject {
     Q_OBJECT
 
@@ -29,8 +40,17 @@ public:
     [[nodiscard]] QString message() const;
     [[nodiscard]] QString lastError() const;
 
+    /**
+     * @brief Start an asynchronous operation
+     * @param module_name Registered service module identifier
+     * @param params JSON-encoded parameters for the operation
+     */
     Q_INVOKABLE void request(const QString& module_name, const QString& params);
+
+    /// Clears the last error state
     Q_INVOKABLE void clearError();
+
+    /// Requests cancellation of the current operation
     Q_INVOKABLE void cancel();
 
 signals:
@@ -70,9 +90,21 @@ private:
     QPointer<ServiceWorker> m_worker;
 };
 
+/**
+ * @brief Worker object that executes service operations in a background thread
+ *
+ * Created by BackendService and moved to a worker thread for async execution.
+ */
 class ServiceWorker : public QObject {
     Q_OBJECT
 public:
+    /**
+     * @brief Construct a service worker
+     * @param module_name Service module to invoke
+     * @param params Operation parameters
+     * @param cancel_requested Shared cancellation flag
+     * @param parent Parent QObject
+     */
     explicit ServiceWorker(const QString& module_name,
                            const nlohmann::json params,
                            std::atomic<bool>& cancel_requested,
@@ -81,6 +113,7 @@ public:
 
     QString moduleName() const { return m_moduleName; }
 public slots:
+    /// Executes the service operation; emits finished or errorOccurred when done
     void process();
 
 signals:
@@ -94,6 +127,11 @@ private:
     std::atomic<bool>& m_cancelRequested;
 };
 
+/**
+ * @brief Qt-compatible progress reporter adapter
+ *
+ * Bridges IProgressReporter interface to Qt signals for thread-safe UI updates.
+ */
 class QtProgressReporter : public App::IProgressReporter {
 public:
     QtProgressReporter(ServiceWorker* worker, std::atomic<bool>& cancelled);
@@ -103,7 +141,7 @@ public:
     bool isCancelled() const override;
 
 private:
-    ServiceWorker* m_worker;
+    ServiceWorker* m_worker; ///< Worker to emit signals through
     std::atomic<bool>& m_cancelled;
     QString m_lastError;
 };
