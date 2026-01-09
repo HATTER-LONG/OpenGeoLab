@@ -1,3 +1,10 @@
+/**
+ * @file ThemedIcon.qml
+ * @brief Theme-aware icon component with color overlay support
+ *
+ * Renders SVG/image icons with dynamic color tinting based on theme.
+ * Handles high-DPI scaling automatically.
+ */
 import QtQuick
 import QtQuick.Window
 import Qt5Compat.GraphicalEffects
@@ -6,8 +13,11 @@ import OpenGeoLab 1.0
 Item {
     id: root
 
+    /// Icon source URL (SVG recommended)
     property url source
+    /// Tint color applied via ColorOverlay
     property color color: Theme.palette.text
+    /// Base icon size in logical pixels
     property int size: 18
 
     implicitWidth: size

@@ -1,3 +1,9 @@
+/**
+ * @file RibbonTabContent.qml
+ * @brief Content area for a ribbon tab displaying groups and items
+ *
+ * Renders button groups with titles and separators based on config data.
+ */
 pragma ComponentBehavior: Bound
 import QtQuick
 import OpenGeoLab 1.0
@@ -6,6 +12,7 @@ Item {
     id: root
     height: parent.height - 28
 
+    /// Array of group definitions with items
     property var groups: []
 
     Row {

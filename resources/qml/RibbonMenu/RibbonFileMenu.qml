@@ -1,3 +1,10 @@
+/**
+ * @file RibbonFileMenu.qml
+ * @brief File menu popup for the ribbon toolbar
+ *
+ * Provides file operations (New, Import, Export), theme toggle, and exit.
+ * Emits actionTriggered signal for parent handling.
+ */
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
@@ -10,6 +17,7 @@ Popup {
     focus: true
     padding: 14
 
+    /// Emitted when a menu action is triggered
     signal actionTriggered(string actionId, var payload)
 
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside

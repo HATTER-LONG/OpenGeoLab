@@ -1,3 +1,9 @@
+/**
+ * @file RibbonLargeButton.qml
+ * @brief Large button component for ribbon toolbar groups
+ *
+ * Displays icon above text label with hover/pressed states and tooltip.
+ */
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
@@ -6,7 +12,9 @@ import OpenGeoLab 1.0
 AbstractButton {
     id: root
 
+    /// Icon source URL (32x32 recommended)
     property string iconSource: ""
+    /// Tooltip text shown on hover
     property string tooltipText: ""
 
     implicitWidth: 52

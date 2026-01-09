@@ -1,3 +1,10 @@
+/**
+ * @file Theme.qml
+ * @brief Global theme singleton providing color tokens and palette
+ *
+ * Supports light/dark mode switching with semantic color definitions
+ * for consistent styling across the application.
+ */
 pragma Singleton
 import QtQuick
 
@@ -7,10 +14,14 @@ QtObject {
     // =========================================================
     // Mode
     // =========================================================
+    /// Light mode constant
     readonly property int light: 0
+    /// Dark mode constant
     readonly property int dark: 1
 
+    /// Current theme mode (light or dark)
     property int mode: light
+    /// Convenience property for dark mode check
     readonly property bool isDark: mode === dark
 
     // =========================================================

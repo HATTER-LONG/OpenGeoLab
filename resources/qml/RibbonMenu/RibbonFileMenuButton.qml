@@ -1,3 +1,9 @@
+/**
+ * @file RibbonFileMenuButton.qml
+ * @brief Styled button for the ribbon file menu
+ *
+ * Provides consistent appearance for file menu items with icon and label.
+ */
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
@@ -8,7 +14,9 @@ Button {
     id: control
 
     // ===== API =====
+    /// Icon source URL
     property url iconSource
+    /// Icon display size
     property int iconSize: 18
 
     implicitHeight: 36

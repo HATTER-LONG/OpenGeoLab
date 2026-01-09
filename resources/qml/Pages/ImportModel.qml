@@ -1,19 +1,20 @@
+/**
+ * @file ImportModel.qml
+ * @brief File dialog for importing 3D model files
+ *
+ * Supports STEP, BREP formats. Triggers backend ModelReader service on selection.
+ */
 import QtQuick
 import QtQuick.Dialogs
 import OpenGeoLab 1.0 as OGL
 
-// import OpenGeoLab 1.0 as OGL
-
-/**
- * File dialog for importing 3D model files.
- * Triggers backend ModelReader service on file selection.
- */
 FileDialog {
     id: dialog
 
     title: qsTr("Import 3D Model")
     nameFilters: [qsTr("3D Models (*.stp *.step *.brep)"), qsTr("All Files (*)")]
 
+    /// Handle file selection and trigger backend import
     onAccepted: {
         const filePath = selectedFile.toString().replace("file:///", "");
         console.log("[ImportModel] Selected model file:", filePath);

@@ -1,11 +1,20 @@
+/**
+ * @file RibbonConfig.qml
+ * @brief Configuration data for the ribbon toolbar
+ *
+ * Defines tab structure, groups, and action items for the ribbon menu.
+ * Serves as the single source of truth for ribbon UI configuration.
+ */
 pragma ComponentBehavior: Bound
 import QtQuick
 
 QtObject {
     id: ribbonConfig
 
+    /// Base path for ribbon icon resources
     readonly property string iconBasePath: "qrc:/opengeolab/resources/icons/"
 
+    /// Tab definitions with groups and action items
     readonly property var tabs: ([
             {
                 id: "geometry",

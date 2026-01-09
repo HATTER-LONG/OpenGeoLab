@@ -1,3 +1,10 @@
+/**
+ * @file RibbonToolBar.qml
+ * @brief Main ribbon toolbar component with tabs and content area
+ *
+ * Provides Office-style ribbon UI with file menu, tabs, and action groups.
+ * Emits actionTriggered for centralized action handling.
+ */
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
@@ -8,8 +15,11 @@ Rectangle {
     width: parent.width
     height: 120
     color: Theme.ribbonBackground
+
+    /// Currently selected tab index
     property int currentTabIndex: 0
 
+    /// Emitted when any ribbon action is triggered
     signal actionTriggered(string actionId, var payload)
 
     RibbonFileMenu {

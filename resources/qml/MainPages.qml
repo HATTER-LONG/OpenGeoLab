@@ -1,10 +1,23 @@
+/**
+ * @file MainPages.qml
+ * @brief Singleton for lazy-loading and managing page components
+ *
+ * Caches page instances and routes actions to appropriate page handlers.
+ */
 pragma Singleton
 import QtQuick
 
 QtObject {
     id: mainPages
 
+    /// Cache of created page component instances
     property var pageCache: ({})
+
+    /**
+     * @brief Get or create a page component by action ID
+     * @param actionId The action identifier mapped to a page
+     * @return Page instance or undefined if not found
+     */
     function getPage(actionId) {
         if (!pageCache[actionId]) {
             const componentMap = {
