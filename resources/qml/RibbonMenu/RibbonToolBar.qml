@@ -9,10 +9,15 @@ Rectangle {
     height: 120
     color: Theme.ribbonBackground
     property int currentTabIndex: 0
+
+    signal actionTriggered(string actionId, var payload)
+
     RibbonFileMenu {
         id: fileMenu
         x: ribbonToolBar.x + 4
         y: ribbonToolBar.y + tabBar.height + 4
+
+        onActionTriggered: (actionId, payload) => ribbonToolBar.actionTriggered(actionId, payload)
     }
 
     RibbonConfig {

@@ -71,7 +71,7 @@ else()
   CPMAddPackage(
     NAME Kangaroo
     GITHUB_REPOSITORY HATTER-LONG/Kangaroo
-    VERSION 2.2.1
+    VERSION 2.2.2
     OPTIONS "BUILD_SHARED_LIBS ON"
   )
 endif()
@@ -152,7 +152,9 @@ qt_add_executable(${PROJECT_NAME} ${sources} ${headers})
 # ==============================================================================
 
 # QML singletons must be declared for the generated qmldir/type system.
-set_source_files_properties(resources/qml/Theme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
+set_source_files_properties(
+  resources/qml/Theme.qml resources/qml/MainPages.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE
+)
 
 # Collect all SVG icon resources automatically (using relative paths)
 file(GLOB ICON_RESOURCES_ABS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/*.svg")
@@ -176,6 +178,7 @@ qt_add_qml_module(
   SOURCES
   QML_FILES
   resources/qml/Main.qml
+  resources/qml/MainPages.qml
   resources/qml/Theme.qml
   resources/qml/ThemedIcon.qml
   resources/qml/RibbonMenu/RibbonToolBar.qml
@@ -184,6 +187,8 @@ qt_add_qml_module(
   resources/qml/RibbonMenu/RibbonTabContent.qml
   resources/qml/RibbonMenu/RibbonLargeButton.qml
   resources/qml/RibbonMenu/RibbonConfig.qml
+  resources/qml/Pages/ImportModel.qml
+  resources/qml/Pages/ProgressOverlay.qml
   RESOURCES
   ${ICON_RESOURCES}
 )

@@ -1,9 +1,9 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Layouts
 import OpenGeoLab 1.0
 import "RibbonMenu" as RibbonMenu
+import "Pages" as Pages
 
 /**
  * @file Main.qml
@@ -20,6 +20,9 @@ ApplicationWindow {
 
     header: RibbonMenu.RibbonToolBar {
         id: ribbonToolBar
+        onActionTriggered: (actionId, payload) => {
+            MainPages.handleAction(actionId, payload);
+        }
     }
 
     // Hello World
@@ -27,5 +30,13 @@ ApplicationWindow {
         anchors.centerIn: parent
         text: qsTr("Hello, OpenGeoLab!")
         font.pixelSize: 24
+    }
+
+    Pages.ProgressOverlay {
+        id: progressOverlay
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        anchors.margins: 20
+        z: 1000
     }
 }

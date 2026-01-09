@@ -2,7 +2,8 @@
  * @file main.cpp
  * @brief Application entry point
  */
-#include <util/logger.hpp>
+#include "service.hpp"
+#include "util/logger.hpp"
 
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
@@ -44,6 +45,7 @@ auto main(int argc, char** argv) -> int {
 
     qputenv("QT_QUICK_CONTROLS_STYLE", "Basic");
 
+    OpenGeoLab::App::registerServices();
     QGuiApplication app(argc, argv);
     QQmlApplicationEngine engine;
 

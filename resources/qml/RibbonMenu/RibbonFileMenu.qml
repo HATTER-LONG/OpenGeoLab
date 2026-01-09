@@ -10,8 +10,14 @@ Popup {
     focus: true
     padding: 14
 
+    signal actionTriggered(string actionId, var payload)
+
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
 
+    function trigger(actionId, payload): void {
+        fileMenu.close();
+        fileMenu.actionTriggered(actionId, payload);
+    }
     background: Rectangle {
         radius: 8
         color: Theme.ribbonFileMenuBackground
@@ -25,19 +31,19 @@ Popup {
         RibbonFileMenuButton {
             text: qsTr("New Model")
             iconSource: "qrc:/opengeolab/resources/icons/new.svg"
-            onClicked: console.log("New Model")
+            onClicked: fileMenu.trigger("newModel", {})
         }
 
         RibbonFileMenuButton {
             text: qsTr("Import Model")
             iconSource: "qrc:/opengeolab/resources/icons/import.svg"
-            onClicked: console.log("Import Model")
+            onClicked: fileMenu.trigger("importModel", {})
         }
 
         RibbonFileMenuButton {
             text: qsTr("Export Model")
             iconSource: "qrc:/opengeolab/resources/icons/export.svg"
-            onClicked: console.log("Export Model")
+            onClicked: fileMenu.trigger("exportModel", {})
         }
 
         Rectangle {
@@ -50,7 +56,9 @@ Popup {
         RibbonFileMenuButton {
             text: qsTr("Theme Switch")
             iconSource: Theme.isDark ? "qrc:/opengeolab/resources/icons/dark.svg" : "qrc:/opengeolab/resources/icons/light.svg"
-            onClicked: Theme.toggleMode()
+            onClicked: {
+                Theme.toggleMode();
+            }
         }
 
         RibbonFileMenuButton {
