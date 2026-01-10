@@ -153,6 +153,7 @@ Item {
 
             // Cancel / Close button
             Button {
+                id: cancelButton
                 implicitWidth: 24
                 implicitHeight: 24
                 flat: true

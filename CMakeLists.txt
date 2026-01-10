@@ -189,6 +189,8 @@ qt_add_qml_module(
   resources/qml/RibbonMenu/RibbonConfig.qml
   resources/qml/Pages/ImportModel.qml
   resources/qml/Pages/ProgressOverlay.qml
+  resources/qml/Pages/CornerOverlay.qml
+  resources/qml/Pages/LogPanel.qml
   RESOURCES
   ${ICON_RESOURCES}
 )

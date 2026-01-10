@@ -1,0 +1,51 @@
+/**
+ * @file log_service.hpp
+ * @brief QObject service for exposing application logs to QML
+ */
+
+#pragma once
+
+#include <app/log_entry_model.hpp>
+
+#include <QAbstractItemModel>
+#include <QMutex>
+#include <QObject>
+#include <QPointer>
+#include <QtQml/qqml.h>
+
+namespace OpenGeoLab::App {
+
+class LogService final : public QObject {
+    Q_OBJECT
+
+    Q_PROPERTY(QAbstractItemModel* model READ model CONSTANT)
+    Q_PROPERTY(bool hasNewErrors READ hasNewErrors NOTIFY hasNewErrorsChanged)
+    Q_PROPERTY(bool hasNewLogs READ hasNewLogs NOTIFY hasNewLogsChanged)
+public:
+    explicit LogService(QObject* parent = nullptr);
+
+    [[nodiscard]] QAbstractItemModel* model();
+
+    [[nodiscard]] bool hasNewErrors() const;
+    [[nodiscard]] bool hasNewLogs() const;
+
+    /// Thread-safe: can be called from any thread.
+    void addEntry(LogEntry entry);
+
+    Q_INVOKABLE void clear();
+    Q_INVOKABLE void markAllSeen();
+
+signals:
+    void hasNewErrorsChanged();
+    void hasNewLogsChanged();
+
+private:
+    void addEntryOnUiThread(LogEntry entry);
+
+private:
+    LogEntryModel m_model;
+    bool m_hasNewErrors{false};
+    bool m_hasNewLogs{false};
+};
+
+} // namespace OpenGeoLab::App

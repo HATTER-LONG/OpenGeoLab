@@ -5,6 +5,9 @@
 #include "service.hpp"
 #include "util/logger.hpp"
 
+#include <app/log_service.hpp>
+#include <util/qml_spdlog_sink.hpp>
+
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlComponent>
@@ -48,6 +51,10 @@ auto main(int argc, char** argv) -> int {
     OpenGeoLab::App::registerServices();
     QGuiApplication app(argc, argv);
     QQmlApplicationEngine engine;
+
+    OpenGeoLab::App::LogService log_service;
+    OpenGeoLab::Util::installQmlSpdlogSink(&log_service);
+    engine.rootContext()->setContextProperty("LogService", &log_service);
 
     QObject::connect(
         &engine, &QQmlApplicationEngine::objectCreated, &app,
