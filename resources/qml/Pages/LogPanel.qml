@@ -16,8 +16,8 @@ Item {
     property bool open: false
     signal requestClose
 
-    width: 360
-    height: 260
+    width: 480
+    height: 360
 
     visible: open || showAnim.running || hideAnim.running
     opacity: 0.0
@@ -91,7 +91,7 @@ Item {
         spacing: 8
 
         RowLayout {
-            height: 28
+            height: 26
             Layout.fillWidth: true
             spacing: 8
 
@@ -104,15 +104,53 @@ Item {
             }
 
             Button {
-                implicitWidth: 60
+                id: clearButton
+                implicitWidth: 56
+                implicitHeight: 22
+                padding: 6
+                hoverEnabled: true
                 text: qsTr("Clear")
                 onClicked: root.logService.clear()
+
+                contentItem: Text {
+                    text: clearButton.text
+                    color: Theme.palette.buttonText
+                    font.pixelSize: 12
+                    verticalAlignment: Text.AlignVCenter
+                    horizontalAlignment: Text.AlignHCenter
+                }
+
+                background: Rectangle {
+                    radius: 6
+                    color: clearButton.down ? Theme.clicked : clearButton.hovered ? Theme.hovered : Theme.surfaceAlt
+                    border.width: 1
+                    border.color: Theme.border
+                }
             }
 
             Button {
+                id: closeButton
                 text: "✕"
                 implicitWidth: 28
+                implicitHeight: 22
+                padding: 4
+                hoverEnabled: true
                 onClicked: root.requestClose()
+
+                contentItem: Text {
+                    text: closeButton.text
+                    color: Theme.palette.buttonText
+                    font.pixelSize: 12
+                    verticalAlignment: Text.AlignVCenter
+                    horizontalAlignment: Text.AlignHCenter
+                }
+
+                background: Rectangle {
+                    radius: 6
+                    color: closeButton.down ? Theme.clicked : closeButton.hovered ? Theme.hovered : Theme.surfaceAlt
+                    border.width: 1
+                    border.color: Theme.border
+                }
             }
         }
 
@@ -224,8 +262,9 @@ Item {
                                 text: row.message
                                 color: Theme.palette.text
                                 wrapMode: Text.WrapAtWordBoundaryOrAnywhere
-                                maximumLineCount: 4
+                                maximumLineCount: 8
                                 elide: Text.ElideRight
+                                font.pixelSize: 12
                             }
                         }
                     }

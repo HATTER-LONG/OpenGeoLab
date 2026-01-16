@@ -5,6 +5,7 @@
 
 #include "io/model_reader.hpp"
 #include "kangaroo/util/current_thread.hpp"
+#include "util/logger.hpp"
 
 namespace OpenGeoLab::IO {
 
@@ -54,7 +55,9 @@ nlohmann::json ModelReader::processRequest(const std::string& module_name,
         progress_reporter->reportError("Operation was cancelled.");
         return nlohmann::json{};
     }
-
+    LOG_WARN("test warning");
+    LOG_TRACE("test trace");
+    LOG_INFO("test info");
     result["module_name"] = module_name;
     result["params"] = params;
     return result;

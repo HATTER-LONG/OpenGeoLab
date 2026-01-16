@@ -34,5 +34,6 @@ ApplicationWindow {
 
     Pages.CornerOverlay {
         id: cornerOverlay
+        logService: LogService
     }
 }

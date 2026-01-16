@@ -157,6 +157,7 @@ Item {
                 implicitWidth: 24
                 implicitHeight: 24
                 flat: true
+                hoverEnabled: true
                 text: "✕"
                 onClicked: {
                     if (root.isInDelayedClose) {
@@ -166,6 +167,21 @@ Item {
                     }
                 }
                 Layout.alignment: Qt.AlignTop
+
+                contentItem: Text {
+                    text: cancelButton.text
+                    color: Theme.palette.buttonText
+                    font.pixelSize: 12
+                    verticalAlignment: Text.AlignVCenter
+                    horizontalAlignment: Text.AlignHCenter
+                }
+
+                background: Rectangle {
+                    radius: 6
+                    color: cancelButton.down ? Theme.clicked : cancelButton.hovered ? Theme.hovered : "transparent"
+                    border.width: (cancelButton.hovered || cancelButton.down) ? 1 : 0
+                    border.color: Theme.border
+                }
 
                 ToolTip.visible: hovered
                 ToolTip.text: root.isInDelayedClose ? qsTr("Close notification") : qsTr("Cancel operation")

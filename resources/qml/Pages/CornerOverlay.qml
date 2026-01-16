@@ -12,15 +12,15 @@ Item {
 
     property int margin: 20
     property bool logOpen: false
-    // LogService is injected from C++ as a context property.
-    property var logService: LogService
+    // Provided by parent (Main.qml), typically the injected context property LogService.
+    property var logService
 
     anchors.right: parent.right
     anchors.bottom: parent.bottom
     anchors.margins: margin
 
-    width: 360
-    height: Math.max(logButton.implicitHeight, progressOverlay.height + (logOpen ? logPanel.height : 0) + 16)
+    width: 480
+    height: logButton.implicitHeight + (progressOverlay.height > 0 ? progressOverlay.height + 8 : 0) + (logOpen ? logPanel.height + 8 : 0)
     z: 1000
 
     // Progress overlay (bottommost)
@@ -28,7 +28,8 @@ Item {
         id: progressOverlay
         width: root.width
         anchors.right: parent.right
-        anchors.bottom: parent.bottom
+        anchors.bottom: logButton.top
+        anchors.bottomMargin: 8
     }
 
     // Log panel (above progress; sinks down when progress height == 0)
@@ -36,8 +37,8 @@ Item {
         id: logPanel
         width: root.width
         anchors.right: parent.right
-        anchors.bottom: progressOverlay.top
-        anchors.bottomMargin: progressOverlay.height > 0 ? 8 : 0
+        anchors.bottom: progressOverlay.height > 0 ? progressOverlay.top : logButton.top
+        anchors.bottomMargin: 8
         open: root.logOpen
         logService: root.logService
         onRequestClose: root.logOpen = false

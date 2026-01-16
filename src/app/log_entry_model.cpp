@@ -29,7 +29,7 @@ QVariant LogEntryModel::data(const QModelIndex& index, int role) const {
     case TimestampRole:
         return entry.m_timestamp;
     case TimeStringRole:
-        return entry.m_timestamp.toString("HH:mm:ss.zzz");
+        return entry.m_timestamp.toString("yyyy-MM-dd HH:mm:ss.zzz");
     case LevelRole:
         return entry.m_level;
     case LevelNameRole:
