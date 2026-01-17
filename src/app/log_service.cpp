@@ -6,7 +6,7 @@
 namespace OpenGeoLab::App {
 
 LogService::LogService(QObject* parent) : QObject(parent), m_model(this), m_filterModel(this) {
-    qRegisterMetaType<OpenGeoLab::App::LogEntry>("OpenGeoLab::App::LogEntry");
+    qRegisterMetaType<LogEntry>("OpenGeoLab::App::LogEntry");
     m_filterModel.setSourceModel(&m_model);
 }
 

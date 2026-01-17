@@ -1,11 +1,14 @@
 /**
  * @file log_service.hpp
  * @brief QObject service for exposing application logs to QML
+ *
+ * This is the public interface for the logging system.
+ * Use this class to interact with logs from QML.
  */
 
 #pragma once
 
-#include <app/log_entry_filter_model.hpp>
+#include <app/log_model.hpp>
 
 #include <QAbstractItemModel>
 #include <QMutex>
