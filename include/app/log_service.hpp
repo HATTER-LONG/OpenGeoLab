@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include <app/log_entry_model.hpp>
+#include <app/log_entry_filter_model.hpp>
 
 #include <QAbstractItemModel>
 #include <QMutex>
@@ -21,6 +21,7 @@ class LogService final : public QObject {
     Q_PROPERTY(QAbstractItemModel* model READ model CONSTANT)
     Q_PROPERTY(bool hasNewErrors READ hasNewErrors NOTIFY hasNewErrorsChanged)
     Q_PROPERTY(bool hasNewLogs READ hasNewLogs NOTIFY hasNewLogsChanged)
+    Q_PROPERTY(int minLevel READ minLevel WRITE setMinLevel NOTIFY minLevelChanged)
 public:
     explicit LogService(QObject* parent = nullptr);
 
@@ -28,6 +29,11 @@ public:
 
     [[nodiscard]] bool hasNewErrors() const;
     [[nodiscard]] bool hasNewLogs() const;
+    [[nodiscard]] int minLevel() const;
+    void setMinLevel(int level);
+
+    Q_INVOKABLE bool levelEnabled(int level) const;
+    Q_INVOKABLE void setLevelEnabled(int level, bool enabled);
 
     /// Thread-safe: can be called from any thread.
     void addEntry(LogEntry entry);
@@ -38,12 +44,15 @@ public:
 signals:
     void hasNewErrorsChanged();
     void hasNewLogsChanged();
+    void minLevelChanged();
+    void levelFilterChanged();
 
 private:
     void addEntryOnUiThread(LogEntry entry);
 
 private:
     LogEntryModel m_model;
+    LogEntryFilterModel m_filterModel;
     bool m_hasNewErrors{false};
     bool m_hasNewLogs{false};
 };

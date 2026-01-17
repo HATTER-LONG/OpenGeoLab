@@ -10,6 +10,7 @@
 #include <QDateTime>
 #include <QString>
 #include <QVector>
+#include <QtGlobal>
 
 namespace OpenGeoLab::App {
 
@@ -18,6 +19,8 @@ struct LogEntry {
     int m_level{0};
     QString m_levelName;
     QString m_message;
+
+    qint64 m_threadId{0};
 
     QString m_file;
     int m_line{0};
@@ -32,6 +35,7 @@ public:
     enum Role {
         TimestampRole = Qt::UserRole + 1,
         TimeStringRole,
+        ThreadIdRole,
         LevelRole,
         LevelNameRole,
         MessageRole,

@@ -30,6 +30,8 @@ QVariant LogEntryModel::data(const QModelIndex& index, int role) const {
         return entry.m_timestamp;
     case TimeStringRole:
         return entry.m_timestamp.toString("yyyy-MM-dd HH:mm:ss.zzz");
+    case ThreadIdRole:
+        return entry.m_threadId;
     case LevelRole:
         return entry.m_level;
     case LevelNameRole:
@@ -51,9 +53,11 @@ QVariant LogEntryModel::data(const QModelIndex& index, int role) const {
 
 QHash<int, QByteArray> LogEntryModel::roleNames() const {
     return {
-        {TimestampRole, "timestamp"}, {TimeStringRole, "time"},   {LevelRole, "level"},
-        {LevelNameRole, "levelName"}, {MessageRole, "message"},   {FileRole, "file"},
-        {LineRole, "line"},           {FunctionRole, "function"}, {LevelColorRole, "levelColor"},
+        {TimestampRole, "timestamp"}, {TimeStringRole, "time"},
+        {ThreadIdRole, "tid"},        {LevelRole, "level"},
+        {LevelNameRole, "levelName"}, {MessageRole, "message"},
+        {FileRole, "file"},           {LineRole, "line"},
+        {FunctionRole, "function"},   {LevelColorRole, "levelColor"},
     };
 }
 

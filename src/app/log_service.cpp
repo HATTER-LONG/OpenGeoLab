@@ -5,15 +5,36 @@
 
 namespace OpenGeoLab::App {
 
-LogService::LogService(QObject* parent) : QObject(parent), m_model(this) {
+LogService::LogService(QObject* parent) : QObject(parent), m_model(this), m_filterModel(this) {
     qRegisterMetaType<OpenGeoLab::App::LogEntry>("OpenGeoLab::App::LogEntry");
+    m_filterModel.setSourceModel(&m_model);
 }
 
-QAbstractItemModel* LogService::model() { return &m_model; }
+QAbstractItemModel* LogService::model() { return &m_filterModel; }
 
 bool LogService::hasNewErrors() const { return m_hasNewErrors; }
 
 bool LogService::hasNewLogs() const { return m_hasNewLogs; }
+
+int LogService::minLevel() const { return m_filterModel.minLevel(); }
+
+void LogService::setMinLevel(int level) {
+    if(m_filterModel.minLevel() == level) {
+        return;
+    }
+    m_filterModel.setMinLevel(level);
+    emit minLevelChanged();
+}
+
+bool LogService::levelEnabled(int level) const { return m_filterModel.levelEnabled(level); }
+
+void LogService::setLevelEnabled(int level, bool enabled) {
+    if(m_filterModel.levelEnabled(level) == enabled) {
+        return;
+    }
+    m_filterModel.setLevelEnabled(level, enabled);
+    emit levelFilterChanged();
+}
 
 void LogService::addEntry(LogEntry entry) {
     if(QThread::currentThread() == thread()) {

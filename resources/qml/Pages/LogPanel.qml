@@ -154,6 +154,141 @@ Item {
             }
         }
 
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 6
+
+            Button {
+                id: filterButton
+                implicitHeight: 22
+                implicitWidth: 84
+                padding: 6
+                hoverEnabled: true
+                text: qsTr("Filter")
+                onClicked: filterPopup.open()
+
+                contentItem: Text {
+                    text: filterButton.text
+                    color: Theme.palette.buttonText
+                    font.pixelSize: 12
+                    verticalAlignment: Text.AlignVCenter
+                    horizontalAlignment: Text.AlignHCenter
+                }
+
+                background: Rectangle {
+                    radius: 6
+                    color: filterButton.down ? Theme.clicked : filterButton.hovered ? Theme.hovered : Theme.surfaceAlt
+                    border.width: 1
+                    border.color: Theme.border
+                }
+            }
+
+            Item {
+                Layout.fillWidth: true
+            }
+
+            Popup {
+                id: filterPopup
+                x: filterButton.x
+                y: filterButton.y + filterButton.height + 6
+                modal: false
+                focus: true
+                closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+
+                background: Rectangle {
+                    radius: 10
+                    color: Theme.surface
+                    border.width: 1
+                    border.color: Theme.border
+                }
+
+                contentItem: ColumnLayout {
+                    // padding: 10
+                    spacing: 8
+
+                    Label {
+                        text: qsTr("Levels")
+                        color: Theme.palette.placeholderText
+                        font.pixelSize: 11
+                    }
+
+                    GridLayout {
+                        columns: 3
+                        columnSpacing: 8
+                        rowSpacing: 4
+
+                        CheckBox {
+                            text: qsTr("Trace")
+                            checked: true
+                            onToggled: if (root.logService)
+                                root.logService.setLevelEnabled(0, checked)
+                        }
+
+                        CheckBox {
+                            text: qsTr("Debug")
+                            checked: true
+                            onToggled: if (root.logService)
+                                root.logService.setLevelEnabled(1, checked)
+                        }
+
+                        CheckBox {
+                            text: qsTr("Info")
+                            checked: true
+                            onToggled: if (root.logService)
+                                root.logService.setLevelEnabled(2, checked)
+                        }
+
+                        CheckBox {
+                            text: qsTr("Warn")
+                            checked: true
+                            onToggled: if (root.logService)
+                                root.logService.setLevelEnabled(3, checked)
+                        }
+
+                        CheckBox {
+                            text: qsTr("Error")
+                            checked: true
+                            onToggled: if (root.logService)
+                                root.logService.setLevelEnabled(4, checked)
+                        }
+
+                        CheckBox {
+                            text: qsTr("Critical")
+                            checked: true
+                            onToggled: if (root.logService)
+                                root.logService.setLevelEnabled(5, checked)
+                        }
+                    }
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        height: 1
+                        color: Theme.border
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 8
+
+                        Label {
+                            text: qsTr("Min level")
+                            color: Theme.palette.placeholderText
+                            font.pixelSize: 11
+                        }
+
+                        ComboBox {
+                            id: minLevelCombo
+                            implicitHeight: 22
+                            model: [qsTr("Trace+"), qsTr("Debug+"), qsTr("Info+"), qsTr("Warn+"), qsTr("Error+"), qsTr("Critical+")]
+                            currentIndex: root.logService ? root.logService.minLevel : 0
+                            onCurrentIndexChanged: if (root.logService)
+                                root.logService.setMinLevel(currentIndex)
+                        }
+                    }
+                }
+            }
+        }
+
         Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -179,6 +314,7 @@ Item {
                     required property int level
                     required property string levelName
                     required property string message
+                    required property int tid
                     required property string file
                     required property int line
                     required property color levelColor
@@ -217,27 +353,13 @@ Item {
                                     font.pixelSize: 11
                                 }
 
-                                // Info level gets a badge-like background (similar to the old category chip)
-                                Rectangle {
-                                    visible: row.level === 2
-                                    radius: 6
-                                    color: row.levelColor
-                                    Layout.preferredHeight: 18
-                                    Layout.preferredWidth: Math.min(110, infoLevelText.implicitWidth + 12)
-
-                                    Text {
-                                        id: infoLevelText
-                                        anchors.centerIn: parent
-                                        text: row.levelName
-                                        color: "#ffffff"
-                                        font.pixelSize: 11
-                                        font.weight: Font.DemiBold
-                                        elide: Text.ElideRight
-                                    }
+                                Label {
+                                    text: "tid " + row.tid
+                                    color: Theme.palette.placeholderText
+                                    font.pixelSize: 11
                                 }
 
                                 Label {
-                                    visible: row.level !== 2
                                     text: row.levelName
                                     color: row.levelColor
                                     font.pixelSize: 11
@@ -257,13 +379,15 @@ Item {
                                 }
                             }
 
-                            Text {
+                            TextEdit {
                                 Layout.fillWidth: true
                                 text: row.message
                                 color: Theme.palette.text
-                                wrapMode: Text.WrapAtWordBoundaryOrAnywhere
-                                maximumLineCount: 8
-                                elide: Text.ElideRight
+                                wrapMode: TextEdit.Wrap
+                                readOnly: true
+                                selectByMouse: true
+                                cursorVisible: false
+                                textFormat: TextEdit.PlainText
                                 font.pixelSize: 12
                             }
                         }

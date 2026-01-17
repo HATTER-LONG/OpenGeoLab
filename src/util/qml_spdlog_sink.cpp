@@ -19,7 +19,7 @@ QColor levelToColor(int level) {
     case 1:
         return QColor("#4F83FF");
     case 2:
-        return QColor("#E0E0E0");
+        return QColor("#B7C7D6");
     case 3:
         return QColor("#F4B400");
     case 4:
@@ -72,6 +72,7 @@ void QmlSpdlogSink::sink_it_(const spdlog::details::log_msg& msg) {
     entry.m_level = static_cast<int>(msg.level);
     entry.m_levelName = levelToName(entry.m_level);
     entry.m_message = QString::fromUtf8(msg.payload.data(), static_cast<int>(msg.payload.size()));
+    entry.m_threadId = static_cast<qint64>(msg.thread_id);
 
     if(msg.source.filename != nullptr) {
         entry.m_file = QString::fromUtf8(msg.source.filename);
