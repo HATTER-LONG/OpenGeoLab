@@ -153,10 +153,6 @@ bool LogEntryFilterModel::filterAcceptsRow(int sourceRow, const QModelIndex& sou
 
     const auto index = sourceModel()->index(sourceRow, 0, sourceParent);
     const auto level = index.data(LogEntryModel::LevelRole).toInt();
-    if(level < m_minLevel) {
-        return false;
-    }
-
     if(!levelEnabled(level)) {
         return false;
     }

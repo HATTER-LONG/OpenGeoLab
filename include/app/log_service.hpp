@@ -33,7 +33,7 @@ public:
     [[nodiscard]] bool hasNewErrors() const;
     [[nodiscard]] bool hasNewLogs() const;
     [[nodiscard]] int minLevel() const;
-    void setMinLevel(int level);
+    Q_INVOKABLE void setMinLevel(int level);
 
     Q_INVOKABLE bool levelEnabled(int level) const;
     Q_INVOKABLE void setLevelEnabled(int level, bool enabled);

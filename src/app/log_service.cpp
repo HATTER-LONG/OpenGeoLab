@@ -1,7 +1,12 @@
 #include <app/log_service.hpp>
 
+#include <util/logger.hpp>
+
 #include <QMetaObject>
 #include <QThread>
+
+#include <algorithm>
+#include <spdlog/common.h>
 
 namespace OpenGeoLab::App {
 
@@ -16,13 +21,28 @@ bool LogService::hasNewErrors() const { return m_hasNewErrors; }
 
 bool LogService::hasNewLogs() const { return m_hasNewLogs; }
 
-int LogService::minLevel() const { return m_filterModel.minLevel(); }
+int LogService::minLevel() const {
+    auto logger = OpenGeoLab::getLogger();
+    if(!logger) {
+        return 0;
+    }
+    return static_cast<int>(logger->level());
+}
 
 void LogService::setMinLevel(int level) {
-    if(m_filterModel.minLevel() == level) {
+    // Historically this controlled the UI filter threshold.
+    // Now: this controls the actual spdlog logger level (i.e. what gets emitted).
+    auto logger = OpenGeoLab::getLogger();
+    const int clamped = std::clamp(level, 0, 6); // trace..off
+    const auto new_level = static_cast<spdlog::level::level_enum>(clamped);
+    if(logger && logger->level() == new_level) {
         return;
     }
-    m_filterModel.setMinLevel(level);
+
+    if(logger) {
+        logger->set_level(new_level);
+    }
+
     emit minLevelChanged();
 }
 

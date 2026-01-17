@@ -161,7 +161,7 @@ Item {
                             spacing: 8
 
                             Label {
-                                text: qsTr("Min Level")
+                                text: qsTr("Log Level")
                                 color: Theme.palette.text
                                 font.pixelSize: 12
                                 font.weight: Font.Medium

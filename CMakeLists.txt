@@ -234,6 +234,9 @@ target_link_libraries(
           ${OpenCASCADE_LIBS}
 )
 
+# Allow runtime control down to trace level (do not compile-out trace/debug).
+target_compile_definitions(${PROJECT_NAME} PRIVATE SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE)
+
 # ==============================================================================
 # Include Directories
 # ==============================================================================

@@ -14,7 +14,7 @@ namespace OpenGeoLab {
 
 std::shared_ptr<spdlog::logger> getLogger() {
     static auto logger =
-        Kangaroo::Util::LoggerFactory::createLogger("OpenGeoLab", spdlog::level::trace);
+        Kangaroo::Util::LoggerFactory::createLogger("OpenGeoLab", spdlog::level::info);
     return logger;
 }
 

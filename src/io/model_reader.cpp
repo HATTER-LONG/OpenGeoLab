@@ -7,6 +7,8 @@
 #include "kangaroo/util/current_thread.hpp"
 #include "util/logger.hpp"
 
+#include <algorithm>
+
 namespace OpenGeoLab::IO {
 
 nlohmann::json ModelReader::processRequest(const std::string& module_name,
@@ -14,6 +16,24 @@ nlohmann::json ModelReader::processRequest(const std::string& module_name,
                                            App::IProgressReporterPtr progress_reporter) {
     nlohmann::json result;
     int counter = 0;
+
+    LOG_TRACE("import test: trace");
+    LOG_DEBUG("import test: debug");
+    LOG_INFO("import test: info");
+    LOG_WARN("import test: warn");
+    LOG_ERROR("import test: error");
+    LOG_CRITICAL("import test: critical");
+    const bool fast_mode = params.value("fast", false);
+    int max_steps = params.value("max_steps", 100);
+    int sleep_usec = params.value("sleep_usec", 100000);
+    if(fast_mode) {
+        // Test-friendly: finish quickly.
+        sleep_usec = 0;
+        max_steps = std::min(max_steps, 5);
+    }
+    if(max_steps <= 0) {
+        max_steps = 1;
+    }
 
     // Test long messages at different progress stages
     const std::vector<std::string> test_messages = {
@@ -34,19 +54,21 @@ nlohmann::json ModelReader::processRequest(const std::string& module_name,
         "geometry and associated metadata..."};
 
     while(!progress_reporter->isCancelled()) {
-        double progress = counter / 100.0;
+        double progress = static_cast<double>(counter) / static_cast<double>(max_steps);
 
         // Select message based on progress stage
         size_t message_index =
             std::min(static_cast<size_t>(counter / 20), test_messages.size() - 1);
         progress_reporter->reportProgress(progress, test_messages[message_index]);
 
-        Kangaroo::Util::CurrentThread::sleepUsec(100000); // 100ms for faster testing
+        if(sleep_usec > 0) {
+            Kangaroo::Util::CurrentThread::sleepUsec(static_cast<uint64_t>(sleep_usec));
+        }
 
         if(progress_reporter->isCancelled()) {
             throw std::runtime_error("Operation was cancelled by user request.");
         }
-        if(counter++ >= 100) {
+        if(counter++ >= max_steps) {
             break;
         }
     }
@@ -55,9 +77,6 @@ nlohmann::json ModelReader::processRequest(const std::string& module_name,
         progress_reporter->reportError("Operation was cancelled.");
         return nlohmann::json{};
     }
-    LOG_WARN("test warning");
-    LOG_TRACE("test trace");
-    LOG_INFO("test info");
     result["module_name"] = module_name;
     result["params"] = params;
     return result;
