@@ -32,7 +32,7 @@ QVariant LogEntryModel::data(const QModelIndex& index, int role) const {
         return {};
     }
 
-    const auto& entry = m_entries.at(row);
+    const auto& entry = m_entries.at(static_cast<size_t>(row));
 
     switch(role) {
     case TimestampRole:
@@ -71,22 +71,17 @@ QHash<int, QByteArray> LogEntryModel::roleNames() const {
 }
 
 void LogEntryModel::append(LogEntry entry) {
-    const auto insert_row = m_entries.size();
+    const auto insert_row = static_cast<int>(m_entries.size());
 
     beginInsertRows(QModelIndex(), insert_row, insert_row);
     m_entries.push_back(std::move(entry));
     endInsertRows();
 
-    if(m_entries.size() > m_maxEntries && m_maxEntries > 0) {
-        const int remove_count = m_entries.size() - m_maxEntries;
-        beginRemoveRows(QModelIndex(), 0, remove_count - 1);
-        m_entries.erase(m_entries.begin(), m_entries.begin() + remove_count);
-        endRemoveRows();
-    }
+    trimToMaxEntries();
 }
 
 void LogEntryModel::clear() {
-    if(m_entries.isEmpty()) {
+    if(m_entries.empty()) {
         return;
     }
     beginResetModel();
@@ -98,12 +93,26 @@ int LogEntryModel::maxEntries() const { return m_maxEntries; }
 
 void LogEntryModel::setMaxEntries(int value) {
     m_maxEntries = value;
-    if(m_entries.size() > m_maxEntries && m_maxEntries > 0) {
-        const int remove_count = m_entries.size() - m_maxEntries;
-        beginRemoveRows(QModelIndex(), 0, remove_count - 1);
-        m_entries.erase(m_entries.begin(), m_entries.begin() + remove_count);
-        endRemoveRows();
+
+    trimToMaxEntries();
+}
+
+void LogEntryModel::trimToMaxEntries() {
+    if(m_maxEntries <= 0) {
+        return;
     }
+
+    const int size = static_cast<int>(m_entries.size());
+    if(size <= m_maxEntries) {
+        return;
+    }
+
+    const int remove_count = size - m_maxEntries;
+    beginRemoveRows(QModelIndex(), 0, remove_count - 1);
+    for(int i = 0; i < remove_count; ++i) {
+        m_entries.pop_front();
+    }
+    endRemoveRows();
 }
 
 // ============================================================================
@@ -146,12 +155,12 @@ void LogEntryFilterModel::setLevelEnabled(int level, bool enabled) {
     emit levelFilterChanged();
 }
 
-bool LogEntryFilterModel::filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const {
+bool LogEntryFilterModel::filterAcceptsRow(int source_row, const QModelIndex& source_parent) const {
     if(!sourceModel()) {
         return true;
     }
 
-    const auto index = sourceModel()->index(sourceRow, 0, sourceParent);
+    const auto index = sourceModel()->index(source_row, 0, source_parent);
     const auto level = index.data(LogEntryModel::LevelRole).toInt();
     if(!levelEnabled(level)) {
         return false;

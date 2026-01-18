@@ -30,7 +30,7 @@ class BackendService final : public QObject {
     Q_PROPERTY(bool busy READ busy NOTIFY busyChanged)
     Q_PROPERTY(double progress READ progress NOTIFY progressChanged)
     Q_PROPERTY(QString message READ message NOTIFY messageChanged)
-    Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
+    // Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
 public:
     explicit BackendService(QObject* parent = nullptr);
     ~BackendService() override;
@@ -38,7 +38,6 @@ public:
     [[nodiscard]] bool busy() const;
     [[nodiscard]] double progress() const;
     [[nodiscard]] QString message() const;
-    [[nodiscard]] QString lastError() const;
 
     /**
      * @brief Start an asynchronous operation
@@ -47,9 +46,6 @@ public:
      */
     Q_INVOKABLE void request(const QString& module_name, const QString& params);
 
-    /// Clears the last error state
-    Q_INVOKABLE void clearError();
-
     /// Requests cancellation of the current operation
     Q_INVOKABLE void cancel();
 
@@ -57,7 +53,6 @@ signals:
     void busyChanged();
     void progressChanged();
     void messageChanged();
-    void lastErrorChanged();
 
     void operationStarted(const QString& module_name);
     void operationProgress(const QString& module_name, double progress, const QString& message);
@@ -70,7 +65,6 @@ private slots:
     void onWorkerError(const QString& module_name, const QString& error);
 
 private:
-    void setLastError(const QString& error);
     void setMessage(const QString& message);
     void setProgressInternal(double progress);
     void setBusyInternal(bool busy);
@@ -81,7 +75,6 @@ private:
     double m_progress{0.0};
 
     QString m_message;
-    QString m_lastError;
 
     QString m_currentModuleName;
 

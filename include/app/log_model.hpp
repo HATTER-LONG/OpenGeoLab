@@ -13,8 +13,9 @@
 #include <QDateTime>
 #include <QSortFilterProxyModel>
 #include <QString>
-#include <QVector>
 #include <QtGlobal>
+
+#include <deque>
 
 namespace OpenGeoLab::App {
 
@@ -64,14 +65,29 @@ public:
     [[nodiscard]] QVariant data(const QModelIndex& index, int role) const override;
     [[nodiscard]] QHash<int, QByteArray> roleNames() const override;
 
+    /**
+     * @brief Append a log entry to the model
+     * @note If maxEntries is positive, the oldest entries are trimmed after insertion.
+     */
     void append(LogEntry entry);
+
+    /**
+     * @brief Remove all log entries
+     */
     void clear();
 
     [[nodiscard]] int maxEntries() const;
+
+    /**
+     * @brief Set the maximum number of retained entries
+     * @param value Maximum number of entries to keep; values <= 0 disable trimming
+     */
     void setMaxEntries(int value);
 
 private:
-    QVector<LogEntry> m_entries;
+    void trimToMaxEntries();
+
+    std::deque<LogEntry> m_entries;
     int m_maxEntries{2000};
 };
 

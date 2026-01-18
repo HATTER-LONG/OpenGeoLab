@@ -17,7 +17,7 @@ Item {
     signal requestClose
 
     width: 480
-    height: 360
+    height: 500
 
     visible: open || showAnim.running || hideAnim.running
     opacity: 0.0

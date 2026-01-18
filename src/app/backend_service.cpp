@@ -47,8 +47,6 @@ void ServiceWorker::process() {
         auto result = service->processRequest(m_moduleName.toStdString(), m_params, report);
         emit finished(m_moduleName, result);
     } catch(const std::exception& e) {
-        LOG_ERROR("ServiceWorker[{}] encountered an error: {}", m_moduleName.toStdString(),
-                  e.what());
         emit errorOccurred(m_moduleName, QString::fromStdString(e.what()));
     }
 }
@@ -59,22 +57,18 @@ BackendService::~BackendService() { cleanupWorker(); }
 bool BackendService::busy() const { return m_busy; }
 double BackendService::progress() const { return m_progress; }
 QString BackendService::message() const { return m_message; }
-QString BackendService::lastError() const { return m_lastError; }
 
 void BackendService::request(const QString& module_name, const QString& params) {
-    LOG_INFO("BackendService::request called with module: {}", qPrintable(module_name));
-
-    clearError();
+    LOG_DEBUG("Backend request: module='{}'", qPrintable(module_name));
 
     if(module_name.trimmed().isEmpty()) {
-        setLastError(QStringLiteral("Module name is empty. Aborting request."));
-        emit operationFailed(module_name, m_lastError);
+        emit operationFailed(module_name,
+                             QStringLiteral("Module name is empty. Aborting request."));
         return;
     }
 
     if(m_busy) {
         const auto err = QStringLiteral("Service is currently busy. Cannot process new request.");
-        setLastError(err);
         emit operationFailed(module_name, err);
         return;
     }
@@ -83,11 +77,10 @@ void BackendService::request(const QString& module_name, const QString& params) 
     nlohmann::json param_json;
     try {
         param_json = nlohmann::json::parse(params.toStdString());
-        LOG_DEBUG("params JSON: {}", param_json.dump(4));
+        LOG_TRACE("Backend params: {}", param_json.dump(4));
     } catch(const nlohmann::json::parse_error& e) {
-        setLastError(QStringLiteral("Failed to parse params JSON: ") +
-                     QString::fromStdString(e.what()));
-        emit operationFailed(module_name, m_lastError);
+        emit operationFailed(module_name, QStringLiteral("Failed to parse params JSON: ") +
+                                              QString::fromStdString(e.what()));
         return;
     }
 
@@ -95,7 +88,7 @@ void BackendService::request(const QString& module_name, const QString& params) 
     m_cancelRequested.store(false);
 
     setProgressInternal(0.0);
-    setMessage(QStringLiteral("Starting operation...%1").arg(module_name));
+    setMessage(QStringLiteral("Starting operation...[%1]").arg(module_name));
     emit operationStarted(module_name);
     cleanupWorker();
     m_workerThread = new QThread(this);
@@ -112,33 +105,16 @@ void BackendService::request(const QString& module_name, const QString& params) 
     m_workerThread->start();
 }
 
-void BackendService::clearError() {
-    if(m_lastError.isEmpty()) {
-        return;
-    }
-    m_lastError.clear();
-    emit lastErrorChanged();
-}
-
 void BackendService::cancel() {
     if(!m_busy) {
         return;
     }
     m_cancelRequested.store(true);
     setMessage(
-        QStringLiteral("Cancellation requested for operation %1...").arg(m_currentModuleName));
+        QStringLiteral("Cancellation requested for operation [%1]...").arg(m_currentModuleName));
     if(m_workerThread && m_workerThread->isRunning()) {
         m_workerThread->quit();
         m_workerThread->wait(1000);
-    }
-    if(std::abs(m_progress - 1.0) > 1e-6) {
-        cleanupWorker();
-        setBusyInternal(false);
-        setProgressInternal(0.0);
-        setMessage(QStringLiteral("Operation %1 cancelled.").arg(m_currentModuleName));
-        setLastError(QStringLiteral("Operation cancelled by user."));
-
-        emit operationFailed(m_currentModuleName, m_lastError);
     }
 }
 
@@ -151,27 +127,23 @@ void BackendService::onWorkerProgress(double progress, const QString& message) {
 }
 
 void BackendService::onWorkerFinished(const QString& module_name, const nlohmann::json& result) {
+    LOG_INFO("Backend operation [{}] finished successfully.", qPrintable(module_name));
     setProgressInternal(1.0);
-    setMessage(QStringLiteral("Operation %1 completed successfully.").arg(module_name));
+    setMessage(QStringLiteral("Operation [%1] completed successfully.").arg(module_name));
     emit operationFinished(module_name, result);
     cleanupWorker();
     setBusyInternal(false);
 }
 
 void BackendService::onWorkerError(const QString& module_name, const QString& error) {
-    setLastError(error);
+    LOG_ERROR("Backend error [{}]: {}", qPrintable(module_name), qPrintable(error));
     setProgressInternal(0.0);
-    setMessage(QStringLiteral("Operation %1 failed: %2").arg(module_name, error));
+    setMessage(QStringLiteral("Operation [%1] failed: %2").arg(module_name, error));
     emit operationFailed(module_name, error);
     cleanupWorker();
     setBusyInternal(false);
 }
 
-void BackendService::setLastError(const QString& error) {
-    LOG_ERROR("BackendService encountered an error: {}", qPrintable(error));
-    m_lastError = error;
-    emit lastErrorChanged();
-}
 void BackendService::setMessage(const QString& message) {
     m_message = message;
     emit messageChanged();

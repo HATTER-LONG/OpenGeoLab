@@ -19,7 +19,7 @@ QColor levelToColor(int level) {
     case 1:
         return QColor("#4F83FF");
     case 2:
-        return QColor("#B7C7D6");
+        return QColor("#5a9f7f");
     case 3:
         return QColor("#F4B400");
     case 4:

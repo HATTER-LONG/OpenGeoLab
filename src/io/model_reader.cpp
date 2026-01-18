@@ -17,12 +17,7 @@ nlohmann::json ModelReader::processRequest(const std::string& module_name,
     nlohmann::json result;
     int counter = 0;
 
-    LOG_TRACE("import test: trace");
-    LOG_DEBUG("import test: debug");
-    LOG_INFO("import test: info");
-    LOG_WARN("import test: warn");
-    LOG_ERROR("import test: error");
-    LOG_CRITICAL("import test: critical");
+    LOG_INFO("ModelReader started: module='{}'", module_name);
     const bool fast_mode = params.value("fast", false);
     int max_steps = params.value("max_steps", 100);
     int sleep_usec = params.value("sleep_usec", 100000);
@@ -34,6 +29,9 @@ nlohmann::json ModelReader::processRequest(const std::string& module_name,
     if(max_steps <= 0) {
         max_steps = 1;
     }
+
+    LOG_TRACE("ModelReader config: fast={}, max_steps={}, sleep_usec={}", fast_mode, max_steps,
+              sleep_usec);
 
     // Test long messages at different progress stages
     const std::vector<std::string> test_messages = {
@@ -79,6 +77,8 @@ nlohmann::json ModelReader::processRequest(const std::string& module_name,
     }
     result["module_name"] = module_name;
     result["params"] = params;
+
+    LOG_INFO("ModelReader finished: module='{}'", module_name);
     return result;
 }
 

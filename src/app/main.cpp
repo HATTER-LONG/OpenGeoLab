@@ -63,18 +63,14 @@ auto main(int argc, char** argv) -> int {
                 LOG_ERROR("Failed to load QML file: {}", obj_url.toString().toStdString());
                 QCoreApplication::exit(-1);
             } else {
-                LOG_INFO("QML file loaded successfully: {}", obj_url.toString().toStdString());
+                LOG_TRACE("QML file loaded successfully: {}", obj_url.toString().toStdString());
             }
         },
         Qt::QueuedConnection);
 
     QObject::connect(
         &engine, &QQmlApplicationEngine::objectCreationFailed, &app,
-        []() {
-            LOG_ERROR("Failed to create QML objects.");
-            QCoreApplication::exit(-1);
-        },
-        Qt::QueuedConnection);
+        []() { QCoreApplication::exit(-1); }, Qt::QueuedConnection);
 
     engine.load(QUrl("qrc:/opengeolab/resources/qml/Main.qml"));
 

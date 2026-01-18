@@ -30,8 +30,6 @@ int LogService::minLevel() const {
 }
 
 void LogService::setMinLevel(int level) {
-    // Historically this controlled the UI filter threshold.
-    // Now: this controls the actual spdlog logger level (i.e. what gets emitted).
     auto logger = OpenGeoLab::getLogger();
     const int clamped = std::clamp(level, 0, 6); // trace..off
     const auto new_level = static_cast<spdlog::level::level_enum>(clamped);
