@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import "../util"
 
 /**
  * @file LogPanel.qml
@@ -103,198 +104,143 @@ Item {
                 elide: Text.ElideRight
             }
 
-            Button {
+            BaseButton {
                 id: filterButton
                 implicitWidth: 70
-                implicitHeight: 22
-                padding: 6
-                hoverEnabled: true
                 text: qsTr("Filter ▼")
                 onClicked: {
                     if (filterPopup.opened) {
                         filterPopup.close();
-                        text = qsTr("Filter ▼");
+                        filterButton.text = qsTr("Filter ▼");
                     } else {
                         filterPopup.open();
-                        text = qsTr("Filter ▲");
+                        filterButton.text = qsTr("Filter ▲");
                     }
                 }
+            }
 
-                contentItem: Text {
-                    text: filterButton.text
-                    color: Theme.palette.buttonText
-                    font.pixelSize: 12
-                    verticalAlignment: Text.AlignVCenter
-                    horizontalAlignment: Text.AlignHCenter
-                }
+            Popup {
+                id: filterPopup
+                x: filterButton.x - width + filterButton.width
+                y: filterButton.y + filterButton.height + 6
+                width: 240
+                modal: false
+                focus: true
+                closePolicy: Popup.CloseOnEscape
+                padding: 12
 
                 background: Rectangle {
-                    radius: 6
-                    color: filterButton.down ? Theme.clicked : filterButton.hovered ? Theme.hovered : Theme.surfaceAlt
+                    radius: 10
+                    color: Theme.surface
                     border.width: 1
                     border.color: Theme.border
                 }
 
-                Popup {
-                    id: filterPopup
-                    x: -width + filterButton.width
-                    y: filterButton.height + 6
-                    width: 240
-                    modal: false
-                    focus: true
-                    closePolicy: Popup.CloseOnEscape
-                    padding: 12
+                contentItem: ColumnLayout {
+                    spacing: 12
 
-                    background: Rectangle {
-                        radius: 10
-                        color: Theme.surface
-                        border.width: 1
-                        border.color: Theme.border
+                    // Min Level Section
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 8
+
+                        Label {
+                            text: qsTr("Log Level")
+                            color: Theme.palette.text
+                            font.pixelSize: 12
+                            font.weight: Font.Medium
+                        }
+
+                        Item {
+                            Layout.fillWidth: true
+                        }
+
+                        BaseComboBox {
+                            id: minLevelCombo
+                            model: ["Trace", "Debug", "Info", "Warn", "Error", "Critical"]
+                            currentIndex: root.logService ? root.logService.minLevel : 0
+                            onCurrentIndexChanged: if (root.logService)
+                                root.logService.setMinLevel(minLevelCombo.currentIndex)
+                        }
                     }
 
-                    contentItem: ColumnLayout {
-                        spacing: 12
+                    Rectangle {
+                        Layout.fillWidth: true
+                        height: 1
+                        color: Theme.border
+                    }
 
-                        // Min Level Section
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 8
+                    // Level Toggles Section
+                    Label {
+                        text: qsTr("Show Levels")
+                        color: Theme.palette.placeholderText
+                        font.pixelSize: 11
+                    }
 
-                            Label {
-                                text: qsTr("Log Level")
-                                color: Theme.palette.text
-                                font.pixelSize: 12
-                                font.weight: Font.Medium
-                            }
+                    GridLayout {
+                        Layout.fillWidth: true
+                        columns: 2
+                        columnSpacing: 12
+                        rowSpacing: 6
 
-                            Item {
-                                Layout.fillWidth: true
-                            }
-
-                            ComboBox {
-                                id: minLevelCombo
-                                implicitHeight: 24
-                                implicitWidth: 100
-                                model: ["Trace", "Debug", "Info", "Warn", "Error", "Critical"]
-                                currentIndex: root.logService ? root.logService.minLevel : 0
-                                onCurrentIndexChanged: if (root.logService)
-                                    root.logService.setMinLevel(currentIndex)
-                            }
+                        CheckBox {
+                            text: qsTr("Trace")
+                            checked: root.logService ? root.logService.levelEnabled(0) : true
+                            onToggled: if (root.logService)
+                                root.logService.setLevelEnabled(0, checked)
                         }
 
-                        Rectangle {
-                            Layout.fillWidth: true
-                            height: 1
-                            color: Theme.border
+                        CheckBox {
+                            text: qsTr("Debug")
+                            checked: root.logService ? root.logService.levelEnabled(1) : true
+                            onToggled: if (root.logService)
+                                root.logService.setLevelEnabled(1, checked)
                         }
 
-                        // Level Toggles Section
-                        Label {
-                            text: qsTr("Show Levels")
-                            color: Theme.palette.placeholderText
-                            font.pixelSize: 11
+                        CheckBox {
+                            text: qsTr("Info")
+                            checked: root.logService ? root.logService.levelEnabled(2) : true
+                            onToggled: if (root.logService)
+                                root.logService.setLevelEnabled(2, checked)
                         }
 
-                        GridLayout {
-                            Layout.fillWidth: true
-                            columns: 2
-                            columnSpacing: 12
-                            rowSpacing: 6
+                        CheckBox {
+                            text: qsTr("Warn")
+                            checked: root.logService ? root.logService.levelEnabled(3) : true
+                            onToggled: if (root.logService)
+                                root.logService.setLevelEnabled(3, checked)
+                        }
 
-                            CheckBox {
-                                text: qsTr("Trace")
-                                checked: root.logService ? root.logService.levelEnabled(0) : true
-                                onToggled: if (root.logService)
-                                    root.logService.setLevelEnabled(0, checked)
-                            }
+                        CheckBox {
+                            text: qsTr("Error")
+                            checked: root.logService ? root.logService.levelEnabled(4) : true
+                            onToggled: if (root.logService)
+                                root.logService.setLevelEnabled(4, checked)
+                        }
 
-                            CheckBox {
-                                text: qsTr("Debug")
-                                checked: root.logService ? root.logService.levelEnabled(1) : true
-                                onToggled: if (root.logService)
-                                    root.logService.setLevelEnabled(1, checked)
-                            }
-
-                            CheckBox {
-                                text: qsTr("Info")
-                                checked: root.logService ? root.logService.levelEnabled(2) : true
-                                onToggled: if (root.logService)
-                                    root.logService.setLevelEnabled(2, checked)
-                            }
-
-                            CheckBox {
-                                text: qsTr("Warn")
-                                checked: root.logService ? root.logService.levelEnabled(3) : true
-                                onToggled: if (root.logService)
-                                    root.logService.setLevelEnabled(3, checked)
-                            }
-
-                            CheckBox {
-                                text: qsTr("Error")
-                                checked: root.logService ? root.logService.levelEnabled(4) : true
-                                onToggled: if (root.logService)
-                                    root.logService.setLevelEnabled(4, checked)
-                            }
-
-                            CheckBox {
-                                text: qsTr("Critical")
-                                checked: root.logService ? root.logService.levelEnabled(5) : true
-                                onToggled: if (root.logService)
-                                    root.logService.setLevelEnabled(5, checked)
-                            }
+                        CheckBox {
+                            text: qsTr("Critical")
+                            checked: root.logService ? root.logService.levelEnabled(5) : true
+                            onToggled: if (root.logService)
+                                root.logService.setLevelEnabled(5, checked)
                         }
                     }
                 }
             }
 
-            Button {
+            BaseButton {
                 id: clearButton
                 implicitWidth: 56
-                implicitHeight: 22
-                padding: 6
-                hoverEnabled: true
                 text: qsTr("Clear")
                 onClicked: root.logService.clear()
-
-                contentItem: Text {
-                    text: clearButton.text
-                    color: Theme.palette.buttonText
-                    font.pixelSize: 12
-                    verticalAlignment: Text.AlignVCenter
-                    horizontalAlignment: Text.AlignHCenter
-                }
-
-                background: Rectangle {
-                    radius: 6
-                    color: clearButton.down ? Theme.clicked : clearButton.hovered ? Theme.hovered : Theme.surfaceAlt
-                    border.width: 1
-                    border.color: Theme.border
-                }
             }
 
-            Button {
+            BaseButton {
                 id: closeButton
                 text: "✕"
                 implicitWidth: 28
-                implicitHeight: 22
                 padding: 4
-                hoverEnabled: true
                 onClicked: root.requestClose()
-
-                contentItem: Text {
-                    text: closeButton.text
-                    color: Theme.palette.buttonText
-                    font.pixelSize: 12
-                    verticalAlignment: Text.AlignVCenter
-                    horizontalAlignment: Text.AlignHCenter
-                }
-
-                background: Rectangle {
-                    radius: 6
-                    color: closeButton.down ? Theme.clicked : closeButton.hovered ? Theme.hovered : Theme.surfaceAlt
-                    border.width: 1
-                    border.color: Theme.border
-                }
             }
         }
 

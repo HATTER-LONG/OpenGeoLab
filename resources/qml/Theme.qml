@@ -52,7 +52,7 @@ QtObject {
     readonly property color redLight: "#D32F2F"
     readonly property color redDark: "#821212"
     readonly property color greenLight: "#2e7d32"
-    readonly property color greenDark: "#145214"
+    readonly property color greenDark: '#107610'
 
     // =========================================================
     // Semantic Tokens

@@ -191,6 +191,8 @@ qt_add_qml_module(
   resources/qml/Pages/ProgressOverlay.qml
   resources/qml/Pages/CornerOverlay.qml
   resources/qml/Pages/LogPanel.qml
+  resources/qml/util/BaseButton.qml
+  resources/qml/util/BaseComboBox.qml
   RESOURCES
   ${ICON_RESOURCES}
 )
