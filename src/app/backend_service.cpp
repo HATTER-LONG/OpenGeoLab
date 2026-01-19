@@ -9,6 +9,7 @@
 #include "util/logger.hpp"
 
 #include <kangaroo/util/component_factory.hpp>
+#include <kangaroo/util/stopwatch.hpp>
 namespace OpenGeoLab {
 namespace App {
 
@@ -36,6 +37,8 @@ ServiceWorker::ServiceWorker(const QString& module_name,
       m_cancelRequested(cancel_requested) {}
 
 void ServiceWorker::process() {
+    Kangaroo::Util::Stopwatch stopwatch("Backend [" + m_moduleName.toStdString() + "]",
+                                        OpenGeoLab::getLogger());
     try {
         auto service = g_ComponentFactory.getInstanceObjectWithID<App::IServiceSigletonFactory>(
             m_moduleName.toStdString());
@@ -127,20 +130,20 @@ void BackendService::onWorkerProgress(double progress, const QString& message) {
 }
 
 void BackendService::onWorkerFinished(const QString& module_name, const nlohmann::json& result) {
-    LOG_INFO("Backend operation [{}] finished successfully.", qPrintable(module_name));
     setProgressInternal(1.0);
     setMessage(QStringLiteral("Operation [%1] completed successfully.").arg(module_name));
     emit operationFinished(module_name, result);
     cleanupWorker();
+    LOG_INFO("Backend operation [{}] finished successfully.", qPrintable(module_name));
     setBusyInternal(false);
 }
 
 void BackendService::onWorkerError(const QString& module_name, const QString& error) {
-    LOG_ERROR("Backend error [{}]: {}", qPrintable(module_name), qPrintable(error));
     setProgressInternal(0.0);
     setMessage(QStringLiteral("Operation [%1] failed: %2").arg(module_name, error));
     emit operationFailed(module_name, error);
     cleanupWorker();
+    LOG_ERROR("Backend error [{}]: {}", qPrintable(module_name), qPrintable(error));
     setBusyInternal(false);
 }
 

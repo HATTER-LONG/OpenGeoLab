@@ -12,8 +12,8 @@ import "Pages" as Pages
 ApplicationWindow {
     id: root
     visible: true
-    width: 1280
-    height: 720
+    width: 1920
+    height: 1080
     title: qsTr("OpenGeoLab")
 
     palette: Theme.palette

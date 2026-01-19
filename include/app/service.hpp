@@ -6,7 +6,10 @@
 #pragma once
 
 #include <kangaroo/util/component_factory.hpp>
+#include <kangaroo/util/noncopyable.hpp>
+#include <memory>
 #include <nlohmann/json.hpp>
+
 
 namespace OpenGeoLab::App {
 
@@ -15,7 +18,7 @@ namespace OpenGeoLab::App {
  *
  * Implementations bridge to UI or logging systems.
  */
-class IProgressReporter {
+class IProgressReporter : public Kangaroo::Util::NonCopyMoveable {
 public:
     virtual ~IProgressReporter() = default;
 
@@ -38,7 +41,7 @@ using IProgressReporterPtr = std::shared_ptr<IProgressReporter>;
 /**
  * @brief Base interface for backend service modules
  */
-class IService {
+class IService : public Kangaroo::Util::NonCopyMoveable {
 public:
     IService() = default;
     virtual ~IService() = default;

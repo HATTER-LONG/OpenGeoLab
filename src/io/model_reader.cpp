@@ -4,82 +4,44 @@
  */
 
 #include "io/model_reader.hpp"
-#include "kangaroo/util/current_thread.hpp"
+#include "io/reader.hpp"
 #include "util/logger.hpp"
 
-#include <algorithm>
-
+#include <kangaroo/util/current_thread.hpp>
 namespace OpenGeoLab::IO {
 
-nlohmann::json ModelReader::processRequest(const std::string& module_name,
+nlohmann::json ModelReader::processRequest(const std::string& /*module_name*/,
                                            const nlohmann::json& params,
                                            App::IProgressReporterPtr progress_reporter) {
     nlohmann::json result;
-    int counter = 0;
-
-    LOG_INFO("ModelReader started: module='{}'", module_name);
-    const bool fast_mode = params.value("fast", false);
-    int max_steps = params.value("max_steps", 100);
-    int sleep_usec = params.value("sleep_usec", 100000);
-    if(fast_mode) {
-        // Test-friendly: finish quickly.
-        sleep_usec = 0;
-        max_steps = std::min(max_steps, 5);
+    progress_reporter->reportProgress(0.0, "Starting model import...");
+    if(!params.contains("file_path") || !params["file_path"].is_string()) {
+        throw std::invalid_argument("Missing or invalid 'file_path' parameter.");
     }
-    if(max_steps <= 0) {
-        max_steps = 1;
-    }
+    std::string file_path = params["file_path"].get<std::string>();
+    LOG_DEBUG("Starting model import from file: {}", file_path);
 
-    LOG_TRACE("ModelReader config: fast={}, max_steps={}, sleep_usec={}", fast_mode, max_steps,
-              sleep_usec);
-
-    // Test long messages at different progress stages
-    const std::vector<std::string> test_messages = {
-        "Initializing model reader and preparing file system access for the specified 3D model "
-        "file path. This operation may take a moment depending on file size and system "
-        "performance...",
-        "Parsing geometric primitives: vertices, edges, faces, and wireframe topology. "
-        "Validating mesh integrity and checking for degenerate triangles or non-manifold "
-        "edges in the input model data structure...",
-        "Processing material properties, texture coordinates, and surface normals. Applying "
-        "transformation matrices and computing bounding boxes for spatial indexing and "
-        "collision detection preparation...",
-        "Optimizing mesh data for GPU rendering: generating vertex buffer objects, index "
-        "buffers, and level-of-detail representations. Compressing texture data and "
-        "pre-computing ambient occlusion maps...",
-        "Finalizing import operation: validating output data consistency, updating scene "
-        "graph hierarchy, and preparing undo/redo state snapshot for the imported model "
-        "geometry and associated metadata..."};
-
-    while(!progress_reporter->isCancelled()) {
-        double progress = static_cast<double>(counter) / static_cast<double>(max_steps);
-
-        // Select message based on progress stage
-        size_t message_index =
-            std::min(static_cast<size_t>(counter / 20), test_messages.size() - 1);
-        progress_reporter->reportProgress(progress, test_messages[message_index]);
-
-        if(sleep_usec > 0) {
-            Kangaroo::Util::CurrentThread::sleepUsec(static_cast<uint64_t>(sleep_usec));
-        }
-
-        if(progress_reporter->isCancelled()) {
-            throw std::runtime_error("Operation was cancelled by user request.");
-        }
-        if(counter++ >= max_steps) {
-            break;
-        }
-    }
-
-    if(progress_reporter->isCancelled()) {
-        progress_reporter->reportError("Operation was cancelled.");
-        return nlohmann::json{};
-    }
-    result["module_name"] = module_name;
-    result["params"] = params;
-
-    LOG_INFO("ModelReader finished: module='{}'", module_name);
+    std::string reader_id = detectFileFormat(file_path);
+    auto reader = g_ComponentFactory.createObjectWithID<ReaderFactory>(reader_id);
+    progress_reporter->reportProgress(0.2, "Reading model file by [" + reader_id + "]...");
+    reader->readFile(file_path);
     return result;
+}
+
+std::string ModelReader::detectFileFormat(const std::string& file_path) const {
+    std::filesystem::path path(file_path);
+    std::string ext = path.extension().string();
+
+    std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+
+    if(ext == ".brep" || ext == ".brp") {
+        return "BrepReader";
+    }
+
+    if(ext == ".step" || ext == ".stp") {
+        return "StepReader";
+    }
+    throw std::invalid_argument("Unsupported file extension: " + ext);
 }
 
 ModelReaderFactory::tObjectSharedPtr ModelReaderFactory::instance() const {

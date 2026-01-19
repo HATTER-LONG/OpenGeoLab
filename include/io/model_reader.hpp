@@ -32,6 +32,14 @@ public:
     nlohmann::json processRequest(const std::string& module_name,
                                   const nlohmann::json& params,
                                   App::IProgressReporterPtr progress_reporter) override;
+
+private:
+    /**
+     * @brief Detect file format from extension
+     * @param file_path Input file path
+     * @return File format string ("brep", "step", or empty on unknown)
+     */
+    std::string detectFileFormat(const std::string& file_path) const;
 };
 
 /**
