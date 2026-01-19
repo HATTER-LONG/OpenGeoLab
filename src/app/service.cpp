@@ -9,6 +9,7 @@
 #include "io/step_reader.hpp"
 
 #include <kangaroo/util/component_factory.hpp>
+
 namespace OpenGeoLab::App {
 
 /**
@@ -17,8 +18,10 @@ namespace OpenGeoLab::App {
  * Called during application startup to make services available for backend requests.
  */
 void registerServices() {
+    // Register the model reader service (singleton)
     g_ComponentFactory.registInstanceFactoryWithID<IO::ModelReaderFactory>("ModelReader");
 
+    // Register file format readers (factory pattern)
     g_ComponentFactory.registFactoryWithID<IO::BrepReaderFactory>("BrepReader");
     g_ComponentFactory.registFactoryWithID<IO::StepReaderFactory>("StepReader");
 }

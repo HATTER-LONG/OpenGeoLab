@@ -5,6 +5,18 @@
 
 #pragma once
 
+// On Windows, include windows.h before Qt headers to avoid incomplete type issues
+// with nlohmann/json template instantiation
+#ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
+
 #include "service.hpp"
 
 #include <QObject>
