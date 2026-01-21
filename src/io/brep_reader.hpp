@@ -9,7 +9,8 @@ public:
     BrepReader() = default;
     ~BrepReader() override = default;
 
-    void readFile(const std::string& file_path) override;
+    ReadResult readFile(const std::string& file_path,
+                        Util::ProgressCallback progress_callback) override;
 };
 
 class BrepReaderFactory : public ReaderFactory {
