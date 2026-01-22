@@ -17,7 +17,7 @@ struct ReadResult {
     /**
      * @brief Create a success result
      */
-    static ReadResult success(std::shared_ptr<void> loaded_part) {
+    [[nodiscard]] static ReadResult success(std::shared_ptr<void> loaded_part) {
         ReadResult result;
         result.m_success = true;
         result.m_part = std::move(loaded_part);
@@ -27,7 +27,7 @@ struct ReadResult {
     /**
      * @brief Create a failure result
      */
-    static ReadResult failure(const std::string& message) {
+    [[nodiscard]] static ReadResult failure(const std::string& message) {
         ReadResult result;
         result.m_success = false;
         result.m_errorMessage = message;
@@ -52,8 +52,8 @@ public:
      * @param progressCallback Optional callback for progress reporting
      * @return ReadResult containing the loaded part or error information
      */
-    virtual ReadResult readFile(const std::string& file_path,
-                                Util::ProgressCallback progress_callback) = 0;
+    [[nodiscard]] virtual ReadResult readFile(const std::string& file_path,
+                                              Util::ProgressCallback progress_callback) = 0;
 };
 /**
  * @brief Factory interface for creating reader instances

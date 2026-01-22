@@ -19,13 +19,14 @@ struct OccProgressContext {
 };
 
 /// Wraps a callback to map progress from [0,1] into [base, base+span].
-ProgressCallback makeScaledProgressCallback(ProgressCallback callback, double base, double span);
+[[nodiscard]] ProgressCallback
+makeScaledProgressCallback(ProgressCallback callback, double base, double span);
 
 /// Create OCCT progress indicator that reports via callback and supports cancellation.
 ///
 /// - `prefix` is prepended to scope path (if any) to form a human readable message.
 /// - `min_delta` throttles updates (e.g. 0.01 = 1%).
-OccProgressContext
+[[nodiscard]] OccProgressContext
 makeOccProgress(ProgressCallback callback, std::string prefix = {}, double min_delta = 0.01);
 
 } // namespace OpenGeoLab::Util

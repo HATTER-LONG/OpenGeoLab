@@ -12,9 +12,8 @@ namespace OpenGeoLab::Util {
 ///
 /// - `base` and `span` map input progress [0,1] into [base, base+span]
 /// - returns false when cancellation is requested
-inline ProgressCallback makeProgressCallback(const App::IProgressReporterPtr& reporter,
-                                             double base = 0.0,
-                                             double span = 1.0) {
+[[nodiscard]] inline ProgressCallback makeProgressCallback(
+    const App::IProgressReporterPtr& reporter, double base = 0.0, double span = 1.0) {
     if(!reporter) {
         return {};
     }

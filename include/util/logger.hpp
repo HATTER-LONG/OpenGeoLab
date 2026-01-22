@@ -18,7 +18,7 @@ namespace OpenGeoLab {
  * @return Shared pointer to the global logger
  * @note Initialization is thread-safe in C++11 and later
  */
-std::shared_ptr<spdlog::logger> getLogger();
+[[nodiscard]] std::shared_ptr<spdlog::logger> getLogger();
 
 } // namespace OpenGeoLab
 

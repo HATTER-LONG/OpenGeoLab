@@ -29,9 +29,10 @@ public:
      * @param progress_reporter Progress callback interface
      * @return JSON result with imported model metadata
      */
-    nlohmann::json processRequest(const std::string& module_name,
-                                  const nlohmann::json& params,
-                                  App::IProgressReporterPtr progress_reporter) override;
+    [[nodiscard]] nlohmann::json
+    processRequest(const std::string& module_name,
+                   const nlohmann::json& params,
+                   App::IProgressReporterPtr progress_reporter) override;
 
 private:
     /**
@@ -39,7 +40,7 @@ private:
      * @param file_path Input file path
      * @return File format string ("brep", "step", or empty on unknown)
      */
-    std::string detectFileFormat(const std::string& file_path) const;
+    [[nodiscard]] std::string detectFileFormat(const std::string& file_path) const;
 };
 
 /**
