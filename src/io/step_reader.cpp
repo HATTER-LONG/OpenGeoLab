@@ -4,6 +4,7 @@
  */
 
 #include "step_reader.hpp"
+#include "geometry/geometry_document.hpp"
 #include "util/logger.hpp"
 #include "util/occ_progress.hpp"
 
@@ -87,7 +88,27 @@ ReadResult StepReader::readFile(const std::string& file_path,
             return ReadResult::failure("Translation produced no geometry");
         }
 
-        return ReadResult::success(nullptr);
+        // Create geometry document and build topology hierarchy
+        auto document = std::make_shared<Geometry::GeometryDocument>();
+        std::filesystem::path path(file_path);
+        std::string entity_name = path.stem().string();
+
+        auto root_entity = document->buildTopologyHierarchy(result_shape, entity_name);
+
+        if(!root_entity) {
+            LOG_ERROR("Failed to create geometry entities from STEP file: {}", file_path);
+            return ReadResult::failure("Failed to create geometry entities");
+        }
+
+        LOG_INFO("STEP file loaded successfully: {} entities created",
+                 document->index().entityCount());
+
+        // Report completion
+        if(progress_callback) {
+            progress_callback(1.0, "Import complete");
+        }
+
+        return ReadResult::success(root_entity);
 
     } catch(const Standard_Failure& e) {
         std::string error = e.GetMessageString() ? e.GetMessageString() : "Unknown OCC error";
