@@ -87,22 +87,7 @@ ReadResult StepReader::readFile(const std::string& file_path,
             return ReadResult::failure("Translation produced no geometry");
         }
 
-        // Import shape into geometry manager
-        auto root_entity = m_geometryManager.importShape(result_shape);
-
-        // Set a meaningful name for the root entity
-        std::filesystem::path path(file_path);
-        root_entity->setName(path.stem().string());
-
-        // Report completion
-        if(progress_callback) {
-            progress_callback(0.95, "STEP file loaded successfully");
-        }
-
-        LOG_INFO("Successfully loaded STEP file: {} ({} entities, {} roots)", file_path,
-                 m_geometryManager.entityCount(), num_roots);
-
-        return ReadResult::success(root_entity);
+        return ReadResult::success(nullptr);
 
     } catch(const Standard_Failure& e) {
         std::string error = e.GetMessageString() ? e.GetMessageString() : "Unknown OCC error";

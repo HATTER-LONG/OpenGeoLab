@@ -81,24 +81,6 @@ public:
      */
     [[nodiscard]] virtual ReadResult readFile(const std::string& file_path,
                                               Util::ProgressCallback progress_callback) = 0;
-
-    /**
-     * @brief Get the geometry manager used by this reader
-     * @return Reference to the geometry manager
-     */
-    [[nodiscard]] Geometry::GeometryManager& geometryManager() { return m_geometryManager; }
-
-    /**
-     * @brief Get the geometry manager (const version)
-     * @return Const reference to the geometry manager
-     */
-    [[nodiscard]] const Geometry::GeometryManager& geometryManager() const {
-        return m_geometryManager;
-    }
-
-protected:
-    /// Geometry manager for creating and tracking entities
-    Geometry::GeometryManager m_geometryManager;
 };
 
 /**

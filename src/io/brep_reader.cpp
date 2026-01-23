@@ -66,22 +66,7 @@ ReadResult BrepReader::readFile(const std::string& file_path,
             return ReadResult::failure("Operation cancelled");
         }
 
-        // Import shape into geometry manager and create entity hierarchy
-        auto root_entity = m_geometryManager.importShape(shape);
-
-        // Set a meaningful name for the root entity
-        std::filesystem::path path(file_path);
-        root_entity->setName(path.stem().string());
-
-        // Report completion
-        if(progress_callback) {
-            progress_callback(0.95, "BREP file loaded successfully");
-        }
-
-        LOG_INFO("Successfully loaded BREP file: {} ({} entities)", file_path,
-                 m_geometryManager.entityCount());
-
-        return ReadResult::success(root_entity);
+        return ReadResult::success(nullptr);
 
     } catch(const Standard_Failure& e) {
         std::string error = e.GetMessageString() ? e.GetMessageString() : "Unknown OCC error";
