@@ -1,3 +1,8 @@
+/**
+ * @file log_service.cpp
+ * @brief Implementation of QML LogService for application logging
+ */
+
 #include <app/log_service.hpp>
 
 #include <util/logger.hpp>
@@ -55,6 +60,7 @@ void LogService::setLevelEnabled(int level, bool enabled) {
 }
 
 void LogService::addEntry(LogEntry entry) {
+    // Thread-safe: dispatch to UI thread if called from worker thread
     if(QThread::currentThread() == thread()) {
         addEntryOnUiThread(std::move(entry));
         return;
@@ -103,6 +109,9 @@ void LogService::markAllSeen() {
 }
 
 void LogService::addEntryOnUiThread(LogEntry entry) {
+    // Track error level for notification badge
+    const bool is_error = entry.m_level >= 4; // error=4, critical=5
+
     m_model.append(std::move(entry));
 
     const auto had_new_logs = m_hasNewLogs;
@@ -111,7 +120,7 @@ void LogService::addEntryOnUiThread(LogEntry entry) {
         emit hasNewLogsChanged();
     }
 
-    if(entry.m_level >= 4) { // warn=3, err=4, critical=5
+    if(is_error) {
         const auto had_new_errors = m_hasNewErrors;
         m_hasNewErrors = true;
         if(!had_new_errors) {

@@ -1,3 +1,11 @@
+/**
+ * @file occ_progress.cpp
+ * @brief Implementation of OpenCASCADE progress indicator adapter
+ *
+ * Bridges OpenCASCADE's Message_ProgressIndicator to our callback-based
+ * progress system, with support for cancellation and throttled updates.
+ */
+
 #include "util/occ_progress.hpp"
 
 #include <algorithm>
@@ -8,8 +16,14 @@
 #include <Message_ProgressScope.hxx>
 
 namespace OpenGeoLab::Util {
+
 namespace {
 
+/**
+ * @brief Join scope names into a hierarchical path string
+ * @param scope Current progress scope
+ * @return Path string like "Reading / Parsing / Vertices"
+ */
 std::string joinScopePath(const Message_ProgressScope& scope) {
     std::vector<std::string> parts;
     for(const Message_ProgressScope* current = &scope; current != nullptr;
@@ -34,8 +48,21 @@ std::string joinScopePath(const Message_ProgressScope& scope) {
     return os.str();
 }
 
+/**
+ * @brief OpenCASCADE progress indicator that delegates to a callback
+ *
+ * Implements throttling to avoid excessive callback invocations and
+ * supports cooperative cancellation via atomic flag.
+ */
 class CallbackProgressIndicator final : public Message_ProgressIndicator {
 public:
+    /**
+     * @brief Construct progress indicator
+     * @param callback Progress callback function
+     * @param cancelled Shared cancellation flag
+     * @param prefix Message prefix for progress reports
+     * @param min_delta Minimum progress delta before reporting
+     */
     CallbackProgressIndicator(ProgressCallback callback,
                               std::shared_ptr<std::atomic_bool> cancelled,
                               std::string prefix,
@@ -44,22 +71,34 @@ public:
           m_prefix(std::move(prefix)), m_minDelta(min_delta) {}
 
 protected:
+    /**
+     * @brief Check for user-requested cancellation
+     * @return Standard_True if cancelled, Standard_False otherwise
+     */
     Standard_Boolean UserBreak() override {
         return (m_cancelled && m_cancelled->load(std::memory_order_relaxed)) ? Standard_True
                                                                              : Standard_False;
     }
 
+    /**
+     * @brief Called by OCC when progress updates
+     * @param scope Current progress scope with hierarchy info
+     * @param is_force If true, bypass throttling and report immediately
+     */
     void Show(const Message_ProgressScope& scope, const Standard_Boolean is_force) override {
         if(!m_callback) {
             return;
         }
 
         const double position = static_cast<double>(GetPosition());
+
+        // Throttle updates unless forced
         if(!is_force && m_lastPosition >= 0.0 && (position - m_lastPosition) < m_minDelta) {
             return;
         }
         m_lastPosition = position;
 
+        // Build human-readable message from prefix and scope path
         std::string message;
         const std::string scope_path = joinScopePath(scope);
         if(!m_prefix.empty() && !scope_path.empty()) {
@@ -72,6 +111,7 @@ protected:
             message = "Working...";
         }
 
+        // Invoke callback; false return means cancellation requested
         const bool keep_going = m_callback(position, message);
         if(!keep_going && m_cancelled) {
             m_cancelled->store(true, std::memory_order_relaxed);
