@@ -27,27 +27,29 @@ namespace OpenGeoLab::Geometry {
  * Used for type identification and selection mode filtering.
  */
 enum class EntityType : uint8_t {
-    None = 0,    ///< No entity type / invalid
-    Vertex = 1,  ///< Point/vertex entity
-    Edge = 2,    ///< Edge/curve entity
-    Wire = 3,    ///< Wire entity (collection of connected edges)
-    Face = 4,    ///< Face/surface entity
-    Shell = 5,   ///< Shell entity (collection of connected faces)
-    Solid = 6,   ///< Solid body entity
-    Compound = 7 ///< Compound entity (collection of shapes)
+    None = 0,      ///< No entity type / invalid
+    Vertex = 1,    ///< Point/vertex entity
+    Edge = 2,      ///< Edge/curve entity
+    Wire = 3,      ///< Wire entity (collection of connected edges)
+    Face = 4,      ///< Face/surface entity
+    Shell = 5,     ///< Shell entity (collection of connected faces)
+    Solid = 6,     ///< Solid body entity
+    CompSolid = 7, ///< Composite solid entity
+    Compound = 8   ///< Compound entity (collection of shapes)
 };
 
 /**
  * @brief Selection mode for interactive geometry picking
  */
 enum class SelectionMode : uint8_t {
-    None = 0,   ///< Selection disabled
-    Vertex = 1, ///< Select vertices only
-    Edge = 2,   ///< Select edges only
-    Face = 3,   ///< Select faces only
-    Solid = 4,  ///< Select solid bodies only
-    Part = 5,   ///< Select entire parts
-    Multi = 6   ///< Multi-selection mode (multiple types)
+    None = 0,      ///< Selection disabled
+    Vertex = 1,    ///< Select vertices only
+    Edge = 2,      ///< Select edges only
+    Face = 3,      ///< Select faces only
+    Solid = 4,     ///< Select solid bodies only
+    CompSolid = 5, ///< Select composite solids only
+    Compound = 6,  ///< Select compounds only
+    Multi = 7      ///< Multi-selection mode (multiple types)
 };
 
 // =============================================================================

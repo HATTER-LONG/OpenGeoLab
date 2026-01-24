@@ -10,18 +10,14 @@
 #pragma once
 
 #include "geometry_types.hpp"
-
-#include <TopExp_Explorer.hxx>
-#include <TopoDS_Shape.hxx>
-
 #include <kangaroo/util/noncopyable.hpp>
-
 #include <memory>
-#include <unordered_map>
+#include <string>
 #include <vector>
 
-namespace OpenGeoLab::Geometry {
+class TopoDS_Shape;
 
+namespace OpenGeoLab::Geometry {
 class GeometryEntity;
 class GeometryManager;
 
@@ -47,20 +43,23 @@ using GeometryEntityWeakPtr = std::weak_ptr<GeometryEntity>;
 class GeometryEntity : public std::enable_shared_from_this<GeometryEntity>,
                        public Kangaroo::Util::NonCopyMoveable {
 public:
-    /**
-     * @brief Default constructor creates an empty entity
-     */
-    GeometryEntity();
-
-    /**
-     * @brief Construct entity from OCC shape
-     * @param shape The OpenCASCADE shape to wrap
-     * @param type Optional explicit entity type (auto-detected if not provided)
-     */
-    explicit GeometryEntity(const TopoDS_Shape& shape, EntityType type = EntityType::None);
-
     /// Virtual destructor for proper inheritance
     virtual ~GeometryEntity() = default;
+    // -------------------------------------------------------------------------
+    // Type Information
+    // -------------------------------------------------------------------------
+
+    /**
+     * @brief Get the entity type
+     * @return EntityType enumeration value
+     */
+    [[nodiscard]] virtual EntityType entityType() const = 0;
+
+    /**
+     * @brief Get the type name as string
+     * @return Human-readable type name
+     */
+    [[nodiscard]] virtual const char* typeName() const = 0;
 
     // -------------------------------------------------------------------------
     // ID Accessors
@@ -78,12 +77,6 @@ public:
      */
     [[nodiscard]] EntityUID entityUID() const { return m_entityUID; }
 
-    /**
-     * @brief Get the entity type
-     * @return EntityType enumeration value
-     */
-    [[nodiscard]] EntityType entityType() const { return m_entityType; }
-
     // -------------------------------------------------------------------------
     // Shape Accessors
     // -------------------------------------------------------------------------
@@ -92,13 +85,13 @@ public:
      * @brief Get the underlying OCC shape
      * @return Const reference to TopoDS_Shape
      */
-    [[nodiscard]] const TopoDS_Shape& shape() const { return m_shape; }
+    [[nodiscard]] virtual const TopoDS_Shape& shape() const = 0;
 
     /**
      * @brief Check if entity has a valid shape
      * @return true if shape is not null
      */
-    [[nodiscard]] bool hasShape() const { return !m_shape.IsNull(); }
+    [[nodiscard]] bool hasShape() const;
 
     // -------------------------------------------------------------------------
     // Geometry Properties
@@ -122,7 +115,7 @@ public:
     void invalidateBoundingBox();
 
     // -------------------------------------------------------------------------
-    // Hierarchy
+    // Hierarchy Management
     // -------------------------------------------------------------------------
 
     /**
@@ -156,6 +149,23 @@ public:
      */
     void setParent(const GeometryEntityWeakPtr& parent) { m_parent = parent; }
 
+    /**
+     * @brief Check if this is a root entity
+     * @return true if has no parent
+     */
+    [[nodiscard]] bool isRoot() const { return m_parent.expired(); }
+
+    /**
+     * @brief Check if entity has children
+     * @return true if children exist
+     */
+    [[nodiscard]] bool hasChildren() const { return !m_children.empty(); }
+
+    /**
+     * @brief Get direct child count
+     * @return Number of children
+     */
+    [[nodiscard]] size_t childCount() const { return m_children.size(); }
     // -------------------------------------------------------------------------
     // Name/Label
     // -------------------------------------------------------------------------
@@ -174,6 +184,12 @@ public:
 
 protected:
     /**
+     * @brief Protected constructor for derived classes
+     * @param type Entity type for UID generation
+     */
+    explicit GeometryEntity(EntityType type);
+
+    /**
      * @brief Compute bounding box from OCC shape
      */
     void computeBoundingBox() const;
@@ -188,14 +204,11 @@ protected:
 protected:
     EntityId m_entityId{INVALID_ENTITY_ID};    ///< Global unique ID
     EntityUID m_entityUID{INVALID_ENTITY_UID}; ///< Type-scoped unique ID
-    EntityType m_entityType{EntityType::None}; ///< Entity type
-
-    TopoDS_Shape m_shape; ///< Underlying OCC shape
 
     mutable BoundingBox3D m_boundingBox;    ///< Cached bounding box
-    mutable bool m_boundingBoxValid{false}; ///< Bounding box validity flag
+    mutable bool m_boundingBoxValid{false}; ///< Bounding box validity
 
-    GeometryEntityWeakPtr m_parent;            ///< Parent entity reference
+    GeometryEntityWeakPtr m_parent;            ///< Parent reference
     std::vector<GeometryEntityPtr> m_children; ///< Child entities
 
     std::string m_name; ///< Display name

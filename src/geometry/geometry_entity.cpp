@@ -20,22 +20,8 @@ namespace OpenGeoLab::Geometry {
 // GeometryEntity Implementation
 // =============================================================================
 
-GeometryEntity::GeometryEntity()
-    : m_entityId(generateEntityId()), m_entityUID(INVALID_ENTITY_UID),
-      m_entityType(EntityType::None) {}
-
-GeometryEntity::GeometryEntity(const TopoDS_Shape& shape, EntityType type)
-    : m_entityId(generateEntityId()), m_shape(shape) {
-    // Auto-detect type if not specified
-    if(type == EntityType::None && !shape.IsNull()) {
-        m_entityType = detectEntityType(shape);
-    } else {
-        m_entityType = type;
-    }
-
-    // Generate type-scoped UID
-    m_entityUID = generateEntityUID(m_entityType);
-}
+GeometryEntity::GeometryEntity(EntityType type)
+    : m_entityId(generateEntityId()), m_entityUID(generateEntityUID(type)) {}
 
 EntityType GeometryEntity::detectEntityType(const TopoDS_Shape& shape) {
     if(shape.IsNull()) {
@@ -55,8 +41,9 @@ EntityType GeometryEntity::detectEntityType(const TopoDS_Shape& shape) {
         return EntityType::Shell;
     case TopAbs_SOLID:
         return EntityType::Solid;
-    case TopAbs_COMPOUND:
     case TopAbs_COMPSOLID:
+        return EntityType::CompSolid;
+    case TopAbs_COMPOUND:
         return EntityType::Compound;
     default:
         return EntityType::None;
@@ -71,14 +58,14 @@ BoundingBox3D GeometryEntity::boundingBox() const {
 }
 
 void GeometryEntity::computeBoundingBox() const {
-    if(m_shape.IsNull()) {
+    if(shape().IsNull()) {
         m_boundingBox = BoundingBox3D();
         m_boundingBoxValid = false;
         return;
     }
 
     Bnd_Box occ_box;
-    BRepBndLib::Add(m_shape, occ_box);
+    BRepBndLib::Add(shape(), occ_box);
 
     if(occ_box.IsVoid()) {
         m_boundingBox = BoundingBox3D();
