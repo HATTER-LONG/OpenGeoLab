@@ -8,12 +8,45 @@ using OpenGeoLab::Geometry::EntityType;
 using OpenGeoLab::Geometry::GeometryDocument;
 using OpenGeoLab::Geometry::GeometryEntity;
 
-class TestEntity final : public GeometryEntity {
+class TestEntity : public GeometryEntity {
 public:
     explicit TestEntity(EntityType type) : GeometryEntity(type), m_type(type) {}
 
     [[nodiscard]] EntityType entityType() const override { return m_type; }
     [[nodiscard]] const char* typeName() const override { return "TestEntity"; }
+    [[nodiscard]] bool canAddChildType(EntityType child_type) const override {
+        switch(m_type) {
+        case EntityType::Edge:
+            return child_type == EntityType::Vertex;
+        case EntityType::Wire:
+            return child_type == EntityType::Edge;
+        case EntityType::Face:
+            return child_type == EntityType::Wire;
+        case EntityType::Shell:
+            return child_type == EntityType::Face;
+        case EntityType::Solid:
+            return child_type == EntityType::Shell;
+        default:
+            return false;
+        }
+    }
+
+    [[nodiscard]] bool canAddParentType(EntityType parent_type) const override {
+        switch(m_type) {
+        case EntityType::Vertex:
+            return parent_type == EntityType::Edge;
+        case EntityType::Edge:
+            return parent_type == EntityType::Wire;
+        case EntityType::Wire:
+            return parent_type == EntityType::Face;
+        case EntityType::Face:
+            return parent_type == EntityType::Shell;
+        case EntityType::Shell:
+            return parent_type == EntityType::Solid;
+        default:
+            return false;
+        }
+    }
     [[nodiscard]] const TopoDS_Shape& shape() const override { return m_shape; }
 
 private:
@@ -27,9 +60,9 @@ namespace {
 TEST_CASE("GeometryEntity relations - multi-parent") {
     auto doc = GeometryDocument::create();
 
-    auto p1 = std::make_shared<TestEntity>(EntityType::Part);
-    auto p2 = std::make_shared<TestEntity>(EntityType::Part);
-    auto c = std::make_shared<TestEntity>(EntityType::Face);
+    auto p1 = std::make_shared<TestEntity>(EntityType::Edge);
+    auto p2 = std::make_shared<TestEntity>(EntityType::Edge);
+    auto c = std::make_shared<TestEntity>(EntityType::Vertex);
 
     REQUIRE(doc->addEntity(p1));
     REQUIRE(doc->addEntity(p2));
@@ -45,7 +78,7 @@ TEST_CASE("GeometryEntity relations - multi-parent") {
 
 TEST_CASE("GeometryEntity relations - prevent self-parent") {
     auto doc = GeometryDocument::create();
-    auto e = std::make_shared<TestEntity>(EntityType::Part);
+    auto e = std::make_shared<TestEntity>(EntityType::Edge);
     REQUIRE(doc->addEntity(e));
 
     const EntityId id = e->entityId();
@@ -53,29 +86,26 @@ TEST_CASE("GeometryEntity relations - prevent self-parent") {
     REQUIRE_FALSE(e->addParent(id));
 }
 
-TEST_CASE("GeometryEntity relations - prevent cycles") {
+TEST_CASE("GeometryEntity relations - prevent invalid type edges") {
     auto doc = GeometryDocument::create();
 
-    auto a = std::make_shared<TestEntity>(EntityType::Part);
-    auto b = std::make_shared<TestEntity>(EntityType::Part);
-    auto c = std::make_shared<TestEntity>(EntityType::Part);
+    auto edge = std::make_shared<TestEntity>(EntityType::Edge);
+    auto vertex = std::make_shared<TestEntity>(EntityType::Vertex);
 
-    REQUIRE(doc->addEntity(a));
-    REQUIRE(doc->addEntity(b));
-    REQUIRE(doc->addEntity(c));
+    REQUIRE(doc->addEntity(edge));
+    REQUIRE(doc->addEntity(vertex));
 
-    REQUIRE(a->addChild(b->entityId()));
-    REQUIRE(b->addChild(c->entityId()));
+    REQUIRE(edge->addChild(vertex->entityId()));
 
-    // Adding c -> a would create a cycle.
-    REQUIRE_FALSE(c->addChild(a->entityId()));
+    // Reverse direction is invalid by type constraints.
+    REQUIRE_FALSE(vertex->addChild(edge->entityId()));
 }
 
 TEST_CASE("GeometryEntity relations - auto cleanup expired") {
     auto doc = GeometryDocument::create();
 
-    auto parent = std::make_shared<TestEntity>(EntityType::Part);
-    auto child = std::make_shared<TestEntity>(EntityType::Face);
+    auto parent = std::make_shared<TestEntity>(EntityType::Edge);
+    auto child = std::make_shared<TestEntity>(EntityType::Vertex);
 
     REQUIRE(doc->addEntity(parent));
     REQUIRE(doc->addEntity(child));

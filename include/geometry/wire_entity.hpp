@@ -32,6 +32,14 @@ public:
 
     [[nodiscard]] const char* typeName() const override { return "Wire"; }
 
+    [[nodiscard]] bool canAddChildType(EntityType child_type) const override {
+        return child_type == EntityType::Edge;
+    }
+
+    [[nodiscard]] bool canAddParentType(EntityType parent_type) const override {
+        return parent_type == EntityType::Face;
+    }
+
     [[nodiscard]] const TopoDS_Shape& shape() const override { return m_wire; }
 
     /**

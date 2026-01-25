@@ -23,6 +23,8 @@ namespace OpenGeoLab::Geometry {
 // GeometryEntity Implementation
 // =============================================================================
 
+GeometryEntity::~GeometryEntity() { detachAllRelations(); }
+
 GeometryEntity::GeometryEntity(EntityType type)
     : m_entityId(generateEntityId()), m_entityUID(generateEntityUID(type)) {}
 
@@ -86,23 +88,25 @@ void GeometryEntity::computeBoundingBox() const {
 void GeometryEntity::invalidateBoundingBox() { m_boundingBoxValid = false; }
 
 GeometryEntityWeakPtr GeometryEntity::anyParent() const {
-    pruneExpiredRelations();
     const auto doc = document();
     if(m_parentIds.empty() || !doc) {
         return GeometryEntityWeakPtr{};
     }
 
     // Return any valid parent.
-    for(const EntityId parent_id : m_parentIds) {
+    for(auto it = m_parentIds.begin(); it != m_parentIds.end();) {
+        const EntityId parent_id = *it;
         if(auto p = doc->findById(parent_id)) {
             return GeometryEntityWeakPtr{p};
         }
+
+        // Best-effort local cleanup for stale ids.
+        it = m_parentIds.erase(it);
     }
     return GeometryEntityWeakPtr{};
 }
 
 GeometryEntityWeakPtr GeometryEntity::singleParent() const {
-    pruneExpiredRelations();
     const auto doc = document();
     if(!doc) {
         return GeometryEntityWeakPtr{};
@@ -115,8 +119,8 @@ GeometryEntityWeakPtr GeometryEntity::singleParent() const {
     const EntityId parent_id = *m_parentIds.begin();
     const auto p = doc->findById(parent_id);
     if(!p) {
-        // stale; prune and report none
-        pruneExpiredRelations();
+        // stale; best-effort local cleanup
+        (void)m_parentIds.erase(parent_id);
         return GeometryEntityWeakPtr{};
     }
     return GeometryEntityWeakPtr{p};
@@ -142,25 +146,13 @@ bool GeometryEntity::hasChildId(EntityId child_id) const {
     return m_childIds.find(child_id) != m_childIds.end();
 }
 
-bool GeometryEntity::isRoot() const {
-    pruneExpiredRelations();
-    return m_parentIds.empty();
-}
+bool GeometryEntity::isRoot() const { return m_parentIds.empty(); }
 
-bool GeometryEntity::hasChildren() const {
-    pruneExpiredRelations();
-    return !m_childIds.empty();
-}
+bool GeometryEntity::hasChildren() const { return !m_childIds.empty(); }
 
-size_t GeometryEntity::parentCount() const {
-    pruneExpiredRelations();
-    return m_parentIds.size();
-}
+size_t GeometryEntity::parentCount() const { return m_parentIds.size(); }
 
-size_t GeometryEntity::childCount() const {
-    pruneExpiredRelations();
-    return m_childIds.size();
-}
+size_t GeometryEntity::childCount() const { return m_childIds.size(); }
 
 bool GeometryEntity::addChild(const GeometryEntityPtr& child) {
     if(!child) {
@@ -296,50 +288,6 @@ bool GeometryEntity::addParentNoSync(EntityId parent_id) {
 
 bool GeometryEntity::removeParentNoSync(EntityId parent_id) {
     return m_parentIds.erase(parent_id) > 0;
-}
-
-bool GeometryEntity::wouldCreateCycle(EntityId child_id) const {
-    if(child_id == INVALID_ENTITY_ID || child_id == entityId()) {
-        return true;
-    }
-
-    const auto doc = document();
-    if(!doc) {
-        return false;
-    }
-
-    const EntityId target_id = entityId();
-
-    std::unordered_set<EntityId> visited;
-    std::vector<EntityId> stack;
-    stack.push_back(child_id);
-
-    while(!stack.empty()) {
-        const EntityId current_id = stack.back();
-        stack.pop_back();
-
-        if(current_id == target_id) {
-            return true;
-        }
-
-        if(!visited.insert(current_id).second) {
-            continue;
-        }
-
-        const auto current = doc->findById(current_id);
-        if(!current) {
-            continue;
-        }
-
-        // Traverse descendants via children ids (do not call visitor to avoid re-entrancy).
-        for(const EntityId next_child_id : current->m_childIds) {
-            if(next_child_id != INVALID_ENTITY_ID) {
-                stack.push_back(next_child_id);
-            }
-        }
-    }
-
-    return false;
 }
 
 void GeometryEntity::detachAllRelations() {

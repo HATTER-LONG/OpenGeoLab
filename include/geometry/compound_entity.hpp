@@ -32,6 +32,14 @@ public:
 
     [[nodiscard]] const char* typeName() const override { return "Compound"; }
 
+    [[nodiscard]] bool canAddChildType(EntityType child_type) const override {
+        return child_type != EntityType::None && child_type != EntityType::Part;
+    }
+
+    [[nodiscard]] bool canAddParentType(EntityType parent_type) const override {
+        return parent_type == EntityType::Part;
+    }
+
     [[nodiscard]] const TopoDS_Shape& shape() const override { return m_compound; }
 
     /**

@@ -37,37 +37,32 @@ public:
 
     ~GeometryDocument() = default;
 
-    [[nodiscard]] bool addEntity(const GeometryEntityPtr& entity) {
-        if(!m_entityIndex.addEntity(entity)) {
-            return false;
-        }
-        entity->setDocument(shared_from_this());
-        return true;
-    }
+    /**
+     * @brief Add an entity to the document index.
+     * @param entity Entity to add.
+     * @return true if added; false if null or duplicates exist.
+     * @note On success, the entity receives a weak back-reference to this document.
+     */
+    [[nodiscard]] bool addEntity(const GeometryEntityPtr& entity);
 
-    [[nodiscard]] bool removeEntity(EntityId entity_id) {
-        const auto entity = m_entityIndex.findById(entity_id);
-        if(!entity) {
-            return false;
-        }
+    /**
+     * @brief Remove an entity from the document by id.
+     * @param entity_id Entity id to remove.
+     * @return true if removed; false if not found.
+     * @note Removal eagerly detaches relationship edges so remaining entities do not
+     *       retain stale parent/child ids.
+     */
+    [[nodiscard]] bool removeEntity(EntityId entity_id);
 
-        if(!m_entityIndex.removeEntity(entity_id)) {
-            return false;
-        }
-
-        entity->setDocument({});
-        return true;
-    }
-
-    void clear() {
-        // Best-effort detach document back-references.
-        for(const auto& entity : m_entityIndex.snapshotEntities()) {
-            if(entity) {
-                entity->setDocument({});
-            }
-        }
-        m_entityIndex.clear();
-    }
+    /**
+     * @brief Clear all entities from this document.
+     * @note Fast-path: assumes the document holds the only strong references to entities.
+     *       If entities may be owned elsewhere (external shared_ptr), use a safe clear
+     *       that detaches document refs and clears local relation sets to avoid stale IDs.
+     * @warning This fast clear relies on exclusive ownership. If violated, leftover
+     *          entities will keep stale parent/child sets and a dangling document pointer.
+     */
+    void clear();
 
     [[nodiscard]] GeometryEntityPtr findById(EntityId entity_id) const {
         return m_entityIndex.findById(entity_id);
@@ -87,7 +82,21 @@ public:
         return m_entityIndex.entityCountByType(entity_type);
     }
 
+    /**
+     * @brief Add a directed parent->child edge.
+     * @param parent_id Parent entity id.
+     * @param child_id Child entity id.
+     * @return true if the edge is added; false if ids are invalid, entities are missing,
+     *         or the edge would create a cycle.
+     */
     [[nodiscard]] bool addChildEdge(EntityId parent_id, EntityId child_id);
+
+    /**
+     * @brief Remove a directed parent->child edge.
+     * @param parent_id Parent entity id.
+     * @param child_id Child entity id.
+     * @return true if the edge existed and was removed; false otherwise.
+     */
     [[nodiscard]] bool removeChildEdge(EntityId parent_id, EntityId child_id);
 
 private:

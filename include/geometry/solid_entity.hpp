@@ -32,6 +32,15 @@ public:
 
     [[nodiscard]] const char* typeName() const override { return "Solid"; }
 
+    [[nodiscard]] bool canAddChildType(EntityType child_type) const override {
+        return child_type == EntityType::Shell;
+    }
+
+    [[nodiscard]] bool canAddParentType(EntityType parent_type) const override {
+        return parent_type == EntityType::Part || parent_type == EntityType::CompSolid ||
+               parent_type == EntityType::Compound;
+    }
+
     [[nodiscard]] const TopoDS_Shape& shape() const override { return m_solid; }
 
     /**

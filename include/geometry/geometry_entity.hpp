@@ -48,8 +48,17 @@ using GeometryEntityWeakPtr = std::weak_ptr<GeometryEntity>;
 class GeometryEntity : public std::enable_shared_from_this<GeometryEntity>,
                        public Kangaroo::Util::NonCopyMoveable {
 public:
-    /// Virtual destructor for proper inheritance
-    virtual ~GeometryEntity() = default;
+    /**
+     * @brief Destructor.
+     *
+     * Ensures parent/child edges are detached in a best-effort manner.
+     *
+     * @note Edges are normally detached eagerly by EntityIndex/GeometryDocument
+     *       on entity removal. This destructor acts as a defensive fallback
+     *       for cases where an entity outlives its document via external
+     *       shared ownership.
+     */
+    virtual ~GeometryEntity();
     // -------------------------------------------------------------------------
     // Type Information
     // -------------------------------------------------------------------------
@@ -124,6 +133,22 @@ public:
     // -------------------------------------------------------------------------
 
     /**
+     * @brief Check whether a parent->child edge is allowed by type.
+     * @param child_type Type of the prospective child.
+     * @return true if this entity is allowed to have a child of the given type.
+     * @note This is a pure type-level constraint. Document presence and entity
+     *       existence are validated by GeometryDocument when creating edges.
+     */
+    [[nodiscard]] virtual bool canAddChildType(EntityType child_type) const = 0;
+
+    /**
+     * @brief Check whether a parent->child edge is allowed by type.
+     * @param parent_type Type of the prospective parent.
+     * @return true if this entity is allowed to have a parent of the given type.
+     */
+    [[nodiscard]] virtual bool canAddParentType(EntityType parent_type) const = 0;
+
+    /**
      * @brief Get one parent entity (if any)
      *
      * Note: This entity may have multiple parents. This accessor returns an arbitrary
@@ -164,7 +189,7 @@ public:
      *
      * Fails on:
      * - self-parent/self-child
-     * - cycle creation
+     * - relationship type constraints
      * - missing EntityIndex / missing entities
      */
     [[nodiscard]] bool addChild(EntityId child_id);
@@ -196,7 +221,14 @@ public:
     /// Visit valid parents; auto-filters invalid and self-cleans.
     void visitParents(const std::function<void(const GeometryEntityPtr&)>& visitor) const;
 
-    /// Opportunistically remove expired parent/child ids.
+    /**
+     * @brief Remove expired parent/child ids.
+     *
+     * @warning This performs lookups against the owning GeometryDocument and may
+     *          be expensive if called frequently on large graphs.
+     * @note With correct lifetime management (edges detached on entity removal),
+     *       relations should remain consistent and this should rarely be needed.
+     */
     void pruneExpiredRelations() const;
     // -------------------------------------------------------------------------
     // Name/Label
@@ -252,8 +284,6 @@ protected:
     [[nodiscard]] bool removeChildNoSync(EntityId child_id);
     [[nodiscard]] bool addParentNoSync(EntityId parent_id);
     [[nodiscard]] bool removeParentNoSync(EntityId parent_id);
-
-    [[nodiscard]] bool wouldCreateCycle(EntityId child_id) const;
 
     // Called by EntityIndex before the entity is removed, to eagerly detach edges.
     void detachAllRelations();

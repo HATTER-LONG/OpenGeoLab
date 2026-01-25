@@ -33,6 +33,14 @@ public:
     [[nodiscard]] EntityType entityType() const override { return EntityType::Part; }
     [[nodiscard]] const char* typeName() const override { return "Part"; }
 
+    [[nodiscard]] bool canAddChildType(EntityType child_type) const override {
+        const EntityType root_type = detectEntityType(m_shape);
+        return root_type != EntityType::None && root_type != EntityType::Part &&
+               child_type == root_type;
+    }
+
+    [[nodiscard]] bool canAddParentType(EntityType /*parent_type*/) const override { return false; }
+
     [[nodiscard]] const TopoDS_Shape& shape() const override { return m_shape; }
 
     [[nodiscard]] const TopoDS_Shape& partShape() const { return m_shape; }

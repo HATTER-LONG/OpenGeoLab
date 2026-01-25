@@ -7,6 +7,30 @@
 
 namespace OpenGeoLab::Geometry {
 
+bool GeometryDocument::addEntity(const GeometryEntityPtr& entity) {
+    if(!m_entityIndex.addEntity(entity)) {
+        return false;
+    }
+    entity->setDocument(shared_from_this());
+    return true;
+}
+
+bool GeometryDocument::removeEntity(EntityId entity_id) {
+    const auto entity = m_entityIndex.findById(entity_id);
+    if(!entity) {
+        return false;
+    }
+
+    if(!m_entityIndex.removeEntity(entity_id)) {
+        return false;
+    }
+
+    entity->setDocument({});
+    return true;
+}
+
+void GeometryDocument::clear() { m_entityIndex.clear(); }
+
 bool GeometryDocument::addChildEdge(EntityId parent_id, EntityId child_id) {
     if(parent_id == INVALID_ENTITY_ID || child_id == INVALID_ENTITY_ID) {
         return false;
@@ -21,11 +45,9 @@ bool GeometryDocument::addChildEdge(EntityId parent_id, EntityId child_id) {
         return false;
     }
 
-    parent->pruneExpiredRelations();
-    child->pruneExpiredRelations();
-
-    // Prevent cycles: adding (parent -> child) must not make parent reachable from child.
-    if(parent->wouldCreateCycle(child_id)) {
+    // Enforce type-level relationship constraints.
+    if(!parent->canAddChildType(child->entityType()) ||
+       !child->canAddParentType(parent->entityType())) {
         return false;
     }
 
@@ -50,8 +72,6 @@ bool GeometryDocument::removeChildEdge(EntityId parent_id, EntityId child_id) {
     if(!parent) {
         return false;
     }
-
-    parent->pruneExpiredRelations();
 
     const bool erased = parent->removeChildNoSync(child_id);
     if(!erased) {

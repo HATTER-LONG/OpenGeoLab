@@ -10,13 +10,16 @@ using OpenGeoLab::Geometry::EntityIndex;
 using OpenGeoLab::Geometry::EntityType;
 using OpenGeoLab::Geometry::GeometryEntity;
 
-class TestEntity final : public GeometryEntity {
+class TestEntity : public GeometryEntity {
 public:
     explicit TestEntity(EntityType type, TopoDS_Shape shape = {})
         : GeometryEntity(type), m_type(type), m_shape(std::move(shape)) {}
 
     [[nodiscard]] EntityType entityType() const override { return m_type; }
     [[nodiscard]] const char* typeName() const override { return "TestEntity"; }
+    [[nodiscard]] bool canAddChildType(EntityType /*child_type*/) const override { return false; }
+
+    [[nodiscard]] bool canAddParentType(EntityType /*parent_type*/) const override { return false; }
     [[nodiscard]] const TopoDS_Shape& shape() const override { return m_shape; }
 
 private:

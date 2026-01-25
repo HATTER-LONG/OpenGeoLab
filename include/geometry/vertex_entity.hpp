@@ -31,6 +31,12 @@ public:
 
     [[nodiscard]] const char* typeName() const override { return "Vertex"; }
 
+    [[nodiscard]] bool canAddChildType(EntityType /*child_type*/) const override { return false; }
+
+    [[nodiscard]] bool canAddParentType(EntityType parent_type) const override {
+        return parent_type == EntityType::Edge;
+    }
+
     [[nodiscard]] const TopoDS_Shape& shape() const override { return m_vertex; }
     /**
      * @brief Get the typed OCC vertex
