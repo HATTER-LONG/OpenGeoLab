@@ -27,6 +27,7 @@ std::array<std::atomic<EntityUID>, 10> g_next_entity_uids = {
     std::atomic<EntityUID>{1}, // Solid
     std::atomic<EntityUID>{1}, // CompSolid
     std::atomic<EntityUID>{1}, // Compound
+    std::atomic<EntityUID>{1}, // Part
 };
 
 } // namespace

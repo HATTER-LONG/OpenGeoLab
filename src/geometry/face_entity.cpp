@@ -6,6 +6,7 @@
 #include <TopExp.hxx>
 #include <TopExp_Explorer.hxx>
 
+#include <unordered_set>
 
 namespace OpenGeoLab::Geometry {
 FaceEntity::FaceEntity(const TopoDS_Face& face) : GeometryEntity(EntityType::Face), m_face(face) {}
@@ -61,7 +62,7 @@ WireEntityPtr FaceEntity::outerWire() const {
         return nullptr;
     }
 
-    for(const auto& child : m_children) {
+    for(const auto& child : children()) {
         if(auto wire_entity = std::dynamic_pointer_cast<WireEntity>(child)) {
             if(wire_entity->wire().IsSame(outer_w)) {
                 return wire_entity;
@@ -74,7 +75,7 @@ WireEntityPtr FaceEntity::outerWire() const {
 
 std::vector<WireEntityPtr> FaceEntity::allWires() const {
     std::vector<WireEntityPtr> wires;
-    for(const auto& child : m_children) {
+    for(const auto& child : children()) {
         if(auto wire_entity = std::dynamic_pointer_cast<WireEntity>(child)) {
             wires.push_back(wire_entity);
         }
@@ -92,8 +93,8 @@ size_t FaceEntity::holeCount() const {
 std::vector<FaceEntityPtr> FaceEntity::adjacentFaces() const {
     std::vector<FaceEntityPtr> result;
 
-    auto parent_ptr = m_parent.lock();
-    if(!parent_ptr) {
+    const auto parent_entities = parents();
+    if(parent_entities.empty()) {
         return result;
     }
 
@@ -101,18 +102,26 @@ std::vector<FaceEntityPtr> FaceEntity::adjacentFaces() const {
     TopTools_IndexedMapOfShape my_edges;
     TopExp::MapShapes(m_face, TopAbs_EDGE, my_edges);
 
-    // Check sibling faces
-    for(const auto& sibling : parent_ptr->children()) {
-        if(sibling.get() == this) {
-            continue;
-        }
+    std::unordered_set<EntityId> added;
+    added.insert(entityId());
 
-        if(auto face_entity = std::dynamic_pointer_cast<FaceEntity>(sibling)) {
-            // Check if any edge is shared
-            for(TopExp_Explorer exp(face_entity->face(), TopAbs_EDGE); exp.More(); exp.Next()) {
-                if(my_edges.Contains(exp.Current())) {
-                    result.push_back(face_entity);
-                    break;
+    // Check sibling faces across all parents.
+    for(const auto& parent_ptr : parent_entities) {
+        for(const auto& sibling : parent_ptr->children()) {
+            if(!sibling) {
+                continue;
+            }
+            if(!added.insert(sibling->entityId()).second) {
+                continue;
+            }
+
+            if(auto face_entity = std::dynamic_pointer_cast<FaceEntity>(sibling)) {
+                // Check if any edge is shared
+                for(TopExp_Explorer exp(face_entity->face(), TopAbs_EDGE); exp.More(); exp.Next()) {
+                    if(my_edges.Contains(exp.Current())) {
+                        result.push_back(face_entity);
+                        break;
+                    }
                 }
             }
         }

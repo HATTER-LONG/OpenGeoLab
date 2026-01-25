@@ -26,6 +26,9 @@ public:
     [[nodiscard]] size_t entityCount() const;
     [[nodiscard]] size_t entityCountByType(EntityType entity_type) const;
 
+    /// Snapshot of currently alive entities (order unspecified).
+    [[nodiscard]] std::vector<GeometryEntityPtr> snapshotEntities() const;
+
 private:
     struct EntityTypeHash {
         size_t operator()(EntityType type) const noexcept {

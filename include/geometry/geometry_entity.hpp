@@ -10,9 +10,13 @@
 #pragma once
 
 #include "geometry_types.hpp"
+
 #include <kangaroo/util/noncopyable.hpp>
+
+#include <functional>
 #include <memory>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 class TopoDS_Shape;
@@ -20,6 +24,7 @@ class TopoDS_Shape;
 namespace OpenGeoLab::Geometry {
 class GeometryEntity;
 class GeometryManager;
+class GeometryDocument;
 
 using GeometryEntityPtr = std::shared_ptr<GeometryEntity>;
 using GeometryEntityWeakPtr = std::weak_ptr<GeometryEntity>;
@@ -119,53 +124,80 @@ public:
     // -------------------------------------------------------------------------
 
     /**
-     * @brief Get parent entity (if any)
-     * @return Weak pointer to parent, or empty if root
+     * @brief Get one parent entity (if any)
+     *
+     * Note: This entity may have multiple parents. This accessor returns an arbitrary
+     * valid parent (if exists) and auto-prunes expired references.
      */
-    [[nodiscard]] GeometryEntityWeakPtr parent() const { return m_parent; }
+    /// Return any valid parent (if exists). Use when multiple parents are acceptable.
+    [[nodiscard]] GeometryEntityWeakPtr anyParent() const;
+
+    /// Return a valid parent only if it is unique; otherwise empty.
+    [[nodiscard]] GeometryEntityWeakPtr singleParent() const;
+
+    /// Get all parent entities (auto-prunes expired references).
+    [[nodiscard]] std::vector<GeometryEntityPtr> parents() const;
+
+    /// Get child entities (auto-prunes expired references).
+    [[nodiscard]] std::vector<GeometryEntityPtr> children() const;
+
+    /// O(1) membership check (does not resolve).
+    [[nodiscard]] bool hasParentId(EntityId parent_id) const;
+
+    /// O(1) membership check (does not resolve).
+    [[nodiscard]] bool hasChildId(EntityId child_id) const;
+
+    /// True if has no valid parents (auto-prunes expired references).
+    [[nodiscard]] bool isRoot() const;
+
+    /// True if has at least one valid child (auto-prunes expired references).
+    [[nodiscard]] bool hasChildren() const;
+
+    /// Count valid parents (auto-prunes expired references).
+    [[nodiscard]] size_t parentCount() const;
+
+    /// Count valid children (auto-prunes expired references).
+    [[nodiscard]] size_t childCount() const;
 
     /**
-     * @brief Get child entities
-     * @return Vector of shared pointers to children
+     * @brief Add a child edge (this -> child), automatically syncing both sides.
+     *
+     * Fails on:
+     * - self-parent/self-child
+     * - cycle creation
+     * - missing EntityIndex / missing entities
      */
-    [[nodiscard]] const std::vector<GeometryEntityPtr>& children() const { return m_children; }
+    [[nodiscard]] bool addChild(EntityId child_id);
 
     /**
-     * @brief Add a child entity
-     * @param child Entity to add as child
+     * @brief Remove a child edge (this -> child), automatically syncing both sides.
      */
-    void addChild(const GeometryEntityPtr& child);
+    [[nodiscard]] bool removeChild(EntityId child_id);
+
+    /// Convenience overload (does not store the pointer; stores only EntityId).
+    [[nodiscard]] bool addChild(const GeometryEntityPtr& child);
+
+    /// Convenience overload (does not store the pointer; stores only EntityId).
+    [[nodiscard]] bool removeChild(const GeometryEntityPtr& child);
 
     /**
-     * @brief Remove a child entity
-     * @param child Entity to remove
-     * @return true if child was found and removed
+     * @brief Add a parent edge (parent -> this), automatically syncing both sides.
      */
-    bool removeChild(const GeometryEntityPtr& child);
+    [[nodiscard]] bool addParent(EntityId parent_id);
 
     /**
-     * @brief Set parent entity
-     * @param parent New parent entity
+     * @brief Remove a parent edge (parent -> this), automatically syncing both sides.
      */
-    void setParent(const GeometryEntityWeakPtr& parent) { m_parent = parent; }
+    [[nodiscard]] bool removeParent(EntityId parent_id);
 
-    /**
-     * @brief Check if this is a root entity
-     * @return true if has no parent
-     */
-    [[nodiscard]] bool isRoot() const { return m_parent.expired(); }
+    /// Visit valid children; auto-filters invalid and self-cleans.
+    void visitChildren(const std::function<void(const GeometryEntityPtr&)>& visitor) const;
 
-    /**
-     * @brief Check if entity has children
-     * @return true if children exist
-     */
-    [[nodiscard]] bool hasChildren() const { return !m_children.empty(); }
+    /// Visit valid parents; auto-filters invalid and self-cleans.
+    void visitParents(const std::function<void(const GeometryEntityPtr&)>& visitor) const;
 
-    /**
-     * @brief Get direct child count
-     * @return Number of children
-     */
-    [[nodiscard]] size_t childCount() const { return m_children.size(); }
+    /// Opportunistically remove expired parent/child ids.
+    void pruneExpiredRelations() const;
     // -------------------------------------------------------------------------
     // Name/Label
     // -------------------------------------------------------------------------
@@ -208,8 +240,27 @@ protected:
     mutable BoundingBox3D m_boundingBox;    ///< Cached bounding box
     mutable bool m_boundingBoxValid{false}; ///< Bounding box validity
 
-    GeometryEntityWeakPtr m_parent;            ///< Parent reference
-    std::vector<GeometryEntityPtr> m_children; ///< Child entities
+    friend class EntityIndex;
+    friend class GeometryDocument;
+
+    // Set/clear by EntityIndex on add/remove; non-owning.
+    void setDocument(std::weak_ptr<GeometryDocument> document) { m_document = std::move(document); }
+    [[nodiscard]] std::shared_ptr<GeometryDocument> document() const { return m_document.lock(); }
+
+    // Relationship internals (do not sync both sides)
+    [[nodiscard]] bool addChildNoSync(EntityId child_id);
+    [[nodiscard]] bool removeChildNoSync(EntityId child_id);
+    [[nodiscard]] bool addParentNoSync(EntityId parent_id);
+    [[nodiscard]] bool removeParentNoSync(EntityId parent_id);
+
+    [[nodiscard]] bool wouldCreateCycle(EntityId child_id) const;
+
+    // Called by EntityIndex before the entity is removed, to eagerly detach edges.
+    void detachAllRelations();
+
+    std::weak_ptr<GeometryDocument> m_document;
+    mutable std::unordered_set<EntityId> m_parentIds;
+    mutable std::unordered_set<EntityId> m_childIds;
 
     std::string m_name; ///< Display name
 };

@@ -21,7 +21,7 @@ double WireEntity::length() const {
 
 std::vector<EdgeEntityPtr> WireEntity::orderedEdges() const {
     std::vector<EdgeEntityPtr> edges;
-    for(const auto& child : m_children) {
+    for(const auto& child : children()) {
         if(auto edge_entity = std::dynamic_pointer_cast<EdgeEntity>(child)) {
             edges.push_back(edge_entity);
         }
