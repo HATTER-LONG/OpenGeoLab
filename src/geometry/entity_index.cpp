@@ -102,7 +102,7 @@ bool EntityIndex::addEntity(const GeometryEntityPtr& entity) {
     }
 
     // Allocate a slot (reuse if possible)
-    std::size_t slot_index = 0;
+    size_t slot_index = 0;
     if(!m_freeSlots.empty()) {
         slot_index = m_freeSlots.back();
         m_freeSlots.pop_back();

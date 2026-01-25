@@ -28,19 +28,19 @@ public:
 
 private:
     struct EntityTypeHash {
-        std::size_t operator()(EntityType type) const noexcept {
+        size_t operator()(EntityType type) const noexcept {
             using Underlying = std::underlying_type_t<EntityType>;
             return std::hash<Underlying>{}(static_cast<Underlying>(type));
         }
     };
 
     struct TypeUIDHash {
-        static void hashCombine(std::size_t& seed, std::size_t value) {
+        static void hashCombine(size_t& seed, size_t value) {
             seed ^= value + 0x9e3779b97f4a7c15ULL + (seed << 6) + (seed >> 2);
         }
 
-        std::size_t operator()(const std::pair<EntityType, EntityUID>& key) const noexcept {
-            std::size_t seed = 0;
+        size_t operator()(const std::pair<EntityType, EntityUID>& key) const noexcept {
+            size_t seed = 0;
             hashCombine(seed, EntityTypeHash{}(key.first));
             hashCombine(seed, std::hash<EntityUID>()(key.second));
             return seed;
@@ -48,7 +48,7 @@ private:
     };
 
     struct IndexHandle {
-        std::size_t m_slot{0};
+        size_t m_slot{0};
         uint32_t m_generation{0};
     };
 
@@ -58,14 +58,14 @@ private:
     };
 
     std::vector<Slot> m_slots;
-    std::vector<std::size_t> m_freeSlots;
+    std::vector<size_t> m_freeSlots;
 
     mutable std::unordered_map<EntityId, IndexHandle> m_byId;
     mutable std::unordered_map<std::pair<EntityType, EntityUID>, IndexHandle, TypeUIDHash>
         m_byTypeAndUID;
     mutable std::unordered_map<TopoDS_Shape, IndexHandle, TopTools_ShapeMapHasher> m_byShape;
 
-    std::unordered_map<EntityType, std::size_t, EntityTypeHash> m_countByType;
-    std::size_t m_aliveCount{0};
+    std::unordered_map<EntityType, size_t, EntityTypeHash> m_countByType;
+    size_t m_aliveCount{0};
 };
 } // namespace OpenGeoLab::Geometry
