@@ -1,12 +1,27 @@
+/**
+ * @file vertex_entity.hpp
+ * @brief Vertex (point) geometry entity
+ *
+ * VertexEntity wraps an OpenCASCADE TopoDS_Vertex and provides
+ * access to its 3D point coordinates.
+ */
+
 #pragma once
 
 #include "geometry/geometry_entity.hpp"
 #include <TopoDS_Vertex.hxx>
 
 namespace OpenGeoLab::Geometry {
+
 class VertexEntity;
 using VertexEntityPtr = std::shared_ptr<VertexEntity>;
 
+/**
+ * @brief Geometry entity representing a vertex (point)
+ *
+ * VertexEntity is the simplest topological entity, representing a
+ * single point in 3D space. Vertices are typically endpoints of edges.
+ */
 class VertexEntity : public GeometryEntity {
 public:
     explicit VertexEntity(const TopoDS_Vertex& vertex);

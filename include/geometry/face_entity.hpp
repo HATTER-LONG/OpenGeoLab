@@ -1,3 +1,11 @@
+/**
+ * @file face_entity.hpp
+ * @brief Face (surface) geometry entity
+ *
+ * FaceEntity wraps an OpenCASCADE TopoDS_Face and provides access to
+ * its underlying surface geometry, UV parameterization, and boundary wires.
+ */
+
 #pragma once
 
 #include "wire_entity.hpp"
@@ -5,9 +13,17 @@
 #include <TopoDS_Face.hxx>
 
 namespace OpenGeoLab::Geometry {
+
 class FaceEntity;
 using FaceEntityPtr = std::shared_ptr<FaceEntity>;
 
+/**
+ * @brief Geometry entity representing a face (bounded surface)
+ *
+ * FaceEntity represents a portion of a surface bounded by one or more
+ * wires. The outer wire defines the face boundary, while inner wires
+ * define holes.
+ */
 class FaceEntity : public GeometryEntity {
 public:
     explicit FaceEntity(const TopoDS_Face& face);

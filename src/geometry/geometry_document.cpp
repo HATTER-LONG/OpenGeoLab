@@ -1,3 +1,8 @@
+/**
+ * @file geometry_document.cpp
+ * @brief Implementation of GeometryDocument entity management
+ */
+
 #include "geometry/geometry_document.hpp"
 
 namespace OpenGeoLab::Geometry {

@@ -1,3 +1,8 @@
+/**
+ * @file wire_entity.cpp
+ * @brief Implementation of WireEntity edge sequence operations
+ */
+
 #include "geometry/wire_entity.hpp"
 #include <BRepGProp.hxx>
 #include <GProp_GProps.hxx>

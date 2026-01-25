@@ -1,3 +1,12 @@
+/**
+ * @file geometry_document.hpp
+ * @brief Geometry document container for entity management
+ *
+ * GeometryDocument is the primary container for geometry entities within
+ * the application. Each document represents an independent model or assembly
+ * with its own entity index and relationship graph.
+ */
+
 #pragma once
 
 #include <kangaroo/util/noncopyable.hpp>

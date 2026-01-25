@@ -1,3 +1,11 @@
+/**
+ * @file comp_solid_entity.hpp
+ * @brief Composite solid geometry entity
+ *
+ * CompSolidEntity wraps an OpenCASCADE TopoDS_CompSolid, representing
+ * a set of solids sharing common faces.
+ */
+
 #pragma once
 
 #include "geometry_entity.hpp"
@@ -7,6 +15,13 @@ namespace OpenGeoLab::Geometry {
 
 class CompSolidEntity;
 using CompSolidEntityPtr = std::shared_ptr<CompSolidEntity>;
+
+/**
+ * @brief Geometry entity representing a composite solid
+ *
+ * CompSolidEntity represents a set of solids that share common faces.
+ * This is used for multi-body configurations where solids are connected.
+ */
 class CompSolidEntity : public GeometryEntity {
 public:
     explicit CompSolidEntity(const TopoDS_CompSolid& compsolid);

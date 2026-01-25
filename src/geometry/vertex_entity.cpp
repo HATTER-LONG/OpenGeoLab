@@ -1,3 +1,8 @@
+/**
+ * @file vertex_entity.cpp
+ * @brief Implementation of VertexEntity point operations
+ */
+
 #include "geometry/vertex_entity.hpp"
 #include <BRep_Tool.hxx>
 namespace OpenGeoLab::Geometry {

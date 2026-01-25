@@ -1,3 +1,8 @@
+/**
+ * @file edge_entity.cpp
+ * @brief Implementation of EdgeEntity curve operations
+ */
+
 #include "geometry/edge_entity.hpp"
 #include <BRepGProp.hxx>
 #include <BRep_Tool.hxx>
@@ -5,7 +10,6 @@
 #include <Geom_Curve.hxx>
 #include <TopExp.hxx>
 #include <TopoDS_Vertex.hxx>
-
 
 namespace OpenGeoLab::Geometry {
 EdgeEntity::EdgeEntity(const TopoDS_Edge& edge) : GeometryEntity(EntityType::Edge), m_edge(edge) {}

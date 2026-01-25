@@ -1,12 +1,28 @@
+/**
+ * @file wire_entity.hpp
+ * @brief Wire (edge loop) geometry entity
+ *
+ * WireEntity wraps an OpenCASCADE TopoDS_Wire, representing a connected
+ * sequence of edges forming a path or closed loop.
+ */
+
 #pragma once
 
 #include "edge_entity.hpp"
 #include <TopoDS_Wire.hxx>
 
 namespace OpenGeoLab::Geometry {
+
 class WireEntity;
 using WireEntityPtr = std::shared_ptr<WireEntity>;
 
+/**
+ * @brief Geometry entity representing a wire (connected edge sequence)
+ *
+ * WireEntity represents a connected sequence of edges. A closed wire
+ * can serve as the boundary of a face. Wires can be open (path) or
+ * closed (loop).
+ */
 class WireEntity : public GeometryEntity {
 public:
     explicit WireEntity(const TopoDS_Wire& wire);

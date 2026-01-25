@@ -1,3 +1,8 @@
+/**
+ * @file solid_entity.cpp
+ * @brief Implementation of SolidEntity geometry computations
+ */
+
 #include "geometry/solid_entity.hpp"
 #include <BRepGProp.hxx>
 #include <GProp_GProps.hxx>

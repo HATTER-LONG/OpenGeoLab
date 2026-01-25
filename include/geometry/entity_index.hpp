@@ -1,3 +1,13 @@
+/**
+ * @file entity_index.hpp
+ * @brief High-performance index for geometry entity lookup
+ *
+ * EntityIndex provides O(1) lookup of entities by various keys:
+ * - EntityId (global unique)
+ * - EntityUID + EntityType (type-scoped unique)
+ * - TopoDS_Shape (OCC shape reference)
+ */
+
 #pragma once
 
 #include "geometry_entity.hpp"
@@ -7,6 +17,19 @@
 #include <vector>
 
 namespace OpenGeoLab::Geometry {
+
+/**
+ * @brief High-performance entity index with generational slot allocation
+ *
+ * EntityIndex maintains multiple lookup tables for fast entity retrieval.
+ * It uses a slot-based allocation scheme with generation counters to detect
+ * stale references and safely recycle storage.
+ *
+ * Features:
+ * - O(1) lookup by EntityId, (EntityType, EntityUID), or TopoDS_Shape
+ * - Automatic cleanup of stale index entries on lookup
+ * - Thread-safe for concurrent reads (writes must be externally synchronized)
+ */
 class EntityIndex : public Kangaroo::Util::NonCopyMoveable {
 public:
     explicit EntityIndex() = default;

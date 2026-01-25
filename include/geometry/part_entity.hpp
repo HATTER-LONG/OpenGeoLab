@@ -1,3 +1,11 @@
+/**
+ * @file part_entity.hpp
+ * @brief Part entity representing a UI-level component
+ *
+ * PartEntity is the top-level container for imported or created geometry.
+ * It serves as the root node in the entity hierarchy for a model component.
+ */
+
 #pragma once
 
 #include "geometry_entity.hpp"
@@ -10,10 +18,12 @@ class PartEntity;
 using PartEntityPtr = std::shared_ptr<PartEntity>;
 
 /**
- * @brief UI-level part entity representing an independent component.
+ * @brief UI-level part entity representing an independent component
  *
- * A PartEntity wraps a top-level OCC shape (solid/compound/etc.) and acts as the
- * root node for that component in the scene tree.
+ * PartEntity is the top-level entity for user-visible model components.
+ * It wraps a TopoDS_Shape (solid, compound, etc.) and serves as the root
+ * of the entity hierarchy for that component. Parts can contain multiple
+ * sub-shapes (solids, faces, edges, etc.) organized in a parent-child tree.
  */
 class PartEntity : public GeometryEntity {
 public:

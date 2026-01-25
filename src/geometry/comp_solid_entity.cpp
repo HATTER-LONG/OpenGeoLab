@@ -1,3 +1,8 @@
+/**
+ * @file comp_solid_entity.cpp
+ * @brief Implementation of CompSolidEntity
+ */
+
 #include "geometry/comp_solid_entity.hpp"
 
 namespace OpenGeoLab::Geometry {

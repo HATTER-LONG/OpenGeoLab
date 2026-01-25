@@ -1,11 +1,28 @@
+/**
+ * @file solid_entity.hpp
+ * @brief Solid (3D body) geometry entity
+ *
+ * SolidEntity wraps an OpenCASCADE TopoDS_Solid, representing a
+ * watertight 3D volume bounded by shells.
+ */
+
 #pragma once
 
 #include "geometry_entity.hpp"
 #include <TopoDS_Solid.hxx>
 
 namespace OpenGeoLab::Geometry {
+
 class SolidEntity;
 using SolidEntityPtr = std::shared_ptr<SolidEntity>;
+
+/**
+ * @brief Geometry entity representing a solid (3D volume)
+ *
+ * SolidEntity represents a watertight 3D volume bounded by one or
+ * more shells. The outer shell defines the solid boundary, while
+ * inner shells define cavities.
+ */
 class SolidEntity : public GeometryEntity {
 public:
     explicit SolidEntity(const TopoDS_Solid& solid);

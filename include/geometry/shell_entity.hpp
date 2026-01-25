@@ -1,11 +1,27 @@
+/**
+ * @file shell_entity.hpp
+ * @brief Shell (face collection) geometry entity
+ *
+ * ShellEntity wraps an OpenCASCADE TopoDS_Shell, representing a connected
+ * set of faces forming a surface boundary.
+ */
+
 #pragma once
 
 #include "geometry_entity.hpp"
 #include <TopoDS_Shell.hxx>
 
 namespace OpenGeoLab::Geometry {
+
 class ShellEntity;
 using ShellEntityPtr = std::shared_ptr<ShellEntity>;
+
+/**
+ * @brief Geometry entity representing a shell (connected face set)
+ *
+ * ShellEntity represents a connected set of faces that together form
+ * a surface boundary. A closed shell can bound a solid volume.
+ */
 class ShellEntity : public GeometryEntity {
 public:
     explicit ShellEntity(const TopoDS_Shell& shell);

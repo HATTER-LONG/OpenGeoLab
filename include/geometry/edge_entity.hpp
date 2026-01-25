@@ -1,3 +1,11 @@
+/**
+ * @file edge_entity.hpp
+ * @brief Edge (curve) geometry entity
+ *
+ * EdgeEntity wraps an OpenCASCADE TopoDS_Edge and provides access to
+ * its underlying 3D curve geometry and topological properties.
+ */
+
 #pragma once
 
 #include "geometry_entity.hpp"
@@ -5,9 +13,17 @@
 #include <TopoDS_Edge.hxx>
 
 namespace OpenGeoLab::Geometry {
+
 class EdgeEntity;
 using EdgeEntityPtr = std::shared_ptr<EdgeEntity>;
 
+/**
+ * @brief Geometry entity representing an edge (curve segment)
+ *
+ * EdgeEntity represents a bounded curve in 3D space, typically bounded
+ * by vertices at its endpoints. Edges form the boundaries of faces and
+ * can be combined into wires.
+ */
 class EdgeEntity : public GeometryEntity {
 public:
     explicit EdgeEntity(const TopoDS_Edge& edge);
