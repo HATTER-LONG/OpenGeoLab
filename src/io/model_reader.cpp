@@ -4,9 +4,13 @@
  */
 
 #include "io/model_reader.hpp"
+#include "geometry/geometry_document.hpp"
+#include "geometry/geometry_manager.hpp"
 #include "io/reader.hpp"
 #include "util/logger.hpp"
 #include "util/progress_bridge.hpp"
+
+#include <filesystem>
 
 #include <kangaroo/util/current_thread.hpp>
 namespace OpenGeoLab::IO {
@@ -35,6 +39,27 @@ nlohmann::json ModelReader::processRequest(const std::string& /*module_name*/,
     if(!reader_result.m_success) {
         throw std::runtime_error("Model import failed " + reader_result.m_errorMessage);
     }
+
+    progress_reporter->reportProgress(0.80, "Creating geometry document...");
+
+    auto doc_name = std::filesystem::path(file_path).filename().string();
+    auto doc = std::make_shared<Geometry::GeometryDocument>(doc_name);
+    doc->setSourcePath(file_path);
+    if(!doc->setRootEntity(reader_result.m_rootEntity)) {
+        throw std::runtime_error("Failed to create GeometryDocument from reader result");
+    }
+
+    auto& geom_mgr = Geometry::GeometryManager::instance();
+    const auto doc_id = geom_mgr.addDocument(doc);
+    geom_mgr.setCurrentDocument(doc_id);
+
+    result["document_id"] = doc_id;
+    result["document_name"] = doc->name();
+    result["source_path"] = doc->sourcePath();
+    result["root_entity_id"] = doc->rootEntity() ? doc->rootEntity()->entityId() : 0;
+    result["part_count"] = doc->parts().size();
+    result["entity_count"] = doc->index().entityCount();
+
     return result;
 }
 

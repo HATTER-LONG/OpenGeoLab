@@ -61,7 +61,7 @@ WireEntityPtr FaceEntity::outerWire() const {
         return nullptr;
     }
 
-    for(const auto& child : m_children) {
+    for(const auto& child : children()) {
         if(auto wire_entity = std::dynamic_pointer_cast<WireEntity>(child)) {
             if(wire_entity->wire().IsSame(outer_w)) {
                 return wire_entity;
@@ -74,7 +74,7 @@ WireEntityPtr FaceEntity::outerWire() const {
 
 std::vector<WireEntityPtr> FaceEntity::allWires() const {
     std::vector<WireEntityPtr> wires;
-    for(const auto& child : m_children) {
+    for(const auto& child : children()) {
         if(auto wire_entity = std::dynamic_pointer_cast<WireEntity>(child)) {
             wires.push_back(wire_entity);
         }
@@ -92,7 +92,7 @@ size_t FaceEntity::holeCount() const {
 std::vector<FaceEntityPtr> FaceEntity::adjacentFaces() const {
     std::vector<FaceEntityPtr> result;
 
-    auto parent_ptr = m_parent.lock();
+    auto parent_ptr = parent().lock();
     if(!parent_ptr) {
         return result;
     }

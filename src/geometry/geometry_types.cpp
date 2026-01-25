@@ -17,7 +17,7 @@ std::atomic<EntityId> g_next_entity_id{1};
 
 /// Per-type atomic counters for EntityUID generation
 /// Index corresponds to EntityType enum value
-std::array<std::atomic<EntityUID>, 10> g_next_entity_uids = {
+std::array<std::atomic<EntityUID>, 11> g_next_entity_uids = {
     std::atomic<EntityUID>{1}, // None
     std::atomic<EntityUID>{1}, // Vertex
     std::atomic<EntityUID>{1}, // Edge
@@ -27,6 +27,7 @@ std::array<std::atomic<EntityUID>, 10> g_next_entity_uids = {
     std::atomic<EntityUID>{1}, // Solid
     std::atomic<EntityUID>{1}, // CompSolid
     std::atomic<EntityUID>{1}, // Compound
+    std::atomic<EntityUID>{1}, // Part
 };
 
 } // namespace

@@ -35,7 +35,8 @@ enum class EntityType : uint8_t {
     Shell = 5,     ///< Shell entity (collection of connected faces)
     Solid = 6,     ///< Solid body entity
     CompSolid = 7, ///< Composite solid entity
-    Compound = 8   ///< Compound entity (collection of shapes)
+    Compound = 8,  ///< Compound entity (collection of shapes)
+    Part = 9       ///< UI-level part (independent component)
 };
 
 /**
@@ -49,7 +50,8 @@ enum class SelectionMode : uint8_t {
     Solid = 4,     ///< Select solid bodies only
     CompSolid = 5, ///< Select composite solids only
     Compound = 6,  ///< Select compounds only
-    Multi = 7      ///< Multi-selection mode (multiple types)
+    Part = 7,      ///< Select parts only
+    Multi = 8      ///< Multi-selection mode (multiple types)
 };
 
 // =============================================================================

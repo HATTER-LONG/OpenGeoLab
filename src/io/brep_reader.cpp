@@ -4,6 +4,7 @@
  */
 
 #include "brep_reader.hpp"
+#include "geometry/entity_builder.hpp"
 #include "util/logger.hpp"
 #include "util/occ_progress.hpp"
 
@@ -66,7 +67,12 @@ ReadResult BrepReader::readFile(const std::string& file_path,
             return ReadResult::failure("Operation cancelled");
         }
 
-        return ReadResult::success(nullptr);
+        auto root_entity = OpenGeoLab::Geometry::buildCompoundModelWithParts(shape);
+        if(!root_entity) {
+            return ReadResult::failure("Failed to build geometry entity hierarchy");
+        }
+
+        return ReadResult::success(std::move(root_entity));
 
     } catch(const Standard_Failure& e) {
         std::string error = e.GetMessageString() ? e.GetMessageString() : "Unknown OCC error";

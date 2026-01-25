@@ -13,6 +13,7 @@
 #include <kangaroo/util/noncopyable.hpp>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 class TopoDS_Shape;
@@ -88,6 +89,13 @@ public:
     [[nodiscard]] virtual const TopoDS_Shape& shape() const = 0;
 
     /**
+     * @brief Detect entity type from OCC shape
+     * @param shape Shape to analyze
+     * @return Detected EntityType
+     */
+    [[nodiscard]] static EntityType detectEntityType(const TopoDS_Shape& shape);
+
+    /**
      * @brief Check if entity has a valid shape
      * @return true if shape is not null
      */
@@ -119,16 +127,40 @@ public:
     // -------------------------------------------------------------------------
 
     /**
-     * @brief Get parent entity (if any)
-     * @return Weak pointer to parent, or empty if root
+        * @brief Get primary parent entity (if any)
+        *
+        * This is a compatibility accessor. B-Rep topology is a DAG, so an entity may
+        * be referenced from multiple parents (e.g. shared edges/faces).
+        *
+        * @return One of the parents if exists, or empty if root
      */
-    [[nodiscard]] GeometryEntityWeakPtr parent() const { return m_parent; }
+        [[nodiscard]] GeometryEntityWeakPtr parent() const;
+
+        /**
+        * @brief Get all parents holding this entity (unique parents)
+        */
+        [[nodiscard]] const std::vector<GeometryEntityWeakPtr>& parents() const { return m_parents; }
+
+        /**
+        * @brief Get number of unique parents
+        */
+        [[nodiscard]] size_t parentCount() const;
 
     /**
      * @brief Get child entities
      * @return Vector of shared pointers to children
      */
     [[nodiscard]] const std::vector<GeometryEntityPtr>& children() const { return m_children; }
+
+        /**
+        * @brief Get how many times a direct child is referenced under this parent
+        */
+        [[nodiscard]] size_t childReferenceCount(const GeometryEntityPtr& child) const;
+
+        /**
+        * @brief Get total reference count over all direct children
+        */
+        [[nodiscard]] size_t totalChildReferenceCount() const;
 
     /**
      * @brief Add a child entity
@@ -144,16 +176,17 @@ public:
     bool removeChild(const GeometryEntityPtr& child);
 
     /**
-     * @brief Set parent entity
-     * @param parent New parent entity
+        * @brief Set a single primary parent (compatibility)
+        *
+        * This overwrites the current parent list.
      */
-    void setParent(const GeometryEntityWeakPtr& parent) { m_parent = parent; }
+        void setParent(const GeometryEntityWeakPtr& parent);
 
     /**
      * @brief Check if this is a root entity
      * @return true if has no parent
      */
-    [[nodiscard]] bool isRoot() const { return m_parent.expired(); }
+    [[nodiscard]] bool isRoot() const { return parentCount() == 0; }
 
     /**
      * @brief Check if entity has children
@@ -194,13 +227,6 @@ protected:
      */
     void computeBoundingBox() const;
 
-    /**
-     * @brief Detect entity type from OCC shape
-     * @param shape Shape to analyze
-     * @return Detected EntityType
-     */
-    [[nodiscard]] static EntityType detectEntityType(const TopoDS_Shape& shape);
-
 protected:
     EntityId m_entityId{INVALID_ENTITY_ID};    ///< Global unique ID
     EntityUID m_entityUID{INVALID_ENTITY_UID}; ///< Type-scoped unique ID
@@ -208,10 +234,19 @@ protected:
     mutable BoundingBox3D m_boundingBox;    ///< Cached bounding box
     mutable bool m_boundingBoxValid{false}; ///< Bounding box validity
 
-    GeometryEntityWeakPtr m_parent;            ///< Parent reference
-    std::vector<GeometryEntityPtr> m_children; ///< Child entities
+    // A B-Rep entity can be referenced by multiple parents.
+    std::vector<GeometryEntityWeakPtr> m_parents; ///< Unique parent references
+
+    // Children are unique in this list; reference multiplicity is tracked separately.
+    std::vector<GeometryEntityPtr> m_children; ///< Unique direct children
+    std::unordered_map<const GeometryEntity*, size_t> m_childRefCounts; ///< multiplicity
 
     std::string m_name; ///< Display name
+
+private:
+    void addParentRef(const GeometryEntityWeakPtr& parent);
+    void removeParentRef(const GeometryEntity* parent);
+    void pruneExpiredParents();
 };
 
 } // namespace OpenGeoLab::Geometry
