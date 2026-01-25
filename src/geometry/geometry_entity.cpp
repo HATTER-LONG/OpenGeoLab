@@ -199,20 +199,18 @@ void GeometryEntity::removeParentRef(const GeometryEntity* parent) {
         return;
     }
 
-    m_parents.erase(
-        std::remove_if(m_parents.begin(), m_parents.end(),
-                       [parent](const GeometryEntityWeakPtr& p) {
-                           auto sp = p.lock();
-                           return !sp || sp.get() == parent;
-                       }),
-        m_parents.end());
+    m_parents.erase(std::remove_if(m_parents.begin(), m_parents.end(),
+                                   [parent](const GeometryEntityWeakPtr& p) {
+                                       auto sp = p.lock();
+                                       return !sp || sp.get() == parent;
+                                   }),
+                    m_parents.end());
 }
 
 void GeometryEntity::pruneExpiredParents() {
-    m_parents.erase(
-        std::remove_if(m_parents.begin(), m_parents.end(),
-                       [](const GeometryEntityWeakPtr& p) { return p.expired(); }),
-        m_parents.end());
+    m_parents.erase(std::remove_if(m_parents.begin(), m_parents.end(),
+                                   [](const GeometryEntityWeakPtr& p) { return p.expired(); }),
+                    m_parents.end());
 }
 
 } // namespace OpenGeoLab::Geometry

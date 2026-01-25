@@ -20,8 +20,8 @@ namespace OpenGeoLab::Geometry {
  *   entities to be referenced from multiple parents. GeometryEntity keeps a
  *   single "primary" parent while allowing multiple parents to list it as child.
  */
-[[nodiscard]] GeometryEntityPtr buildCompoundModelWithParts(const TopoDS_Shape& model_shape,
-                                                           const std::string& part_name_prefix =
-                                                               "Part");
+[[nodiscard]] GeometryEntityPtr
+buildCompoundModelWithParts(const TopoDS_Shape& model_shape,
+                            const std::string& part_name_prefix = "Part");
 
 } // namespace OpenGeoLab::Geometry

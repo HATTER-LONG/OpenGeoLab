@@ -76,7 +76,8 @@ using CacheMap = std::unordered_map<TopoDS_Shape, CacheEntry, TopTools_ShapeMapH
     return ins_it->second.m_entity;
 }
 
-void buildGraphNonRecursive(const GeometryEntityPtr& root_entity, const TopoDS_Shape& root_shape,
+void buildGraphNonRecursive(const GeometryEntityPtr& root_entity,
+                            const TopoDS_Shape& root_shape,
                             CacheMap& cache) {
     if(!root_entity || root_shape.IsNull()) {
         return;
@@ -126,7 +127,7 @@ void buildGraphNonRecursive(const GeometryEntityPtr& root_entity, const TopoDS_S
 } // namespace
 
 GeometryEntityPtr buildCompoundModelWithParts(const TopoDS_Shape& model_shape,
-                                             const std::string& part_name_prefix) {
+                                              const std::string& part_name_prefix) {
     if(model_shape.IsNull()) {
         return nullptr;
     }

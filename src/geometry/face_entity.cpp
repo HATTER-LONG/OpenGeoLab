@@ -6,7 +6,6 @@
 #include <TopExp.hxx>
 #include <TopExp_Explorer.hxx>
 
-
 namespace OpenGeoLab::Geometry {
 FaceEntity::FaceEntity(const TopoDS_Face& face) : GeometryEntity(EntityType::Face), m_face(face) {}
 

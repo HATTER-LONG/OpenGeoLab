@@ -22,40 +22,40 @@ namespace OpenGeoLab::Geometry {
  */
 class GeometryDocument : public Kangaroo::Util::NonCopyMoveable {
 public:
-	using Ptr = std::shared_ptr<GeometryDocument>;
+    using Ptr = std::shared_ptr<GeometryDocument>;
 
-	GeometryDocument() = default;
-	explicit GeometryDocument(std::string name);
-	~GeometryDocument() = default;
+    GeometryDocument() = default;
+    explicit GeometryDocument(std::string name);
+    ~GeometryDocument() = default;
 
-	void clear();
+    void clear();
 
-	[[nodiscard]] bool setRootEntity(const GeometryEntityPtr& root);
-	[[nodiscard]] GeometryEntityPtr rootEntity() const { return m_root; }
+    [[nodiscard]] bool setRootEntity(const GeometryEntityPtr& root);
+    [[nodiscard]] GeometryEntityPtr rootEntity() const { return m_root; }
 
-	[[nodiscard]] const std::string& name() const { return m_name; }
-	void setName(std::string name);
+    [[nodiscard]] const std::string& name() const { return m_name; }
+    void setName(std::string name);
 
-	[[nodiscard]] const std::string& sourcePath() const { return m_sourcePath; }
-	void setSourcePath(std::string source_path);
+    [[nodiscard]] const std::string& sourcePath() const { return m_sourcePath; }
+    void setSourcePath(std::string source_path);
 
-	[[nodiscard]] EntityIndex& index() { return m_index; }
-	[[nodiscard]] const EntityIndex& index() const { return m_index; }
-	void rebuildIndex();
+    [[nodiscard]] EntityIndex& index() { return m_index; }
+    [[nodiscard]] const EntityIndex& index() const { return m_index; }
+    void rebuildIndex();
 
-	[[nodiscard]] GeometryEntityPtr findById(EntityId entity_id) const;
-	[[nodiscard]] GeometryEntityPtr findByUIDAndType(EntityUID entity_uid,
-													 EntityType entity_type) const;
-	[[nodiscard]] GeometryEntityPtr findByShape(const TopoDS_Shape& shape) const;
+    [[nodiscard]] GeometryEntityPtr findById(EntityId entity_id) const;
+    [[nodiscard]] GeometryEntityPtr findByUIDAndType(EntityUID entity_uid,
+                                                     EntityType entity_type) const;
+    [[nodiscard]] GeometryEntityPtr findByShape(const TopoDS_Shape& shape) const;
 
-	[[nodiscard]] std::vector<GeometryEntityPtr> parts() const;
+    [[nodiscard]] std::vector<GeometryEntityPtr> parts() const;
 
 private:
-	std::string m_name;
-	std::string m_sourcePath;
+    std::string m_name;
+    std::string m_sourcePath;
 
-	GeometryEntityPtr m_root;
-	EntityIndex m_index;
+    GeometryEntityPtr m_root;
+    EntityIndex m_index;
 };
 
 } // namespace OpenGeoLab::Geometry

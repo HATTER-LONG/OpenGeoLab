@@ -20,7 +20,7 @@ private:
     EntityType m_type{EntityType::None};
     TopoDS_Shape m_shape;
 };
- 
+
 TEST_CASE("GeometryEntity - child reference count and multi-parents") { // NOLINT
     auto parent1 = std::make_shared<TestEntity>(EntityType::Compound);
     auto parent2 = std::make_shared<TestEntity>(EntityType::Compound);

@@ -68,7 +68,8 @@ GeometryEntityPtr GeometryDocument::findById(EntityId entity_id) const {
     return m_index.findById(entity_id);
 }
 
-GeometryEntityPtr GeometryDocument::findByUIDAndType(EntityUID entity_uid, EntityType entity_type) const {
+GeometryEntityPtr GeometryDocument::findByUIDAndType(EntityUID entity_uid,
+                                                     EntityType entity_type) const {
     return m_index.findByUIDAndType(entity_uid, entity_type);
 }
 

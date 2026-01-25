@@ -43,8 +43,8 @@ set(module_sources
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/io/model_reader.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/geometry_types.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/geometry_entity.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/geometry_document.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/geometry_manager.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/geometry_document.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/geometry_manager.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/entity_index.cpp
 )
 
