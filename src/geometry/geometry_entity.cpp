@@ -28,6 +28,8 @@ GeometryEntity::~GeometryEntity() { detachAllRelations(); }
 GeometryEntity::GeometryEntity(EntityType type)
     : m_entityId(generateEntityId()), m_entityUID(generateEntityUID(type)) {}
 
+bool GeometryEntity::hasShape() const { return !shape().IsNull(); }
+
 EntityType GeometryEntity::detectEntityType(const TopoDS_Shape& shape) {
     if(shape.IsNull()) {
         return EntityType::None;

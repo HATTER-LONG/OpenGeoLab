@@ -44,7 +44,19 @@ set(module_sources
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/geometry_types.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/geometry_document.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/geometry_entity.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/geometry_builder.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/entity_index.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/primitive_factory.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/tessellator.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/vertex_entity.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/edge_entity.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/wire_entity.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/face_entity.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/shell_entity.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/solid_entity.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/compound_entity.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/comp_solid_entity.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/part_entity.cpp
 )
 
 # Include header files for AUTOMOC to find Q_OBJECT macros

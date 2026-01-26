@@ -4,6 +4,8 @@
  */
 
 #include "brep_reader.hpp"
+#include "geometry/geometry_builder.hpp"
+#include "geometry/geometry_document.hpp"
 #include "util/logger.hpp"
 #include "util/occ_progress.hpp"
 
@@ -66,7 +68,32 @@ ReadResult BrepReader::readFile(const std::string& file_path,
             return ReadResult::failure("Operation cancelled");
         }
 
-        return ReadResult::success(nullptr);
+        // Build entity hierarchy
+        auto document = Geometry::GeometryDocumentManager::instance().currentDocument();
+        if(!document) {
+            document = Geometry::GeometryDocumentManager::instance().newDocument();
+        }
+
+        Geometry::GeometryBuilder geometry_builder(document);
+        std::string part_name = std::filesystem::path(file_path).stem().string();
+        auto build_result = geometry_builder.buildFromShape(
+            shape, part_name, [&progress_callback](double progress, const std::string& message) {
+                if(!progress_callback) {
+                    return true;
+                }
+                // Scale progress from 0.75 to 0.99
+                double scaled_progress = 0.75 + progress * 0.24;
+                return progress_callback(scaled_progress, message);
+            });
+
+        if(!build_result.m_success) {
+            LOG_ERROR("Failed to build entity hierarchy: {}", build_result.m_errorMessage);
+            return ReadResult::failure("Entity hierarchy construction failed: " +
+                                       build_result.m_errorMessage);
+        }
+
+        LOG_INFO("BREP file imported successfully: {}", file_path);
+        return ReadResult::success(build_result.m_partEntity);
 
     } catch(const Standard_Failure& e) {
         std::string error = e.GetMessageString() ? e.GetMessageString() : "Unknown OCC error";
