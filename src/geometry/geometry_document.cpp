@@ -31,6 +31,24 @@ bool GeometryDocument::removeEntity(EntityId entity_id) {
 
 void GeometryDocument::clear() { m_entityIndex.clear(); }
 
+GeometryEntityPtr GeometryDocument::findById(EntityId entity_id) const {
+    return m_entityIndex.findById(entity_id);
+}
+
+GeometryEntityPtr GeometryDocument::findByUIDAndType(EntityUID entity_uid,
+                                                     EntityType entity_type) const {
+    return m_entityIndex.findByUIDAndType(entity_uid, entity_type);
+}
+
+GeometryEntityPtr GeometryDocument::findByShape(const TopoDS_Shape& shape) const {
+    return m_entityIndex.findByShape(shape);
+}
+
+[[nodiscard]] size_t GeometryDocument::entityCount() const { return m_entityIndex.entityCount(); }
+
+[[nodiscard]] size_t GeometryDocument::entityCountByType(EntityType entity_type) const {
+    return m_entityIndex.entityCountByType(entity_type);
+}
 bool GeometryDocument::addChildEdge(EntityId parent_id, EntityId child_id) {
     if(parent_id == INVALID_ENTITY_ID || child_id == INVALID_ENTITY_ID) {
         return false;
@@ -86,4 +104,20 @@ bool GeometryDocument::removeChildEdge(EntityId parent_id, EntityId child_id) {
     return true;
 }
 
+GeometryDocumentManager& GeometryDocumentManager::instance() {
+    static GeometryDocumentManager s_instance;
+    return s_instance;
+}
+
+GeometryDocumentPtr GeometryDocumentManager::currentDocument() {
+    if(!m_currentDocument) {
+        return newDocument();
+    }
+    return m_currentDocument;
+}
+
+GeometryDocumentPtr GeometryDocumentManager::newDocument() {
+    m_currentDocument = GeometryDocument::create();
+    return m_currentDocument;
+}
 } // namespace OpenGeoLab::Geometry

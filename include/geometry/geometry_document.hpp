@@ -17,6 +17,7 @@
 
 namespace OpenGeoLab::Geometry {
 
+using GeometryDocumentPtr = std::shared_ptr<GeometryDocument>;
 /**
  * @brief Geometry document holding the authoritative entity index.
  *
@@ -26,9 +27,7 @@ namespace OpenGeoLab::Geometry {
 class GeometryDocument : public Kangaroo::Util::NonCopyMoveable,
                          public std::enable_shared_from_this<GeometryDocument> {
 public:
-    using Ptr = std::shared_ptr<GeometryDocument>;
-
-    [[nodiscard]] static Ptr create() {
+    [[nodiscard]] static GeometryDocumentPtr create() {
         struct MakeSharedEnabler final : public GeometryDocument {
             MakeSharedEnabler() = default;
         };
@@ -64,23 +63,16 @@ public:
      */
     void clear();
 
-    [[nodiscard]] GeometryEntityPtr findById(EntityId entity_id) const {
-        return m_entityIndex.findById(entity_id);
-    }
+    [[nodiscard]] GeometryEntityPtr findById(EntityId entity_id) const;
 
     [[nodiscard]] GeometryEntityPtr findByUIDAndType(EntityUID entity_uid,
-                                                     EntityType entity_type) const {
-        return m_entityIndex.findByUIDAndType(entity_uid, entity_type);
-    }
+                                                     EntityType entity_type) const;
 
-    [[nodiscard]] GeometryEntityPtr findByShape(const TopoDS_Shape& shape) const {
-        return m_entityIndex.findByShape(shape);
-    }
+    [[nodiscard]] GeometryEntityPtr findByShape(const TopoDS_Shape& shape) const;
 
-    [[nodiscard]] size_t entityCount() const { return m_entityIndex.entityCount(); }
-    [[nodiscard]] size_t entityCountByType(EntityType entity_type) const {
-        return m_entityIndex.entityCountByType(entity_type);
-    }
+    [[nodiscard]] size_t entityCount() const;
+
+    [[nodiscard]] size_t entityCountByType(EntityType entity_type) const;
 
     /**
      * @brief Add a directed parent->child edge.
@@ -104,6 +96,22 @@ private:
 
 private:
     EntityIndex m_entityIndex;
+};
+
+class GeometryDocumentManager : public Kangaroo::Util::NonCopyMoveable {
+public:
+    ~GeometryDocumentManager() = default;
+    static GeometryDocumentManager& instance();
+
+    [[nodiscard]] GeometryDocumentPtr currentDocument();
+
+    [[nodiscard]] GeometryDocumentPtr newDocument();
+
+protected:
+    GeometryDocumentManager() = default;
+
+private:
+    GeometryDocumentPtr m_currentDocument;
 };
 
 } // namespace OpenGeoLab::Geometry
