@@ -156,8 +156,10 @@ set_source_files_properties(
   resources/qml/Theme.qml resources/qml/MainPages.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE
 )
 
-# Collect all SVG icon resources automatically (using relative paths)
-file(GLOB ICON_RESOURCES_ABS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/*.svg")
+# Collect icon resources automatically (using relative paths)
+file(GLOB ICON_RESOURCES_ABS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/*.svg"
+     "${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/*.png"
+)
 
 # Convert absolute paths to relative paths for Qt resource system
 set(ICON_RESOURCES "")

@@ -9,6 +9,7 @@
 #include <util/qml_spdlog_sink.hpp>
 
 #include <QGuiApplication>
+#include <QIcon>
 #include <QQmlApplicationEngine>
 #include <QQmlComponent>
 #include <QQmlContext>
@@ -50,6 +51,11 @@ auto main(int argc, char** argv) -> int {
 
     OpenGeoLab::App::registerServices();
     QGuiApplication app(argc, argv);
+
+    QIcon app_icon;
+    app_icon.addFile(":/opengeolab/resources/icons/toolsbaricon1024x934.png");
+    QGuiApplication::setWindowIcon(app_icon);
+
     QQmlApplicationEngine engine;
 
     OpenGeoLab::App::LogService log_service;
