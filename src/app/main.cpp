@@ -53,7 +53,7 @@ auto main(int argc, char** argv) -> int {
     QGuiApplication app(argc, argv);
 
     QIcon app_icon;
-    app_icon.addFile(":/opengeolab/resources/icons/toolsbaricon1024x934.png");
+    app_icon.addFile(":/opengeolab/resources/icons/toolsbaricon1592x1592.png");
     QGuiApplication::setWindowIcon(app_icon);
 
     QQmlApplicationEngine engine;
