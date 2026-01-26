@@ -191,6 +191,18 @@ qt_add_qml_module(
   resources/qml/Pages/ProgressOverlay.qml
   resources/qml/Pages/CornerOverlay.qml
   resources/qml/Pages/LogPanel.qml
+  resources/qml/Pages/AddBoxPage.qml
+  resources/qml/Pages/AddLinePage.qml
+  resources/qml/Pages/AddPointPage.qml
+  resources/qml/Pages/AIChatPage.qml
+  resources/qml/Pages/AISuggestPage.qml
+  resources/qml/Pages/CoordinateField.qml
+  resources/qml/Pages/FunctionPageBase.qml
+  resources/qml/Pages/GenerateMeshPage.qml
+  resources/qml/Pages/OffsetPage.qml
+  resources/qml/Pages/ParamField.qml
+  resources/qml/Pages/SmoothMeshPage.qml
+  resources/qml/Pages/TrimPage.qml
   resources/qml/util/BaseButton.qml
   resources/qml/util/BaseComboBox.qml
   RESOURCES

@@ -18,6 +18,11 @@ ApplicationWindow {
 
     palette: Theme.palette
 
+    // Set main window reference for floating pages
+    Component.onCompleted: {
+        MainPages.mainWindow = root;
+    }
+
     header: RibbonMenu.RibbonToolBar {
         id: ribbonToolBar
         onActionTriggered: (actionId, payload) => {
@@ -35,5 +40,12 @@ ApplicationWindow {
     Pages.CornerOverlay {
         id: cornerOverlay
         logService: LogService
+    }
+
+    // Container for floating function pages
+    Item {
+        id: functionPagesContainer
+        anchors.fill: parent
+        z: 100
     }
 }

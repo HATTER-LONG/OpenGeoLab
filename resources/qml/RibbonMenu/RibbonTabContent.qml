@@ -12,6 +12,9 @@ Item {
     id: root
     height: parent.height - 28
 
+    /// Emitted when any ribbon item is triggered
+    signal actionTriggered(string actionId, var payload)
+
     /// Array of group definitions with items
     property var groups: []
 
@@ -106,7 +109,10 @@ Item {
             tooltipText: itemData.tooltip || ""
 
             onClicked: {
-                // Emit a single action signal for the host to handle.
+                const actionId = (itemData && itemData.id) ? itemData.id : "";
+                if (actionId.length > 0) {
+                    root.actionTriggered(actionId, itemData || {});
+                }
             }
         }
     }

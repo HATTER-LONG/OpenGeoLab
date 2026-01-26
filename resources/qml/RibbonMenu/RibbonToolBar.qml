@@ -129,6 +129,8 @@ Rectangle {
                 return tab ? (tab.groups || []) : [];
             }
 
+            onActionTriggered: (actionId, payload) => ribbonToolBar.actionTriggered(actionId, payload)
+
             // iconColor: root.iconColor
             // textColor: root.textColor
             // textColorDim: root.textColorDim
@@ -136,7 +138,6 @@ Rectangle {
             // pressedColor: Theme.ribbonPressedColor
             // separatorColor: root.borderColor
 
-            // onActionTriggered: (actionId, payload) => root.actionTriggered(actionId, payload)
         }
     }
 }
