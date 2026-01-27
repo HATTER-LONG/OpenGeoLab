@@ -37,7 +37,7 @@ FunctionPageBase {
     /// Line name
     property string lineName: ""
 
-    function getParameters() {
+    function getParameters(): var {
         return {
             "action": "createLine",
             "name": lineName || "Line_" + Date.now(),
@@ -116,7 +116,7 @@ FunctionPageBase {
                     property real dx: root.endX - root.startX
                     property real dy: root.endY - root.startY
                     property real dz: root.endZ - root.startZ
-                    property real length: Math.sqrt(dx*dx + dy*dy + dz*dz)
+                    property real length: Math.sqrt(dx * dx + dy * dy + dz * dz)
 
                     text: length.toFixed(3)
                     font.pixelSize: 11

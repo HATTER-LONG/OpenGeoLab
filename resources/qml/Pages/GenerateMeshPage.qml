@@ -35,7 +35,7 @@ FunctionPageBase {
     /// Enable adaptive meshing
     property bool adaptive: true
 
-    function getParameters() {
+    function getParameters(): var {
         return {
             "action": "generateMesh",
             "targets": targetGeometries,
@@ -75,22 +75,21 @@ FunctionPageBase {
                 }
 
                 Label {
-                    text: root.targetGeometries.length > 0 ?
-                          qsTr("%1 geometries selected").arg(root.targetGeometries.length) :
-                          qsTr("Select geometries in viewport")
+                    text: root.targetGeometries.length > 0 ? qsTr("%1 geometries selected").arg(root.targetGeometries.length) : qsTr("Select geometries in viewport")
                     font.pixelSize: 11
                     color: root.targetGeometries.length > 0 ? Theme.textPrimary : Theme.textDisabled
                     Layout.fillWidth: true
                 }
 
                 AbstractButton {
+                    id: pickGeometryBtn
                     implicitWidth: 24
                     implicitHeight: 24
                     hoverEnabled: true
 
                     background: Rectangle {
                         radius: 4
-                        color: parent.hovered ? Theme.hovered : "transparent"
+                        color: pickGeometryBtn.hovered ? Theme.hovered : "transparent"
                     }
 
                     contentItem: Label {
@@ -100,7 +99,7 @@ FunctionPageBase {
                         verticalAlignment: Text.AlignVCenter
                     }
 
-                    ToolTip.visible: hovered
+                    ToolTip.visible: pickGeometryBtn.hovered
                     ToolTip.text: qsTr("Select from viewport")
                     ToolTip.delay: 500
                 }
@@ -121,7 +120,9 @@ FunctionPageBase {
                     color: Theme.textSecondary
                 }
 
-                Item { Layout.fillWidth: true }
+                Item {
+                    Layout.fillWidth: true
+                }
 
                 Label {
                     text: root.elementSize.toFixed(2)
@@ -186,14 +187,15 @@ FunctionPageBase {
                     color: Theme.textSecondary
                 }
 
-                Item { Layout.fillWidth: true }
+                Item {
+                    Layout.fillWidth: true
+                }
 
                 Label {
                     text: Math.round(root.quality * 100) + "%"
                     font.pixelSize: 11
                     font.bold: true
-                    color: root.quality > 0.7 ? Theme.success :
-                           root.quality > 0.4 ? Theme.accent : Theme.danger
+                    color: root.quality > 0.7 ? Theme.success : root.quality > 0.4 ? Theme.accent : Theme.danger
                 }
             }
 
@@ -220,8 +222,7 @@ FunctionPageBase {
                     Rectangle {
                         width: qualitySlider.visualPosition * parent.width
                         height: parent.height
-                        color: root.quality > 0.7 ? Theme.success :
-                               root.quality > 0.4 ? Theme.accent : Theme.danger
+                        color: root.quality > 0.7 ? Theme.success : root.quality > 0.4 ? Theme.accent : Theme.danger
                         radius: 2
                     }
                 }
@@ -234,8 +235,7 @@ FunctionPageBase {
                     radius: 8
                     color: qualitySlider.pressed ? Theme.clicked : Theme.surface
                     border.width: 2
-                    border.color: root.quality > 0.7 ? Theme.success :
-                                  root.quality > 0.4 ? Theme.accent : Theme.danger
+                    border.color: root.quality > 0.7 ? Theme.success : root.quality > 0.4 ? Theme.accent : Theme.danger
                 }
             }
         }
@@ -346,9 +346,7 @@ FunctionPageBase {
 
         background: Rectangle {
             radius: 4
-            color: meshBtn.selected ? Theme.accent :
-                   meshBtn.pressed ? Theme.clicked :
-                   meshBtn.hovered ? Theme.hovered : Theme.surface
+            color: meshBtn.selected ? Theme.accent : meshBtn.pressed ? Theme.clicked : meshBtn.hovered ? Theme.hovered : Theme.surface
             border.width: 1
             border.color: meshBtn.selected ? Theme.accent : Theme.border
         }

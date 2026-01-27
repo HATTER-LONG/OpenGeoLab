@@ -4,6 +4,7 @@
  */
 
 #include "service.hpp"
+#include "geometry/geometry_service.hpp"
 #include "io/brep_reader.hpp"
 #include "io/model_reader.hpp"
 #include "io/step_reader.hpp"
@@ -17,8 +18,12 @@ namespace OpenGeoLab::App {
  * Called during application startup to make services available for backend requests.
  */
 void registerServices() {
+    // Singleton services
     g_ComponentFactory.registInstanceFactoryWithID<IO::ModelReaderFactory>("ModelReader");
+    g_ComponentFactory.registInstanceFactoryWithID<Geometry::GeometryServiceFactory>(
+        "GeometryService");
 
+    // Reader factories
     g_ComponentFactory.registFactoryWithID<IO::BrepReaderFactory>("BrepReader");
     g_ComponentFactory.registFactoryWithID<IO::StepReaderFactory>("StepReader");
 }

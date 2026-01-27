@@ -31,7 +31,7 @@ FunctionPageBase {
     /// Suggestion mode
     property string mode: "auto"
 
-    function getParameters() {
+    function getParameters(): var {
         return {
             "action": "suggest",
             "prompt": userPrompt,
@@ -69,9 +69,7 @@ FunctionPageBase {
                 }
 
                 Label {
-                    text: root.contextGeometries.length > 0 ?
-                          qsTr("%1 objects in context").arg(root.contextGeometries.length) :
-                          qsTr("Analyzing workspace...")
+                    text: root.contextGeometries.length > 0 ? qsTr("%1 objects in context").arg(root.contextGeometries.length) : qsTr("Analyzing workspace...")
                     font.pixelSize: 11
                     color: Theme.textPrimary
                     Layout.fillWidth: true
@@ -219,9 +217,7 @@ FunctionPageBase {
 
         background: Rectangle {
             radius: 4
-            color: modeBtn.selected ? Theme.accent :
-                   modeBtn.pressed ? Theme.clicked :
-                   modeBtn.hovered ? Theme.hovered : Theme.surface
+            color: modeBtn.selected ? Theme.accent : modeBtn.pressed ? Theme.clicked : modeBtn.hovered ? Theme.hovered : Theme.surface
             border.width: 1
             border.color: modeBtn.selected ? Theme.accent : Theme.border
         }
@@ -241,7 +237,7 @@ FunctionPageBase {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: modeBtn.description
                 font.pixelSize: 9
-                color: modeBtn.selected ? Qt.rgba(1,1,1,0.7) : Theme.textSecondary
+                color: modeBtn.selected ? Qt.rgba(1, 1, 1, 0.7) : Theme.textSecondary
             }
         }
     }
@@ -258,8 +254,7 @@ FunctionPageBase {
 
         background: Rectangle {
             radius: 12
-            color: chip.pressed ? Theme.clicked :
-                   chip.hovered ? Theme.hovered : Theme.surfaceAlt
+            color: chip.pressed ? Theme.clicked : chip.hovered ? Theme.hovered : Theme.surfaceAlt
             border.width: 1
             border.color: Theme.border
         }

@@ -7,6 +7,9 @@
  * - Parameter content area (to be filled by subclasses)
  * - Execute and Cancel action buttons
  * - JSON request emission on execute
+ *
+ * Subclasses override getParameters() to provide custom parameter JSON.
+ * The [shadow] warning is expected QML behavior for function overriding.
  */
 pragma ComponentBehavior: Bound
 import QtQuick
@@ -36,14 +39,13 @@ Item {
     /// Default content to be overridden by subclasses
     default property alias content: contentColumn.data
 
-    /// Parameters object - subclasses should define their own properties
-    /// and build JSON in getParameters()
+    /// Parameters object - subclasses should override getParameters()
     property var parameters: ({})
 
     /// Signal emitted when execute is clicked with JSON payload
     signal executed(string jsonPayload)
     /// Signal emitted when cancel is clicked
-    signal cancelled()
+    signal cancelled
 
     // =========================================================
     // Layout
@@ -59,14 +61,14 @@ Item {
     y: 12
 
     // =========================================================
-    // Methods
+    // Methods (subclasses may override)
     // =========================================================
 
     /**
      * @brief Open the function page
      * @param payload Optional initial data
      */
-    function open(payload) {
+    function open(payload: var): void {
         if (payload) {
             parsePayload(payload);
         }
@@ -77,7 +79,7 @@ Item {
     /**
      * @brief Close the function page
      */
-    function close() {
+    function close(): void {
         pageVisible = false;
         // Notify MainPages that this page is closed
         if (MainPages.currentOpenPage === root.actionId) {
@@ -89,31 +91,32 @@ Item {
      * @brief Override in subclasses to parse incoming payload
      * @param payload The payload data
      */
-    function parsePayload(payload) {
-        // Override in subclass
+    function parsePayload(payload: var): void {
+        // Default: do nothing
+        void payload;
     }
 
     /**
      * @brief Override in subclasses to build parameter JSON
      * @return Object containing parameters for backend request
      */
-    function getParameters() {
+    function getParameters(): var {
         return parameters;
     }
 
     /**
      * @brief Execute the function and send request to backend
      */
-    function execute() {
+    function execute(): void {
         const params = getParameters();
         const jsonPayload = JSON.stringify(params);
-        console.log("[FunctionPage]", actionId, "executing with:", jsonPayload);
+        console.log("[FunctionPage]", root.actionId, "executing with:", jsonPayload);
 
-        if (serviceName) {
-            BackendService.request(serviceName, jsonPayload);
+        if (root.serviceName) {
+            BackendService.request(root.serviceName, jsonPayload);
         }
-        executed(jsonPayload);
-        close();
+        root.executed(jsonPayload);
+        root.close();
     }
 
     // =========================================================
@@ -304,8 +307,7 @@ Item {
 
                         background: Rectangle {
                             radius: 4
-                            color: executeButton.pressed ? Qt.darker(Theme.accent, 1.2) :
-                                   executeButton.hovered ? Qt.lighter(Theme.accent, 1.1) : Theme.accent
+                            color: executeButton.pressed ? Qt.darker(Theme.accent, 1.2) : executeButton.hovered ? Qt.lighter(Theme.accent, 1.1) : Theme.accent
                             border.width: 1
                             border.color: Qt.darker(Theme.accent, 1.3)
                         }
@@ -335,8 +337,7 @@ Item {
 
                         background: Rectangle {
                             radius: 4
-                            color: cancelButton.pressed ? Theme.clicked :
-                                   cancelButton.hovered ? Theme.hovered : Theme.surfaceAlt
+                            color: cancelButton.pressed ? Theme.clicked : cancelButton.hovered ? Theme.hovered : Theme.surfaceAlt
                             border.width: 1
                             border.color: Theme.border
                         }

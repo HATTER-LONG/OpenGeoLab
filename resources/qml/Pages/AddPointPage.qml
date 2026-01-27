@@ -30,7 +30,7 @@ FunctionPageBase {
     /// Point name
     property string pointName: ""
 
-    function getParameters() {
+    function getParameters(): var {
         return {
             "action": "createPoint",
             "name": pointName || "Point_" + Date.now(),
@@ -42,10 +42,13 @@ FunctionPageBase {
         };
     }
 
-    function parsePayload(payload) {
-        if (payload.x !== undefined) pointX = payload.x;
-        if (payload.y !== undefined) pointY = payload.y;
-        if (payload.z !== undefined) pointZ = payload.z;
+    function parsePayload(payload: var): void {
+        if (payload.x !== undefined)
+            root.pointX = payload.x;
+        if (payload.y !== undefined)
+            root.pointY = payload.y;
+        if (payload.z !== undefined)
+            root.pointZ = payload.z;
     }
 
     // =========================================================

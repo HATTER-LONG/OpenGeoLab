@@ -32,7 +32,7 @@ FunctionPageBase {
     /// Include workspace context
     property bool includeContext: true
 
-    function getParameters() {
+    function getParameters(): var {
         return {
             "action": "chat",
             "message": currentMessage,
@@ -41,29 +41,30 @@ FunctionPageBase {
     }
 
     // Override execute to add message to history
-    function execute() {
-        if (currentMessage.trim().length === 0) return;
+    function execute(): void {
+        if (root.currentMessage.trim().length === 0)
+            return;
 
         // Add user message to history
-        chatHistory.push({
+        root.chatHistory.push({
             role: "user",
-            content: currentMessage,
+            content: root.currentMessage,
             timestamp: Date.now()
         });
-        chatHistoryChanged();
+        root.chatHistoryChanged();
 
         // Send request
         const params = getParameters();
         const jsonPayload = JSON.stringify(params);
         console.log("[AIChatPage] sending:", jsonPayload);
 
-        if (serviceName) {
-            BackendService.request(serviceName, jsonPayload);
+        if (root.serviceName) {
+            BackendService.request(root.serviceName, jsonPayload);
         }
-        executed(jsonPayload);
+        root.executed(jsonPayload);
 
         // Clear input
-        currentMessage = "";
+        root.currentMessage = "";
     }
 
     // =========================================================
@@ -221,10 +222,7 @@ FunctionPageBase {
 
                     background: Rectangle {
                         radius: 18
-                        color: sendButton.enabled ?
-                               (sendButton.pressed ? Qt.darker(Theme.accent, 1.2) :
-                                sendButton.hovered ? Qt.lighter(Theme.accent, 1.1) : Theme.accent) :
-                               Theme.surfaceAlt
+                        color: sendButton.enabled ? (sendButton.pressed ? Qt.darker(Theme.accent, 1.2) : sendButton.hovered ? Qt.lighter(Theme.accent, 1.1) : Theme.accent) : Theme.surfaceAlt
                     }
 
                     contentItem: Label {

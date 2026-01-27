@@ -35,7 +35,7 @@ FunctionPageBase {
     /// Smoothing method
     property string method: "laplacian"
 
-    function getParameters() {
+    function getParameters(): var {
         return {
             "action": "smoothMesh",
             "target": targetMesh,
@@ -88,13 +88,14 @@ FunctionPageBase {
                     }
 
                     AbstractButton {
+                        id: pickMeshBtn
                         implicitWidth: 24
                         implicitHeight: 24
                         hoverEnabled: true
 
                         background: Rectangle {
                             radius: 4
-                            color: parent.hovered ? Theme.hovered : "transparent"
+                            color: pickMeshBtn.hovered ? Theme.hovered : "transparent"
                         }
 
                         contentItem: Label {
@@ -104,7 +105,7 @@ FunctionPageBase {
                             verticalAlignment: Text.AlignVCenter
                         }
 
-                        ToolTip.visible: hovered
+                        ToolTip.visible: pickMeshBtn.hovered
                         ToolTip.text: qsTr("Pick from viewport")
                         ToolTip.delay: 500
                     }
@@ -157,7 +158,9 @@ FunctionPageBase {
                     color: Theme.textSecondary
                 }
 
-                Item { Layout.fillWidth: true }
+                Item {
+                    Layout.fillWidth: true
+                }
 
                 Label {
                     text: root.iterations.toString()
@@ -222,7 +225,9 @@ FunctionPageBase {
                     color: Theme.textSecondary
                 }
 
-                Item { Layout.fillWidth: true }
+                Item {
+                    Layout.fillWidth: true
+                }
 
                 Label {
                     text: root.factor.toFixed(2)
@@ -337,9 +342,7 @@ FunctionPageBase {
 
         background: Rectangle {
             radius: 4
-            color: methodBtn.selected ? Theme.accent :
-                   methodBtn.pressed ? Theme.clicked :
-                   methodBtn.hovered ? Theme.hovered : Theme.surface
+            color: methodBtn.selected ? Theme.accent : methodBtn.pressed ? Theme.clicked : methodBtn.hovered ? Theme.hovered : Theme.surface
             border.width: 1
             border.color: methodBtn.selected ? Theme.accent : Theme.border
         }

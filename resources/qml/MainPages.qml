@@ -7,6 +7,7 @@
  */
 pragma Singleton
 import QtQuick
+import OpenGeoLab 1.0 as OGL
 
 QtObject {
     id: mainPages
@@ -22,33 +23,63 @@ QtObject {
 
     /// Component path mapping for all available pages
     readonly property var componentMap: ({
-        // File operations
-        "importModel": { path: "Pages/ImportModel.qml", floating: false },
+            // File operations
+            "importModel": {
+                path: "Pages/ImportModel.qml",
+                floating: false
+            },
 
-        // Geometry - Create
-        "addPoint": { path: "Pages/AddPointPage.qml", floating: true },
-        "addLine": { path: "Pages/AddLinePage.qml", floating: true },
-        "addBox": { path: "Pages/AddBoxPage.qml", floating: true },
+            // Geometry - Create
+            "addPoint": {
+                path: "Pages/AddPointPage.qml",
+                floating: true
+            },
+            "addLine": {
+                path: "Pages/AddLinePage.qml",
+                floating: true
+            },
+            "addBox": {
+                path: "Pages/AddBoxPage.qml",
+                floating: true
+            },
 
-        // Geometry - Modify
-        "trim": { path: "Pages/TrimPage.qml", floating: true },
-        "offset": { path: "Pages/OffsetPage.qml", floating: true },
+            // Geometry - Modify
+            "trim": {
+                path: "Pages/TrimPage.qml",
+                floating: true
+            },
+            "offset": {
+                path: "Pages/OffsetPage.qml",
+                floating: true
+            },
 
-        // Mesh
-        "generateMesh": { path: "Pages/GenerateMeshPage.qml", floating: true },
-        "smoothMesh": { path: "Pages/SmoothMeshPage.qml", floating: true },
+            // Mesh
+            "generateMesh": {
+                path: "Pages/GenerateMeshPage.qml",
+                floating: true
+            },
+            "smoothMesh": {
+                path: "Pages/SmoothMeshPage.qml",
+                floating: true
+            },
 
-        // AI
-        "aiSuggest": { path: "Pages/AISuggestPage.qml", floating: true },
-        "aiChat": { path: "Pages/AIChatPage.qml", floating: true }
-    })
+            // AI
+            "aiSuggest": {
+                path: "Pages/AISuggestPage.qml",
+                floating: true
+            },
+            "aiChat": {
+                path: "Pages/AIChatPage.qml",
+                floating: true
+            }
+        })
 
     /**
      * @brief Get or create a page component by action ID
      * @param actionId The action identifier mapped to a page
      * @return Page instance or undefined if not found
      */
-    function getPage(actionId) {
+    function getPage(actionId: string): QtObject {
         if (!pageCache[actionId]) {
             const config = componentMap[actionId];
             if (!config) {
@@ -77,7 +108,13 @@ QtObject {
      * @param actionId The action identifier
      * @param payload Optional data payload
      */
-    function handleAction(actionId, payload) {
+    function handleAction(actionId: string, payload: var): void {
+        // Handle special actions that don't have pages
+        if (actionId === "newModel") {
+            handleNewModel();
+            return;
+        }
+
         const config = componentMap[actionId];
 
         // For floating pages, close the current one first (only one allowed at a time)
@@ -101,9 +138,19 @@ QtObject {
     }
 
     /**
+     * @brief Handle new model action - creates a new empty document
+     */
+    function handleNewModel(): void {
+        console.log("[MainPages] Creating new model...");
+        OGL.BackendService.request("GeometryService", JSON.stringify({
+            "action": "newDocument"
+        }));
+    }
+
+    /**
      * @brief Close all open floating pages
      */
-    function closeAll() {
+    function closeAll(): void {
         for (const actionId in pageCache) {
             const page = pageCache[actionId];
             if (page && typeof page.close === "function") {
@@ -117,7 +164,7 @@ QtObject {
      * @param actionId The action identifier
      * @return true if page is visible
      */
-    function isPageOpen(actionId) {
+    function isPageOpen(actionId: string): bool {
         const page = pageCache[actionId];
         return page && page.visible;
     }

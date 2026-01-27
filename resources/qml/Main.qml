@@ -1,7 +1,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
-import OpenGeoLab 1.0
+import OpenGeoLab 1.0 as OGL
 import "RibbonMenu" as RibbonMenu
 import "Pages" as Pages
 
@@ -17,6 +17,9 @@ ApplicationWindow {
     title: qsTr("OpenGeoLab")
 
     palette: Theme.palette
+
+    // Store context property reference for ComponentBehavior: Bound
+    required property var logService
 
     // Set main window reference for floating pages
     Component.onCompleted: {
@@ -39,7 +42,7 @@ ApplicationWindow {
 
     Pages.CornerOverlay {
         id: cornerOverlay
-        logService: LogService
+        logService: root.logService
     }
 
     // Container for floating function pages

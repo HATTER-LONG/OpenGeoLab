@@ -60,7 +60,7 @@ auto main(int argc, char** argv) -> int {
 
     OpenGeoLab::App::LogService log_service;
     OpenGeoLab::Util::installQmlSpdlogSink(&log_service);
-    engine.rootContext()->setContextProperty("LogService", &log_service);
+    engine.rootContext()->setContextProperty("logService", &log_service);
 
     QObject::connect(
         &engine, &QQmlApplicationEngine::objectCreated, &app,

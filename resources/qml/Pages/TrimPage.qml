@@ -33,7 +33,7 @@ FunctionPageBase {
     /// Keep original geometry
     property bool keepOriginal: false
 
-    function getParameters() {
+    function getParameters(): var {
         return {
             "action": "trim",
             "target": targetGeometry,
@@ -85,13 +85,14 @@ FunctionPageBase {
                     }
 
                     AbstractButton {
+                        id: pickTargetBtn
                         implicitWidth: 24
                         implicitHeight: 24
                         hoverEnabled: true
 
                         background: Rectangle {
                             radius: 4
-                            color: parent.hovered ? Theme.hovered : "transparent"
+                            color: pickTargetBtn.hovered ? Theme.hovered : "transparent"
                         }
 
                         contentItem: Label {
@@ -101,7 +102,7 @@ FunctionPageBase {
                             verticalAlignment: Text.AlignVCenter
                         }
 
-                        ToolTip.visible: hovered
+                        ToolTip.visible: pickTargetBtn.hovered
                         ToolTip.text: qsTr("Pick from viewport")
                         ToolTip.delay: 500
                     }
@@ -143,13 +144,14 @@ FunctionPageBase {
                     }
 
                     AbstractButton {
+                        id: pickBoundaryBtn
                         implicitWidth: 24
                         implicitHeight: 24
                         hoverEnabled: true
 
                         background: Rectangle {
                             radius: 4
-                            color: parent.hovered ? Theme.hovered : "transparent"
+                            color: pickBoundaryBtn.hovered ? Theme.hovered : "transparent"
                         }
 
                         contentItem: Label {
@@ -159,7 +161,7 @@ FunctionPageBase {
                             verticalAlignment: Text.AlignVCenter
                         }
 
-                        ToolTip.visible: hovered
+                        ToolTip.visible: pickBoundaryBtn.hovered
                         ToolTip.text: qsTr("Pick from viewport")
                         ToolTip.delay: 500
                     }
@@ -262,9 +264,7 @@ FunctionPageBase {
 
         background: Rectangle {
             radius: 4
-            color: modeBtn.selected ? Theme.accent :
-                   modeBtn.pressed ? Theme.clicked :
-                   modeBtn.hovered ? Theme.hovered : Theme.surface
+            color: modeBtn.selected ? Theme.accent : modeBtn.pressed ? Theme.clicked : modeBtn.hovered ? Theme.hovered : Theme.surface
             border.width: 1
             border.color: modeBtn.selected ? Theme.accent : Theme.border
         }

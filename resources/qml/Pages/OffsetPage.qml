@@ -35,7 +35,7 @@ FunctionPageBase {
     /// Keep original geometry
     property bool keepOriginal: true
 
-    function getParameters() {
+    function getParameters(): var {
         return {
             "action": "offset",
             "target": targetGeometry,
@@ -87,13 +87,14 @@ FunctionPageBase {
                     }
 
                     AbstractButton {
+                        id: pickTargetBtn
                         implicitWidth: 24
                         implicitHeight: 24
                         hoverEnabled: true
 
                         background: Rectangle {
                             radius: 4
-                            color: parent.hovered ? Theme.hovered : "transparent"
+                            color: pickTargetBtn.hovered ? Theme.hovered : "transparent"
                         }
 
                         contentItem: Label {
@@ -103,7 +104,7 @@ FunctionPageBase {
                             verticalAlignment: Text.AlignVCenter
                         }
 
-                        ToolTip.visible: hovered
+                        ToolTip.visible: pickTargetBtn.hovered
                         ToolTip.text: qsTr("Pick from viewport")
                         ToolTip.delay: 500
                     }
@@ -188,7 +189,7 @@ FunctionPageBase {
                     }
 
                     contentItem: TextInput {
-                        text: copiesSpinBox.textFromValue(copiesSpinBox.value, copiesSpinBox.locale)
+                        text: copiesSpinBox.displayText
                         font.pixelSize: 12
                         color: Theme.textPrimary
                         selectionColor: Theme.accent
@@ -207,8 +208,7 @@ FunctionPageBase {
                         implicitWidth: 24
                         implicitHeight: parent.height / 2
                         radius: 4
-                        color: copiesSpinBox.up.pressed ? Theme.clicked :
-                               copiesSpinBox.up.hovered ? Theme.hovered : "transparent"
+                        color: copiesSpinBox.up.pressed ? Theme.clicked : copiesSpinBox.up.hovered ? Theme.hovered : "transparent"
 
                         Label {
                             anchors.centerIn: parent
@@ -225,8 +225,7 @@ FunctionPageBase {
                         implicitWidth: 24
                         implicitHeight: parent.height / 2
                         radius: 4
-                        color: copiesSpinBox.down.pressed ? Theme.clicked :
-                               copiesSpinBox.down.hovered ? Theme.hovered : "transparent"
+                        color: copiesSpinBox.down.pressed ? Theme.clicked : copiesSpinBox.down.hovered ? Theme.hovered : "transparent"
 
                         Label {
                             anchors.centerIn: parent
@@ -304,9 +303,7 @@ FunctionPageBase {
 
         background: Rectangle {
             radius: 4
-            color: dirBtn.selected ? Theme.accent :
-                   dirBtn.pressed ? Theme.clicked :
-                   dirBtn.hovered ? Theme.hovered : Theme.surface
+            color: dirBtn.selected ? Theme.accent : dirBtn.pressed ? Theme.clicked : dirBtn.hovered ? Theme.hovered : Theme.surface
             border.width: 1
             border.color: dirBtn.selected ? Theme.accent : Theme.border
         }
