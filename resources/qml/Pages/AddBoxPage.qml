@@ -179,9 +179,7 @@ FunctionPageBase {
                     Layout.preferredWidth: 16
                     Layout.preferredHeight: 16
                     radius: 3
-                    color: Qt.rgba(dimItem.accentColor.r,
-                                   dimItem.accentColor.g,
-                                   dimItem.accentColor.b, 0.2)
+                    color: Qt.rgba(dimItem.accentColor.r, dimItem.accentColor.g, dimItem.accentColor.b, 0.2)
 
                     Label {
                         anchors.centerIn: parent

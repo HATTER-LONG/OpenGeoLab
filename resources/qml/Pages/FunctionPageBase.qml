@@ -43,7 +43,7 @@ Item {
     /// Signal emitted when execute is clicked with JSON payload
     signal executed(string jsonPayload)
     /// Signal emitted when cancel is clicked
-    signal cancelled()
+    signal cancelled
 
     // =========================================================
     // Layout
@@ -304,8 +304,7 @@ Item {
 
                         background: Rectangle {
                             radius: 4
-                            color: executeButton.pressed ? Qt.darker(Theme.accent, 1.2) :
-                                   executeButton.hovered ? Qt.lighter(Theme.accent, 1.1) : Theme.accent
+                            color: executeButton.pressed ? Qt.darker(Theme.accent, 1.2) : executeButton.hovered ? Qt.lighter(Theme.accent, 1.1) : Theme.accent
                             border.width: 1
                             border.color: Qt.darker(Theme.accent, 1.3)
                         }
@@ -335,8 +334,7 @@ Item {
 
                         background: Rectangle {
                             radius: 4
-                            color: cancelButton.pressed ? Theme.clicked :
-                                   cancelButton.hovered ? Theme.hovered : Theme.surfaceAlt
+                            color: cancelButton.pressed ? Theme.clicked : cancelButton.hovered ? Theme.hovered : Theme.surfaceAlt
                             border.width: 1
                             border.color: Theme.border
                         }

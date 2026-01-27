@@ -8,6 +8,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import "../util"
 import OpenGeoLab 1.0
 
 FunctionPageBase {
@@ -86,27 +87,7 @@ FunctionPageBase {
                         Layout.fillWidth: true
                     }
 
-                    AbstractButton {
-                        implicitWidth: 24
-                        implicitHeight: 24
-                        hoverEnabled: true
-
-                        background: Rectangle {
-                            radius: 4
-                            color: parent.hovered ? Theme.hovered : "transparent"
-                        }
-
-                        contentItem: Label {
-                            text: "🎯"
-                            font.pixelSize: 14
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                        }
-
-                        ToolTip.visible: hovered
-                        ToolTip.text: qsTr("Pick from viewport")
-                        ToolTip.delay: 500
-                    }
+                    ViewportPickButton {}
                 }
             }
         }
@@ -188,6 +169,7 @@ FunctionPageBase {
                     }
 
                     contentItem: TextInput {
+                        // qmllint disable use-proper-function
                         text: copiesSpinBox.textFromValue(copiesSpinBox.value, copiesSpinBox.locale)
                         font.pixelSize: 12
                         color: Theme.textPrimary
@@ -207,8 +189,7 @@ FunctionPageBase {
                         implicitWidth: 24
                         implicitHeight: parent.height / 2
                         radius: 4
-                        color: copiesSpinBox.up.pressed ? Theme.clicked :
-                               copiesSpinBox.up.hovered ? Theme.hovered : "transparent"
+                        color: copiesSpinBox.up.pressed ? Theme.clicked : copiesSpinBox.up.hovered ? Theme.hovered : "transparent"
 
                         Label {
                             anchors.centerIn: parent
@@ -225,8 +206,7 @@ FunctionPageBase {
                         implicitWidth: 24
                         implicitHeight: parent.height / 2
                         radius: 4
-                        color: copiesSpinBox.down.pressed ? Theme.clicked :
-                               copiesSpinBox.down.hovered ? Theme.hovered : "transparent"
+                        color: copiesSpinBox.down.pressed ? Theme.clicked : copiesSpinBox.down.hovered ? Theme.hovered : "transparent"
 
                         Label {
                             anchors.centerIn: parent
@@ -293,24 +273,12 @@ FunctionPageBase {
     // =========================================================
     // Direction button component
     // =========================================================
-    component DirectionButton: AbstractButton {
+    component DirectionButton: SelectableButton {
         id: dirBtn
 
-        property bool selected: false
         property string iconText: ""
 
         implicitHeight: 32
-        hoverEnabled: true
-
-        background: Rectangle {
-            radius: 4
-            color: dirBtn.selected ? Theme.accent :
-                   dirBtn.pressed ? Theme.clicked :
-                   dirBtn.hovered ? Theme.hovered : Theme.surface
-            border.width: 1
-            border.color: dirBtn.selected ? Theme.accent : Theme.border
-        }
-
         contentItem: RowLayout {
             spacing: 4
 

@@ -8,6 +8,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import "../util"
 import OpenGeoLab 1.0
 
 FunctionPageBase {
@@ -69,9 +70,7 @@ FunctionPageBase {
                 }
 
                 Label {
-                    text: root.contextGeometries.length > 0 ?
-                          qsTr("%1 objects in context").arg(root.contextGeometries.length) :
-                          qsTr("Analyzing workspace...")
+                    text: root.contextGeometries.length > 0 ? qsTr("%1 objects in context").arg(root.contextGeometries.length) : qsTr("Analyzing workspace...")
                     font.pixelSize: 11
                     color: Theme.textPrimary
                     Layout.fillWidth: true
@@ -182,22 +181,22 @@ FunctionPageBase {
                 width: parent.width
                 spacing: 6
 
-                QuickPromptChip {
+                ChipButton {
                     text: qsTr("Optimize mesh")
                     onClicked: root.userPrompt = "Optimize mesh quality and element distribution"
                 }
 
-                QuickPromptChip {
+                ChipButton {
                     text: qsTr("Fix normals")
                     onClicked: root.userPrompt = "Fix inconsistent normals and repair surface orientation"
                 }
 
-                QuickPromptChip {
+                ChipButton {
                     text: qsTr("Simplify")
                     onClicked: root.userPrompt = "Simplify geometry while preserving key features"
                 }
 
-                QuickPromptChip {
+                ChipButton {
                     text: qsTr("Fill holes")
                     onClicked: root.userPrompt = "Detect and fill holes in the mesh"
                 }
@@ -208,23 +207,12 @@ FunctionPageBase {
     // =========================================================
     // Mode button component
     // =========================================================
-    component ModeButton: AbstractButton {
+    component ModeButton: SelectableButton {
         id: modeBtn
 
-        property bool selected: false
         property string description: ""
 
         implicitHeight: 48
-        hoverEnabled: true
-
-        background: Rectangle {
-            radius: 4
-            color: modeBtn.selected ? Theme.accent :
-                   modeBtn.pressed ? Theme.clicked :
-                   modeBtn.hovered ? Theme.hovered : Theme.surface
-            border.width: 1
-            border.color: modeBtn.selected ? Theme.accent : Theme.border
-        }
 
         contentItem: Column {
             spacing: 2
@@ -241,36 +229,8 @@ FunctionPageBase {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: modeBtn.description
                 font.pixelSize: 9
-                color: modeBtn.selected ? Qt.rgba(1,1,1,0.7) : Theme.textSecondary
+                color: modeBtn.selected ? Qt.rgba(1, 1, 1, 0.7) : Theme.textSecondary
             }
-        }
-    }
-
-    // =========================================================
-    // Quick prompt chip component
-    // =========================================================
-    component QuickPromptChip: AbstractButton {
-        id: chip
-
-        implicitWidth: chipLabel.implicitWidth + 16
-        implicitHeight: 24
-        hoverEnabled: true
-
-        background: Rectangle {
-            radius: 12
-            color: chip.pressed ? Theme.clicked :
-                   chip.hovered ? Theme.hovered : Theme.surfaceAlt
-            border.width: 1
-            border.color: Theme.border
-        }
-
-        contentItem: Label {
-            id: chipLabel
-            text: chip.text
-            font.pixelSize: 10
-            color: Theme.textPrimary
-            horizontalAlignment: Text.AlignHCenter
-            verticalAlignment: Text.AlignVCenter
         }
     }
 }

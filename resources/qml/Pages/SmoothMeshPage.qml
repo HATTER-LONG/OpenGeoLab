@@ -8,6 +8,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import "../util"
 import OpenGeoLab 1.0
 
 FunctionPageBase {
@@ -87,27 +88,7 @@ FunctionPageBase {
                         Layout.fillWidth: true
                     }
 
-                    AbstractButton {
-                        implicitWidth: 24
-                        implicitHeight: 24
-                        hoverEnabled: true
-
-                        background: Rectangle {
-                            radius: 4
-                            color: parent.hovered ? Theme.hovered : "transparent"
-                        }
-
-                        contentItem: Label {
-                            text: "🎯"
-                            font.pixelSize: 14
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                        }
-
-                        ToolTip.visible: hovered
-                        ToolTip.text: qsTr("Pick from viewport")
-                        ToolTip.delay: 500
-                    }
+                    ViewportPickButton {}
                 }
             }
         }
@@ -157,7 +138,9 @@ FunctionPageBase {
                     color: Theme.textSecondary
                 }
 
-                Item { Layout.fillWidth: true }
+                Item {
+                    Layout.fillWidth: true
+                }
 
                 Label {
                     text: root.iterations.toString()
@@ -222,7 +205,9 @@ FunctionPageBase {
                     color: Theme.textSecondary
                 }
 
-                Item { Layout.fillWidth: true }
+                Item {
+                    Layout.fillWidth: true
+                }
 
                 Label {
                     text: root.factor.toFixed(2)
@@ -324,33 +309,5 @@ FunctionPageBase {
         }
     }
 
-    // =========================================================
-    // Method button component
-    // =========================================================
-    component MethodButton: AbstractButton {
-        id: methodBtn
-
-        property bool selected: false
-
-        implicitHeight: 28
-        hoverEnabled: true
-
-        background: Rectangle {
-            radius: 4
-            color: methodBtn.selected ? Theme.accent :
-                   methodBtn.pressed ? Theme.clicked :
-                   methodBtn.hovered ? Theme.hovered : Theme.surface
-            border.width: 1
-            border.color: methodBtn.selected ? Theme.accent : Theme.border
-        }
-
-        contentItem: Label {
-            text: methodBtn.text
-            font.pixelSize: 11
-            font.bold: methodBtn.selected
-            color: methodBtn.selected ? Theme.white : Theme.textPrimary
-            horizontalAlignment: Text.AlignHCenter
-            verticalAlignment: Text.AlignVCenter
-        }
-    }
+    component MethodButton: SelectableButton {}
 }

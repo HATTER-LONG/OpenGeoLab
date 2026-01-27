@@ -7,7 +7,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Layouts
 import OpenGeoLab 1.0
 
 FunctionPageBase {
@@ -43,9 +42,12 @@ FunctionPageBase {
     }
 
     function parsePayload(payload) {
-        if (payload.x !== undefined) pointX = payload.x;
-        if (payload.y !== undefined) pointY = payload.y;
-        if (payload.z !== undefined) pointZ = payload.z;
+        if (payload.x !== undefined)
+            pointX = payload.x;
+        if (payload.y !== undefined)
+            pointY = payload.y;
+        if (payload.z !== undefined)
+            pointZ = payload.z;
     }
 
     // =========================================================

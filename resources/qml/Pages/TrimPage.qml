@@ -8,6 +8,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import "../util"
 import OpenGeoLab 1.0
 
 FunctionPageBase {
@@ -84,27 +85,7 @@ FunctionPageBase {
                         Layout.fillWidth: true
                     }
 
-                    AbstractButton {
-                        implicitWidth: 24
-                        implicitHeight: 24
-                        hoverEnabled: true
-
-                        background: Rectangle {
-                            radius: 4
-                            color: parent.hovered ? Theme.hovered : "transparent"
-                        }
-
-                        contentItem: Label {
-                            text: "🎯"
-                            font.pixelSize: 14
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                        }
-
-                        ToolTip.visible: hovered
-                        ToolTip.text: qsTr("Pick from viewport")
-                        ToolTip.delay: 500
-                    }
+                    ViewportPickButton {}
                 }
             }
         }
@@ -142,27 +123,7 @@ FunctionPageBase {
                         Layout.fillWidth: true
                     }
 
-                    AbstractButton {
-                        implicitWidth: 24
-                        implicitHeight: 24
-                        hoverEnabled: true
-
-                        background: Rectangle {
-                            radius: 4
-                            color: parent.hovered ? Theme.hovered : "transparent"
-                        }
-
-                        contentItem: Label {
-                            text: "🎯"
-                            font.pixelSize: 14
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                        }
-
-                        ToolTip.visible: hovered
-                        ToolTip.text: qsTr("Pick from viewport")
-                        ToolTip.delay: 500
-                    }
+                    ViewportPickButton {}
                 }
             }
         }
@@ -249,33 +210,5 @@ FunctionPageBase {
         }
     }
 
-    // =========================================================
-    // Mode button component
-    // =========================================================
-    component ModeButton: AbstractButton {
-        id: modeBtn
-
-        property bool selected: false
-
-        implicitHeight: 28
-        hoverEnabled: true
-
-        background: Rectangle {
-            radius: 4
-            color: modeBtn.selected ? Theme.accent :
-                   modeBtn.pressed ? Theme.clicked :
-                   modeBtn.hovered ? Theme.hovered : Theme.surface
-            border.width: 1
-            border.color: modeBtn.selected ? Theme.accent : Theme.border
-        }
-
-        contentItem: Label {
-            text: modeBtn.text
-            font.pixelSize: 11
-            font.bold: modeBtn.selected
-            color: modeBtn.selected ? Theme.white : Theme.textPrimary
-            horizontalAlignment: Text.AlignHCenter
-            verticalAlignment: Text.AlignVCenter
-        }
-    }
+    component ModeButton: SelectableButton {}
 }

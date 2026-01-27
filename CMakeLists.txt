@@ -207,6 +207,9 @@ qt_add_qml_module(
   resources/qml/Pages/TrimPage.qml
   resources/qml/util/BaseButton.qml
   resources/qml/util/BaseComboBox.qml
+  resources/qml/util/SelectableButton.qml
+  resources/qml/util/ChipButton.qml
+  resources/qml/util/ViewportPickButton.qml
   RESOURCES
   ${ICON_RESOURCES}
 )
