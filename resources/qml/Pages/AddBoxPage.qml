@@ -39,7 +39,8 @@ FunctionPageBase {
 
     function getParameters() {
         return {
-            "action": "createBox",
+            "action": "create",
+            "type": "box",
             "name": boxName || "Box_" + Date.now(),
             "origin": {
                 "x": originX,

@@ -40,7 +40,7 @@ void ServiceWorker::process() {
     Kangaroo::Util::Stopwatch stopwatch("Backend [" + m_moduleName.toStdString() + "]",
                                         OpenGeoLab::getLogger());
     try {
-        auto service = g_ComponentFactory.getInstanceObjectWithID<App::IServiceSigletonFactory>(
+        auto service = g_ComponentFactory.getInstanceObjectWithID<App::IServiceSingletonFactory>(
             m_moduleName.toStdString());
         auto report = std::make_shared<QtProgressReporter>(this, m_cancelRequested);
         if(m_cancelRequested.load()) {

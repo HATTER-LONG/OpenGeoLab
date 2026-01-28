@@ -10,7 +10,6 @@
 #include <memory>
 #include <nlohmann/json.hpp>
 
-
 namespace OpenGeoLab::App {
 
 /**
@@ -72,11 +71,11 @@ public:
 /**
  * @brief Factory interface for singleton service instances
  */
-class IServiceSigletonFactory
-    : public Kangaroo::Util::FactoryTraits<IServiceSigletonFactory, IService> {
+class IServiceSingletonFactory
+    : public Kangaroo::Util::FactoryTraits<IServiceSingletonFactory, IService> {
 public:
-    IServiceSigletonFactory() = default;
-    virtual ~IServiceSigletonFactory() = default;
+    IServiceSingletonFactory() = default;
+    virtual ~IServiceSingletonFactory() = default;
 
     virtual tObjectSharedPtr instance() const = 0;
 };

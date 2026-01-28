@@ -14,11 +14,12 @@ public:
                    App::IProgressReporterPtr progress_reporter) override;
 };
 
-class GeometryServiceFactory : public App::IServiceSigletonFactory {
+class GeometryServiceFactory : public App::IServiceSingletonFactory {
 public:
     GeometryServiceFactory() = default;
     ~GeometryServiceFactory() override = default;
 
     tObjectSharedPtr instance() const override;
 };
+void registerServices();
 } // namespace OpenGeoLab::Geometry

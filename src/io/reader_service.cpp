@@ -1,19 +1,21 @@
 /**
- * @file model_reader.cpp
- * @brief Implementation of ModelReader service for 3D model file processing
+ * @file reader_service.cpp
+ * @brief Implementation of ReaderService for 3D model file processing
  */
 
-#include "io/model_reader.hpp"
+#include "io/reader_service.hpp"
 #include "io/reader.hpp"
 #include "util/logger.hpp"
 #include "util/progress_bridge.hpp"
 
-#include <kangaroo/util/current_thread.hpp>
+#include "brep_reader.hpp"
+#include "step_reader.hpp"
+
 namespace OpenGeoLab::IO {
 
-nlohmann::json ModelReader::processRequest(const std::string& /*module_name*/,
-                                           const nlohmann::json& params,
-                                           App::IProgressReporterPtr progress_reporter) {
+nlohmann::json ReaderService::processRequest(const std::string& /*module_name*/,
+                                             const nlohmann::json& params,
+                                             App::IProgressReporterPtr progress_reporter) {
     nlohmann::json result;
 
     progress_reporter->reportProgress(0.0, "Starting model import...");
@@ -38,7 +40,7 @@ nlohmann::json ModelReader::processRequest(const std::string& /*module_name*/,
     return result;
 }
 
-std::string ModelReader::detectFileFormat(const std::string& file_path) const {
+std::string ReaderService::detectFileFormat(const std::string& file_path) const {
     std::filesystem::path path(file_path);
     std::string ext = path.extension().string();
 
@@ -54,9 +56,16 @@ std::string ModelReader::detectFileFormat(const std::string& file_path) const {
     throw std::invalid_argument("Unsupported file extension: " + ext);
 }
 
-ModelReaderFactory::tObjectSharedPtr ModelReaderFactory::instance() const {
-    static tObjectSharedPtr singleton_instance = std::make_shared<ModelReader>();
+ReaderServiceFactory::tObjectSharedPtr ReaderServiceFactory::instance() const {
+    static tObjectSharedPtr singleton_instance = std::make_shared<ReaderService>();
     return singleton_instance;
+}
+
+void registerServices() {
+    g_ComponentFactory.registInstanceFactoryWithID<IO::ReaderServiceFactory>("ReaderService");
+
+    g_ComponentFactory.registFactoryWithID<IO::BrepReaderFactory>("BrepReader");
+    g_ComponentFactory.registFactoryWithID<IO::StepReaderFactory>("StepReader");
 }
 
 } // namespace OpenGeoLab::IO

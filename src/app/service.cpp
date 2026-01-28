@@ -5,9 +5,7 @@
 
 #include "service.hpp"
 #include "geometry/geometry_service.hpp"
-#include "io/brep_reader.hpp"
-#include "io/model_reader.hpp"
-#include "io/step_reader.hpp"
+#include "io/reader_service.hpp"
 #include <kangaroo/util/component_factory.hpp>
 
 namespace OpenGeoLab::App {
@@ -18,11 +16,8 @@ namespace OpenGeoLab::App {
  * Called during application startup to make services available for backend requests.
  */
 void registerServices() {
-    g_ComponentFactory.registInstanceFactoryWithID<IO::ModelReaderFactory>("ModelReader");
-    g_ComponentFactory.registInstanceFactoryWithID<Geometry::GeometryServiceFactory>(
-        "GeometryService");
-    g_ComponentFactory.registFactoryWithID<IO::BrepReaderFactory>("BrepReader");
-    g_ComponentFactory.registFactoryWithID<IO::StepReaderFactory>("StepReader");
+    IO::registerServices();
+    Geometry::registerServices();
 }
 
 } // namespace OpenGeoLab::App

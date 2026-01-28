@@ -17,10 +17,10 @@ namespace OpenGeoLab::IO {
  *
  * Supports various CAD formats (STEP, BREP) with progress reporting.
  */
-class ModelReader : public App::IService {
+class ReaderService : public App::IService {
 public:
-    ModelReader() = default;
-    ~ModelReader() override = default;
+    ReaderService() = default;
+    ~ReaderService() override = default;
 
     /**
      * @brief Process a model import request
@@ -44,14 +44,14 @@ private:
 };
 
 /**
- * @brief Singleton factory for ModelReader service
+ * @brief Singleton factory for ReaderService
  */
-class ModelReaderFactory : public App::IServiceSigletonFactory {
+class ReaderServiceFactory : public App::IServiceSingletonFactory {
 public:
-    ModelReaderFactory() = default;
-    ~ModelReaderFactory() override = default;
+    ReaderServiceFactory() = default;
+    ~ReaderServiceFactory() override = default;
 
     tObjectSharedPtr instance() const override;
 };
-
+void registerServices();
 } // namespace OpenGeoLab::IO
