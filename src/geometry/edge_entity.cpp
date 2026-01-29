@@ -52,6 +52,8 @@ double EdgeEntity::length() const {
     return props.Mass();
 }
 
+bool EdgeEntity::isDegenerated() const { return BRep_Tool::Degenerated(m_edge); }
+
 bool EdgeEntity::isClosed() const {
     TopoDS_Vertex v1, v2;
     TopExp::Vertices(m_edge, v1, v2);

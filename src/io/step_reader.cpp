@@ -4,6 +4,8 @@
  */
 
 #include "step_reader.hpp"
+#include "geometry/geometry_document.hpp"
+#include "geometry/shape_builder.hpp"
 #include "util/logger.hpp"
 #include "util/occ_progress.hpp"
 
@@ -48,7 +50,7 @@ ReadResult StepReader::readFile(const std::string& file_path,
         }
 
         // Report progress before translation
-        if(progress_callback && !progress_callback(0.50, "Translating STEP model...")) {
+        if(progress_callback && !progress_callback(0.40, "Translating STEP model...")) {
             return ReadResult::failure("Operation cancelled");
         }
 
@@ -62,7 +64,7 @@ ReadResult StepReader::readFile(const std::string& file_path,
         LOG_DEBUG("STEP file contains {} root(s)", num_roots);
 
         // Report progress before entity creation
-        if(progress_callback && !progress_callback(0.85, "Creating geometry entities...")) {
+        if(progress_callback && !progress_callback(0.55, "Creating geometry entities...")) {
             return ReadResult::failure("Operation cancelled");
         }
 
@@ -87,7 +89,35 @@ ReadResult StepReader::readFile(const std::string& file_path,
             return ReadResult::failure("Translation produced no geometry");
         }
 
-        return ReadResult::success(nullptr);
+        // Extract part name from file path
+        std::filesystem::path p(file_path);
+        std::string part_name = p.stem().string();
+
+        // Get or create the current document
+        auto doc = Geometry::GeometryDocumentManager::instance().currentDocument();
+
+        // Build entity hierarchy using ShapeBuilder
+        Geometry::ShapeBuilder shape_builder(doc);
+        auto build_options = Geometry::ShapeBuildOptions::forRendering();
+
+        auto build_result = shape_builder.buildFromShape(
+            result_shape, part_name, build_options, [&](double p, const std::string& msg) {
+                if(progress_callback) {
+                    // Scale progress from 0.55 to 1.0
+                    return progress_callback(0.55 + p * 0.45, msg);
+                }
+                return true;
+            });
+
+        if(!build_result.m_success) {
+            LOG_ERROR("Failed to build geometry entities: {}", build_result.m_errorMessage);
+            return ReadResult::failure("Failed to create geometry: " + build_result.m_errorMessage);
+        }
+
+        LOG_INFO("Successfully read STEP file: {} ({} entities)", file_path,
+                 build_result.totalEntityCount());
+
+        return ReadResult::success(build_result.m_rootPart);
 
     } catch(const Standard_Failure& e) {
         std::string error = e.GetMessageString() ? e.GetMessageString() : "Unknown OCC error";

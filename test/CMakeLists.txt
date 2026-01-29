@@ -38,7 +38,31 @@ set(CMAKE_AUTOMOC ON)
 file(GLOB_RECURSE test_sources CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/source/*.cpp)
 
 # Include module sources for testing (with Qt classes needing MOC)
-set(module_sources ${CMAKE_CURRENT_SOURCE_DIR}/../src/util/logger.cpp)
+set(module_sources
+    # Utility module
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/util/logger.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/util/occ_progress.cpp
+    # Geometry module
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/geometry_document.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/geometry_entity.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/geometry_types.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/part_entity.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/solid_entity.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/shell_entity.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/face_entity.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/wire_entity.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/edge_entity.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/vertex_entity.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/compound_entity.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/comp_solid_entity.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/entity_index.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/render_data.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/mesh_metadata.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/shape_builder.cpp
+    # IO module
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/io/brep_reader.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/io/step_reader.cpp
+)
 
 # Include header files for AUTOMOC to find Q_OBJECT macros
 set(module_headers "")
