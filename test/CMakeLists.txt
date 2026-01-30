@@ -57,7 +57,7 @@ set(module_sources
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/entity/compound_entity.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/geometry/entity/comp_solid_entity.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/render/render_data.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../src/render/mesh/tessellation_service.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/render/tessellation_service.cpp
 )
 
 # Include header files for AUTOMOC to find Q_OBJECT macros

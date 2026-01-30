@@ -6,8 +6,9 @@
 #include "geometry/geometry_document.hpp"
 #include "geometry/part_entity.hpp"
 #include "geometry/shape_builder.hpp"
-#include "render/mesh/tessellation_service.hpp"
 #include "render/render_data.hpp"
+#include "render/tessellation_service.hpp"
+
 
 #include <BRepPrimAPI_MakeBox.hxx>
 #include <BRepPrimAPI_MakeSphere.hxx>

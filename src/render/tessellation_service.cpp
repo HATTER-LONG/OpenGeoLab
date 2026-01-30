@@ -3,7 +3,7 @@
  * @brief Implementation of tessellation service for OCC geometry
  */
 
-#include "render/mesh/tessellation_service.hpp"
+#include "render/tessellation_service.hpp"
 #include "geometry/edge_entity.hpp"
 #include "geometry/face_entity.hpp"
 #include "geometry/part_entity.hpp"
