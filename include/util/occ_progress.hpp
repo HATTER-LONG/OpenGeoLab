@@ -25,6 +25,10 @@ namespace OpenGeoLab::Util {
  */
 using ProgressCallback = std::function<bool(double progress, const std::string& message)>;
 
+inline const ProgressCallback NO_PROGRESS_CALLBACK = [](double, const std::string&) {
+    return true;
+};
+
 /**
  * @brief Context for OCC progress indicator with cancellation support
  */

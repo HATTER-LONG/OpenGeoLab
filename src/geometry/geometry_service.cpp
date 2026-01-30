@@ -1,5 +1,6 @@
 #include "geometry/geometry_service.hpp"
-#include "create_action.hpp"
+#include "action/create_action.hpp"
+#include "action/newmodel_action.hpp"
 #include "util/logger.hpp"
 #include "util/progress_bridge.hpp"
 
@@ -35,5 +36,6 @@ GeometryServiceFactory::tObjectSharedPtr GeometryServiceFactory::instance() cons
 void registerServices() {
     g_ComponentFactory.registInstanceFactoryWithID<GeometryServiceFactory>("GeometryService");
     g_ComponentFactory.registFactoryWithID<CreateActionFactory>(CreateAction::actionName());
+    g_ComponentFactory.registFactoryWithID<NewModelActionFactory>(NewModelAction::actionName());
 }
 } // namespace OpenGeoLab::Geometry
