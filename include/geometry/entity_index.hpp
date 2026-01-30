@@ -52,6 +52,9 @@ public:
     /// Snapshot of currently alive entities (order unspecified).
     [[nodiscard]] std::vector<GeometryEntityPtr> snapshotEntities() const;
 
+    /// Get all entities of a specific type.
+    [[nodiscard]] std::vector<GeometryEntityPtr> entitiesByType(EntityType entity_type) const;
+
 private:
     struct EntityTypeHash {
         size_t operator()(EntityType type) const noexcept {

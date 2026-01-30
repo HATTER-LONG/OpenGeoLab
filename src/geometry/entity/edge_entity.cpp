@@ -58,6 +58,8 @@ bool EdgeEntity::isClosed() const {
     return v1.IsSame(v2);
 }
 
+bool EdgeEntity::isDegenerated() const { return BRep_Tool::Degenerated(m_edge); }
+
 Point3D EdgeEntity::startPoint() const {
     double first, last;
     parameterRange(first, last);

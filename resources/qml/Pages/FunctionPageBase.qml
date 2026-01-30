@@ -113,7 +113,6 @@ Item {
             BackendService.request(serviceName, jsonPayload);
         }
         executed(jsonPayload);
-        close();
     }
 
     // =========================================================

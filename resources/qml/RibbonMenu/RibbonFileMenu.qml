@@ -9,6 +9,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import OpenGeoLab 1.0 as OGL
 
 Popup {
     id: fileMenu
@@ -39,7 +40,12 @@ Popup {
         RibbonFileMenuButton {
             text: qsTr("New Model")
             iconSource: "qrc:/opengeolab/resources/icons/new.svg"
-            onClicked: fileMenu.trigger("newModel", {})
+            onClicked: {
+                OGL.BackendService.request("GeometryService", JSON.stringify({
+                    action: "new_model"
+                }));
+                fileMenu.close();
+            }
         }
 
         RibbonFileMenuButton {
@@ -66,6 +72,7 @@ Popup {
             iconSource: Theme.isDark ? "qrc:/opengeolab/resources/icons/dark.svg" : "qrc:/opengeolab/resources/icons/light.svg"
             onClicked: {
                 Theme.toggleMode();
+                fileMenu.close();
             }
         }
 

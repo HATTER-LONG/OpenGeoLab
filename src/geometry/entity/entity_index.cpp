@@ -246,4 +246,15 @@ size_t EntityIndex::entityCountByType(EntityType entity_type) const {
     return it->second;
 }
 
+std::vector<GeometryEntityPtr> EntityIndex::entitiesByType(EntityType entity_type) const {
+    std::vector<GeometryEntityPtr> result;
+    result.reserve(entityCountByType(entity_type));
+    for(const auto& slot : m_slots) {
+        if(slot.m_entity && slot.m_entity->entityType() == entity_type) {
+            result.push_back(slot.m_entity);
+        }
+    }
+    return result;
+}
+
 } // namespace OpenGeoLab::Geometry

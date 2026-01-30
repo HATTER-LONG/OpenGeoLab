@@ -150,6 +150,8 @@ bool GeometryEntity::isRoot() const { return m_parentIds.empty(); }
 
 bool GeometryEntity::hasChildren() const { return !m_childIds.empty(); }
 
+bool GeometryEntity::hasShape() const { return !shape().IsNull(); }
+
 size_t GeometryEntity::parentCount() const { return m_parentIds.size(); }
 
 size_t GeometryEntity::childCount() const { return m_childIds.size(); }

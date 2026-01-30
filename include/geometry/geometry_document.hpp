@@ -14,6 +14,7 @@
 #include "geometry/entity_index.hpp"
 
 #include <memory>
+#include <vector>
 
 namespace OpenGeoLab::Geometry {
 
@@ -36,6 +37,10 @@ public:
 
     ~GeometryDocument() = default;
 
+    // -------------------------------------------------------------------------
+    // Entity Management
+    // -------------------------------------------------------------------------
+
     /**
      * @brief Add an entity to the document index.
      * @param entity Entity to add.
@@ -54,6 +59,15 @@ public:
     [[nodiscard]] bool removeEntity(EntityId entity_id);
 
     /**
+     * @brief Remove an entity and all its descendants recursively.
+     * @param entity_id Entity id to remove.
+     * @return Number of entities removed (including the root entity).
+     * @note This performs a depth-first traversal to remove all child entities
+     *       before removing the parent, ensuring proper cleanup.
+     */
+    [[nodiscard]] size_t removeEntityWithChildren(EntityId entity_id);
+
+    /**
      * @brief Clear all entities from this document.
      * @note Fast-path: assumes the document holds the only strong references to entities.
      *       If entities may be owned elsewhere (external shared_ptr), use a safe clear
@@ -62,6 +76,10 @@ public:
      *          entities will keep stale parent/child sets and a dangling document pointer.
      */
     void clear();
+
+    // -------------------------------------------------------------------------
+    // Entity Lookup
+    // -------------------------------------------------------------------------
 
     [[nodiscard]] GeometryEntityPtr findById(EntityId entity_id) const;
 
@@ -73,6 +91,65 @@ public:
     [[nodiscard]] size_t entityCount() const;
 
     [[nodiscard]] size_t entityCountByType(EntityType entity_type) const;
+
+    /**
+     * @brief Get all entities of a specific type.
+     * @param entity_type Type to filter by.
+     * @return Vector of entities matching the type.
+     */
+    [[nodiscard]] std::vector<GeometryEntityPtr> entitiesByType(EntityType entity_type) const;
+
+    /**
+     * @brief Get a snapshot of all entities in the document.
+     * @return Vector of all entities.
+     */
+    [[nodiscard]] std::vector<GeometryEntityPtr> allEntities() const;
+
+    // -------------------------------------------------------------------------
+    // Entity Relationship Queries
+    // -------------------------------------------------------------------------
+
+    /**
+     * @brief Find ancestor entities of a specific type for a given entity.
+     * @param entity_id Source entity id.
+     * @param ancestor_type Type of ancestors to find.
+     * @return Vector of ancestor entities of the specified type.
+     * @note Traverses up the parent chain to find all ancestors of the given type.
+     */
+    [[nodiscard]] std::vector<GeometryEntityPtr> findAncestors(EntityId entity_id,
+                                                               EntityType ancestor_type) const;
+
+    /**
+     * @brief Find descendant entities of a specific type for a given entity.
+     * @param entity_id Source entity id.
+     * @param descendant_type Type of descendants to find.
+     * @return Vector of descendant entities of the specified type.
+     * @note Traverses down the child tree to find all descendants of the given type.
+     */
+    [[nodiscard]] std::vector<GeometryEntityPtr> findDescendants(EntityId entity_id,
+                                                                 EntityType descendant_type) const;
+
+    /**
+     * @brief Find the owning Part entity for a given entity.
+     * @param entity_id Source entity id.
+     * @return Part entity that owns this entity, or nullptr if not found.
+     * @note Traverses up the parent chain until a Part entity is found.
+     */
+    [[nodiscard]] GeometryEntityPtr findOwningPart(EntityId entity_id) const;
+
+    /**
+     * @brief Find related entities of a specific type for an edge entity.
+     * @param edge_entity_id Edge entity id.
+     * @param related_type Type of related entities (e.g., Face).
+     * @return Vector of related entities.
+     * @note For edges, this finds faces that share this edge. Useful for adjacency queries.
+     */
+    [[nodiscard]] std::vector<GeometryEntityPtr> findRelatedEntities(EntityId edge_entity_id,
+                                                                     EntityType related_type) const;
+
+    // -------------------------------------------------------------------------
+    // Relationship Edge Management
+    // -------------------------------------------------------------------------
 
     /**
      * @brief Add a directed parent->child edge.
@@ -93,6 +170,13 @@ public:
 
 private:
     GeometryDocument() = default;
+
+    /**
+     * @brief Helper for recursive entity removal.
+     * @param entity_id Entity to remove.
+     * @param removed_count Counter for removed entities.
+     */
+    void removeEntityRecursive(EntityId entity_id, size_t& removed_count);
 
 private:
     EntityIndex m_entityIndex;

@@ -1,4 +1,9 @@
-#include "shape_builder.hpp"
+/**
+ * @file shape_builder.cpp
+ * @brief Implementation of ShapeBuilder for creating entity hierarchies
+ */
+
+#include "geometry/shape_builder.hpp"
 #include "geometry/comp_solid_entity.hpp"
 #include "geometry/compound_entity.hpp"
 #include "geometry/edge_entity.hpp"
@@ -9,15 +14,19 @@
 #include "geometry/wire_entity.hpp"
 #include "util/logger.hpp"
 
+#include <TopExp.hxx>
 #include <TopExp_Explorer.hxx>
 #include <TopoDS.hxx>
+#include <TopoDS_Iterator.hxx>
 
 namespace OpenGeoLab::Geometry {
+
 ShapeBuilder::ShapeBuilder(GeometryDocumentPtr document) : m_document(std::move(document)) {
     if(!m_document) {
         throw std::invalid_argument("ShapeBuilder requires a valid GeometryDocument");
     }
 }
+
 ShapeBuildResult ShapeBuilder::buildFromShape(const TopoDS_Shape& shape,
                                               const std::string& part_name,
                                               Util::ProgressCallback progress_callback) {
@@ -29,102 +38,141 @@ ShapeBuildResult ShapeBuilder::buildFromShape(const TopoDS_Shape& shape,
         return ShapeBuildResult::failure("Operation cancelled");
     }
 
+    // Create the root Part entity
     auto part = std::make_shared<PartEntity>(shape);
     part->setName(part_name.empty() ? "Part" : part_name);
 
     if(!m_document->addEntity(part)) {
         return ShapeBuildResult::failure("Failed to add part entity to document");
     }
+
     ShapeBuildResult result = ShapeBuildResult::success(part);
 
-    if(!progress_callback(0.1, "Building entity hierarchy...")) {
+    if(!progress_callback(0.1, "Indexing shapes...")) {
         (void)m_document->removeEntity(part->entityId());
         return ShapeBuildResult::failure("Operation cancelled");
     }
 
-    const TopAbs_ShapeEnum root_shape_type = shape.ShapeType();
+    // Build indexed map of all unique shapes
+    // This ensures each topological element is only processed once
+    TopTools_IndexedMapOfShape shape_map;
+    TopExp::MapShapes(shape, shape_map);
 
-    GeometryEntityPtr hierarchy_root = part;
+    LOG_DEBUG("ShapeBuilder: Found {} unique shapes in model", shape_map.Extent());
 
-    // part -> container shape (same with part) -> sub-shapes
-    auto container_entity = createEntityForShape(shape);
-    if(!container_entity) {
+    if(!progress_callback(0.2, "Creating entities...")) {
         (void)m_document->removeEntity(part->entityId());
-        return ShapeBuildResult::failure("Unsupported root shape type for entity creation");
+        return ShapeBuildResult::failure("Operation cancelled");
     }
 
-    if(!m_document->addEntity(container_entity)) {
+    // Create entities for all unique shapes
+    ShapeEntityMap shape_entity_map;
+    buildEntitiesFromShapeMap(shape_map, shape_entity_map, result);
+
+    if(!progress_callback(0.6, "Building relationships...")) {
         (void)m_document->removeEntity(part->entityId());
-        return ShapeBuildResult::failure("Failed to add container entity to document");
+        return ShapeBuildResult::failure("Operation cancelled");
     }
 
-    if(!part->addChild(container_entity)) {
-        (void)m_document->removeEntity(container_entity->entityId());
-        (void)m_document->removeEntity(part->entityId());
-        return ShapeBuildResult::failure("Failed to link container entity to part");
-    }
-
-    updateEntityCounts(shape, result);
-    auto subcallback = Util::makeScaledProgressCallback(progress_callback, 0.1, 0.9);
-    buildSubShapes(shape, container_entity, result, subcallback);
+    // Build parent-child relationships
+    buildRelationships(shape, shape_map, shape_entity_map, part);
 
     if(!progress_callback(1.0, "Shape build completed.")) {
-        (void)m_document->removeEntity(part->entityId());
+        // Don't fail on final progress report
     }
+
+    LOG_INFO("ShapeBuilder: Created {} entities (V:{} E:{} W:{} F:{} Sh:{} So:{} C:{})",
+             result.totalEntityCount(), result.m_vertexCount, result.m_edgeCount,
+             result.m_wireCount, result.m_faceCount, result.m_shellCount, result.m_solidCount,
+             result.m_compoundCount);
+
     return result;
 }
 
-void ShapeBuilder::buildSubShapes(const TopoDS_Shape& shape, // NOLINT
-                                  const GeometryEntityPtr& parent,
-                                  ShapeBuildResult& result,
-                                  Util::ProgressCallback& progress_callback) {
-    if(shape.IsNull()) {
-        LOG_ERROR("Cannot build sub-shapes for null shape");
-        return;
+void ShapeBuilder::buildEntitiesFromShapeMap(const TopTools_IndexedMapOfShape& shape_map,
+                                             ShapeEntityMap& shape_entity_map,
+                                             ShapeBuildResult& result) {
+    const int count = shape_map.Extent();
+
+    for(int i = 1; i <= count; ++i) {
+        const TopoDS_Shape& sub_shape = shape_map(i);
+
+        auto entity = createEntityForShape(sub_shape);
+        if(!entity) {
+            LOG_WARN("ShapeBuilder: Skipping unsupported shape type at index {}", i);
+            continue;
+        }
+
+        if(!m_document->addEntity(entity)) {
+            LOG_ERROR("ShapeBuilder: Failed to add entity at index {} to document", i);
+            continue;
+        }
+
+        shape_entity_map[i] = entity;
+        updateEntityCounts(sub_shape, result);
+    }
+}
+
+void ShapeBuilder::buildRelationships(const TopoDS_Shape& root_shape,
+                                      const TopTools_IndexedMapOfShape& shape_map,
+                                      const ShapeEntityMap& shape_entity_map,
+                                      const GeometryEntityPtr& root_entity) {
+    // Find the root shape's index and connect it to part
+    const int root_index = shape_map.FindIndex(root_shape);
+    if(root_index > 0) {
+        auto it = shape_entity_map.find(root_index);
+        if(it != shape_entity_map.end()) {
+            (void)root_entity->addChild(it->second);
+            // Now recursively build child relationships starting from root shape
+            buildChildRelationships(root_shape, it->second, shape_map, shape_entity_map);
+            return;
+        }
     }
 
-    size_t child_index = 0, total_children = 0;
-
-    for(TopoDS_Iterator it(shape); it.More(); it.Next()) {
-        ++total_children;
-    }
-
-    for(TopoDS_Iterator it(shape); it.More(); it.Next(), ++child_index) {
+    // Root shape itself might not be in map (e.g., if it's the Part shape)
+    // In this case, process direct children of root shape
+    for(TopoDS_Iterator it(root_shape); it.More(); it.Next()) {
         const TopoDS_Shape& child_shape = it.Value();
-        if(child_shape.IsNull()) {
-            LOG_WARN("Skipping null sub-shape in hierarchy...");
+        const int child_index = shape_map.FindIndex(child_shape);
+
+        if(child_index <= 0) {
             continue;
         }
 
-        auto child_entity = createEntityForShape(child_shape);
-        if(!child_entity) {
-            LOG_WARN("Skipping unsupported shape type in hierarchy");
+        auto entity_it = shape_entity_map.find(child_index);
+        if(entity_it == shape_entity_map.end()) {
             continue;
         }
 
-        if(!m_document->addEntity(child_entity)) {
-            LOG_ERROR("Failed to add child entity to document");
+        (void)root_entity->addChild(entity_it->second);
+        buildChildRelationships(child_shape, entity_it->second, shape_map, shape_entity_map);
+    }
+}
+
+void ShapeBuilder::buildChildRelationships(const TopoDS_Shape& parent_shape, // NOLINT
+                                           const GeometryEntityPtr& parent_entity,
+                                           const TopTools_IndexedMapOfShape& shape_map,
+                                           const ShapeEntityMap& shape_entity_map) {
+    // Iterate through direct children of this shape
+    for(TopoDS_Iterator it(parent_shape); it.More(); it.Next()) {
+        const TopoDS_Shape& child_shape = it.Value();
+        const int child_index = shape_map.FindIndex(child_shape);
+
+        if(child_index <= 0) {
             continue;
         }
 
-        if(!parent->addChild(child_entity)) {
-            LOG_ERROR("Failed to link child entity to parent");
-            (void)m_document->removeEntity(child_entity->entityId());
+        auto entity_it = shape_entity_map.find(child_index);
+        if(entity_it == shape_entity_map.end()) {
             continue;
         }
 
-        if(total_children > 0 &&
-           !progress_callback((static_cast<double>(child_index) / total_children),
-                              "Processing sub-shapes...")) {
-            // Cancellation requested not handled here to allow cleanup
-        }
+        // Add parent-child relationship
+        // Note: This may add multiple parents to the same child (shared edges/vertices)
+        (void)parent_entity->addChild(entity_it->second);
 
-        updateEntityCounts(child_shape, result);
-        auto subcallback = Util::makeScaledProgressCallback(
-            progress_callback,
-            static_cast<double>(child_index) / std::max(total_children, size_t{1}),
-            1.0 / std::max(total_children, size_t{1}));
-        buildSubShapes(child_shape, child_entity, result, subcallback);
+        // Recursively process children
+        buildChildRelationships(child_shape, entity_it->second, shape_map, shape_entity_map);
     }
 }
 
@@ -133,8 +181,8 @@ void ShapeBuilder::updateEntityCounts(const TopoDS_Shape& shape, ShapeBuildResul
         LOG_ERROR("Cannot update entity counts for null shape");
         return;
     }
-    const TopAbs_ShapeEnum shape_type = shape.ShapeType();
-    switch(shape_type) {
+
+    switch(shape.ShapeType()) {
     case TopAbs_VERTEX:
         ++result.m_vertexCount;
         break;
@@ -152,6 +200,9 @@ void ShapeBuilder::updateEntityCounts(const TopoDS_Shape& shape, ShapeBuildResul
         break;
     case TopAbs_SOLID:
         ++result.m_solidCount;
+        break;
+    case TopAbs_COMPSOLID:
+        // CompSolid not counted separately
         break;
     case TopAbs_COMPOUND:
         ++result.m_compoundCount;
@@ -189,4 +240,5 @@ GeometryEntityPtr ShapeBuilder::createEntityForShape(const TopoDS_Shape& shape) 
         return nullptr;
     }
 }
+
 } // namespace OpenGeoLab::Geometry
