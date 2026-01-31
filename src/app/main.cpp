@@ -1,11 +1,16 @@
 /**
  * @file main.cpp
  * @brief Application entry point
+ *
+ * Initializes the Qt application, registers QML types and services,
+ * and loads the main QML interface.
  */
 #include "service.hpp"
 #include "util/logger.hpp"
 
+#include <app/gl_viewport.hpp>
 #include <app/log_service.hpp>
+#include <render/render_service.hpp>
 #include <util/qml_spdlog_sink.hpp>
 
 #include <QGuiApplication>
@@ -22,6 +27,10 @@
 #ifdef Q_OS_WIN
 /**
  * @brief Hint hybrid graphics systems to prefer the discrete GPU
+ *
+ * These exports tell the graphics driver to use the discrete GPU
+ * on systems with hybrid graphics (e.g., laptops with both integrated
+ * and dedicated GPUs).
  */
 extern "C" {
 Q_DECL_EXPORT unsigned long NvOptimusEnablement = 0x00000001; // NOLINT
@@ -58,9 +67,14 @@ auto main(int argc, char** argv) -> int {
 
     QQmlApplicationEngine engine;
 
+    // Create and register services as context properties
     OpenGeoLab::App::LogService log_service;
     OpenGeoLab::Util::installQmlSpdlogSink(&log_service);
     engine.rootContext()->setContextProperty("LogService", &log_service);
+
+    // Register render service singleton for QML access
+    OpenGeoLab::Render::RenderService render_service;
+    engine.rootContext()->setContextProperty("RenderService", &render_service);
 
     QObject::connect(
         &engine, &QQmlApplicationEngine::objectCreated, &app,

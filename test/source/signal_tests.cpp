@@ -21,10 +21,10 @@ TEST_CASE("Signal - Basic connection and emission", "[signal]") {
 
     auto conn = sig.connect([&](int val) { received_value = val; });
 
-    sig.emit(42);
+    sig.emitSignal(42);
     REQUIRE(received_value == 42);
 
-    sig.emit(100);
+    sig.emitSignal(100);
     REQUIRE(received_value == 100);
 }
 
@@ -36,7 +36,7 @@ TEST_CASE("Signal - Multiple slots", "[signal]") {
     auto conn2 = sig.connect([&](int val) { results.push_back(val * 2); });
     auto conn3 = sig.connect([&](int val) { results.push_back(val * 3); });
 
-    sig.emit(10);
+    sig.emitSignal(10);
 
     REQUIRE(results.size() == 3);
     REQUIRE(results[0] == 10);
@@ -50,11 +50,11 @@ TEST_CASE("Signal - ScopedConnection auto-disconnect", "[signal]") {
 
     {
         auto conn = sig.connect([&](int) { call_count++; });
-        sig.emit(1);
+        sig.emitSignal(1);
         REQUIRE(call_count == 1);
     } // conn goes out of scope, should disconnect
 
-    sig.emit(2);
+    sig.emitSignal(2);
     REQUIRE(call_count == 1); // Should not have been called again
 }
 
@@ -64,12 +64,12 @@ TEST_CASE("Signal - Manual disconnect", "[signal]") {
 
     auto conn = sig.connect([&](int) { call_count++; });
 
-    sig.emit(1);
+    sig.emitSignal(1);
     REQUIRE(call_count == 1);
 
     conn.disconnect();
 
-    sig.emit(2);
+    sig.emitSignal(2);
     REQUIRE(call_count == 1); // Should not have been called after disconnect
 }
 
@@ -79,13 +79,13 @@ TEST_CASE("Signal - Manual ConnectionId disconnect", "[signal]") {
 
     ConnectionId id = sig.connectManual([&](int) { call_count++; });
 
-    sig.emit(1);
+    sig.emitSignal(1);
     REQUIRE(call_count == 1);
 
     bool disconnected = sig.disconnect(id);
     REQUIRE(disconnected);
 
-    sig.emit(2);
+    sig.emitSignal(2);
     REQUIRE(call_count == 1);
 
     // Disconnecting again should return false
@@ -100,13 +100,13 @@ TEST_CASE("Signal - DisconnectAll", "[signal]") {
     auto conn1 = sig.connect([&](int) { count1++; });
     auto conn2 = sig.connect([&](int) { count2++; });
 
-    sig.emit(1);
+    sig.emitSignal(1);
     REQUIRE(count1 == 1);
     REQUIRE(count2 == 1);
 
     sig.disconnectAll();
 
-    sig.emit(2);
+    sig.emitSignal(2);
     REQUIRE(count1 == 1);
     REQUIRE(count2 == 1);
 }
@@ -123,7 +123,7 @@ TEST_CASE("Signal - Multiple arguments", "[signal]") {
         dbl_val = d;
     });
 
-    sig.emit(42, "hello", 3.14);
+    sig.emitSignal(42, "hello", 3.14);
 
     REQUIRE(int_val == 42);
     REQUIRE(str_val == "hello");
@@ -136,9 +136,9 @@ TEST_CASE("Signal - No arguments", "[signal]") {
 
     auto conn = sig.connect([&]() { call_count++; });
 
-    sig.emit();
-    sig.emit();
-    sig.emit();
+    sig.emitSignal();
+    sig.emitSignal();
+    sig.emitSignal();
 
     REQUIRE(call_count == 3);
 }
@@ -182,7 +182,7 @@ TEST_CASE("Signal - ScopedConnection move semantics", "[signal]") {
     {
         ScopedConnection conn2 = sig.connect([&](int) { call_count++; });
 
-        sig.emit(1);
+        sig.emitSignal(1);
         REQUIRE(call_count == 1);
 
         conn1 = std::move(conn2);
@@ -190,7 +190,7 @@ TEST_CASE("Signal - ScopedConnection move semantics", "[signal]") {
         REQUIRE(conn1.isConnected());
     }
 
-    sig.emit(2);
+    sig.emitSignal(2);
     REQUIRE(call_count == 2); // Connection still active via conn1
 }
 
@@ -201,7 +201,7 @@ TEST_CASE("Signal - Connection release", "[signal]") {
     auto conn = sig.connect([&](int) { call_count++; });
     conn.release(); // Release ownership
 
-    sig.emit(1);
+    sig.emitSignal(1);
     REQUIRE(call_count == 1); // Connection still active because we released (not disconnected)
 
     // Now we have a leaked connection - this is expected behavior for release()
@@ -223,7 +223,7 @@ TEST_CASE("Signal - Thread safety", "[signal]") {
     for(int t = 0; t < 4; ++t) {
         threads.emplace_back([&]() {
             for(int i = 0; i < 100; ++i) {
-                sig.emit(1);
+                sig.emitSignal(1);
             }
         });
     }
@@ -247,10 +247,10 @@ TEST_CASE("Signal - Disconnect during emission", "[signal]") {
     });
 
     // This should not crash or cause issues
-    sig.emit(1);
+    sig.emitSignal(1);
     REQUIRE(call_count == 1);
 
-    sig.emit(2);
+    sig.emitSignal(2);
     REQUIRE(call_count == 1); // Not called again
 }
 

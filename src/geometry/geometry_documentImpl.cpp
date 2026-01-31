@@ -35,7 +35,7 @@ namespace {
  * @param trsf Transformation to check
  * @return true if transformation is identity
  */
-bool IsIdentityTrsf(const gp_Trsf& trsf) {
+bool isIdentityTrsf(const gp_Trsf& trsf) {
     return trsf.IsNegative() == Standard_False && trsf.ScaleFactor() == 1.0 &&
            trsf.TranslationPart().SquareModulus() == 0.0;
 }
@@ -366,7 +366,30 @@ LoadResult GeometryDocumentImpl::loadFromShape(const TopoDS_Shape& shape,
         return LoadResult::failure("Input shape is null");
     }
 
-    if(!progress(0.0, "Starting shape load...")) {
+    if(!progress(0.0, "Clearing document...")) {
+        return LoadResult::failure("Operation cancelled");
+    }
+
+    // Clear existing geometry first
+    clear();
+
+    if(!progress(0.1, "Starting shape load...")) {
+        return LoadResult::failure("Operation cancelled");
+    }
+
+    // Use appendShape for the actual loading
+    auto subcallback = Util::makeScaledProgressCallback(progress, 0.1, 1.0);
+    return appendShape(shape, name, subcallback);
+}
+
+LoadResult GeometryDocumentImpl::appendShape(const TopoDS_Shape& shape,
+                                             const std::string& name,
+                                             Util::ProgressCallback progress) {
+    if(shape.IsNull()) {
+        return LoadResult::failure("Input shape is null");
+    }
+
+    if(!progress(0.0, "Starting shape append...")) {
         return LoadResult::failure("Operation cancelled");
     }
 
@@ -391,11 +414,11 @@ LoadResult GeometryDocumentImpl::loadFromShape(const TopoDS_Shape& shape,
             GeometryChangeType::EntityAdded,
             build_result.m_rootPart ? build_result.m_rootPart->entityId() : INVALID_ENTITY_ID));
 
-        progress(1.0, "Load completed.");
+        progress(1.0, "Append completed.");
         return LoadResult::success(build_result.m_rootPart->entityId(),
                                    build_result.totalEntityCount());
     } catch(const std::exception& e) {
-        LOG_ERROR("Exception during shape load: {}", e.what());
+        LOG_ERROR("Exception during shape append: {}", e.what());
         return LoadResult::failure(std::string("Exception: ") + e.what());
     }
 }
@@ -416,6 +439,7 @@ GeometryDocumentImpl::getRenderData(const Render::TessellationOptions& options) 
 
     // Generate face meshes
     auto faces = entitiesByType(EntityType::Face);
+    LOG_DEBUG("getRenderData: Found {} faces in document", faces.size());
     for(const auto& face : faces) {
         auto mesh = generateFaceMesh(face, options);
         if(mesh.isValid()) {
@@ -425,6 +449,7 @@ GeometryDocumentImpl::getRenderData(const Render::TessellationOptions& options) 
 
     // Generate edge meshes
     auto edges = entitiesByType(EntityType::Edge);
+    LOG_DEBUG("getRenderData: Found {} edges in document", edges.size());
     for(const auto& edge : edges) {
         auto mesh = generateEdgeMesh(edge, options);
         if(mesh.isValid()) {
@@ -434,12 +459,17 @@ GeometryDocumentImpl::getRenderData(const Render::TessellationOptions& options) 
 
     // Generate vertex meshes
     auto vertices = entitiesByType(EntityType::Vertex);
+    LOG_DEBUG("getRenderData: Found {} vertices in document", vertices.size());
     for(const auto& vertex : vertices) {
         auto mesh = generateVertexMesh(vertex);
         if(mesh.isValid()) {
             m_cachedRenderData.m_vertexMeshes.push_back(std::move(mesh));
         }
     }
+
+    LOG_INFO("getRenderData: Generated {} face meshes, {} edge meshes, {} vertex meshes",
+             m_cachedRenderData.m_faceMeshes.size(), m_cachedRenderData.m_edgeMeshes.size(),
+             m_cachedRenderData.m_vertexMeshes.size());
 
     m_cachedRenderData.updateBoundingBox();
     m_renderDataValid = true;
@@ -487,7 +517,7 @@ GeometryDocumentImpl::generateFaceMesh(const GeometryEntityPtr& entity,
     }
 
     const gp_Trsf& trsf = loc.Transformation();
-    const bool has_transform = !IsIdentityTrsf(trsf);
+    const bool has_transform = !isIdentityTrsf(trsf);
 
     // Extract vertices
     const Standard_Integer nb_nodes = tri->NbNodes();
@@ -566,12 +596,17 @@ GeometryDocumentImpl::generateEdgeMesh(const GeometryEntityPtr& entity,
             const TColgp_Array1OfPnt& nodes = polygon->Nodes();
             const gp_Trsf& trsf = loc.Transformation();
 
+            // Edge color: yellow for visibility
+            constexpr float edgeColor[4] = {1.0f, 0.8f, 0.2f, 1.0f};
+
             for(Standard_Integer i = nodes.Lower(); i <= nodes.Upper(); ++i) {
                 gp_Pnt pnt = nodes(i);
                 pnt.Transform(trsf);
-                mesh.m_vertices.emplace_back(static_cast<float>(pnt.X()),
-                                             static_cast<float>(pnt.Y()),
-                                             static_cast<float>(pnt.Z()));
+                Render::RenderVertex vertex(static_cast<float>(pnt.X()),
+                                            static_cast<float>(pnt.Y()),
+                                            static_cast<float>(pnt.Z()));
+                vertex.setColor(edgeColor[0], edgeColor[1], edgeColor[2], edgeColor[3]);
+                mesh.m_vertices.push_back(vertex);
                 mesh.m_boundingBox.expand(Point3D(pnt.X(), pnt.Y(), pnt.Z()));
             }
         }
@@ -589,10 +624,15 @@ GeometryDocumentImpl::generateEdgeMesh(const GeometryEntityPtr& entity,
     const Standard_Integer nb_points = sampler.NbPoints();
     mesh.m_vertices.reserve(static_cast<size_t>(nb_points));
 
+    // Edge color: yellow for visibility
+    constexpr float edgeColor[4] = {1.0f, 0.8f, 0.2f, 1.0f};
+
     for(Standard_Integer i = 1; i <= nb_points; ++i) {
         const gp_Pnt& pnt = sampler.Value(i);
-        mesh.m_vertices.emplace_back(static_cast<float>(pnt.X()), static_cast<float>(pnt.Y()),
-                                     static_cast<float>(pnt.Z()));
+        Render::RenderVertex vertex(static_cast<float>(pnt.X()), static_cast<float>(pnt.Y()),
+                                    static_cast<float>(pnt.Z()));
+        vertex.setColor(edgeColor[0], edgeColor[1], edgeColor[2], edgeColor[3]);
+        mesh.m_vertices.push_back(vertex);
         mesh.m_boundingBox.expand(Point3D(pnt.X(), pnt.Y(), pnt.Z()));
     }
 
@@ -613,8 +653,11 @@ Render::RenderMesh GeometryDocumentImpl::generateVertexMesh(const GeometryEntity
     const TopoDS_Vertex& vertex = TopoDS::Vertex(shape);
     const gp_Pnt pnt = BRep_Tool::Pnt(vertex);
 
-    mesh.m_vertices.emplace_back(static_cast<float>(pnt.X()), static_cast<float>(pnt.Y()),
-                                 static_cast<float>(pnt.Z()));
+    // Vertex color: bright green for visibility
+    Render::RenderVertex renderVertex(static_cast<float>(pnt.X()), static_cast<float>(pnt.Y()),
+                                      static_cast<float>(pnt.Z()));
+    renderVertex.setColor(0.2f, 1.0f, 0.4f, 1.0f);
+    mesh.m_vertices.push_back(renderVertex);
     mesh.m_boundingBox.expand(Point3D(pnt.X(), pnt.Y(), pnt.Z()));
 
     return mesh;
@@ -630,7 +673,7 @@ GeometryDocumentImpl::subscribeToChanges(std::function<void(const GeometryChange
 }
 
 void GeometryDocumentImpl::emitChangeEvent(const GeometryChangeEvent& event) {
-    m_changeSignal.emit(event);
+    m_changeSignal.emitSignal(event);
 }
 
 } // namespace OpenGeoLab::Geometry

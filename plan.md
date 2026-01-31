@@ -7,9 +7,9 @@
 # 计划任务
 
 1. 了解当前实现，按如下要求完成开发：
-   - 实现一个基础组件，实现 signal 与 slot。
-   - 为 Geometry document 增加一个获取 render 数据的接口，可以获取数据来进行 opengl 渲染。
-   - 为 Geometry document 增加接口用来订阅几何数据更新的信号。
+   - 修改 UI 界面，添加 OpenGL 渲染显示区域，当未加载模型时，默认通过 create action 构建一个 box 进行显示。
+   - 创建几何或者 import 模型后，能够在 OpenGL 界面正确刷新显示。
+   - viewport 与 qml 相关的组件代码放到 src/app 目录下， render service 相关的代码放到 src/render 目录下，对外不同模块间使用组件进行交互，参考其他service。
 2. 检查工程中所有的 qml cpp hpp 代码，完善或补充注释信息，当前注释不符合要求的也要进行修改。所有注释信息参考  doxygen_comment_style.md 文件中的要求进行编写。
 3. 完成前边修改后，仔细阅读项目中所有 qml cpp 代码，思考实现软件主题功能的前提下，代码是否足够清晰，重构不合理的代码以及架构。
 4. 保证最终代码可以编译通过，并正确执行。
