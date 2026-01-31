@@ -3,7 +3,7 @@
  * @brief Implementation of CompoundEntity
  */
 
-#include "geometry/compound_entity.hpp"
+#include "compound_entity.hpp"
 
 namespace OpenGeoLab::Geometry {
 

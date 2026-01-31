@@ -3,15 +3,15 @@
  * @brief Implementation of ShapeBuilder for creating entity hierarchies
  */
 
-#include "geometry/shape_builder.hpp"
-#include "geometry/comp_solid_entity.hpp"
-#include "geometry/compound_entity.hpp"
-#include "geometry/edge_entity.hpp"
-#include "geometry/face_entity.hpp"
-#include "geometry/shell_entity.hpp"
-#include "geometry/solid_entity.hpp"
-#include "geometry/vertex_entity.hpp"
-#include "geometry/wire_entity.hpp"
+#include "shape_builder.hpp"
+#include "entity/comp_solid_entity.hpp"
+#include "entity/compound_entity.hpp"
+#include "entity/edge_entity.hpp"
+#include "entity/face_entity.hpp"
+#include "entity/shell_entity.hpp"
+#include "entity/solid_entity.hpp"
+#include "entity/vertex_entity.hpp"
+#include "entity/wire_entity.hpp"
 #include "util/logger.hpp"
 
 #include <TopExp.hxx>
@@ -21,7 +21,7 @@
 
 namespace OpenGeoLab::Geometry {
 
-ShapeBuilder::ShapeBuilder(GeometryDocumentPtr document) : m_document(std::move(document)) {
+ShapeBuilder::ShapeBuilder(GeometryDocumentImplPtr document) : m_document(std::move(document)) {
     if(!m_document) {
         throw std::invalid_argument("ShapeBuilder requires a valid GeometryDocument");
     }

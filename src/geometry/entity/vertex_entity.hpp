@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "geometry/geometry_entity.hpp"
+#include "geometry_entity.hpp"
 #include <TopoDS_Vertex.hxx>
 
 namespace OpenGeoLab::Geometry {

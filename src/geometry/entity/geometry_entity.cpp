@@ -3,9 +3,8 @@
  * @brief Implementation of GeometryEntity and GeometryManager
  */
 
-#include "geometry/geometry_entity.hpp"
-
-#include "geometry/geometry_document.hpp"
+#include "geometry_entity.hpp"
+#include "../geometry_documentImpl.hpp"
 
 #include <BRepBndLib.hxx>
 #include <Bnd_Box.hxx>

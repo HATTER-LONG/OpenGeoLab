@@ -3,7 +3,7 @@
  * @brief Implementation of FaceEntity surface operations
  */
 
-#include "geometry/face_entity.hpp"
+#include "face_entity.hpp"
 #include <BRepGProp.hxx>
 #include <BRepTools.hxx>
 #include <BRep_Tool.hxx>

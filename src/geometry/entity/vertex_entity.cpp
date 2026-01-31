@@ -3,7 +3,7 @@
  * @brief Implementation of VertexEntity point operations
  */
 
-#include "geometry/vertex_entity.hpp"
+#include "vertex_entity.hpp"
 #include <BRep_Tool.hxx>
 namespace OpenGeoLab::Geometry {
 VertexEntity::VertexEntity(const TopoDS_Vertex& vertex)

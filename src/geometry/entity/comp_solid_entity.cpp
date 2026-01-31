@@ -3,7 +3,7 @@
  * @brief Implementation of CompSolidEntity
  */
 
-#include "geometry/comp_solid_entity.hpp"
+#include "comp_solid_entity.hpp"
 
 namespace OpenGeoLab::Geometry {
 CompSolidEntity::CompSolidEntity(const TopoDS_CompSolid& compsolid)

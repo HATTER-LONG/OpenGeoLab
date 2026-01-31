@@ -3,7 +3,7 @@
  * @brief High-performance geometry entity index
  */
 
-#include "geometry/entity_index.hpp"
+#include "entity_index.hpp"
 
 #include <TopoDS_Shape.hxx>
 

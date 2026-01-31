@@ -1,6 +1,7 @@
 #include "geometry/geometry_service.hpp"
 #include "action/create_action.hpp"
 #include "action/newmodel_action.hpp"
+#include "geometry_document_managerImpl.hpp"
 #include "util/logger.hpp"
 #include "util/progress_bridge.hpp"
 
@@ -37,5 +38,10 @@ void registerServices() {
     g_ComponentFactory.registInstanceFactoryWithID<GeometryServiceFactory>("GeometryService");
     g_ComponentFactory.registFactoryWithID<CreateActionFactory>(CreateAction::actionName());
     g_ComponentFactory.registFactoryWithID<NewModelActionFactory>(NewModelAction::actionName());
+    g_ComponentFactory.registInstanceFactory<GeometryDocumentManagerImplSingletonFactory>();
+
+    auto test_getter =
+        g_ComponentFactory.getInstanceObject<GeometryDocumentManagerImplSingletonFactory>();
+    auto test_getter2 = g_ComponentFactory.getInstanceObject<IGeoDocumentManagerSingletonFactory>();
 }
 } // namespace OpenGeoLab::Geometry

@@ -3,7 +3,7 @@
  * @brief Implementation of PartEntity top-level component
  */
 
-#include "geometry/part_entity.hpp"
+#include "part_entity.hpp"
 
 namespace OpenGeoLab::Geometry {
 

@@ -4,8 +4,8 @@
  */
 
 #include "create_action.hpp"
-#include "geometry/geometry_document.hpp"
-#include "geometry/shape_builder.hpp"
+#include "../geometry_document_managerImpl.hpp"
+#include "../shape_builder.hpp"
 #include "util/logger.hpp"
 
 #include <BRepPrimAPI_MakeBox.hxx>
@@ -14,7 +14,6 @@
 #include <BRepPrimAPI_MakeSphere.hxx>
 #include <gp_Ax2.hxx>
 #include <gp_Pnt.hxx>
-
 
 namespace OpenGeoLab::Geometry {
 
@@ -212,7 +211,7 @@ namespace {
     }
 
     // Add to current document
-    auto document = GeometryDocumentManager::instance().currentDocument();
+    auto document = GeometryDocumentManagerImpl::instance()->currentDocumentImplType();
     if(!document) {
         if(progress_callback) {
             progress_callback(1.0, "Error: No active document.");

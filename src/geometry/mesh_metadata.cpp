@@ -4,8 +4,8 @@
  */
 
 #include "geometry/mesh_metadata.hpp"
-#include "geometry/edge_entity.hpp"
-#include "geometry/face_entity.hpp"
+#include "entity/edge_entity.hpp"
+#include "entity/face_entity.hpp"
 #include "util/logger.hpp"
 
 #include <BRepAdaptor_Curve.hxx>
@@ -28,7 +28,6 @@
 #include <ShapeAnalysis.hxx>
 #include <TopExp_Explorer.hxx>
 #include <TopoDS.hxx>
-
 
 #include <cmath>
 

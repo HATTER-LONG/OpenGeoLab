@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include "geometry_types.hpp"
+#include "geometry/geometry_types.hpp"
 
 #include <kangaroo/util/noncopyable.hpp>
 
@@ -24,7 +24,7 @@ class TopoDS_Shape;
 namespace OpenGeoLab::Geometry {
 class GeometryEntity;
 class GeometryManager;
-class GeometryDocument;
+class GeometryDocumentImpl;
 
 using GeometryEntityPtr = std::shared_ptr<GeometryEntity>;
 using GeometryEntityWeakPtr = std::weak_ptr<GeometryEntity>;
@@ -273,11 +273,15 @@ protected:
     mutable bool m_boundingBoxValid{false}; ///< Bounding box validity
 
     friend class EntityIndex;
-    friend class GeometryDocument;
+    friend class GeometryDocumentImpl;
 
     // Set/clear by EntityIndex on add/remove; non-owning.
-    void setDocument(std::weak_ptr<GeometryDocument> document) { m_document = std::move(document); }
-    [[nodiscard]] std::shared_ptr<GeometryDocument> document() const { return m_document.lock(); }
+    void setDocument(std::weak_ptr<GeometryDocumentImpl> document) {
+        m_document = std::move(document);
+    }
+    [[nodiscard]] std::shared_ptr<GeometryDocumentImpl> document() const {
+        return m_document.lock();
+    }
 
     // Relationship internals (do not sync both sides)
     [[nodiscard]] bool addChildNoSync(EntityId child_id);
@@ -288,7 +292,7 @@ protected:
     // Called by EntityIndex before the entity is removed, to eagerly detach edges.
     void detachAllRelations();
 
-    std::weak_ptr<GeometryDocument> m_document;
+    std::weak_ptr<GeometryDocumentImpl> m_document;
     mutable std::unordered_set<EntityId> m_parentIds;
     mutable std::unordered_set<EntityId> m_childIds;
 

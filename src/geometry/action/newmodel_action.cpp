@@ -4,7 +4,7 @@
  */
 
 #include "newmodel_action.hpp"
-#include "geometry/geometry_document.hpp"
+#include "../geometry_document_managerImpl.hpp"
 #include "util/logger.hpp"
 
 namespace OpenGeoLab::Geometry {
@@ -16,7 +16,7 @@ bool NewModelAction::execute(const nlohmann::json& /*params*/,
     }
 
     // Create a new document (this clears the old one)
-    auto doc = GeometryDocumentManager::instance().newDocument();
+    auto doc = GeometryDocumentManagerImpl::instance()->newDocumentImplType();
 
     if(!doc) {
         LOG_ERROR("NewModelAction: Failed to create new document");

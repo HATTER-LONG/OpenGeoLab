@@ -8,7 +8,6 @@
 
 #pragma once
 
-#include "geometry/geometry_entity.hpp"
 #include "util/occ_progress.hpp"
 
 #include <kangaroo/util/component_factory.hpp>
@@ -24,19 +23,17 @@ namespace OpenGeoLab::IO {
  * Contains success status, error information, and the loaded geometry entity.
  */
 struct ReadResult {
-    bool m_success{false};                    ///< Whether the read operation succeeded
-    std::string m_errorMessage;               ///< Error message if failed
-    Geometry::GeometryEntityPtr m_rootEntity; ///< The root entity of loaded geometry
+    bool m_success{false};      ///< Whether the read operation succeeded
+    std::string m_errorMessage; ///< Error message if failed
 
     /**
      * @brief Create a success result with loaded entity
      * @param root_entity The root geometry entity
      * @return Success ReadResult
      */
-    [[nodiscard]] static ReadResult success(Geometry::GeometryEntityPtr root_entity) {
+    [[nodiscard]] static ReadResult success() {
         ReadResult result;
         result.m_success = true;
-        result.m_rootEntity = std::move(root_entity);
         return result;
     }
 

@@ -3,7 +3,7 @@
  * @brief Implementation of WireEntity edge sequence operations
  */
 
-#include "geometry/wire_entity.hpp"
+#include "wire_entity.hpp"
 #include <BRepGProp.hxx>
 #include <GProp_GProps.hxx>
 #include <ShapeAnalysis_Wire.hxx>

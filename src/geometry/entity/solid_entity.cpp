@@ -3,7 +3,7 @@
  * @brief Implementation of SolidEntity geometry computations
  */
 
-#include "geometry/solid_entity.hpp"
+#include "solid_entity.hpp"
 #include <BRepGProp.hxx>
 #include <GProp_GProps.hxx>
 #include <TopExp.hxx>

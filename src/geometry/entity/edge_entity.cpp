@@ -3,7 +3,7 @@
  * @brief Implementation of EdgeEntity curve operations
  */
 
-#include "geometry/edge_entity.hpp"
+#include "edge_entity.hpp"
 #include <BRepGProp.hxx>
 #include <BRep_Tool.hxx>
 #include <GProp_GProps.hxx>

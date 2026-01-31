@@ -3,14 +3,15 @@
  * @brief Implementation of GeometryDocument entity management
  */
 
-#include "geometry/geometry_document.hpp"
+#include "geometry_documentImpl.hpp"
+#include "entity/geometry_entity.hpp"
 
 #include <queue>
 #include <unordered_set>
 
 namespace OpenGeoLab::Geometry {
 
-bool GeometryDocument::addEntity(const GeometryEntityPtr& entity) {
+bool GeometryDocumentImpl::addEntity(const GeometryEntityPtr& entity) {
     if(!m_entityIndex.addEntity(entity)) {
         return false;
     }
@@ -18,7 +19,7 @@ bool GeometryDocument::addEntity(const GeometryEntityPtr& entity) {
     return true;
 }
 
-bool GeometryDocument::removeEntity(EntityId entity_id) {
+bool GeometryDocumentImpl::removeEntity(EntityId entity_id) {
     const auto entity = m_entityIndex.findById(entity_id);
     if(!entity) {
         return false;
@@ -32,13 +33,14 @@ bool GeometryDocument::removeEntity(EntityId entity_id) {
     return true;
 }
 
-size_t GeometryDocument::removeEntityWithChildren(EntityId entity_id) {
+size_t GeometryDocumentImpl::removeEntityWithChildren(EntityId entity_id) {
     size_t removed_count = 0;
     removeEntityRecursive(entity_id, removed_count);
     return removed_count;
 }
 
-void GeometryDocument::removeEntityRecursive(EntityId entity_id, size_t& removed_count) { // NOLINT
+void GeometryDocumentImpl::removeEntityRecursive(EntityId entity_id, // NOLINT
+                                                 size_t& removed_count) {
     const auto entity = m_entityIndex.findById(entity_id);
     if(!entity) {
         return;
@@ -58,37 +60,39 @@ void GeometryDocument::removeEntityRecursive(EntityId entity_id, size_t& removed
     }
 }
 
-void GeometryDocument::clear() { m_entityIndex.clear(); }
+void GeometryDocumentImpl::clear() { m_entityIndex.clear(); }
 
-GeometryEntityPtr GeometryDocument::findById(EntityId entity_id) const {
+GeometryEntityPtr GeometryDocumentImpl::findById(EntityId entity_id) const {
     return m_entityIndex.findById(entity_id);
 }
 
-GeometryEntityPtr GeometryDocument::findByUIDAndType(EntityUID entity_uid,
-                                                     EntityType entity_type) const {
+GeometryEntityPtr GeometryDocumentImpl::findByUIDAndType(EntityUID entity_uid,
+                                                         EntityType entity_type) const {
     return m_entityIndex.findByUIDAndType(entity_uid, entity_type);
 }
 
-GeometryEntityPtr GeometryDocument::findByShape(const TopoDS_Shape& shape) const {
+GeometryEntityPtr GeometryDocumentImpl::findByShape(const TopoDS_Shape& shape) const {
     return m_entityIndex.findByShape(shape);
 }
 
-[[nodiscard]] size_t GeometryDocument::entityCount() const { return m_entityIndex.entityCount(); }
+[[nodiscard]] size_t GeometryDocumentImpl::entityCount() const {
+    return m_entityIndex.entityCount();
+}
 
-[[nodiscard]] size_t GeometryDocument::entityCountByType(EntityType entity_type) const {
+[[nodiscard]] size_t GeometryDocumentImpl::entityCountByType(EntityType entity_type) const {
     return m_entityIndex.entityCountByType(entity_type);
 }
 
-std::vector<GeometryEntityPtr> GeometryDocument::entitiesByType(EntityType entity_type) const {
+std::vector<GeometryEntityPtr> GeometryDocumentImpl::entitiesByType(EntityType entity_type) const {
     return m_entityIndex.entitiesByType(entity_type);
 }
 
-std::vector<GeometryEntityPtr> GeometryDocument::allEntities() const {
+std::vector<GeometryEntityPtr> GeometryDocumentImpl::allEntities() const {
     return m_entityIndex.snapshotEntities();
 }
 
-std::vector<GeometryEntityPtr> GeometryDocument::findAncestors(EntityId entity_id,
-                                                               EntityType ancestor_type) const {
+std::vector<GeometryEntityPtr> GeometryDocumentImpl::findAncestors(EntityId entity_id,
+                                                                   EntityType ancestor_type) const {
     std::vector<GeometryEntityPtr> result;
     const auto entity = findById(entity_id);
     if(!entity) {
@@ -134,8 +138,8 @@ std::vector<GeometryEntityPtr> GeometryDocument::findAncestors(EntityId entity_i
     return result;
 }
 
-std::vector<GeometryEntityPtr> GeometryDocument::findDescendants(EntityId entity_id,
-                                                                 EntityType descendant_type) const {
+std::vector<GeometryEntityPtr>
+GeometryDocumentImpl::findDescendants(EntityId entity_id, EntityType descendant_type) const {
     std::vector<GeometryEntityPtr> result;
     const auto entity = findById(entity_id);
     if(!entity) {
@@ -181,7 +185,7 @@ std::vector<GeometryEntityPtr> GeometryDocument::findDescendants(EntityId entity
     return result;
 }
 
-GeometryEntityPtr GeometryDocument::findOwningPart(EntityId entity_id) const {
+GeometryEntityPtr GeometryDocumentImpl::findOwningPart(EntityId entity_id) const {
     const auto entity = findById(entity_id);
     if(!entity) {
         return nullptr;
@@ -231,7 +235,7 @@ GeometryEntityPtr GeometryDocument::findOwningPart(EntityId entity_id) const {
 }
 
 std::vector<GeometryEntityPtr>
-GeometryDocument::findRelatedEntities(EntityId edge_entity_id, EntityType related_type) const {
+GeometryDocumentImpl::findRelatedEntities(EntityId edge_entity_id, EntityType related_type) const {
     std::vector<GeometryEntityPtr> result;
 
     const auto entity = findById(edge_entity_id);
@@ -270,7 +274,7 @@ GeometryDocument::findRelatedEntities(EntityId edge_entity_id, EntityType relate
     return result;
 }
 
-bool GeometryDocument::addChildEdge(EntityId parent_id, EntityId child_id) {
+bool GeometryDocumentImpl::addChildEdge(EntityId parent_id, EntityId child_id) {
     if(parent_id == INVALID_ENTITY_ID || child_id == INVALID_ENTITY_ID) {
         return false;
     }
@@ -299,7 +303,7 @@ bool GeometryDocument::addChildEdge(EntityId parent_id, EntityId child_id) {
     return true;
 }
 
-bool GeometryDocument::removeChildEdge(EntityId parent_id, EntityId child_id) {
+bool GeometryDocumentImpl::removeChildEdge(EntityId parent_id, EntityId child_id) {
     if(parent_id == INVALID_ENTITY_ID || child_id == INVALID_ENTITY_ID) {
         return false;
     }
@@ -325,20 +329,4 @@ bool GeometryDocument::removeChildEdge(EntityId parent_id, EntityId child_id) {
     return true;
 }
 
-GeometryDocumentManager& GeometryDocumentManager::instance() {
-    static GeometryDocumentManager s_instance;
-    return s_instance;
-}
-
-GeometryDocumentPtr GeometryDocumentManager::currentDocument() {
-    if(!m_currentDocument) {
-        return newDocument();
-    }
-    return m_currentDocument;
-}
-
-GeometryDocumentPtr GeometryDocumentManager::newDocument() {
-    m_currentDocument = GeometryDocument::create();
-    return m_currentDocument;
-}
 } // namespace OpenGeoLab::Geometry

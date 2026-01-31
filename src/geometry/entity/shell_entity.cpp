@@ -3,7 +3,7 @@
  * @brief Implementation of ShellEntity face collection operations
  */
 
-#include "geometry/shell_entity.hpp"
+#include "shell_entity.hpp"
 #include <BRepGProp.hxx>
 #include <GProp_GProps.hxx>
 #include <TopExp_Explorer.hxx>

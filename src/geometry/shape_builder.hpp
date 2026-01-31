@@ -5,15 +5,20 @@
  * ShapeBuilder traverses an OCC TopoDS_Shape and creates corresponding
  * GeometryEntity objects, establishing parent-child relationships to
  * form a complete entity hierarchy within a GeometryDocument.
+ *
+ * @note Uses TopTools_IndexedMapOfShape to ensure each unique topological
+ * element is only created once, even when shared by multiple parent shapes.
  */
 
 #pragma once
 
-#include "geometry/geometry_document.hpp"
-#include "geometry/part_entity.hpp"
+#include "entity/part_entity.hpp"
+#include "geometry_documentImpl.hpp"
 #include "util/occ_progress.hpp"
 
+#include <TopTools_IndexedMapOfShape.hxx>
 #include <kangaroo/util/noncopyable.hpp>
+#include <unordered_map>
 
 class TopoDS_Face;
 class TopoDS_Shape;
@@ -74,6 +79,9 @@ struct ShapeBuildResult {
  *
  * Recursively traverses TopoDS_Shape structures and creates corresponding
  * GeometryEntity objects with proper parent-child relationships.
+ *
+ * Uses shape indexing to ensure each unique topological element (vertex, edge,
+ * face, etc.) is created only once, even when shared by multiple parent shapes.
  */
 class ShapeBuilder : public Kangaroo::Util::NonCopyMoveable {
 public:
@@ -81,7 +89,7 @@ public:
      * @brief Construct a shape builder for a document
      * @param document Target document for created entities
      */
-    explicit ShapeBuilder(GeometryDocumentPtr document);
+    explicit ShapeBuilder(GeometryDocumentImplPtr document);
     ~ShapeBuilder() = default;
 
     /**
@@ -90,6 +98,10 @@ public:
      * @param part_name Name for the root part entity
      * @param progress_callback Optional progress reporting callback
      * @return Build result with root part and entity counts
+     *
+     * @note Each unique topological element creates exactly one entity.
+     * Shared elements (e.g., edges shared by two faces) are represented
+     * by a single entity with multiple parent relationships.
      */
     [[nodiscard]] ShapeBuildResult
     buildFromShape(const TopoDS_Shape& shape,
@@ -99,16 +111,50 @@ public:
     /**
      * @brief Get the target document
      */
-    [[nodiscard]] GeometryDocumentPtr document() const { return m_document; }
+    [[nodiscard]] GeometryDocumentImplPtr document() const { return m_document; }
 
 private:
     /**
-     * @brief Recursively build child entities
+     * @brief Map from shape index to created entity
+     *
+     * Shape index comes from TopTools_IndexedMapOfShape which assigns
+     * a unique integer index to each unique shape in a model.
      */
-    void buildSubShapes(const TopoDS_Shape& shape,
-                        const GeometryEntityPtr& parent,
-                        ShapeBuildResult& result,
-                        Util::ProgressCallback& progress_callback);
+    using ShapeEntityMap = std::unordered_map<int, GeometryEntityPtr>;
+
+    /**
+     * @brief Build all entities from indexed shapes
+     * @param shape_map Indexed map of all unique shapes
+     * @param shape_entity_map Output map from shape index to entity
+     * @param result Build result to update counts
+     */
+    void buildEntitiesFromShapeMap(const TopTools_IndexedMapOfShape& shape_map,
+                                   ShapeEntityMap& shape_entity_map,
+                                   ShapeBuildResult& result);
+
+    /**
+     * @brief Build parent-child relationships based on topological structure
+     * @param root_shape The root shape to traverse
+     * @param shape_map Indexed map of all unique shapes
+     * @param shape_entity_map Map from shape index to entity
+     * @param root_entity The root entity (Part or container)
+     */
+    void buildRelationships(const TopoDS_Shape& root_shape,
+                            const TopTools_IndexedMapOfShape& shape_map,
+                            const ShapeEntityMap& shape_entity_map,
+                            const GeometryEntityPtr& root_entity);
+
+    /**
+     * @brief Recursively build parent-child relationships
+     * @param parent_shape Parent shape
+     * @param parent_entity Parent entity
+     * @param shape_map Indexed map of all unique shapes
+     * @param shape_entity_map Map from shape index to entity
+     */
+    void buildChildRelationships(const TopoDS_Shape& parent_shape,
+                                 const GeometryEntityPtr& parent_entity,
+                                 const TopTools_IndexedMapOfShape& shape_map,
+                                 const ShapeEntityMap& shape_entity_map);
 
     /**
      * @brief Create appropriate entity type for a shape
@@ -121,7 +167,7 @@ private:
     void updateEntityCounts(const TopoDS_Shape& shape, ShapeBuildResult& result);
 
 private:
-    GeometryDocumentPtr m_document; ///< Target document
+    GeometryDocumentImplPtr m_document; ///< Target document
 };
 
 } // namespace OpenGeoLab::Geometry
