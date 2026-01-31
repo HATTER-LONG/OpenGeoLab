@@ -1,3 +1,8 @@
+/**
+ * @file geometry_service.cpp
+ * @brief Implementation of GeometryService request processing
+ */
+
 #include "geometry/geometry_service.hpp"
 #include "action/create_action.hpp"
 #include "action/newmodel_action.hpp"

@@ -1,14 +1,54 @@
+/**
+ * @file geometry_document.hpp
+ * @brief Geometry document interface for entity management and rendering
+ *
+ * Defines the public interface for geometry documents that manage
+ * geometric entities and provide render data for visualization.
+ */
+
 #pragma once
 #include "geometry/geometry_types.hpp"
+#include "render/render_data.hpp"
 #include "util/progress_callback.hpp"
+#include "util/signal.hpp"
+
 #include <kangaroo/util/noncopyable.hpp>
 #include <memory>
 #include <string>
 
 class TopoDS_Shape;
+
 namespace OpenGeoLab::Geometry {
+
 class GeometryDocument;
 using GeometryDocumentPtr = std::shared_ptr<GeometryDocument>;
+
+/**
+ * @brief Type of geometry change that occurred
+ */
+enum class GeometryChangeType : uint8_t {
+    EntityAdded = 0,          ///< One or more entities were added
+    EntityRemoved = 1,        ///< One or more entities were removed
+    EntityModified = 2,       ///< Entity properties changed
+    DocumentCleared = 3,      ///< All entities removed
+    RenderDataInvalidated = 4 ///< Render data needs refresh
+};
+
+/**
+ * @brief Information about a geometry change event
+ */
+struct GeometryChangeEvent {
+    GeometryChangeType m_type{GeometryChangeType::EntityModified}; ///< Type of change
+    std::vector<EntityId> m_affectedEntities; ///< IDs of affected entities (may be empty)
+
+    GeometryChangeEvent() = default;
+    explicit GeometryChangeEvent(GeometryChangeType type) : m_type(type) {}
+    GeometryChangeEvent(GeometryChangeType type, EntityId entity_id)
+        : m_type(type), m_affectedEntities{entity_id} {}
+    GeometryChangeEvent(GeometryChangeType type, std::vector<EntityId> entities)
+        : m_type(type), m_affectedEntities(std::move(entities)) {}
+};
+
 /**
  * @brief Result of a shape load operation
  */
@@ -59,6 +99,44 @@ public:
     loadFromShape(const TopoDS_Shape& shape, // NOLINT
                   const std::string& name,
                   Util::ProgressCallback progress = Util::NO_PROGRESS_CALLBACK) = 0;
+
+    // -------------------------------------------------------------------------
+    // Render Data Access
+    // -------------------------------------------------------------------------
+
+    /**
+     * @brief Get render data for OpenGL visualization
+     * @param options Tessellation options for mesh generation
+     * @return Complete render data including faces, edges, and vertices
+     *
+     * @note This method may cache tessellated data. Call invalidateRenderData()
+     *       to force regeneration after geometry changes.
+     */
+    [[nodiscard]] virtual Render::DocumentRenderData
+    getRenderData(const Render::TessellationOptions& options) = 0;
+
+    /**
+     * @brief Invalidate cached render data
+     *
+     * Call this method to force regeneration of render data on the next
+     * getRenderData() call. Automatically called when geometry changes.
+     */
+    virtual void invalidateRenderData() = 0;
+
+    // -------------------------------------------------------------------------
+    // Change Notification
+    // -------------------------------------------------------------------------
+
+    /**
+     * @brief Subscribe to geometry change notifications
+     * @param callback Function to call when geometry changes
+     * @return ScopedConnection for automatic unsubscription
+     *
+     * @note The callback may be invoked from any thread. Subscribers should
+     *       handle thread safety appropriately.
+     */
+    [[nodiscard]] virtual Util::ScopedConnection
+    subscribeToChanges(std::function<void(const GeometryChangeEvent&)> callback) = 0;
 };
 
 } // namespace OpenGeoLab::Geometry

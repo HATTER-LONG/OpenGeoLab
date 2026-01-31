@@ -38,7 +38,9 @@ set(CMAKE_AUTOMOC ON)
 file(GLOB_RECURSE test_sources CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/source/*.cpp)
 
 # Include module sources for testing (with Qt classes needing MOC)
-set(module_sources ${CMAKE_CURRENT_SOURCE_DIR}/../src/util/logger.cpp)
+set(module_sources ${CMAKE_CURRENT_SOURCE_DIR}/../src/util/logger.cpp
+                   ${CMAKE_CURRENT_SOURCE_DIR}/../src/util/signal.cpp
+)
 
 # Include header files for AUTOMOC to find Q_OBJECT macros
 set(module_headers "")

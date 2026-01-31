@@ -1,3 +1,8 @@
+/**
+ * @file geometry_document_managerImpl.cpp
+ * @brief Implementation of GeometryDocumentManagerImpl
+ */
+
 #include "geometry_document_managerImpl.hpp"
 #include "geometry_documentImpl.hpp"
 

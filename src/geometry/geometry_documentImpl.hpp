@@ -1,8 +1,8 @@
 /**
- * @file geometry_document.hpp
- * @brief Geometry document container for entity management
+ * @file geometry_documentImpl.hpp
+ * @brief Geometry document implementation for entity management
  *
- * GeometryDocument is the primary container for geometry entities within
+ * GeometryDocumentImpl is the primary container for geometry entities within
  * the application. Each document represents an independent model or assembly
  * with its own entity index and relationship graph.
  */
@@ -14,9 +14,11 @@
 #include "geometry/geometry_document.hpp"
 
 #include <memory>
+#include <mutex>
 #include <vector>
 
 namespace OpenGeoLab::Geometry {
+
 class GeometryDocumentImpl;
 using GeometryDocumentImplPtr = std::shared_ptr<GeometryDocumentImpl>;
 /**
@@ -169,6 +171,22 @@ public:
      */
     [[nodiscard]] bool removeChildEdge(EntityId parent_id, EntityId child_id);
 
+    // =========================================================================
+    // Render Data Access (GeometryDocument interface)
+    // =========================================================================
+
+    [[nodiscard]] Render::DocumentRenderData
+    getRenderData(const Render::TessellationOptions& options) override;
+
+    void invalidateRenderData() override;
+
+    // =========================================================================
+    // Change Notification (GeometryDocument interface)
+    // =========================================================================
+
+    [[nodiscard]] Util::ScopedConnection
+    subscribeToChanges(std::function<void(const GeometryChangeEvent&)> callback) override;
+
 private:
     /**
      * @brief Helper for recursive entity removal.
@@ -177,8 +195,47 @@ private:
      */
     void removeEntityRecursive(EntityId entity_id, size_t& removed_count);
 
+    /**
+     * @brief Generate render mesh for a face entity
+     * @param entity Face entity
+     * @param options Tessellation options
+     * @return Render mesh for the face
+     */
+    [[nodiscard]] Render::RenderMesh generateFaceMesh(const GeometryEntityPtr& entity,
+                                                      const Render::TessellationOptions& options);
+
+    /**
+     * @brief Generate render mesh for an edge entity
+     * @param entity Edge entity
+     * @param options Tessellation options
+     * @return Render mesh for the edge
+     */
+    [[nodiscard]] Render::RenderMesh generateEdgeMesh(const GeometryEntityPtr& entity,
+                                                      const Render::TessellationOptions& options);
+
+    /**
+     * @brief Generate render mesh for a vertex entity
+     * @param entity Vertex entity
+     * @return Render mesh for the vertex
+     */
+    [[nodiscard]] Render::RenderMesh generateVertexMesh(const GeometryEntityPtr& entity);
+
+    /**
+     * @brief Emit a change notification to all subscribers
+     * @param event Change event to emit
+     */
+    void emitChangeEvent(const GeometryChangeEvent& event);
+
 private:
     EntityIndex m_entityIndex;
+
+    /// Signal for geometry change notifications
+    Util::Signal<const GeometryChangeEvent&> m_changeSignal;
+
+    /// Cached render data
+    mutable Render::DocumentRenderData m_cachedRenderData;
+    mutable bool m_renderDataValid{false};
+    mutable std::mutex m_renderDataMutex;
 };
 
 } // namespace OpenGeoLab::Geometry

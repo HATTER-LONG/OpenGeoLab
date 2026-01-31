@@ -1,3 +1,8 @@
+/**
+ * @file process_callback.cpp
+ * @brief Implementation of progress callback utilities
+ */
+
 #include "util/progress_callback.hpp"
 #include <algorithm>
 

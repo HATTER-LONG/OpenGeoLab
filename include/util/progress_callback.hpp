@@ -1,3 +1,11 @@
+/**
+ * @file progress_callback.hpp
+ * @brief Progress callback type definitions for long-running operations
+ *
+ * Provides callback types for reporting operation progress and requesting
+ * cancellation from callers.
+ */
+
 #pragma once
 
 #include <functional>

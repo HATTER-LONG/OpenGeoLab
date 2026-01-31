@@ -1,5 +1,5 @@
 /**
- * @file geometry_document.cpp
+ * @file geometry_documentImpl.cpp
  * @brief Implementation of GeometryDocument entity management
  */
 
@@ -9,10 +9,37 @@
 #include "util/logger.hpp"
 #include "util/progress_callback.hpp"
 
+#include <BRepMesh_IncrementalMesh.hxx>
+#include <BRep_Tool.hxx>
+#include <GCPnts_UniformDeflection.hxx>
+#include <GeomAdaptor_Curve.hxx>
+#include <Poly_Polygon3D.hxx>
+#include <Poly_Triangle.hxx>
+#include <Poly_Triangulation.hxx>
+#include <TColgp_Array1OfPnt.hxx>
+#include <TopAbs_Orientation.hxx>
+#include <TopLoc_Location.hxx>
+#include <TopoDS.hxx>
+#include <gp_Dir.hxx>
+#include <gp_Pnt.hxx>
+#include <gp_Trsf.hxx>
+
 #include <queue>
 #include <unordered_set>
 
 namespace OpenGeoLab::Geometry {
+
+namespace {
+/**
+ * @brief Check if transformation is identity
+ * @param trsf Transformation to check
+ * @return true if transformation is identity
+ */
+bool IsIdentityTrsf(const gp_Trsf& trsf) {
+    return trsf.IsNegative() == Standard_False && trsf.ScaleFactor() == 1.0 &&
+           trsf.TranslationPart().SquareModulus() == 0.0;
+}
+} // namespace
 
 bool GeometryDocumentImpl::addEntity(const GeometryEntityPtr& entity) {
     if(!m_entityIndex.addEntity(entity)) {
@@ -358,6 +385,12 @@ LoadResult GeometryDocumentImpl::loadFromShape(const TopoDS_Shape& shape,
             return LoadResult::failure("Operation cancelled");
         }
 
+        // Invalidate render data and notify subscribers
+        invalidateRenderData();
+        emitChangeEvent(GeometryChangeEvent(
+            GeometryChangeType::EntityAdded,
+            build_result.m_rootPart ? build_result.m_rootPart->entityId() : INVALID_ENTITY_ID));
+
         progress(1.0, "Load completed.");
         return LoadResult::success(build_result.m_rootPart->entityId(),
                                    build_result.totalEntityCount());
@@ -365,6 +398,239 @@ LoadResult GeometryDocumentImpl::loadFromShape(const TopoDS_Shape& shape,
         LOG_ERROR("Exception during shape load: {}", e.what());
         return LoadResult::failure(std::string("Exception: ") + e.what());
     }
+}
+
+// =============================================================================
+// Render Data Implementation
+// =============================================================================
+
+Render::DocumentRenderData
+GeometryDocumentImpl::getRenderData(const Render::TessellationOptions& options) {
+    std::lock_guard<std::mutex> lock(m_renderDataMutex);
+
+    if(m_renderDataValid) {
+        return m_cachedRenderData;
+    }
+
+    m_cachedRenderData.clear();
+
+    // Generate face meshes
+    auto faces = entitiesByType(EntityType::Face);
+    for(const auto& face : faces) {
+        auto mesh = generateFaceMesh(face, options);
+        if(mesh.isValid()) {
+            m_cachedRenderData.m_faceMeshes.push_back(std::move(mesh));
+        }
+    }
+
+    // Generate edge meshes
+    auto edges = entitiesByType(EntityType::Edge);
+    for(const auto& edge : edges) {
+        auto mesh = generateEdgeMesh(edge, options);
+        if(mesh.isValid()) {
+            m_cachedRenderData.m_edgeMeshes.push_back(std::move(mesh));
+        }
+    }
+
+    // Generate vertex meshes
+    auto vertices = entitiesByType(EntityType::Vertex);
+    for(const auto& vertex : vertices) {
+        auto mesh = generateVertexMesh(vertex);
+        if(mesh.isValid()) {
+            m_cachedRenderData.m_vertexMeshes.push_back(std::move(mesh));
+        }
+    }
+
+    m_cachedRenderData.updateBoundingBox();
+    m_renderDataValid = true;
+
+    return m_cachedRenderData;
+}
+
+void GeometryDocumentImpl::invalidateRenderData() {
+    std::lock_guard<std::mutex> lock(m_renderDataMutex);
+    m_renderDataValid = false;
+}
+
+Render::RenderMesh
+GeometryDocumentImpl::generateFaceMesh(const GeometryEntityPtr& entity,
+                                       const Render::TessellationOptions& options) {
+    Render::RenderMesh mesh;
+    mesh.m_entityId = entity->entityId();
+    mesh.m_entityType = EntityType::Face;
+    mesh.m_primitiveType = Render::RenderPrimitiveType::Triangles;
+
+    const auto& shape = entity->shape();
+    if(shape.IsNull()) {
+        return mesh;
+    }
+
+    // Use OCC's triangulation (already computed by BRepMesh)
+    TopLoc_Location loc;
+    const Handle(Poly_Triangulation) triangulation =
+        BRep_Tool::Triangulation(TopoDS::Face(shape), loc);
+
+    if(triangulation.IsNull()) {
+        // Try to mesh the face first
+        BRepMesh_IncrementalMesh mesher(shape, options.m_linearDeflection, Standard_False,
+                                        options.m_angularDeflection);
+
+        const Handle(Poly_Triangulation) tri2 = BRep_Tool::Triangulation(TopoDS::Face(shape), loc);
+        if(tri2.IsNull()) {
+            return mesh;
+        }
+    }
+
+    const Handle(Poly_Triangulation) tri = BRep_Tool::Triangulation(TopoDS::Face(shape), loc);
+    if(tri.IsNull()) {
+        return mesh;
+    }
+
+    const gp_Trsf& trsf = loc.Transformation();
+    const bool has_transform = !IsIdentityTrsf(trsf);
+
+    // Extract vertices
+    const Standard_Integer nb_nodes = tri->NbNodes();
+    mesh.m_vertices.reserve(static_cast<size_t>(nb_nodes));
+
+    for(Standard_Integer i = 1; i <= nb_nodes; ++i) {
+        gp_Pnt pnt = tri->Node(i);
+        if(has_transform) {
+            pnt.Transform(trsf);
+        }
+
+        Render::RenderVertex vertex(static_cast<float>(pnt.X()), static_cast<float>(pnt.Y()),
+                                    static_cast<float>(pnt.Z()));
+
+        // Get normal if available
+        if(options.m_computeNormals && tri->HasNormals()) {
+            gp_Dir normal = tri->Normal(i);
+            if(has_transform) {
+                normal.Transform(trsf);
+            }
+            vertex.m_normal[0] = static_cast<float>(normal.X());
+            vertex.m_normal[1] = static_cast<float>(normal.Y());
+            vertex.m_normal[2] = static_cast<float>(normal.Z());
+        }
+
+        mesh.m_vertices.push_back(vertex);
+        mesh.m_boundingBox.expand(Point3D(pnt.X(), pnt.Y(), pnt.Z()));
+    }
+
+    // Extract triangles
+    const Standard_Integer nb_triangles = tri->NbTriangles();
+    mesh.m_indices.reserve(static_cast<size_t>(nb_triangles) * 3);
+
+    const TopAbs_Orientation orientation = shape.Orientation();
+
+    for(Standard_Integer i = 1; i <= nb_triangles; ++i) {
+        const Poly_Triangle& triangle = tri->Triangle(i);
+        Standard_Integer n1, n2, n3;
+        triangle.Get(n1, n2, n3);
+
+        // Adjust winding based on face orientation
+        if(orientation == TopAbs_REVERSED) {
+            std::swap(n2, n3);
+        }
+
+        mesh.m_indices.push_back(static_cast<uint32_t>(n1 - 1));
+        mesh.m_indices.push_back(static_cast<uint32_t>(n2 - 1));
+        mesh.m_indices.push_back(static_cast<uint32_t>(n3 - 1));
+    }
+
+    return mesh;
+}
+
+Render::RenderMesh
+GeometryDocumentImpl::generateEdgeMesh(const GeometryEntityPtr& entity,
+                                       const Render::TessellationOptions& options) {
+    Render::RenderMesh mesh;
+    mesh.m_entityId = entity->entityId();
+    mesh.m_entityType = EntityType::Edge;
+    mesh.m_primitiveType = Render::RenderPrimitiveType::LineStrip;
+
+    const auto& shape = entity->shape();
+    if(shape.IsNull()) {
+        return mesh;
+    }
+
+    const TopoDS_Edge& edge = TopoDS::Edge(shape);
+    Standard_Real first, last;
+    const Handle(Geom_Curve) curve = BRep_Tool::Curve(edge, first, last);
+
+    if(curve.IsNull()) {
+        // Try polygon on triangulation
+        TopLoc_Location loc;
+        const Handle(Poly_Polygon3D) polygon = BRep_Tool::Polygon3D(edge, loc);
+        if(!polygon.IsNull()) {
+            const TColgp_Array1OfPnt& nodes = polygon->Nodes();
+            const gp_Trsf& trsf = loc.Transformation();
+
+            for(Standard_Integer i = nodes.Lower(); i <= nodes.Upper(); ++i) {
+                gp_Pnt pnt = nodes(i);
+                pnt.Transform(trsf);
+                mesh.m_vertices.emplace_back(static_cast<float>(pnt.X()),
+                                             static_cast<float>(pnt.Y()),
+                                             static_cast<float>(pnt.Z()));
+                mesh.m_boundingBox.expand(Point3D(pnt.X(), pnt.Y(), pnt.Z()));
+            }
+        }
+        return mesh;
+    }
+
+    // Sample the curve
+    GCPnts_UniformDeflection sampler(GeomAdaptor_Curve(curve, first, last),
+                                     options.m_linearDeflection);
+
+    if(!sampler.IsDone()) {
+        return mesh;
+    }
+
+    const Standard_Integer nb_points = sampler.NbPoints();
+    mesh.m_vertices.reserve(static_cast<size_t>(nb_points));
+
+    for(Standard_Integer i = 1; i <= nb_points; ++i) {
+        const gp_Pnt& pnt = sampler.Value(i);
+        mesh.m_vertices.emplace_back(static_cast<float>(pnt.X()), static_cast<float>(pnt.Y()),
+                                     static_cast<float>(pnt.Z()));
+        mesh.m_boundingBox.expand(Point3D(pnt.X(), pnt.Y(), pnt.Z()));
+    }
+
+    return mesh;
+}
+
+Render::RenderMesh GeometryDocumentImpl::generateVertexMesh(const GeometryEntityPtr& entity) {
+    Render::RenderMesh mesh;
+    mesh.m_entityId = entity->entityId();
+    mesh.m_entityType = EntityType::Vertex;
+    mesh.m_primitiveType = Render::RenderPrimitiveType::Points;
+
+    const auto& shape = entity->shape();
+    if(shape.IsNull()) {
+        return mesh;
+    }
+
+    const TopoDS_Vertex& vertex = TopoDS::Vertex(shape);
+    const gp_Pnt pnt = BRep_Tool::Pnt(vertex);
+
+    mesh.m_vertices.emplace_back(static_cast<float>(pnt.X()), static_cast<float>(pnt.Y()),
+                                 static_cast<float>(pnt.Z()));
+    mesh.m_boundingBox.expand(Point3D(pnt.X(), pnt.Y(), pnt.Z()));
+
+    return mesh;
+}
+
+// =============================================================================
+// Change Notification Implementation
+// =============================================================================
+
+Util::ScopedConnection
+GeometryDocumentImpl::subscribeToChanges(std::function<void(const GeometryChangeEvent&)> callback) {
+    return m_changeSignal.connect(std::move(callback));
+}
+
+void GeometryDocumentImpl::emitChangeEvent(const GeometryChangeEvent& event) {
+    m_changeSignal.emit(event);
 }
 
 } // namespace OpenGeoLab::Geometry
