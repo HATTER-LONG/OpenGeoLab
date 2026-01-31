@@ -31,8 +31,12 @@ public:
     GeometryDocumentImpl() = default;
     virtual ~GeometryDocumentImpl() = default;
 
-    [[nodiscard]] bool buildShapes() override { return true; }
-    [[nodiscard]] void* getRenderContext() const override { return nullptr; }
+    // =========================================================================
+    // Shape Loading (GeometryDocument interface)
+    // =========================================================================
+    [[nodiscard]] LoadResult loadFromShape(const TopoDS_Shape& shape,
+                                           const std::string& name,
+                                           Util::ProgressCallback progress) override;
 
     // -------------------------------------------------------------------------
     // Entity Management

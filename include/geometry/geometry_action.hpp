@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include "util/occ_progress.hpp"
+#include "util/progress_callback.hpp"
 
 #include <kangaroo/util/component_factory.hpp>
 #include <kangaroo/util/noncopyable.hpp>

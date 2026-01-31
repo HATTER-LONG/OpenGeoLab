@@ -5,6 +5,9 @@
 
 #include "geometry_documentImpl.hpp"
 #include "entity/geometry_entity.hpp"
+#include "shape_builder.hpp"
+#include "util/logger.hpp"
+#include "util/progress_callback.hpp"
 
 #include <queue>
 #include <unordered_set>
@@ -327,6 +330,41 @@ bool GeometryDocumentImpl::removeChildEdge(EntityId parent_id, EntityId child_id
     }
 
     return true;
+}
+
+LoadResult GeometryDocumentImpl::loadFromShape(const TopoDS_Shape& shape,
+                                               const std::string& name,
+                                               Util::ProgressCallback progress) {
+    if(shape.IsNull()) {
+        return LoadResult::failure("Input shape is null");
+    }
+
+    if(!progress(0.0, "Starting shape load...")) {
+        return LoadResult::failure("Operation cancelled");
+    }
+
+    try {
+        ShapeBuilder builder(shared_from_this());
+
+        auto subcallback = Util::makeScaledProgressCallback(progress, 0.0, 0.9);
+
+        auto build_result = builder.buildFromShape(shape, name, subcallback);
+
+        if(!build_result.m_success) {
+            return LoadResult::failure(build_result.m_errorMessage);
+        }
+
+        if(!progress(0.95, "Finalizing...")) {
+            return LoadResult::failure("Operation cancelled");
+        }
+
+        progress(1.0, "Load completed.");
+        return LoadResult::success(build_result.m_rootPart->entityId(),
+                                   build_result.totalEntityCount());
+    } catch(const std::exception& e) {
+        LOG_ERROR("Exception during shape load: {}", e.what());
+        return LoadResult::failure(std::string("Exception: ") + e.what());
+    }
 }
 
 } // namespace OpenGeoLab::Geometry

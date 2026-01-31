@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "util/occ_progress.hpp"
+#include "util/progress_callback.hpp"
 
 #include <kangaroo/util/component_factory.hpp>
 #include <kangaroo/util/noncopyable.hpp>
@@ -76,8 +76,9 @@ public:
      * @note Progress callback receives values in [0, 1] range
      * @note Callback returning false requests cancellation
      */
-    [[nodiscard]] virtual ReadResult readFile(const std::string& file_path,
-                                              Util::ProgressCallback progress_callback) = 0;
+    [[nodiscard]] virtual ReadResult
+    readFile(const std::string& file_path, // NOLINT
+             Util::ProgressCallback progress_callback = Util::NO_PROGRESS_CALLBACK) = 0;
 };
 
 /**

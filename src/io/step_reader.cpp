@@ -4,8 +4,8 @@
  */
 
 #include "step_reader.hpp"
+#include "geometry/geometry_document_manager.hpp"
 #include "util/logger.hpp"
-#include "util/occ_progress.hpp"
 
 #include <BRep_Builder.hxx>
 #include <STEPControl_Reader.hxx>
@@ -27,7 +27,7 @@ ReadResult StepReader::readFile(const std::string& file_path,
     }
 
     // Report initial progress
-    if(progress_callback && !progress_callback(0.05, "Initializing STEP reader...")) {
+    if(!progress_callback(0.05, "Initializing STEP reader...")) {
         return ReadResult::failure("Operation cancelled");
     }
 
@@ -35,7 +35,7 @@ ReadResult StepReader::readFile(const std::string& file_path,
         STEPControl_Reader reader;
 
         // Report progress before reading
-        if(progress_callback && !progress_callback(0.10, "Reading STEP file...")) {
+        if(!progress_callback(0.10, "Reading STEP file...")) {
             return ReadResult::failure("Operation cancelled");
         }
 
@@ -48,7 +48,7 @@ ReadResult StepReader::readFile(const std::string& file_path,
         }
 
         // Report progress before translation
-        if(progress_callback && !progress_callback(0.50, "Translating STEP model...")) {
+        if(!progress_callback(0.50, "Translating STEP model...")) {
             return ReadResult::failure("Operation cancelled");
         }
 
@@ -62,7 +62,7 @@ ReadResult StepReader::readFile(const std::string& file_path,
         LOG_DEBUG("STEP file contains {} root(s)", num_roots);
 
         // Report progress before entity creation
-        if(progress_callback && !progress_callback(0.70, "Creating geometry entities...")) {
+        if(!progress_callback(0.70, "Creating geometry entities...")) {
             return ReadResult::failure("Operation cancelled");
         }
 
@@ -87,6 +87,23 @@ ReadResult StepReader::readFile(const std::string& file_path,
             return ReadResult::failure("Translation produced no geometry");
         }
 
+        // Load shape into current document
+        auto document = Geometry::GeometryDocumentManager::instance().currentDocument();
+        if(!document) {
+            LOG_ERROR("No active geometry document");
+            return ReadResult::failure("No active geometry document");
+        }
+
+        // Extract filename for part name
+        std::filesystem::path path(file_path);
+        std::string part_name = path.stem().string();
+        auto sub_callback = Util::makeScaledProgressCallback(progress_callback, 0.7, 1.0);
+        auto load_result = document->loadFromShape(result_shape, part_name, sub_callback);
+        if(!load_result.m_success) {
+            LOG_ERROR("Failed to load shape into document: {}", load_result.m_errorMessage);
+            return ReadResult::failure("Failed to load geometry: " + load_result.m_errorMessage);
+        }
+        LOG_INFO("STEP file loaded successfully: {} entities created", load_result.m_entityCount);
         return ReadResult::success();
 
     } catch(const Standard_Failure& e) {

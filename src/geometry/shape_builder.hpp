@@ -14,7 +14,7 @@
 
 #include "entity/part_entity.hpp"
 #include "geometry_documentImpl.hpp"
-#include "util/occ_progress.hpp"
+#include "util/progress_callback.hpp"
 
 #include <TopTools_IndexedMapOfShape.hxx>
 #include <kangaroo/util/noncopyable.hpp>

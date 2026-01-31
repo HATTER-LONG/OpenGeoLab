@@ -6,6 +6,7 @@
 #pragma once
 
 #include "io/reader.hpp"
+#include "util/progress_callback.hpp"
 
 #include <kangaroo/util/component_factory.hpp>
 

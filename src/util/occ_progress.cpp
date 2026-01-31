@@ -132,17 +132,6 @@ bool OccProgressContext::isCancelled() const {
     return m_cancelled && m_cancelled->load(std::memory_order_relaxed);
 }
 
-ProgressCallback makeScaledProgressCallback(ProgressCallback callback, double base, double span) {
-    if(!callback) {
-        return {};
-    }
-    return [callback = std::move(callback), base, span](double progress,
-                                                        const std::string& message) -> bool {
-        const double clamped = std::clamp(progress, 0.0, 1.0);
-        return callback(base + span * clamped, message);
-    };
-}
-
 OccProgressContext
 makeOccProgress(ProgressCallback callback, std::string prefix, double min_delta) {
     OccProgressContext ctx;

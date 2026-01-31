@@ -9,7 +9,7 @@
 #pragma once
 
 #include "app/service.hpp"
-#include "util/occ_progress.hpp"
+#include "util/progress_callback.hpp"
 
 #include <algorithm>
 #include <kangaroo/util/current_thread.hpp>
