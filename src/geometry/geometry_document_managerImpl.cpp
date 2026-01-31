@@ -3,6 +3,12 @@
 
 namespace OpenGeoLab::Geometry {
 
+// Implementation of base class static method
+GeometryDocumentManager& GeometryDocumentManager::instance() {
+    static auto impl = std::make_shared<GeometryDocumentManagerImpl>();
+    return *impl;
+}
+
 std::shared_ptr<GeometryDocumentManagerImpl> GeometryDocumentManagerImpl::instance() {
     static auto instance = std::make_shared<GeometryDocumentManagerImpl>();
     return instance;

@@ -1,13 +1,16 @@
+/**
+ * @file LogPanel.qml
+ * @brief Floating log panel for viewing application logs
+ *
+ * Provides a scrollable view of log entries from LogService with filtering
+ * by log level (trace, debug, info, warn, error) and auto-scroll functionality.
+ */
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import "../util"
 
-/**
- * @file LogPanel.qml
- * @brief Floating log panel for viewing application logs from LogService
- */
 Item {
     id: root
 

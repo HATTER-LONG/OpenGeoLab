@@ -1,11 +1,14 @@
+/**
+ * @file CornerOverlay.qml
+ * @brief Bottom-right overlay container for progress indicator and log panel
+ *
+ * Coordinates the layout of ProgressOverlay and LogPanel components in the
+ * bottom-right corner of the main window.
+ */
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 
-/**
- * @file CornerOverlay.qml
- * @brief Bottom-right overlay container (progress + logs)
- */
 Item {
     id: root
 

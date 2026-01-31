@@ -1,5 +1,5 @@
 /**
- * @file model_reader.hpp
+ * @file reader_service.hpp
  * @brief 3D model file reader service interface and factory
  */
 

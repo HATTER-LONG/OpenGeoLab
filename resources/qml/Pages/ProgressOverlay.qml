@@ -1,15 +1,16 @@
+/**
+ * @file ProgressOverlay.qml
+ * @brief Progress overlay component for displaying backend operation status
+ *
+ * Shows progress bar, message, and cancel button. Supports fade-in/out animations,
+ * error state (red, 10s timeout) and success state (green, normal timeout).
+ */
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import OpenGeoLab 1.0 as OGL
 
-/**
- * @brief Progress overlay component for displaying backend operation status
- *
- * Shows progress bar, message, and cancel button. Supports fade-in/out animations,
- * error state (red, 10s timeout) and success state (green, normal timeout).
- */
 Item {
     id: root
 

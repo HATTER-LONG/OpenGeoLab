@@ -122,6 +122,9 @@ set(OpenCASCADE_LIBS
     TKLCAF
     TKCDF
     TKernel
+    TKFillet
+    TKBool
+    TKOffset
 )
 
 # Qt 6: GUI framework with QML support
@@ -261,9 +264,8 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE SPDLOG_ACTIVE_LEVEL=SPDLOG_LE
 # ==============================================================================
 
 target_include_directories(
-  ${PROJECT_NAME}
-  PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include"
-          "${CMAKE_CURRENT_SOURCE_DIR}/include/app" # For Qt moc generated code
+  ${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include"
+                          "${CMAKE_CURRENT_SOURCE_DIR}/include/app" # For Qt moc generated code
 )
 
 # ==============================================================================

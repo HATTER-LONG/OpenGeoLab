@@ -4,6 +4,7 @@
  */
 
 #include "step_reader.hpp"
+#include "geometry/geometry_document_manager.hpp"
 #include "util/logger.hpp"
 #include "util/occ_progress.hpp"
 
@@ -87,6 +88,31 @@ ReadResult StepReader::readFile(const std::string& file_path,
             return ReadResult::failure("Translation produced no geometry");
         }
 
+        // Load shape into current document
+        auto document = Geometry::GeometryDocumentManager::instance().currentDocument();
+        if(!document) {
+            LOG_ERROR("No active geometry document");
+            return ReadResult::failure("No active geometry document");
+        }
+
+        // Extract filename for part name
+        std::filesystem::path path(file_path);
+        std::string part_name = path.stem().string();
+
+        auto loadProgress = [&progress_callback](double p, const std::string& msg) {
+            if(progress_callback) {
+                return progress_callback(0.70 + p * 0.30, msg);
+            }
+            return true;
+        };
+
+        auto loadResult = document->loadFromShape(result_shape, part_name, loadProgress);
+        if(!loadResult.m_success) {
+            LOG_ERROR("Failed to load shape into document: {}", loadResult.m_errorMessage);
+            return ReadResult::failure("Failed to load geometry: " + loadResult.m_errorMessage);
+        }
+
+        LOG_INFO("STEP file loaded successfully: {} entities created", loadResult.m_entityCount);
         return ReadResult::success();
 
     } catch(const Standard_Failure& e) {
