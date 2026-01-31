@@ -20,20 +20,22 @@ namespace OpenGeoLab::IO {
 /**
  * @brief Result structure for file read operations
  *
- * Contains success status, error information, and the loaded geometry entity.
+ * Contains success status, error information, and metadata about loaded geometry.
  */
 struct ReadResult {
     bool m_success{false};      ///< Whether the read operation succeeded
     std::string m_errorMessage; ///< Error message if failed
+    size_t m_entityCount{0};    ///< Number of entities created (on success)
 
     /**
-     * @brief Create a success result with loaded entity
-     * @param root_entity The root geometry entity
+     * @brief Create a success result
+     * @param entity_count Number of entities created
      * @return Success ReadResult
      */
-    [[nodiscard]] static ReadResult success() {
+    [[nodiscard]] static ReadResult success(size_t entity_count = 0) {
         ReadResult result;
         result.m_success = true;
+        result.m_entityCount = entity_count;
         return result;
     }
 

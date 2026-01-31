@@ -32,10 +32,12 @@ void CameraState::reset() {
     m_target = QVector3D(0.0f, 0.0f, 0.0f);
     m_up = QVector3D(0.0f, 1.0f, 0.0f);
     m_fov = 45.0f;
+    LOG_TRACE("CameraState: Reset to default position");
 }
 
 void CameraState::fitToBoundingBox(const Geometry::BoundingBox3D& bbox) {
     if(!bbox.isValid()) {
+        LOG_DEBUG("CameraState: Invalid bounding box, resetting camera");
         reset();
         return;
     }
@@ -56,6 +58,8 @@ void CameraState::fitToBoundingBox(const Geometry::BoundingBox3D& bbox) {
     // Adjust near/far planes based on scene size
     m_nearPlane = std::max(0.1f, distance * 0.01f);
     m_farPlane = distance * 10.0f;
+
+    LOG_DEBUG("CameraState: Fit to bounding box, distance={:.2f}", distance);
 }
 
 // =============================================================================
@@ -64,6 +68,7 @@ void CameraState::fitToBoundingBox(const Geometry::BoundingBox3D& bbox) {
 
 RenderService::RenderService(QObject* parent) : QObject(parent) {
     LOG_TRACE("RenderService created");
+    subscribeToCurrentDocument();
 }
 
 RenderService::~RenderService() { LOG_TRACE("RenderService destroyed"); }
@@ -80,7 +85,6 @@ const CameraState& RenderService::camera() const { return m_camera; }
 
 void RenderService::refreshScene() {
     LOG_DEBUG("RenderService: Refreshing scene");
-    subscribeToCurrentDocument();
     updateRenderData();
     emit geometryChanged();
     emit sceneNeedsUpdate();
@@ -108,13 +112,13 @@ void RenderService::createDefaultGeometry() {
         auto manager_factory =
             g_ComponentFactory.getInstanceObject<Geometry::IGeoDocumentManagerSingletonFactory>();
         if(!manager_factory) {
-            LOG_ERROR("Failed to get document manager factory");
+            LOG_ERROR("RenderService: Failed to get document manager factory");
             return;
         }
 
         auto document = manager_factory->currentDocument();
         if(!document) {
-            LOG_ERROR("Failed to get current document");
+            LOG_ERROR("RenderService: Failed to get current document");
             return;
         }
 
@@ -125,17 +129,17 @@ void RenderService::createDefaultGeometry() {
 
         if(!m_hasGeometry) {
             // If still no geometry, the create action should be triggered from QML
-            LOG_DEBUG("No geometry found, default should be created via action");
+            LOG_DEBUG("RenderService: No geometry found, default should be created via action");
         }
     } catch(const std::exception& e) {
-        LOG_ERROR("Exception creating default geometry: {}", e.what());
+        LOG_ERROR("RenderService: Exception creating default geometry: {}", e.what());
     }
 }
 
 void RenderService::onDocumentGeometryChanged(const Geometry::GeometryChangeEvent& event) {
-    LOG_INFO("RenderService: Document geometry changed, type={}", static_cast<int>(event.m_type));
+    LOG_DEBUG("RenderService: Document geometry changed, type={}", static_cast<int>(event.m_type));
     updateRenderData();
-    LOG_INFO("RenderService: After updateRenderData, hasGeometry={}", m_hasGeometry);
+    LOG_DEBUG("RenderService: After updateRenderData, hasGeometry={}", m_hasGeometry);
     emit geometryChanged();
     emit sceneNeedsUpdate();
 }
@@ -166,7 +170,7 @@ void RenderService::subscribeToCurrentDocument() {
 
         LOG_DEBUG("RenderService: Subscribed to document changes");
     } catch(const std::exception& e) {
-        LOG_ERROR("Exception subscribing to document: {}", e.what());
+        LOG_ERROR("RenderService: Exception subscribing to document: {}", e.what());
     }
 }
 
@@ -175,6 +179,7 @@ void RenderService::updateRenderData() {
         auto manager_factory =
             g_ComponentFactory.getInstanceObject<Geometry::IGeoDocumentManagerSingletonFactory>();
         if(!manager_factory) {
+            LOG_WARN("RenderService: Document manager factory not available during update");
             m_renderData.clear();
             m_hasGeometry = false;
             return;
@@ -182,6 +187,7 @@ void RenderService::updateRenderData() {
 
         auto document = manager_factory->currentDocument();
         if(!document) {
+            LOG_WARN("RenderService: No current document available during update");
             m_renderData.clear();
             m_hasGeometry = false;
             return;
@@ -195,7 +201,7 @@ void RenderService::updateRenderData() {
         LOG_DEBUG("RenderService: Updated render data, meshCount={}, hasGeometry={}, version={}",
                   m_renderData.meshCount(), m_hasGeometry, m_renderData.m_version);
     } catch(const std::exception& e) {
-        LOG_ERROR("Exception updating render data: {}", e.what());
+        LOG_ERROR("RenderService: Exception updating render data: {}", e.what());
         m_renderData.clear();
         m_hasGeometry = false;
     }

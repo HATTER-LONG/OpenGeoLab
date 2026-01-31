@@ -3,7 +3,7 @@
  * @brief Implementation of GLViewport and GLViewportRenderer
  */
 
-#include "opengl_viewport.hpp"
+#include "app/opengl_viewport.hpp"
 #include "util/logger.hpp"
 
 #include <QMouseEvent>
@@ -14,96 +14,6 @@
 
 namespace OpenGeoLab::App {
 
-// =============================================================================
-// Shader Sources
-// =============================================================================
-namespace {
-
-static const char* vertex_shader_source = R"(
-#version 330 core
-layout(location = 0) in vec3 aPosition;
-layout(location = 1) in vec3 aNormal;
-layout(location = 2) in vec4 aColor;
-
-uniform mat4 uMVPMatrix;
-uniform mat4 uModelMatrix;
-uniform mat3 uNormalMatrix;
-uniform float uPointSize;
-
-out vec3 vWorldPos;
-out vec3 vNormal;
-out vec4 vColor;
-
-void main() {
-    vec4 worldPos = uModelMatrix * vec4(aPosition, 1.0);
-    vWorldPos = worldPos.xyz;
-    vNormal = normalize(uNormalMatrix * aNormal);
-    vColor = aColor;
-    gl_Position = uMVPMatrix * vec4(aPosition, 1.0);
-    gl_PointSize = uPointSize;
-}
-)";
-
-static const char* fragment_shader_source = R"(
-#version 330 core
-in vec3 vWorldPos;
-in vec3 vNormal;
-in vec4 vColor;
-
-uniform vec3 uLightPos;
-uniform vec3 uViewPos;
-
-out vec4 fragColor;
-
-void main() {
-    // Ambient
-    float ambientStrength = 0.3;
-    vec3 ambient = ambientStrength * vec3(1.0);
-
-    // Diffuse
-    vec3 norm = normalize(vNormal);
-    vec3 lightDir = normalize(uLightPos - vWorldPos);
-    float diff = max(dot(norm, lightDir), 0.0);
-    vec3 diffuse = diff * vec3(1.0);
-
-    // Specular
-    float specularStrength = 0.3;
-    vec3 viewDir = normalize(uViewPos - vWorldPos);
-    vec3 reflectDir = reflect(-lightDir, norm);
-    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
-    vec3 specular = specularStrength * spec * vec3(1.0);
-
-    vec3 result = (ambient + diffuse + specular) * vColor.rgb;
-    fragColor = vec4(result, vColor.a);
-}
-)";
-
-static const char* grid_vertex_shader = R"(
-#version 330 core
-layout(location = 0) in vec3 aPosition;
-layout(location = 1) in vec4 aColor;
-
-uniform mat4 uMVPMatrix;
-
-out vec4 vColor;
-
-void main() {
-    vColor = aColor;
-    gl_Position = uMVPMatrix * vec4(aPosition, 1.0);
-}
-)";
-
-static const char* grid_fragment_shader = R"(
-#version 330 core
-in vec4 vColor;
-out vec4 fragColor;
-
-void main() {
-    fragColor = vColor;
-}
-)";
-
-} // namespace
 // =============================================================================
 // GLViewport Implementation
 // =============================================================================
@@ -146,6 +56,7 @@ void GLViewport::setRenderService(Render::RenderService* service) {
         m_cameraState = m_renderService->camera();
     }
 
+    LOG_DEBUG("GLViewport: RenderService changed");
     emit renderServiceChanged();
     update();
 }
@@ -281,54 +192,13 @@ void GLViewport::zoomCamera(float delta) {
 // =============================================================================
 
 GLViewportRenderer::GLViewportRenderer(const GLViewport* viewport)
-    : m_viewport(viewport), m_gridVBO(QOpenGLBuffer::VertexBuffer) {
+    : m_viewport(viewport), m_sceneRenderer(std::make_unique<Render::SceneRenderer>()) {
     LOG_TRACE("GLViewportRenderer created");
 }
 
 GLViewportRenderer::~GLViewportRenderer() {
+    m_sceneRenderer->cleanup();
     LOG_TRACE("GLViewportRenderer destroyed");
-
-    // Cleanup GPU resources
-    if(m_gridVAO.isCreated()) {
-        m_gridVAO.destroy();
-    }
-    if(m_gridVBO.isCreated()) {
-        m_gridVBO.destroy();
-    }
-
-    for(auto& mesh : m_faceMeshBuffers) {
-        if(mesh.m_vao && mesh.m_vao->isCreated()) {
-            mesh.m_vao->destroy();
-        }
-        if(mesh.m_vbo && mesh.m_vbo->isCreated()) {
-            mesh.m_vbo->destroy();
-        }
-        if(mesh.m_ebo && mesh.m_ebo->isCreated()) {
-            mesh.m_ebo->destroy();
-        }
-    }
-    for(auto& mesh : m_edgeMeshBuffers) {
-        if(mesh.m_vao && mesh.m_vao->isCreated()) {
-            mesh.m_vao->destroy();
-        }
-        if(mesh.m_vbo && mesh.m_vbo->isCreated()) {
-            mesh.m_vbo->destroy();
-        }
-        if(mesh.m_ebo && mesh.m_ebo->isCreated()) {
-            mesh.m_ebo->destroy();
-        }
-    }
-    for(auto& mesh : m_vertexMeshBuffers) {
-        if(mesh.m_vao && mesh.m_vao->isCreated()) {
-            mesh.m_vao->destroy();
-        }
-        if(mesh.m_vbo && mesh.m_vbo->isCreated()) {
-            mesh.m_vbo->destroy();
-        }
-        if(mesh.m_ebo && mesh.m_ebo->isCreated()) {
-            mesh.m_ebo->destroy();
-        }
-    }
 }
 
 QOpenGLFramebufferObject* GLViewportRenderer::createFramebufferObject(const QSize& size) {
@@ -336,6 +206,7 @@ QOpenGLFramebufferObject* GLViewportRenderer::createFramebufferObject(const QSiz
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
     format.setSamples(4); // Enable MSAA
     m_viewportSize = size;
+    m_sceneRenderer->setViewportSize(size);
     return new QOpenGLFramebufferObject(size, format);
 }
 
@@ -358,367 +229,22 @@ void GLViewportRenderer::synchronize(QQuickFramebufferObject* item) {
 }
 
 void GLViewportRenderer::render() {
-    if(!m_initialized) {
-        initializeGL();
-        m_initialized = true;
+    if(!m_sceneRenderer->isInitialized()) {
+        m_sceneRenderer->initialize();
     }
 
     if(m_needsDataUpload) {
-        uploadMeshData();
+        m_sceneRenderer->uploadMeshData(m_renderData);
         m_needsDataUpload = false;
     }
-
-    // Clear background
-    glClearColor(0.15f, 0.15f, 0.17f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     // Calculate matrices
     const float aspect_ratio = m_viewportSize.width() / static_cast<float>(m_viewportSize.height());
     const QMatrix4x4 projection = m_cameraState.projectionMatrix(aspect_ratio);
     const QMatrix4x4 view = m_cameraState.viewMatrix();
-    const QMatrix4x4 model; // Identity
-    const QMatrix4x4 mvp = projection * view * model;
-    const QMatrix3x3 normal_matrix = model.normalMatrix();
 
-    // Render grid
-    renderGrid();
-
-    // Render meshes
-    if(m_shaderProgram && m_shaderProgram->isLinked()) {
-        m_shaderProgram->bind();
-        m_shaderProgram->setUniformValue(m_mvpMatrixLoc, mvp);
-        m_shaderProgram->setUniformValue(m_modelMatrixLoc, model);
-        m_shaderProgram->setUniformValue(m_normalMatrixLoc, normal_matrix);
-        m_shaderProgram->setUniformValue(m_lightPosLoc, m_cameraState.m_position);
-        m_shaderProgram->setUniformValue(m_viewPosLoc, m_cameraState.m_position);
-
-        renderMeshes();
-
-        m_shaderProgram->release();
-    }
-
-    glDisable(GL_BLEND);
-    glDisable(GL_DEPTH_TEST);
-}
-
-void GLViewportRenderer::initializeGL() {
-    initializeOpenGLFunctions();
-    setupShaders();
-
-    // Setup grid
-    m_gridVAO.create();
-    m_gridVBO.create();
-
-    // Generate grid vertices
-    std::vector<float> grid_vertices;
-    const float grid_size = 100.0f;
-    const float grid_step = 5.0f;
-    const int grid_lines = static_cast<int>(grid_size / grid_step);
-
-    // Grid color (subtle gray)
-    const float grid_color[4] = {0.3f, 0.3f, 0.35f, 0.5f};
-    const float axis_color_x[4] = {0.8f, 0.2f, 0.2f, 0.8f}; // Red for X
-    const float axis_color_z[4] = {0.2f, 0.2f, 0.8f, 0.8f}; // Blue for Z
-
-    for(int i = -grid_lines; i <= grid_lines; ++i) {
-        const float pos = i * grid_step;
-
-        // Choose color based on whether this is an axis line
-        const float* color_x = (i == 0) ? axis_color_z : grid_color;
-        const float* color_z = (i == 0) ? axis_color_x : grid_color;
-
-        // Lines parallel to X axis
-        grid_vertices.insert(grid_vertices.end(), {-grid_size, 0.0f, pos});
-        grid_vertices.insert(grid_vertices.end(), {color_x[0], color_x[1], color_x[2], color_x[3]});
-        grid_vertices.insert(grid_vertices.end(), {grid_size, 0.0f, pos});
-        grid_vertices.insert(grid_vertices.end(), {color_x[0], color_x[1], color_x[2], color_x[3]});
-
-        // Lines parallel to Z axis
-        grid_vertices.insert(grid_vertices.end(), {pos, 0.0f, -grid_size});
-        grid_vertices.insert(grid_vertices.end(), {color_z[0], color_z[1], color_z[2], color_z[3]});
-        grid_vertices.insert(grid_vertices.end(), {pos, 0.0f, grid_size});
-        grid_vertices.insert(grid_vertices.end(), {color_z[0], color_z[1], color_z[2], color_z[3]});
-    }
-
-    m_gridVertexCount = static_cast<int>(grid_vertices.size()) / 7;
-
-    m_gridVAO.bind();
-    m_gridVBO.bind();
-    m_gridVBO.allocate(grid_vertices.data(),
-                       static_cast<int>(grid_vertices.size() * sizeof(float)));
-
-    // Position attribute
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 7 * sizeof(float), nullptr);
-
-    // Color attribute
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 7 * sizeof(float),
-                          reinterpret_cast<void*>(3 * sizeof(float)));
-
-    m_gridVBO.release();
-    m_gridVAO.release();
-
-    LOG_DEBUG("GLViewportRenderer: OpenGL initialized");
-}
-
-void GLViewportRenderer::setupShaders() {
-    // Main shader program
-    m_shaderProgram = std::make_unique<QOpenGLShaderProgram>();
-    m_shaderProgram->addShaderFromSourceCode(QOpenGLShader::Vertex, vertex_shader_source);
-    m_shaderProgram->addShaderFromSourceCode(QOpenGLShader::Fragment, fragment_shader_source);
-    if(!m_shaderProgram->link()) {
-        LOG_ERROR("Failed to link main shader: {}", m_shaderProgram->log().toStdString());
-    }
-
-    m_mvpMatrixLoc = m_shaderProgram->uniformLocation("uMVPMatrix");
-    m_modelMatrixLoc = m_shaderProgram->uniformLocation("uModelMatrix");
-    m_normalMatrixLoc = m_shaderProgram->uniformLocation("uNormalMatrix");
-    m_lightPosLoc = m_shaderProgram->uniformLocation("uLightPos");
-    m_viewPosLoc = m_shaderProgram->uniformLocation("uViewPos");
-    m_pointSizeLoc = m_shaderProgram->uniformLocation("uPointSize");
-
-    // Grid shader program
-    m_gridShader = std::make_unique<QOpenGLShaderProgram>();
-    m_gridShader->addShaderFromSourceCode(QOpenGLShader::Vertex, grid_vertex_shader);
-    m_gridShader->addShaderFromSourceCode(QOpenGLShader::Fragment, grid_fragment_shader);
-    if(!m_gridShader->link()) {
-        LOG_ERROR("Failed to link grid shader: {}", m_gridShader->log().toStdString());
-    }
-}
-
-void GLViewportRenderer::uploadMeshData() {
-    // Clear old buffers
-    for(auto& mesh : m_faceMeshBuffers) {
-        if(mesh.m_vao && mesh.m_vao->isCreated()) {
-            mesh.m_vao->destroy();
-        }
-        if(mesh.m_vbo && mesh.m_vbo->isCreated()) {
-            mesh.m_vbo->destroy();
-        }
-        if(mesh.m_ebo && mesh.m_ebo->isCreated()) {
-            mesh.m_ebo->destroy();
-        }
-    }
-    m_faceMeshBuffers.clear();
-
-    for(auto& mesh : m_edgeMeshBuffers) {
-        if(mesh.m_vao && mesh.m_vao->isCreated()) {
-            mesh.m_vao->destroy();
-        }
-        if(mesh.m_vbo && mesh.m_vbo->isCreated()) {
-            mesh.m_vbo->destroy();
-        }
-        if(mesh.m_ebo && mesh.m_ebo->isCreated()) {
-            mesh.m_ebo->destroy();
-        }
-    }
-    m_edgeMeshBuffers.clear();
-
-    for(auto& mesh : m_vertexMeshBuffers) {
-        if(mesh.m_vao && mesh.m_vao->isCreated()) {
-            mesh.m_vao->destroy();
-        }
-        if(mesh.m_vbo && mesh.m_vbo->isCreated()) {
-            mesh.m_vbo->destroy();
-        }
-        if(mesh.m_ebo && mesh.m_ebo->isCreated()) {
-            mesh.m_ebo->destroy();
-        }
-    }
-    m_vertexMeshBuffers.clear();
-
-    // Upload face meshes
-    for(const auto& mesh : m_renderData.m_faceMeshes) {
-        if(!mesh.isValid()) {
-            continue;
-        }
-
-        MeshBuffers buffers;
-        buffers.m_vao->create();
-        buffers.m_vbo->create();
-        if(mesh.isIndexed()) {
-            buffers.m_ebo->create();
-        }
-
-        uploadMesh(mesh, *buffers.m_vao, *buffers.m_vbo, *buffers.m_ebo);
-
-        buffers.m_vertexCount = static_cast<int>(mesh.vertexCount());
-        buffers.m_indexCount = static_cast<int>(mesh.indexCount());
-        buffers.m_primitiveType = mesh.m_primitiveType;
-
-        m_faceMeshBuffers.push_back(std::move(buffers));
-    }
-
-    // Upload edge meshes
-    for(const auto& mesh : m_renderData.m_edgeMeshes) {
-        if(!mesh.isValid()) {
-            continue;
-        }
-
-        MeshBuffers buffers;
-        buffers.m_vao->create();
-        buffers.m_vbo->create();
-        if(mesh.isIndexed()) {
-            buffers.m_ebo->create();
-        }
-
-        uploadMesh(mesh, *buffers.m_vao, *buffers.m_vbo, *buffers.m_ebo);
-
-        buffers.m_vertexCount = static_cast<int>(mesh.vertexCount());
-        buffers.m_indexCount = static_cast<int>(mesh.indexCount());
-        buffers.m_primitiveType = mesh.m_primitiveType;
-
-        m_edgeMeshBuffers.push_back(std::move(buffers));
-    }
-
-    // Upload vertex meshes
-    for(const auto& mesh : m_renderData.m_vertexMeshes) {
-        if(!mesh.isValid()) {
-            continue;
-        }
-
-        MeshBuffers buffers;
-        buffers.m_vao->create();
-        buffers.m_vbo->create();
-
-        uploadMesh(mesh, *buffers.m_vao, *buffers.m_vbo, *buffers.m_ebo);
-
-        buffers.m_vertexCount = static_cast<int>(mesh.vertexCount());
-        buffers.m_primitiveType = mesh.m_primitiveType;
-
-        m_vertexMeshBuffers.push_back(std::move(buffers));
-    }
-
-    LOG_DEBUG("Uploaded {} face meshes, {} edge meshes, {} vertex meshes", m_faceMeshBuffers.size(),
-              m_edgeMeshBuffers.size(), m_vertexMeshBuffers.size());
-}
-
-void GLViewportRenderer::uploadMesh(const Render::RenderMesh& mesh,
-                                    QOpenGLVertexArrayObject& vao,
-                                    QOpenGLBuffer& vbo,
-                                    QOpenGLBuffer& ebo) {
-    vao.bind();
-    vbo.bind();
-
-    // Upload vertex data
-    vbo.allocate(mesh.m_vertices.data(),
-                 static_cast<int>(mesh.m_vertices.size() * sizeof(Render::RenderVertex)));
-
-    // Setup vertex attributes
-    // Position (location 0)
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Render::RenderVertex),
-                          reinterpret_cast<void*>(offsetof(Render::RenderVertex, m_position)));
-
-    // Normal (location 1)
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Render::RenderVertex),
-                          reinterpret_cast<void*>(offsetof(Render::RenderVertex, m_normal)));
-
-    // Color (location 2)
-    glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(Render::RenderVertex),
-                          reinterpret_cast<void*>(offsetof(Render::RenderVertex, m_color)));
-
-    // Upload index data if present
-    if(mesh.isIndexed() && ebo.isCreated()) {
-        ebo.bind();
-        ebo.allocate(mesh.m_indices.data(),
-                     static_cast<int>(mesh.m_indices.size() * sizeof(uint32_t)));
-    }
-
-    vao.release();
-    vbo.release();
-    if(ebo.isCreated()) {
-        ebo.release();
-    }
-}
-
-void GLViewportRenderer::renderMeshes() {
-    auto get_primitive_type = [](Render::RenderPrimitiveType type) -> GLenum {
-        switch(type) {
-        case Render::RenderPrimitiveType::Points:
-            return GL_POINTS;
-        case Render::RenderPrimitiveType::Lines:
-            return GL_LINES;
-        case Render::RenderPrimitiveType::LineStrip:
-            return GL_LINE_STRIP;
-        case Render::RenderPrimitiveType::Triangles:
-            return GL_TRIANGLES;
-        case Render::RenderPrimitiveType::TriangleStrip:
-            return GL_TRIANGLE_STRIP;
-        case Render::RenderPrimitiveType::TriangleFan:
-            return GL_TRIANGLE_FAN;
-        default:
-            return GL_TRIANGLES;
-        }
-    };
-
-    // Enable shader-controlled point size
-    glEnable(GL_PROGRAM_POINT_SIZE);
-
-    // Set default point size for faces/edges
-    m_shaderProgram->setUniformValue(m_pointSizeLoc, 1.0f);
-
-    // Render face meshes
-    for(auto& buffers : m_faceMeshBuffers) {
-        buffers.m_vao->bind();
-        if(buffers.m_indexCount > 0) {
-            buffers.m_ebo->bind();
-            glDrawElements(get_primitive_type(buffers.m_primitiveType), buffers.m_indexCount,
-                           GL_UNSIGNED_INT, nullptr);
-        } else {
-            glDrawArrays(get_primitive_type(buffers.m_primitiveType), 0, buffers.m_vertexCount);
-        }
-        buffers.m_vao->release();
-    }
-
-    // Render edge meshes (with line width)
-    glLineWidth(2.0f);
-    for(auto& buffers : m_edgeMeshBuffers) {
-        buffers.m_vao->bind();
-        if(buffers.m_indexCount > 0) {
-            buffers.m_ebo->bind();
-            glDrawElements(get_primitive_type(buffers.m_primitiveType), buffers.m_indexCount,
-                           GL_UNSIGNED_INT, nullptr);
-        } else {
-            glDrawArrays(get_primitive_type(buffers.m_primitiveType), 0, buffers.m_vertexCount);
-        }
-        buffers.m_vao->release();
-    }
-
-    // Render vertex meshes (with larger point size)
-    m_shaderProgram->setUniformValue(m_pointSizeLoc, 5.0f);
-    for(auto& buffers : m_vertexMeshBuffers) {
-        buffers.m_vao->bind();
-        glDrawArrays(GL_POINTS, 0, buffers.m_vertexCount);
-        buffers.m_vao->release();
-    }
-}
-
-void GLViewportRenderer::renderGrid() {
-    if(!m_gridShader || !m_gridShader->isLinked()) {
-        return;
-    }
-
-    const float aspect_ratio = m_viewportSize.width() / static_cast<float>(m_viewportSize.height());
-    const QMatrix4x4 mvp =
-        m_cameraState.projectionMatrix(aspect_ratio) * m_cameraState.viewMatrix();
-
-    m_gridShader->bind();
-    m_gridShader->setUniformValue("uMVPMatrix", mvp);
-
-    glLineWidth(1.0f);
-    m_gridVAO.bind();
-    glDrawArrays(GL_LINES, 0, m_gridVertexCount);
-    m_gridVAO.release();
-
-    m_gridShader->release();
+    // Delegate rendering to SceneRenderer
+    m_sceneRenderer->render(m_cameraState.m_position, view, projection);
 }
 
 } // namespace OpenGeoLab::App

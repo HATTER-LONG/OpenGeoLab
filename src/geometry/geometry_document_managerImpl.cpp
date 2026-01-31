@@ -30,7 +30,11 @@ GeometryDocumentImplPtr GeometryDocumentManagerImpl::currentDocumentImplType() {
 }
 
 GeometryDocumentImplPtr GeometryDocumentManagerImpl::newDocumentImplType() {
-    m_currentDocument = std::make_shared<GeometryDocumentImpl>();
+    if(!m_currentDocument) {
+        m_currentDocument = std::make_shared<GeometryDocumentImpl>();
+    } else {
+        m_currentDocument->clear();
+    }
     return m_currentDocument;
 }
 

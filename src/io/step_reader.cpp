@@ -106,7 +106,7 @@ ReadResult StepReader::readFile(const std::string& file_path,
             return ReadResult::failure("Failed to load geometry: " + load_result.m_errorMessage);
         }
         LOG_INFO("STEP file loaded successfully: {} entities created", load_result.m_entityCount);
-        return ReadResult::success();
+        return ReadResult::success(load_result.m_entityCount);
 
     } catch(const Standard_Failure& e) {
         std::string error = e.GetMessageString() ? e.GetMessageString() : "Unknown OCC error";

@@ -1,23 +1,20 @@
 /**
- * @file gl_viewport.hpp
+ * @file opengl_viewport.hpp
  * @brief QQuickFramebufferObject-based OpenGL viewport for geometry rendering
  *
  * GLViewport provides a QML-integrable 3D viewport that renders geometry
  * using OpenGL. It supports camera manipulation (rotate, pan, zoom) and
- * integrates with RenderService for scene management.
+ * integrates with RenderService for scene management. The actual rendering
+ * is delegated to SceneRenderer from the render module.
  */
 
 #pragma once
 
 #include "app/render_service.hpp"
 #include "render/render_data.hpp"
-
+#include "render/scene_renderer.hpp"
 
 #include <QMatrix4x4>
-#include <QOpenGLBuffer>
-#include <QOpenGLFunctions>
-#include <QOpenGLShaderProgram>
-#include <QOpenGLVertexArrayObject>
 #include <QQuickFramebufferObject>
 #include <QtQml/qqml.h>
 #include <memory>
@@ -30,9 +27,12 @@ class GLViewportRenderer;
  * @brief QML-integrable OpenGL viewport for 3D geometry visualization
  *
  * GLViewport provides:
- * - OpenGL rendering of geometry from RenderService
+ * - OpenGL rendering of geometry from RenderService via SceneRenderer
  * - Mouse-based camera manipulation (orbit, pan, zoom)
  * - Integration with the application's render service
+ *
+ * @note This class handles QML integration and input; rendering logic is
+ *       delegated to Render::SceneRenderer.
  */
 class GLViewport : public QQuickFramebufferObject {
     Q_OBJECT
@@ -119,10 +119,10 @@ private:
 /**
  * @brief OpenGL renderer for GLViewport
  *
- * Handles the actual OpenGL rendering of geometry meshes.
+ * Handles the actual OpenGL rendering of geometry meshes using SceneRenderer.
  * Created by GLViewport::createRenderer().
  */
-class GLViewportRenderer : public QQuickFramebufferObject::Renderer, protected QOpenGLFunctions {
+class GLViewportRenderer : public QQuickFramebufferObject::Renderer {
 public:
     explicit GLViewportRenderer(const GLViewport* viewport);
     ~GLViewportRenderer() override;
@@ -146,71 +146,10 @@ public:
     void synchronize(QQuickFramebufferObject* item) override;
 
 private:
-    void initializeGL();
-    void setupShaders();
-    void uploadMeshData();
-    void renderMeshes();
-    void renderGrid();
+    const GLViewport* m_viewport{nullptr};                  ///< Parent viewport item
+    std::unique_ptr<Render::SceneRenderer> m_sceneRenderer; ///< Rendering component
 
-    /**
-     * @brief Upload a single mesh to GPU
-     * @param mesh Mesh data to upload
-     * @param vao VAO to bind
-     * @param vbo VBO to use
-     * @param ebo EBO to use (optional)
-     */
-    void uploadMesh(const Render::RenderMesh& mesh,
-                    QOpenGLVertexArrayObject& vao,
-                    QOpenGLBuffer& vbo,
-                    QOpenGLBuffer& ebo);
-
-private:
-    const GLViewport* m_viewport{nullptr}; ///< Parent viewport item
-
-    bool m_initialized{false};     ///< OpenGL initialization state
     bool m_needsDataUpload{false}; ///< Whether mesh data needs uploading
-
-    std::unique_ptr<QOpenGLShaderProgram> m_shaderProgram; ///< Main shader program
-    std::unique_ptr<QOpenGLShaderProgram> m_gridShader;    ///< Grid shader program
-
-    // Shader uniform locations
-    int m_mvpMatrixLoc{-1};
-    int m_modelMatrixLoc{-1};
-    int m_normalMatrixLoc{-1};
-    int m_lightPosLoc{-1};
-    int m_viewPosLoc{-1};
-    int m_pointSizeLoc{-1};
-
-    // Grid rendering
-    QOpenGLVertexArrayObject m_gridVAO;
-    QOpenGLBuffer m_gridVBO;
-    int m_gridVertexCount{0};
-
-    // Mesh rendering buffers
-    struct MeshBuffers {
-        std::unique_ptr<QOpenGLVertexArrayObject> m_vao;
-        std::unique_ptr<QOpenGLBuffer> m_vbo;
-        std::unique_ptr<QOpenGLBuffer> m_ebo;
-        int m_vertexCount{0};
-        int m_indexCount{0};
-        Render::RenderPrimitiveType m_primitiveType{Render::RenderPrimitiveType::Triangles};
-
-        MeshBuffers()
-            : m_vao(std::make_unique<QOpenGLVertexArrayObject>()),
-              m_vbo(std::make_unique<QOpenGLBuffer>(QOpenGLBuffer::VertexBuffer)),
-              m_ebo(std::make_unique<QOpenGLBuffer>(QOpenGLBuffer::IndexBuffer)) {}
-        ~MeshBuffers() = default;
-
-        MeshBuffers(MeshBuffers&&) noexcept = default;
-        MeshBuffers& operator=(MeshBuffers&&) noexcept = default;
-
-        MeshBuffers(const MeshBuffers&) = delete;
-        MeshBuffers& operator=(const MeshBuffers&) = delete;
-    };
-
-    std::vector<MeshBuffers> m_faceMeshBuffers;   ///< Face mesh GPU buffers
-    std::vector<MeshBuffers> m_edgeMeshBuffers;   ///< Edge mesh GPU buffers
-    std::vector<MeshBuffers> m_vertexMeshBuffers; ///< Vertex mesh GPU buffers
 
     // Cached render data
     Render::DocumentRenderData m_renderData;

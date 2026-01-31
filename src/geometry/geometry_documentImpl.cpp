@@ -43,29 +43,37 @@ bool isIdentityTrsf(const gp_Trsf& trsf) {
 
 bool GeometryDocumentImpl::addEntity(const GeometryEntityPtr& entity) {
     if(!m_entityIndex.addEntity(entity)) {
+        LOG_WARN("GeometryDocument: Failed to add entity id={}", entity ? entity->entityId() : 0);
         return false;
     }
     entity->setDocument(shared_from_this());
+    LOG_TRACE("GeometryDocument: Added entity id={}, type={}", entity->entityId(),
+              static_cast<int>(entity->entityType()));
     return true;
 }
 
 bool GeometryDocumentImpl::removeEntity(EntityId entity_id) {
     const auto entity = m_entityIndex.findById(entity_id);
     if(!entity) {
+        LOG_DEBUG("GeometryDocument: Entity not found for removal, id={}", entity_id);
         return false;
     }
 
     if(!m_entityIndex.removeEntity(entity_id)) {
+        LOG_WARN("GeometryDocument: Failed to remove entity id={}", entity_id);
         return false;
     }
 
     entity->setDocument({});
+    LOG_TRACE("GeometryDocument: Removed entity id={}", entity_id);
     return true;
 }
 
 size_t GeometryDocumentImpl::removeEntityWithChildren(EntityId entity_id) {
+    LOG_DEBUG("GeometryDocument: Removing entity and children, rootId={}", entity_id);
     size_t removed_count = 0;
     removeEntityRecursive(entity_id, removed_count);
+    LOG_DEBUG("GeometryDocument: Removed {} entities", removed_count);
     return removed_count;
 }
 
@@ -90,7 +98,12 @@ void GeometryDocumentImpl::removeEntityRecursive(EntityId entity_id, // NOLINT
     }
 }
 
-void GeometryDocumentImpl::clear() { m_entityIndex.clear(); }
+void GeometryDocumentImpl::clear() {
+    const size_t count = m_entityIndex.entityCount();
+    m_entityIndex.clear();
+    LOG_INFO("GeometryDocument: Cleared document, removed {} entities", count);
+    emitChangeEvent(GeometryChangeEvent(GeometryChangeType::EntityRemoved, INVALID_ENTITY_ID));
+}
 
 GeometryEntityPtr GeometryDocumentImpl::findById(EntityId entity_id) const {
     return m_entityIndex.findById(entity_id);
@@ -362,11 +375,15 @@ bool GeometryDocumentImpl::removeChildEdge(EntityId parent_id, EntityId child_id
 LoadResult GeometryDocumentImpl::loadFromShape(const TopoDS_Shape& shape,
                                                const std::string& name,
                                                Util::ProgressCallback progress) {
+    LOG_INFO("GeometryDocument: Loading shape '{}' (replacing existing geometry)", name);
+
     if(shape.IsNull()) {
+        LOG_ERROR("GeometryDocument: Input shape is null");
         return LoadResult::failure("Input shape is null");
     }
 
     if(!progress(0.0, "Clearing document...")) {
+        LOG_DEBUG("GeometryDocument: Load cancelled during clear phase");
         return LoadResult::failure("Operation cancelled");
     }
 
@@ -382,10 +399,14 @@ LoadResult GeometryDocumentImpl::loadFromShape(const TopoDS_Shape& shape,
 LoadResult GeometryDocumentImpl::appendShape(const TopoDS_Shape& shape,
                                              const std::string& name,
                                              Util::ProgressCallback progress) {
+    LOG_DEBUG("GeometryDocument: Appending shape '{}'", name);
+
     if(shape.IsNull()) {
+        LOG_ERROR("GeometryDocument: Input shape is null");
         return LoadResult::failure("Input shape is null");
     }
     if(!progress(0.0, "Starting shape append...")) {
+        LOG_DEBUG("GeometryDocument: Append cancelled");
         return LoadResult::failure("Operation cancelled");
     }
     try {
@@ -396,6 +417,7 @@ LoadResult GeometryDocumentImpl::appendShape(const TopoDS_Shape& shape,
         auto build_result = builder.buildFromShape(shape, name, subcallback);
 
         if(!build_result.m_success) {
+            LOG_ERROR("GeometryDocument: Shape build failed: {}", build_result.m_errorMessage);
             return LoadResult::failure(build_result.m_errorMessage);
         }
 
@@ -404,16 +426,17 @@ LoadResult GeometryDocumentImpl::appendShape(const TopoDS_Shape& shape,
         }
 
         // Invalidate render data and notify subscribers
-        invalidateRenderData();
         emitChangeEvent(GeometryChangeEvent(
             GeometryChangeType::EntityAdded,
             build_result.m_rootPart ? build_result.m_rootPart->entityId() : INVALID_ENTITY_ID));
 
         progress(1.0, "Load completed.");
+        LOG_INFO("GeometryDocument: Shape '{}' loaded successfully, entityCount={}", name,
+                 build_result.totalEntityCount());
         return LoadResult::success(build_result.m_rootPart->entityId(),
                                    build_result.totalEntityCount());
     } catch(const std::exception& e) {
-        LOG_ERROR("Exception during shape load: {}", e.what());
+        LOG_ERROR("GeometryDocument: Exception during shape load: {}", e.what());
         return LoadResult::failure(std::string("Exception: ") + e.what());
     }
 }
@@ -660,6 +683,7 @@ GeometryDocumentImpl::subscribeToChanges(std::function<void(const GeometryChange
 }
 
 void GeometryDocumentImpl::emitChangeEvent(const GeometryChangeEvent& event) {
+    invalidateRenderData();
     m_changeSignal.emitSignal(event);
 }
 

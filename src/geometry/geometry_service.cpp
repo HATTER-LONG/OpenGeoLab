@@ -14,23 +14,27 @@ namespace OpenGeoLab::Geometry {
 nlohmann::json GeometryService::processRequest(const std::string& module_name,
                                                const nlohmann::json& params,
                                                App::IProgressReporterPtr progress_reporter) {
-    LOG_INFO("GeometryService: Processing request for module: {}", module_name);
+    LOG_DEBUG("GeometryService: Processing request for module: {}", module_name);
     nlohmann::json response;
 
     if(!params.contains("action") || !params["action"].is_string()) {
+        LOG_ERROR("GeometryService: Missing or invalid 'action' parameter");
         throw std::invalid_argument("Missing or invalid 'action' parameter.");
     }
 
-    auto action = g_ComponentFactory.createObjectWithID<GeometryActionFactory>(
-        params["action"].get<std::string>());
+    const std::string action_name = params["action"].get<std::string>();
+    LOG_INFO("GeometryService: Executing action '{}'", action_name);
+
+    auto action = g_ComponentFactory.createObjectWithID<GeometryActionFactory>(action_name);
 
     bool success = action->execute(params, Util::makeProgressCallback(progress_reporter, 0.0, 1.0));
 
     if(!success) {
-        throw std::runtime_error("Geometry action '" + params["action"].get<std::string>() +
-                                 "' failed to execute.");
+        LOG_ERROR("GeometryService: Action '{}' failed to execute", action_name);
+        throw std::runtime_error("Geometry action '" + action_name + "' failed to execute.");
     }
 
+    LOG_INFO("GeometryService: Action '{}' completed successfully", action_name);
     response["status"] = "success";
     return response;
 }
@@ -40,6 +44,7 @@ GeometryServiceFactory::tObjectSharedPtr GeometryServiceFactory::instance() cons
     return singleton_instance;
 }
 void registerServices() {
+    LOG_DEBUG("GeometryService: Registering geometry services and actions");
     g_ComponentFactory.registInstanceFactoryWithID<GeometryServiceFactory>("GeometryService");
     g_ComponentFactory.registFactoryWithID<CreateActionFactory>(CreateAction::actionName());
     g_ComponentFactory.registFactoryWithID<NewModelActionFactory>(NewModelAction::actionName());

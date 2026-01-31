@@ -90,7 +90,7 @@ ReadResult BrepReader::readFile(const std::string& file_path,
 
         LOG_INFO("BREP file loaded successfully: {} entities created", load_result.m_entityCount);
 
-        return ReadResult::success();
+        return ReadResult::success(load_result.m_entityCount);
 
     } catch(const Standard_Failure& e) {
         std::string error = e.GetMessageString() ? e.GetMessageString() : "Unknown OCC error";

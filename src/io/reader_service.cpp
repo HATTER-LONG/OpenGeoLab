@@ -21,12 +21,14 @@ nlohmann::json ReaderService::processRequest(const std::string& /*module_name*/,
     progress_reporter->reportProgress(0.0, "Starting model import...");
 
     if(!params.contains("file_path") || !params["file_path"].is_string()) {
+        LOG_ERROR("ReaderService: Missing or invalid 'file_path' parameter");
         throw std::invalid_argument("Missing or invalid 'file_path' parameter.");
     }
     std::string file_path = params["file_path"].get<std::string>();
-    LOG_DEBUG("Starting model import from file: {}", file_path);
+    LOG_INFO("ReaderService: Starting model import from file: {}", file_path);
 
     std::string reader_type = detectFileFormat(file_path);
+    LOG_DEBUG("ReaderService: Detected file format, using reader: {}", reader_type);
     progress_reporter->reportProgress(0.01, "Creating reader [" + reader_type + "]...");
     auto reader = g_ComponentFactory.createObjectWithID<ReaderFactory>(reader_type);
 
@@ -35,8 +37,12 @@ nlohmann::json ReaderService::processRequest(const std::string& /*module_name*/,
     auto reader_result = reader->readFile(
         file_path, OpenGeoLab::Util::makeProgressCallback(progress_reporter, 0.05, 0.75));
     if(!reader_result.m_success) {
+        LOG_ERROR("ReaderService: Model import failed: {}", reader_result.m_errorMessage);
         throw std::runtime_error("Model import failed " + reader_result.m_errorMessage);
     }
+
+    LOG_INFO("ReaderService: Model import completed successfully, entityCount={}",
+             reader_result.m_entityCount);
     return result;
 }
 
@@ -45,6 +51,7 @@ std::string ReaderService::detectFileFormat(const std::string& file_path) const 
     std::string ext = path.extension().string();
 
     std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+    LOG_TRACE("ReaderService: Detecting file format for extension: {}", ext);
 
     if(ext == ".brep" || ext == ".brp") {
         return "BrepReader";
@@ -53,6 +60,8 @@ std::string ReaderService::detectFileFormat(const std::string& file_path) const 
     if(ext == ".step" || ext == ".stp") {
         return "StepReader";
     }
+
+    LOG_ERROR("ReaderService: Unsupported file extension: {}", ext);
     throw std::invalid_argument("Unsupported file extension: " + ext);
 }
 
@@ -62,6 +71,7 @@ ReaderServiceFactory::tObjectSharedPtr ReaderServiceFactory::instance() const {
 }
 
 void registerServices() {
+    LOG_DEBUG("ReaderService: Registering IO services and readers");
     g_ComponentFactory.registInstanceFactoryWithID<IO::ReaderServiceFactory>("ReaderService");
 
     g_ComponentFactory.registFactoryWithID<IO::BrepReaderFactory>("BrepReader");
