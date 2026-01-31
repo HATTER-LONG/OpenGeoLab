@@ -14,7 +14,6 @@
 #include <spdlog/details/log_msg.h>
 #include <spdlog/sinks/base_sink.h>
 
-#include <memory>
 #include <mutex>
 
 namespace OpenGeoLab::Util {

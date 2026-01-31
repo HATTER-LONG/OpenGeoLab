@@ -88,7 +88,9 @@ ReadResult StepReader::readFile(const std::string& file_path,
         }
 
         // Load shape into current document
-        auto document = Geometry::GeometryDocumentManager::instance().currentDocument();
+        auto document =
+            g_ComponentFactory.getInstanceObject<Geometry::IGeoDocumentManagerSingletonFactory>()
+                ->currentDocument();
         if(!document) {
             LOG_ERROR("No active geometry document");
             return ReadResult::failure("No active geometry document");

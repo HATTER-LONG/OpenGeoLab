@@ -8,7 +8,6 @@ namespace OpenGeoLab::Geometry {
 class GeometryDocumentManager : public Kangaroo::Util::NonCopyMoveable {
 public:
     ~GeometryDocumentManager() = default;
-    static GeometryDocumentManager& instance();
 
     [[nodiscard]] virtual GeometryDocumentPtr currentDocument() = 0;
 
