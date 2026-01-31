@@ -82,24 +82,37 @@ public:
     virtual ~GeometryDocument() = default;
 
     // -------------------------------------------------------------------------
-    // Shape Loading (for io/reader)
+    // Shape Loading
     // -------------------------------------------------------------------------
 
     /**
-     * @brief Load geometry from an OCC shape
+     * @brief Load geometry from an OCC shape (clears existing geometry)
      * @param shape Source OCC shape to load
      * @param name Name for the root part entity
      * @param progress Progress callback for reporting
      * @return LoadResult with success status and entity information
      *
-     * @note This is the primary entry point for file readers to add
-     *       geometry to the document.
+     * @note This clears the document first, then loads the new geometry.
+     *       Use this for file import operations.
      */
     [[nodiscard]] virtual LoadResult
     loadFromShape(const TopoDS_Shape& shape, // NOLINT
                   const std::string& name,
                   Util::ProgressCallback progress = Util::NO_PROGRESS_CALLBACK) = 0;
-
+    /**
+     * @brief Append geometry from an OCC shape (keeps existing geometry)
+     * @param shape Source OCC shape to append
+     * @param name Name for the root part entity
+     * @param progress Progress callback for reporting
+     * @return LoadResult with success status and entity information
+     *
+     * @note This adds new geometry without clearing existing content.
+     *       Use this for creating new primitives in the scene.
+     */
+    [[nodiscard]] virtual LoadResult
+    appendShape(const TopoDS_Shape& shape, // NOLINT
+                const std::string& name,
+                Util::ProgressCallback progress = Util::NO_PROGRESS_CALLBACK) = 0;
     // -------------------------------------------------------------------------
     // Render Data Access
     // -------------------------------------------------------------------------

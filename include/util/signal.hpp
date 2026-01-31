@@ -12,7 +12,6 @@
 #include <algorithm>
 #include <cstdint>
 #include <functional>
-#include <memory>
 #include <mutex>
 #include <vector>
 
@@ -198,7 +197,7 @@ public:
      * @param args Arguments to pass to each slot
      * @note Slots are invoked synchronously in connection order
      */
-    void emit(Args... args) {
+    void emitSignal(Args... args) {
         // Copy slots to allow disconnection during emission
         std::vector<SlotEntry> slots_copy;
         {
@@ -214,10 +213,10 @@ public:
     }
 
     /**
-     * @brief Operator() alias for emit
+     * @brief Operator() alias for emitSignal
      * @param args Arguments to pass to each slot
      */
-    void operator()(Args... args) { emit(std::forward<Args>(args)...); }
+    void operator()(Args... args) { emitSignal(std::forward<Args>(args)...); }
 
     /**
      * @brief Get the number of connected slots

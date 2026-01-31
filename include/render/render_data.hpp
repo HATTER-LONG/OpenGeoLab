@@ -49,7 +49,7 @@ struct RenderVertex {
      * @param ny Normal Y
      * @param nz Normal Z
      */
-    RenderVertex(float px, float py, float pz, float nx, float ny, float nz) {
+    RenderVertex(float px, float py, float pz, float nx, float ny, float nz) { // NOLINT
         m_position[0] = px;
         m_position[1] = py;
         m_position[2] = pz;
@@ -140,6 +140,8 @@ struct DocumentRenderData {
 
     Geometry::BoundingBox3D m_boundingBox; ///< Combined bounding box
 
+    uint64_t m_version{0}; ///< Data version for change detection
+
     /**
      * @brief Check if render data is empty
      * @return true if no meshes are present
@@ -164,7 +166,13 @@ struct DocumentRenderData {
         m_edgeMeshes.clear();
         m_vertexMeshes.clear();
         m_boundingBox = Geometry::BoundingBox3D();
+        ++m_version;
     }
+
+    /**
+     * @brief Increment version to signal data change
+     */
+    void markModified() { ++m_version; }
 
     /**
      * @brief Update combined bounding box from all meshes

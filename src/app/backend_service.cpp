@@ -1,58 +1,15 @@
 /**
  * @file backend_service.cpp
- * @brief Implementation of BackendService and worker components
+ * @brief Implementation of BackendService for asynchronous operations
  */
 
 #include "backend_service.hpp"
-#include "nlohmann/json.hpp"
-#include "service.hpp"
+#include "service_worker.hpp"
 #include "util/logger.hpp"
 
-#include <kangaroo/util/component_factory.hpp>
-#include <kangaroo/util/stopwatch.hpp>
-namespace OpenGeoLab {
-namespace App {
+#include <nlohmann/json.hpp>
 
-QtProgressReporter::QtProgressReporter(ServiceWorker* worker, std::atomic<bool>& cancelled)
-    : m_worker(worker), m_cancelled(cancelled) {}
-void QtProgressReporter::reportProgress(double progress, const std::string& message) {
-    if(m_worker) {
-        emit m_worker->progressUpdated(progress, QString::fromStdString(message));
-    }
-}
-
-void QtProgressReporter::reportError(const std::string& error_message) {
-    if(m_worker) {
-        emit m_worker->errorOccurred(m_worker->moduleName(), QString::fromStdString(error_message));
-    }
-}
-
-bool QtProgressReporter::isCancelled() const { return m_cancelled.load(); }
-
-ServiceWorker::ServiceWorker(const QString& module_name,
-                             const nlohmann::json params,
-                             std::atomic<bool>& cancel_requested,
-                             QObject* parent)
-    : QObject(parent), m_moduleName(module_name), m_params(params),
-      m_cancelRequested(cancel_requested) {}
-
-void ServiceWorker::process() {
-    Kangaroo::Util::Stopwatch stopwatch("Backend [" + m_moduleName.toStdString() + "]",
-                                        OpenGeoLab::getLogger());
-    try {
-        auto service = g_ComponentFactory.getInstanceObjectWithID<App::IServiceSingletonFactory>(
-            m_moduleName.toStdString());
-        auto report = std::make_shared<QtProgressReporter>(this, m_cancelRequested);
-        if(m_cancelRequested.load()) {
-            emit errorOccurred(m_moduleName, "Operation cancelled before start.");
-            return;
-        }
-        auto result = service->processRequest(m_moduleName.toStdString(), m_params, report);
-        emit finished(m_moduleName, result);
-    } catch(const std::exception& e) {
-        emit errorOccurred(m_moduleName, QString::fromStdString(e.what()));
-    }
-}
+namespace OpenGeoLab::App {
 
 BackendService::BackendService(QObject* parent) : QObject(parent) {}
 BackendService::~BackendService() { cleanupWorker(); }
@@ -77,14 +34,18 @@ void BackendService::request(const QString& module_name, const QString& params) 
     }
     setBusyInternal(true);
 
+    // Parse JSON once here, then pass the parsed object to the worker
     nlohmann::json param_json;
-    try {
-        param_json = nlohmann::json::parse(params.toStdString());
-        LOG_TRACE("Backend params: {}", param_json.dump(4));
-    } catch(const nlohmann::json::parse_error& e) {
-        emit operationFailed(module_name, QStringLiteral("Failed to parse params JSON: ") +
-                                              QString::fromStdString(e.what()));
-        return;
+    if(!params.trimmed().isEmpty()) {
+        try {
+            param_json = nlohmann::json::parse(params.toStdString());
+            LOG_TRACE("Backend params: {}", param_json.dump(4));
+        } catch(const nlohmann::json::parse_error& e) {
+            setBusyInternal(false);
+            emit operationFailed(module_name, QStringLiteral("Failed to parse params JSON: ") +
+                                                  QString::fromStdString(e.what()));
+            return;
+        }
     }
 
     m_currentModuleName = module_name;
@@ -93,10 +54,13 @@ void BackendService::request(const QString& module_name, const QString& params) 
     setProgressInternal(0.0);
     setMessage(QStringLiteral("Starting operation...[%1]").arg(module_name));
     emit operationStarted(module_name);
+
     cleanupWorker();
     m_workerThread = new QThread(this);
-    m_worker = new ServiceWorker(module_name, param_json, m_cancelRequested);
+    // Pass pre-parsed JSON to worker (avoids re-parsing in worker thread)
+    m_worker = new ServiceWorker(module_name, std::move(param_json), m_cancelRequested);
     m_worker->moveToThread(m_workerThread);
+
     connect(m_workerThread, &QThread::started, m_worker, &ServiceWorker::process);
     connect(m_worker, &ServiceWorker::progressUpdated, this, &BackendService::onWorkerProgress);
     connect(m_worker, &ServiceWorker::finished, this, &BackendService::onWorkerFinished);
@@ -105,6 +69,7 @@ void BackendService::request(const QString& module_name, const QString& params) 
     connect(m_worker, &ServiceWorker::finished, m_workerThread, &QThread::quit);
     connect(m_worker, &ServiceWorker::errorOccurred, m_workerThread, &QThread::quit);
     connect(m_workerThread, &QThread::finished, m_worker, &QObject::deleteLater);
+
     m_workerThread->start();
 }
 
@@ -129,7 +94,7 @@ void BackendService::onWorkerProgress(double progress, const QString& message) {
     emit operationProgress(m_currentModuleName, progress, message);
 }
 
-void BackendService::onWorkerFinished(const QString& module_name, const nlohmann::json& result) {
+void BackendService::onWorkerFinished(const QString& module_name, const QString& result) {
     setProgressInternal(1.0);
     setMessage(QStringLiteral("Operation [%1] completed successfully.").arg(module_name));
     emit operationFinished(module_name, result);
@@ -176,5 +141,5 @@ void BackendService::cleanupWorker() {
     }
     m_worker.clear();
 }
-} // namespace App
-} // namespace OpenGeoLab
+
+} // namespace OpenGeoLab::App

@@ -34,11 +34,16 @@ public:
     virtual ~GeometryDocumentImpl() = default;
 
     // =========================================================================
-    // Shape Loading (GeometryDocument interface)
+    // Shape Operations (GeometryDocument interface)
     // =========================================================================
+
     [[nodiscard]] LoadResult loadFromShape(const TopoDS_Shape& shape,
                                            const std::string& name,
                                            Util::ProgressCallback progress) override;
+
+    [[nodiscard]] LoadResult appendShape(const TopoDS_Shape& shape,
+                                         const std::string& name,
+                                         Util::ProgressCallback progress) override;
 
     // -------------------------------------------------------------------------
     // Entity Management

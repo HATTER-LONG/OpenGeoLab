@@ -20,10 +20,7 @@ GeometryDocumentPtr GeometryDocumentManagerImpl::currentDocument() {
     return m_currentDocument;
 }
 
-GeometryDocumentPtr GeometryDocumentManagerImpl::newDocument() {
-    m_currentDocument = std::make_shared<GeometryDocumentImpl>();
-    return m_currentDocument;
-}
+GeometryDocumentPtr GeometryDocumentManagerImpl::newDocument() { return newDocumentImplType(); }
 
 GeometryDocumentImplPtr GeometryDocumentManagerImpl::currentDocumentImplType() {
     if(!m_currentDocument) {

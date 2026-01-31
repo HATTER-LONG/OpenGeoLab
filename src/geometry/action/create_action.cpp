@@ -5,7 +5,6 @@
 
 #include "create_action.hpp"
 #include "../geometry_document_managerImpl.hpp"
-#include "../shape_builder.hpp"
 #include "util/logger.hpp"
 
 #include <BRepPrimAPI_MakeBox.hxx>
@@ -21,22 +20,42 @@ namespace {
 
 /**
  * @brief Create a box shape
- * @param params JSON with dx, dy, dz (dimensions) and optional x, y, z (origin)
+ * @param params JSON with dimensions and optional origin
+ *        Supports two formats:
+ *        1. {dx, dy, dz, x, y, z} - legacy flat format
+ *        2. {dimensions: {x, y, z}, origin: {x, y, z}} - nested format from QML
  * @return Created TopoDS_Shape or null shape on failure
  */
 [[nodiscard]] TopoDS_Shape createBox(const nlohmann::json& params) {
-    double dx = params.value("dx", 10.0);
-    double dy = params.value("dy", 10.0);
-    double dz = params.value("dz", 10.0);
+    if(!params.contains("dimensions") || !params.contains("origin")) {
+        LOG_ERROR("CreateAction: Box creation params missing 'dimensions' or 'origin' fields");
+        throw std::invalid_argument("Invalid box creation parameters");
+    }
+    const auto& dim = params["dimensions"];
+    if(!dim.contains("x") || !dim.contains("y") || !dim.contains("z")) {
+        LOG_ERROR("CreateAction: Box 'dimensions' field must be an object");
+        throw std::invalid_argument("Invalid box creation parameters");
+    }
+    double dx = dim.value("x", 10.0);
+    double dy = dim.value("y", 10.0);
+    double dz = dim.value("z", 10.0);
 
-    double x = params.value("x", 0.0);
-    double y = params.value("y", 0.0);
-    double z = params.value("z", 0.0);
+    const auto& orig = params["origin"];
+    if(!orig.contains("x") || !orig.contains("y") || !orig.contains("z")) {
+        LOG_ERROR("CreateAction: Box 'origin' field must be an object");
+        throw std::invalid_argument("Invalid box creation parameters");
+    }
+    double x = orig.value("x", 0.0);
+    double y = orig.value("y", 0.0);
+    double z = orig.value("z", 0.0);
 
     if(dx <= 0.0 || dy <= 0.0 || dz <= 0.0) {
         LOG_ERROR("CreateAction: Box dimensions must be positive");
-        return TopoDS_Shape();
+        throw std::invalid_argument("Invalid box creation parameters");
     }
+
+    LOG_DEBUG("CreateAction: Creating box at ({}, {}, {}) with size ({}, {}, {})", x, y, z, dx, dy,
+              dz);
 
     try {
         gp_Pnt corner(x, y, z);
@@ -44,13 +63,13 @@ namespace {
         maker.Build();
         if(!maker.IsDone()) {
             LOG_ERROR("CreateAction: Failed to create box");
-            return TopoDS_Shape();
+            throw std::runtime_error("Failed to create box");
         }
         return maker.Shape();
     } catch(const Standard_Failure& e) {
         LOG_ERROR("CreateAction: OCC error creating box: {}",
                   e.GetMessageString() ? e.GetMessageString() : "Unknown");
-        return TopoDS_Shape();
+        throw std::runtime_error("Failed to create box");
     }
 }
 
@@ -69,7 +88,7 @@ namespace {
 
     if(radius <= 0.0 || height <= 0.0) {
         LOG_ERROR("CreateAction: Cylinder radius and height must be positive");
-        return TopoDS_Shape();
+        throw std::invalid_argument("Invalid cylinder creation parameters");
     }
 
     try {
@@ -81,13 +100,13 @@ namespace {
         maker.Build();
         if(!maker.IsDone()) {
             LOG_ERROR("CreateAction: Failed to create cylinder");
-            return TopoDS_Shape();
+            throw std::runtime_error("Failed to create cylinder");
         }
         return maker.Shape();
     } catch(const Standard_Failure& e) {
         LOG_ERROR("CreateAction: OCC error creating cylinder: {}",
                   e.GetMessageString() ? e.GetMessageString() : "Unknown");
-        return TopoDS_Shape();
+        throw std::runtime_error("Failed to create cylinder");
     }
 }
 
@@ -105,7 +124,7 @@ namespace {
 
     if(radius <= 0.0) {
         LOG_ERROR("CreateAction: Sphere radius must be positive");
-        return TopoDS_Shape();
+        throw std::invalid_argument("Invalid sphere creation parameters");
     }
 
     try {
@@ -114,13 +133,13 @@ namespace {
         maker.Build();
         if(!maker.IsDone()) {
             LOG_ERROR("CreateAction: Failed to create sphere");
-            return TopoDS_Shape();
+            throw std::runtime_error("Failed to create sphere");
         }
         return maker.Shape();
     } catch(const Standard_Failure& e) {
         LOG_ERROR("CreateAction: OCC error creating sphere: {}",
                   e.GetMessageString() ? e.GetMessageString() : "Unknown");
-        return TopoDS_Shape();
+        throw std::runtime_error("Failed to create sphere");
     }
 }
 
@@ -140,7 +159,7 @@ namespace {
 
     if(radius1 < 0.0 || radius2 < 0.0 || height <= 0.0) {
         LOG_ERROR("CreateAction: Cone parameters invalid");
-        return TopoDS_Shape();
+        throw std::invalid_argument("Invalid cone creation parameters");
     }
 
     try {
@@ -152,13 +171,13 @@ namespace {
         maker.Build();
         if(!maker.IsDone()) {
             LOG_ERROR("CreateAction: Failed to create cone");
-            return TopoDS_Shape();
+            throw std::runtime_error("Failed to create cone");
         }
         return maker.Shape();
     } catch(const Standard_Failure& e) {
         LOG_ERROR("CreateAction: OCC error creating cone: {}",
                   e.GetMessageString() ? e.GetMessageString() : "Unknown");
-        return TopoDS_Shape();
+        throw std::runtime_error("Failed to create cone");
     }
 }
 
@@ -210,8 +229,9 @@ namespace {
         return false;
     }
 
-    // Add to current document
-    auto document = GeometryDocumentManagerImpl::instance()->currentDocumentImplType();
+    // Add to current document using appendShape
+    // (document internally handles change notification)
+    auto document = GeometryDocumentManagerImpl::instance()->currentDocument();
     if(!document) {
         if(progress_callback) {
             progress_callback(1.0, "Error: No active document.");
@@ -220,9 +240,8 @@ namespace {
         return false;
     }
 
-    ShapeBuilder builder(document);
     auto build_progress = Util::makeScaledProgressCallback(progress_callback, 0.5, 0.95);
-    auto result = builder.buildFromShape(shape, part_name, build_progress);
+    auto result = document->appendShape(shape, part_name, build_progress);
 
     if(!result.m_success) {
         if(progress_callback) {
@@ -233,12 +252,12 @@ namespace {
     }
 
     if(progress_callback) {
-        progress_callback(1.0, "Created " + type + " with " +
-                                   std::to_string(result.totalEntityCount()) + " entities.");
+        progress_callback(1.0, "Created " + type + " with " + std::to_string(result.m_entityCount) +
+                                   " entities.");
     }
 
     LOG_INFO("CreateAction: Created {} '{}' with {} entities", type, part_name,
-             result.totalEntityCount());
+             result.m_entityCount);
 
     return true;
 }

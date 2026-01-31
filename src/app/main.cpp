@@ -2,9 +2,9 @@
  * @file main.cpp
  * @brief Application entry point
  */
+#include "app/render_service.hpp"
 #include "service.hpp"
 #include "util/logger.hpp"
-
 #include <app/log_service.hpp>
 #include <util/qml_spdlog_sink.hpp>
 
@@ -58,6 +58,7 @@ auto main(int argc, char** argv) -> int {
 
     QQmlApplicationEngine engine;
 
+    // Create and register services as context properties
     OpenGeoLab::App::LogService log_service;
     OpenGeoLab::Util::installQmlSpdlogSink(&log_service);
     engine.rootContext()->setContextProperty("LogService", &log_service);
