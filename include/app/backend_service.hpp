@@ -5,6 +5,15 @@
 
 #pragma once
 
+// Windows header must be included before nlohmann/json to avoid template
+// instantiation issues with tagMSG
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <Windows.h>
+#endif
+
 #include "service.hpp"
 
 #include <QObject>

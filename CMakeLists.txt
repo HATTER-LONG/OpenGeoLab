@@ -178,6 +178,8 @@ qt_add_qml_module(
   /opengeolab
   NO_RESOURCE_TARGET_PATH
   SOURCES
+  include/render/opengl_viewport.hpp
+  src/render/opengl_viewport.cpp
   QML_FILES
   resources/qml/Main.qml
   resources/qml/MainPages.qml
@@ -264,6 +266,7 @@ target_include_directories(
   ${PROJECT_NAME}
   PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include"
           "${CMAKE_CURRENT_SOURCE_DIR}/include/app" # For Qt moc generated code
+          "${CMAKE_CURRENT_SOURCE_DIR}/include/render" # For Qt moc generated code
 )
 
 # ==============================================================================

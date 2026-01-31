@@ -38,6 +38,13 @@ public:
                                            const std::string& name,
                                            Util::ProgressCallback progress) override;
 
+    // =========================================================================
+    // Render Data Generation (GeometryDocument interface)
+    // =========================================================================
+    [[nodiscard]] Render::RenderScene generateRenderScene(double deflection = 0.1) const override;
+    [[nodiscard]] Render::RenderMesh generateRenderMesh(EntityId entity_id,
+                                                        double deflection = 0.1) const override;
+
     // -------------------------------------------------------------------------
     // Entity Management
     // -------------------------------------------------------------------------

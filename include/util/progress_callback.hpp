@@ -1,3 +1,11 @@
+/**
+ * @file progress_callback.hpp
+ * @brief Progress reporting callback interface
+ *
+ * Defines a callback-based progress reporting interface used throughout
+ * the application for long-running operations.
+ */
+
 #pragma once
 
 #include <functional>
@@ -12,6 +20,7 @@ namespace OpenGeoLab::Util {
  */
 using ProgressCallback = std::function<bool(double progress, const std::string& message)>;
 
+/// No-op progress callback that always continues
 inline const ProgressCallback NO_PROGRESS_CALLBACK = [](double, const std::string&) {
     return true;
 };

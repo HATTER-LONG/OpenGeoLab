@@ -1,5 +1,6 @@
 #pragma once
 #include "geometry/geometry_types.hpp"
+#include "render/render_data.hpp"
 #include "util/progress_callback.hpp"
 #include <kangaroo/util/noncopyable.hpp>
 #include <memory>
@@ -59,6 +60,30 @@ public:
     loadFromShape(const TopoDS_Shape& shape, // NOLINT
                   const std::string& name,
                   Util::ProgressCallback progress = Util::NO_PROGRESS_CALLBACK) = 0;
+
+    // -------------------------------------------------------------------------
+    // Render Data Generation
+    // -------------------------------------------------------------------------
+
+    /**
+     * @brief Generate render data for all geometry in the document
+     * @param deflection Tessellation deflection (smaller = more detailed)
+     * @return RenderScene containing all renderable geometry
+     *
+     * @note Tessellation quality is controlled by the deflection parameter.
+     *       Smaller values produce smoother surfaces but more triangles.
+     */
+    [[nodiscard]] virtual Render::RenderScene
+    generateRenderScene(double deflection = 0.1) const = 0;
+
+    /**
+     * @brief Generate render data for a specific entity
+     * @param entity_id Entity to generate render data for
+     * @param deflection Tessellation deflection
+     * @return RenderMesh for the specified entity
+     */
+    [[nodiscard]] virtual Render::RenderMesh generateRenderMesh(EntityId entity_id,
+                                                                double deflection = 0.1) const = 0;
 };
 
 } // namespace OpenGeoLab::Geometry

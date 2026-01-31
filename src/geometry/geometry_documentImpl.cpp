@@ -9,6 +9,17 @@
 #include "util/logger.hpp"
 #include "util/progress_callback.hpp"
 
+#include <BRepMesh_IncrementalMesh.hxx>
+#include <BRep_Tool.hxx>
+#include <Poly_Triangulation.hxx>
+#include <TopAbs_Orientation.hxx>
+#include <TopLoc_Location.hxx>
+#include <TopoDS.hxx>
+#include <TopoDS_Face.hxx>
+#include <gp_Dir.hxx>
+#include <gp_Pnt.hxx>
+#include <gp_Trsf.hxx>
+
 #include <queue>
 #include <unordered_set>
 
@@ -365,6 +376,114 @@ LoadResult GeometryDocumentImpl::loadFromShape(const TopoDS_Shape& shape,
         LOG_ERROR("Exception during shape load: {}", e.what());
         return LoadResult::failure(std::string("Exception: ") + e.what());
     }
+}
+
+Render::RenderScene GeometryDocumentImpl::generateRenderScene(double deflection) const {
+    Render::RenderScene scene;
+
+    // Get all face entities for tessellation
+    auto faces = entitiesByType(EntityType::Face);
+    for(const auto& face : faces) {
+        auto mesh = generateRenderMesh(face->entityId(), deflection);
+        if(mesh.isValid()) {
+            scene.m_meshes.push_back(std::move(mesh));
+        }
+    }
+
+    scene.updateBoundingBox();
+    LOG_DEBUG("Generated render scene with {} meshes", scene.m_meshes.size());
+    return scene;
+}
+
+Render::RenderMesh GeometryDocumentImpl::generateRenderMesh(EntityId entity_id,
+                                                            double deflection) const {
+    Render::RenderMesh mesh;
+    mesh.m_entityId = entity_id;
+
+    auto entity = findById(entity_id);
+    if(!entity || !entity->hasShape()) {
+        return mesh;
+    }
+
+    const TopoDS_Shape& shape = entity->shape();
+
+    // Use OCC's tessellation
+    BRepMesh_IncrementalMesh mesher(shape, deflection);
+    if(!mesher.IsDone()) {
+        LOG_WARN("Tessellation failed for entity {}", entity_id);
+        return mesh;
+    }
+
+    // Extract triangulation from faces
+    if(entity->entityType() == EntityType::Face) {
+        TopLoc_Location location;
+        Handle(Poly_Triangulation) triangulation =
+            BRep_Tool::Triangulation(TopoDS::Face(shape), location);
+
+        if(triangulation.IsNull()) {
+            return mesh;
+        }
+
+        gp_Trsf transform = location.Transformation();
+        bool needsTransform = !location.IsIdentity();
+
+        // Reserve space
+        int nbNodes = triangulation->NbNodes();
+        int nbTriangles = triangulation->NbTriangles();
+        mesh.m_vertices.reserve(static_cast<size_t>(nbNodes));
+        mesh.m_indices.reserve(static_cast<size_t>(nbTriangles * 3));
+
+        // Check face orientation
+        TopAbs_Orientation orientation = shape.Orientation();
+        bool reversed = (orientation == TopAbs_REVERSED);
+
+        // Extract vertices with normals
+        for(int i = 1; i <= nbNodes; ++i) {
+            gp_Pnt point = triangulation->Node(i);
+            if(needsTransform) {
+                point.Transform(transform);
+            }
+
+            Render::RenderVertex vertex(static_cast<float>(point.X()),
+                                        static_cast<float>(point.Y()),
+                                        static_cast<float>(point.Z()));
+
+            // Get normal if available
+            if(triangulation->HasNormals()) {
+                gp_Dir normal = triangulation->Normal(i);
+                if(needsTransform) {
+                    normal.Transform(transform);
+                }
+                if(reversed) {
+                    normal.Reverse();
+                }
+                vertex.m_normal[0] = static_cast<float>(normal.X());
+                vertex.m_normal[1] = static_cast<float>(normal.Y());
+                vertex.m_normal[2] = static_cast<float>(normal.Z());
+            }
+
+            mesh.m_vertices.push_back(vertex);
+        }
+
+        // Extract triangles
+        for(int i = 1; i <= nbTriangles; ++i) {
+            int n1, n2, n3;
+            triangulation->Triangle(i).Get(n1, n2, n3);
+
+            // Adjust for reversed face
+            if(reversed) {
+                std::swap(n2, n3);
+            }
+
+            mesh.m_indices.push_back(static_cast<uint32_t>(n1 - 1));
+            mesh.m_indices.push_back(static_cast<uint32_t>(n2 - 1));
+            mesh.m_indices.push_back(static_cast<uint32_t>(n3 - 1));
+        }
+
+        mesh.m_primitiveType = Render::RenderPrimitiveType::Triangles;
+    }
+
+    return mesh;
 }
 
 } // namespace OpenGeoLab::Geometry
