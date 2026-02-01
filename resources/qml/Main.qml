@@ -82,27 +82,13 @@ ApplicationWindow {
             }
         }
 
-        // Toolbar for viewport controls
-        Row {
+        // View toolbar for viewport controls
+        ViewToolbar {
+            id: viewToolbar
             anchors.top: parent.top
             anchors.right: parent.right
             anchors.margins: 8
-            spacing: 4
             z: 10
-
-            Button {
-                text: qsTr("Fit")
-                onClicked: RenderService.fitToScene()
-                ToolTip.visible: hovered
-                ToolTip.text: qsTr("Fit view to scene")
-            }
-
-            Button {
-                text: qsTr("Reset")
-                onClicked: RenderService.resetCamera()
-                ToolTip.visible: hovered
-                ToolTip.text: qsTr("Reset camera to default")
-            }
         }
     }
 

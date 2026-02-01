@@ -2,7 +2,6 @@
  * @file main.cpp
  * @brief Application entry point
  */
-#include "app/render_service.hpp"
 #include "service.hpp"
 #include "util/logger.hpp"
 #include <app/log_service.hpp>

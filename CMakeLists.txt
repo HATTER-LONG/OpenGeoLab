@@ -210,6 +210,8 @@ qt_add_qml_module(
   resources/qml/util/SelectableButton.qml
   resources/qml/util/ChipButton.qml
   resources/qml/util/ViewportPickButton.qml
+  resources/qml/util/ViewToolbar.qml
+  resources/qml/util/ViewToolButton.qml
   RESOURCES
   ${ICON_RESOURCES}
 )
@@ -261,9 +263,8 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE SPDLOG_ACTIVE_LEVEL=SPDLOG_LE
 # ==============================================================================
 
 target_include_directories(
-  ${PROJECT_NAME}
-  PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include"
-          "${CMAKE_CURRENT_SOURCE_DIR}/include/app" # For Qt moc generated code
+  ${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include"
+                          "${CMAKE_CURRENT_SOURCE_DIR}/include/app" # For Qt moc generated code
 )
 
 # ==============================================================================
