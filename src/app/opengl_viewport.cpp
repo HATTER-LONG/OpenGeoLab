@@ -10,6 +10,7 @@
 #include <QOpenGLFramebufferObject>
 #include <QQuickWindow>
 #include <QWheelEvent>
+#include <QtCore/QMetaObject>
 #include <QtMath>
 
 namespace OpenGeoLab::App {
@@ -23,6 +24,22 @@ GLViewport::GLViewport(QQuickItem* parent) : QQuickFramebufferObject(parent) {
     setFlag(ItemHasContents, true);
     setMirrorVertically(true);
 
+    auto& render_ctrl_service = Render::RenderCtrlService::instance();
+    m_cameraState = render_ctrl_service.camera();
+    m_hasGeometry = render_ctrl_service.hasGeometry();
+
+    // Bridge service events (Util::Signal) onto the Qt/GUI thread
+    m_sceneNeedsUpdateConn = render_ctrl_service.subscribeSceneNeedsUpdate([this]() {
+        QMetaObject::invokeMethod(this, &GLViewport::onSceneNeedsUpdate, Qt::QueuedConnection);
+    });
+    m_cameraChangedConn = render_ctrl_service.subscribeCameraChanged([this]() {
+        QMetaObject::invokeMethod(this, &GLViewport::onSceneNeedsUpdate, Qt::QueuedConnection);
+    });
+    m_geometryChangedConn = render_ctrl_service.subscribeGeometryChanged([this]() {
+        QMetaObject::invokeMethod(this, &GLViewport::onServiceGeometryChanged,
+                                  Qt::QueuedConnection);
+    });
+
     LOG_TRACE("GLViewport created");
 }
 
@@ -32,46 +49,28 @@ QQuickFramebufferObject::Renderer* GLViewport::createRenderer() const {
     return new GLViewportRenderer(this);
 }
 
-Render::RenderService* GLViewport::renderService() const { return m_renderService; }
-
-void GLViewport::setRenderService(Render::RenderService* service) {
-    if(m_renderService == service) {
-        return;
-    }
-
-    if(m_renderService) {
-        disconnect(m_renderService, &Render::RenderService::sceneNeedsUpdate, this,
-                   &GLViewport::onSceneNeedsUpdate);
-        disconnect(m_renderService, &Render::RenderService::cameraChanged, this,
-                   &GLViewport::onSceneNeedsUpdate);
-    }
-
-    m_renderService = service;
-
-    if(m_renderService) {
-        connect(m_renderService, &Render::RenderService::sceneNeedsUpdate, this,
-                &GLViewport::onSceneNeedsUpdate);
-        connect(m_renderService, &Render::RenderService::cameraChanged, this,
-                &GLViewport::onSceneNeedsUpdate);
-        m_cameraState = m_renderService->camera();
-    }
-
-    LOG_DEBUG("GLViewport: RenderService changed");
-    emit renderServiceChanged();
-    update();
-}
+bool GLViewport::hasGeometry() const { return m_hasGeometry; }
 
 const Render::CameraState& GLViewport::cameraState() const { return m_cameraState; }
 
 const Render::DocumentRenderData& GLViewport::renderData() const {
     static Render::DocumentRenderData empty;
-    return m_renderService ? m_renderService->renderData() : empty;
+    return Render::RenderCtrlService::instance().renderData();
 }
 
 void GLViewport::onSceneNeedsUpdate() {
-    if(m_renderService) {
-        m_cameraState = m_renderService->camera();
+    m_cameraState = Render::RenderCtrlService::instance().camera();
+    update();
+}
+
+void GLViewport::onServiceGeometryChanged() {
+    const bool new_has_geometry = Render::RenderCtrlService::instance().hasGeometry();
+    if(new_has_geometry != m_hasGeometry) {
+        m_hasGeometry = new_has_geometry;
+        emit hasGeometryChanged();
     }
+
+    emit geometryChanged();
     update();
 }
 
@@ -137,10 +136,7 @@ void GLViewport::orbitCamera(float dx, float dy) {
 
     m_cameraState.m_position = m_cameraState.m_target + direction;
 
-    if(m_renderService) {
-        m_renderService->camera() = m_cameraState;
-    }
-
+    Render::RenderCtrlService::instance().setCamera(m_cameraState);
     update();
 }
 
@@ -160,9 +156,7 @@ void GLViewport::panCamera(float dx, float dy) {
     m_cameraState.m_position += pan;
     m_cameraState.m_target += pan;
 
-    if(m_renderService) {
-        m_renderService->camera() = m_cameraState;
-    }
+    Render::RenderCtrlService::instance().setCamera(m_cameraState);
 
     update();
 }
@@ -180,9 +174,7 @@ void GLViewport::zoomCamera(float delta) {
     direction = direction.normalized() * distance;
     m_cameraState.m_position = m_cameraState.m_target + direction;
 
-    if(m_renderService) {
-        m_renderService->camera() = m_cameraState;
-    }
+    Render::RenderCtrlService::instance().setCamera(m_cameraState);
 
     update();
 }

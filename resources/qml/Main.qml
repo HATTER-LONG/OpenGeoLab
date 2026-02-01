@@ -31,7 +31,15 @@ ApplicationWindow {
      * if no model is loaded.
      */
     function initializeScene() {
-        RenderService.refreshScene();
+        BackendService.request("RenderService", JSON.stringify({
+            action: "ViewPortControl",
+            view_ctrl: {
+                refresh: true
+            },
+            _meta: {
+                silent: true
+            }
+        }));
     }
     header: RibbonMenu.RibbonToolBar {
         id: ribbonToolBar
@@ -49,7 +57,6 @@ ApplicationWindow {
         GLViewport {
             id: glViewport
             anchors.fill: parent
-            renderService: RenderService
 
             // Viewport info overlay
             Rectangle {
@@ -68,7 +75,7 @@ ApplicationWindow {
                     spacing: 16
 
                     Label {
-                        text: RenderService.hasGeometry ? qsTr("Geometry loaded") : qsTr("No geometry")
+                        text: glViewport.hasGeometry ? qsTr("Geometry loaded") : qsTr("No geometry")
                         font.pixelSize: 11
                         color: "white"
                     }
@@ -92,18 +99,26 @@ ApplicationWindow {
         }
     }
 
-    // Handle geometry data changes from RenderService
+    // Handle geometry data changes from GLViewport (auto-fit)
     Connections {
-        target: RenderService
+        target: glViewport
         function onGeometryChanged() {
             // Auto-fit camera when geometry changes
-            RenderService.fitToScene();
+            BackendService.request("RenderService", JSON.stringify({
+                action: "ViewPortControl",
+                view_ctrl: {
+                    refresh: true
+                },
+                _meta: {
+                    silent: true
+                }
+            }));
         }
     }
 
     Pages.CornerOverlay {
         id: cornerOverlay
-        logService: LogService
+        logService: LogService // qmllint disable
     }
 
     // Container for floating function pages

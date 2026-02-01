@@ -6,10 +6,33 @@
 #include "backend_service.hpp"
 #include "service_worker.hpp"
 #include "util/logger.hpp"
+#include "util/progress_callback.hpp"
 
 #include <nlohmann/json.hpp>
 
+#include <kangaroo/util/component_factory.hpp>
+
 namespace OpenGeoLab::App {
+
+namespace {
+class NullProgressReporter final : public IProgressReporter {
+public:
+    void reportProgress(double /*progress*/, const std::string& /*message*/) override {}
+    void reportError(const std::string& /*error_message*/) override {}
+    [[nodiscard]] bool isCancelled() const override { return false; }
+};
+
+[[nodiscard]] bool isSilentRequest(const nlohmann::json& params) {
+    if(!params.is_object()) {
+        return false;
+    }
+    if(!params.contains("_meta") || !params["_meta"].is_object()) {
+        return false;
+    }
+    const auto& meta = params["_meta"];
+    return meta.contains("silent") && meta["silent"].is_boolean() && meta["silent"].get<bool>();
+}
+} // namespace
 
 BackendService::BackendService(QObject* parent) : QObject(parent) {}
 BackendService::~BackendService() { cleanupWorker(); }
@@ -19,11 +42,49 @@ double BackendService::progress() const { return m_progress; }
 QString BackendService::message() const { return m_message; }
 
 void BackendService::request(const QString& module_name, const QString& params) {
-    LOG_DEBUG("Backend request: module='{}'", qPrintable(module_name));
-
     if(module_name.trimmed().isEmpty()) {
         emit operationFailed(module_name,
                              QStringLiteral("Module name is empty. Aborting request."));
+        return;
+    }
+
+    // Parse JSON once here, then pass the parsed object to the worker
+    nlohmann::json param_json;
+    if(!params.trimmed().isEmpty()) {
+        try {
+            param_json = nlohmann::json::parse(params.toStdString());
+        } catch(const nlohmann::json::parse_error& e) {
+            emit operationFailed(module_name, QStringLiteral("Failed to parse params JSON: ") +
+                                                  QString::fromStdString(e.what()));
+            return;
+        }
+    }
+
+    const bool silent = isSilentRequest(param_json);
+    if(!silent) {
+        LOG_DEBUG("Backend request: module='{}'", qPrintable(module_name));
+        if(param_json.is_object() && !param_json.empty()) {
+            LOG_TRACE("Backend params: {}", param_json.dump(4));
+        }
+    }
+
+    // Silent requests are intended for frequent UI actions (e.g., view changes).
+    // They execute synchronously without progress overlay/log spam.
+    if(silent) {
+        try {
+            auto service = g_ComponentFactory.getInstanceObjectWithID<IServiceSingletonFactory>(
+                module_name.toStdString());
+            if(!service) {
+                throw std::runtime_error("Service factory not found for module: " +
+                                         module_name.toStdString());
+            }
+
+            auto reporter = std::make_shared<NullProgressReporter>();
+            (void)service->processRequest(module_name.toStdString(), param_json, reporter);
+        } catch(const std::exception& e) {
+            // Keep errors visible to logs, but don't trigger UI progress overlay.
+            LOG_ERROR("Silent backend error [{}]: {}", qPrintable(module_name), e.what());
+        }
         return;
     }
 
@@ -33,20 +94,6 @@ void BackendService::request(const QString& module_name, const QString& params) 
         return;
     }
     setBusyInternal(true);
-
-    // Parse JSON once here, then pass the parsed object to the worker
-    nlohmann::json param_json;
-    if(!params.trimmed().isEmpty()) {
-        try {
-            param_json = nlohmann::json::parse(params.toStdString());
-            LOG_TRACE("Backend params: {}", param_json.dump(4));
-        } catch(const nlohmann::json::parse_error& e) {
-            setBusyInternal(false);
-            emit operationFailed(module_name, QStringLiteral("Failed to parse params JSON: ") +
-                                                  QString::fromStdString(e.what()));
-            return;
-        }
-    }
 
     m_currentModuleName = module_name;
     m_cancelRequested.store(false);

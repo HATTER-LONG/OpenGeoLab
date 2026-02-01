@@ -23,6 +23,15 @@ Rectangle {
     height: 28
     radius: 4
     color: mouseArea.containsPress ? Theme.clicked : (mouseArea.containsMouse ? Theme.hovered : "transparent")
+    border.width: mouseArea.containsMouse ? 1 : 0
+    border.color: Theme.border
+
+    Behavior on color {
+        ColorAnimation {
+            duration: 120
+            easing.type: Easing.OutQuad
+        }
+    }
 
     ThemedIcon {
         anchors.centerIn: parent

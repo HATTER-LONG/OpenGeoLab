@@ -4,15 +4,16 @@
  *
  * GLViewport provides a QML-integrable 3D viewport that renders geometry
  * using OpenGL. It supports camera manipulation (rotate, pan, zoom) and
- * integrates with RenderService for scene management. The actual rendering
+ * integrates with RenderCtrlService for scene management. The actual rendering
  * is delegated to SceneRenderer from the render module.
  */
 
 #pragma once
 
-#include "app/render_service.hpp"
+#include "render/render_ctrl_service.hpp"
 #include "render/render_data.hpp"
 #include "render/scene_renderer.hpp"
+#include "util/signal.hpp"
 
 #include <QMatrix4x4>
 #include <QQuickFramebufferObject>
@@ -27,7 +28,7 @@ class GLViewportRenderer;
  * @brief QML-integrable OpenGL viewport for 3D geometry visualization
  *
  * GLViewport provides:
- * - OpenGL rendering of geometry from RenderService via SceneRenderer
+ * - OpenGL rendering of geometry from RenderCtrlService via SceneRenderer
  * - Mouse-based camera manipulation (orbit, pan, zoom)
  * - Integration with the application's render service
  *
@@ -38,8 +39,7 @@ class GLViewport : public QQuickFramebufferObject {
     Q_OBJECT
     QML_ELEMENT
 
-    Q_PROPERTY(Render::RenderService* renderService READ renderService WRITE setRenderService NOTIFY
-                   renderServiceChanged)
+    Q_PROPERTY(bool hasGeometry READ hasGeometry NOTIFY hasGeometryChanged)
 
 public:
     explicit GLViewport(QQuickItem* parent = nullptr);
@@ -51,17 +51,7 @@ public:
      */
     Renderer* createRenderer() const override;
 
-    /**
-     * @brief Get the associated render service
-     * @return Pointer to the render service
-     */
-    [[nodiscard]] Render::RenderService* renderService() const;
-
-    /**
-     * @brief Set the render service
-     * @param service Render service to use
-     */
-    void setRenderService(Render::RenderService* service);
+    [[nodiscard]] bool hasGeometry() const;
 
     /**
      * @brief Get current camera state for rendering
@@ -76,7 +66,8 @@ public:
     [[nodiscard]] const Render::DocumentRenderData& renderData() const;
 
 signals:
-    void renderServiceChanged();
+    void hasGeometryChanged();
+    void geometryChanged();
 
 protected:
     void mousePressEvent(QMouseEvent* event) override;
@@ -86,6 +77,7 @@ protected:
 
 private slots:
     void onSceneNeedsUpdate();
+    void onServiceGeometryChanged();
 
 private:
     /**
@@ -109,8 +101,13 @@ private:
     void zoomCamera(float delta);
 
 private:
-    Render::RenderService* m_renderService{nullptr}; ///< Associated render service
-    Render::CameraState m_cameraState;               ///< Local camera state copy
+    Render::CameraState m_cameraState; ///< Local camera state copy
+
+    bool m_hasGeometry{false};
+
+    Util::ScopedConnection m_sceneNeedsUpdateConn;
+    Util::ScopedConnection m_cameraChangedConn;
+    Util::ScopedConnection m_geometryChangedConn;
 
     QPointF m_lastMousePos;            ///< Last mouse position for delta calculation
     Qt::MouseButtons m_pressedButtons; ///< Currently pressed mouse buttons

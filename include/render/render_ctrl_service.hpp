@@ -2,7 +2,7 @@
  * @file render_service.hpp
  * @brief Render service interface for managing OpenGL scene rendering
  *
- * RenderService provides the bridge between the geometry layer and the
+ * RenderCtrlService provides the bridge between the geometry layer and the
  * OpenGL rendering system. It manages scene state, camera, and
  * coordinates render data updates when geometry changes.
  */
@@ -11,11 +11,11 @@
 
 #include "geometry/geometry_document.hpp"
 #include "render/render_data.hpp"
+#include "util/signal.hpp"
 
 #include <QMatrix4x4>
-#include <QObject>
 #include <QVector3D>
-#include <QtQml/qqml.h>
+#include <functional>
 
 namespace OpenGeoLab::Render {
 
@@ -58,23 +58,23 @@ struct CameraState {
 /**
  * @brief QML-exposed service for managing 3D scene rendering
  *
- * RenderService acts as the central coordinator for:
+ * RenderCtrlService acts as the central coordinator for:
  * - Managing the current scene's render data
  * - Camera state and manipulation
  * - Geometry change notifications to trigger redraws
  * - Selection state management (future)
  */
-class RenderService : public QObject {
-    Q_OBJECT
-    QML_ELEMENT
-    QML_SINGLETON
-
-    Q_PROPERTY(bool hasGeometry READ hasGeometry NOTIFY geometryChanged)
-    Q_PROPERTY(bool needsDefaultGeometry READ needsDefaultGeometry NOTIFY geometryChanged)
-
+class RenderCtrlService {
 public:
-    explicit RenderService(QObject* parent = nullptr);
-    ~RenderService() override;
+    static RenderCtrlService& instance();
+
+    RenderCtrlService(const RenderCtrlService&) = delete;
+    RenderCtrlService& operator=(const RenderCtrlService&) = delete;
+    RenderCtrlService(RenderCtrlService&&) = delete;
+    RenderCtrlService& operator=(RenderCtrlService&&) = delete;
+
+    RenderCtrlService();
+    ~RenderCtrlService();
 
     /**
      * @brief Check if any geometry is loaded
@@ -102,51 +102,82 @@ public:
     [[nodiscard]] const CameraState& camera() const;
 
     /**
+     * @brief Replace camera state and notify listeners
+     */
+    void setCamera(const CameraState& camera);
+
+    /**
      * @brief Request scene refresh
      *
      * Call this to trigger a render data update from the current document.
      */
-    Q_INVOKABLE void refreshScene();
+    void refreshScene();
 
     /**
      * @brief Fit camera to view all geometry
      */
-    Q_INVOKABLE void fitToScene();
+    void fitToScene();
 
     /**
      * @brief Reset camera to default view
      */
-    Q_INVOKABLE void resetCamera();
+    void resetCamera();
 
     /**
      * @brief Create default box geometry for empty scene
      *
      * Creates a simple box to display when no model is loaded.
      */
-    Q_INVOKABLE void createDefaultGeometry();
+    void createDefaultGeometry();
 
-signals:
-    /// Emitted when geometry data changes and viewport needs redraw
-    void geometryChanged();
+    /**
+     * @brief Set camera to front view (looking along -Z axis)
+     */
+    void setFrontView();
 
-    /// Emitted when camera state changes
-    void cameraChanged();
+    /**
+     * @brief Set camera to top view (looking along -Y axis)
+     */
+    void setTopView();
 
-    /// Emitted when scene needs to be redrawn
-    void sceneNeedsUpdate();
+    /**
+     * @brief Set camera to left view (looking along +X axis)
+     */
+    void setLeftView();
 
-private slots:
-    void onDocumentGeometryChanged(const Geometry::GeometryChangeEvent& event);
+    /**
+     * @brief Set camera to right view (looking along -X axis)
+     */
+    void setRightView();
+
+    void setBackView();
+    void setBottomView();
+
+    // ---------------------------------------------------------------------
+    // Signals (Util::Signal based)
+    // ---------------------------------------------------------------------
+
+    [[nodiscard]] Util::ScopedConnection subscribeGeometryChanged(std::function<void()> callback);
+
+    [[nodiscard]] Util::ScopedConnection subscribeCameraChanged(std::function<void()> callback);
+
+    [[nodiscard]] Util::ScopedConnection subscribeSceneNeedsUpdate(std::function<void()> callback);
 
 private:
     void subscribeToCurrentDocument();
     void updateRenderData();
+
+    void handleDocumentGeometryChanged(const Geometry::GeometryChangeEvent& event);
 
 private:
     DocumentRenderData m_renderData;             ///< Current scene render data
     CameraState m_camera;                        ///< Camera state
     Util::ScopedConnection m_documentConnection; ///< Connection to document changes
     bool m_hasGeometry{false};                   ///< Whether geometry is loaded
+
+    Util::Signal<> m_geometryChanged;
+    Util::Signal<> m_cameraChanged;
+    Util::Signal<> m_sceneNeedsUpdate;
 };
 
 } // namespace OpenGeoLab::Render
