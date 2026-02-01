@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Layouts
 import OpenGeoLab 1.0
 import "RibbonMenu" as RibbonMenu
 import "Pages" as Pages
@@ -8,6 +9,9 @@ import "Pages" as Pages
 /**
  * @file Main.qml
  * @brief Main application window
+ *
+ * Contains the main layout with ribbon toolbar, document sidebar,
+ * OpenGL viewport, and view controls.
  */
 ApplicationWindow {
     id: root
@@ -40,15 +44,29 @@ ApplicationWindow {
         }
     }
 
-    // Main content area with OpenGL viewport
+    // Main content area with sidebar and viewport
     Item {
         id: contentArea
         anchors.fill: parent
 
+        // Document sidebar on the left
+        DocumentSidebar {
+            id: documentSidebar
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            anchors.left: parent.left
+            z: 5
+            documentService: DocumentService
+            renderService: RenderService
+        }
+
         // OpenGL 3D Viewport
         GLViewport {
             id: glViewport
-            anchors.fill: parent
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            anchors.left: documentSidebar.right
+            anchors.right: parent.right
             renderService: RenderService
 
             // Viewport info overlay
@@ -74,7 +92,7 @@ ApplicationWindow {
                     }
 
                     Label {
-                        text: qsTr("LMB: Rotate | MMB: Pan | RMB/Wheel: Zoom")
+                        text: qsTr("Ctrl+LMB: Rotate | MMB: Pan | RMB/Wheel: Zoom")
                         font.pixelSize: 11
                         color: Qt.rgba(1, 1, 1, 0.7)
                     }
@@ -82,27 +100,19 @@ ApplicationWindow {
             }
         }
 
-        // Toolbar for viewport controls
-        Row {
+        // View toolbar for viewport controls
+        ViewToolbar {
+            id: viewToolbar
             anchors.top: parent.top
             anchors.right: parent.right
             anchors.margins: 8
-            spacing: 4
             z: 10
 
-            Button {
-                text: qsTr("Fit")
-                onClicked: RenderService.fitToScene()
-                ToolTip.visible: hovered
-                ToolTip.text: qsTr("Fit view to scene")
-            }
-
-            Button {
-                text: qsTr("Reset")
-                onClicked: RenderService.resetCamera()
-                ToolTip.visible: hovered
-                ToolTip.text: qsTr("Reset camera to default")
-            }
+            onFitRequested: RenderService.fitToScene()
+            onFrontViewRequested: RenderService.setFrontView()
+            onTopViewRequested: RenderService.setTopView()
+            onLeftViewRequested: RenderService.setLeftView()
+            onRightViewRequested: RenderService.setRightView()
         }
     }
 

@@ -78,6 +78,7 @@ void GLViewport::onSceneNeedsUpdate() {
 void GLViewport::mousePressEvent(QMouseEvent* event) {
     m_lastMousePos = event->position();
     m_pressedButtons = event->buttons();
+    m_pressedModifiers = event->modifiers();
     event->accept();
 }
 
@@ -85,8 +86,8 @@ void GLViewport::mouseMoveEvent(QMouseEvent* event) {
     const QPointF delta = event->position() - m_lastMousePos;
     m_lastMousePos = event->position();
 
-    if(m_pressedButtons & Qt::LeftButton) {
-        // Left button: orbit
+    if((m_pressedButtons & Qt::LeftButton) && (m_pressedModifiers & Qt::ControlModifier)) {
+        // Ctrl + Left button: orbit
         orbitCamera(static_cast<float>(delta.x()), static_cast<float>(delta.y()));
     } else if(m_pressedButtons & Qt::MiddleButton) {
         // Middle button: pan
@@ -101,6 +102,7 @@ void GLViewport::mouseMoveEvent(QMouseEvent* event) {
 
 void GLViewport::mouseReleaseEvent(QMouseEvent* event) {
     m_pressedButtons = event->buttons();
+    m_pressedModifiers = event->modifiers();
     event->accept();
 }
 

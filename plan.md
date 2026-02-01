@@ -7,9 +7,8 @@
 # 计划任务
 
 1. 了解当前实现，按如下要求完成开发：
-   - Geometry 对外的信号应当允许 geometry manager 控制，当 new document 时可以直接创建一个 document 并继承之前订阅者，完善 new model 功能。
-   - 简化 opengl_viewport，只保留与 qml 交互相关接口，渲染的代码逻辑放到 render 中的源码中，自成组件，参考 reader 与 geometry service 组件。
-   - 检查所有 cpp hpp 代码，优化日志记录，关键代码处增加日志输出，按照要求增加 trace debug info warning error 等日志输出，不要刷屏、滥用。
+   - UI 主窗口左侧实现一个侧边栏，显示当前 document 的 part name id，以及包括了子类型的数量。
+   - 修改旋转模型为 ctrl + 鼠标左键，并在界面当前 reset fit 的位置实现一个工具栏要注意美观，Fit、主、顶、左、右视图按钮，生成必要的 icon 不要直接写文字。
 2. 检查工程中所有的 qml cpp hpp 代码，完善或补充注释信息，当前注释不符合要求的也要进行修改。所有注释信息参考  doxygen_comment_style.md 文件中的要求进行编写。
 3. 完成前边修改后，仔细阅读项目中所有 qml cpp 代码，思考实现软件主题功能的前提下，代码是否足够清晰，重构不合理的代码以及架构。
 4. 保证最终代码可以编译通过，并正确执行。

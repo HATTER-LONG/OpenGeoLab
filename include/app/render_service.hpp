@@ -125,6 +125,26 @@ public:
      */
     Q_INVOKABLE void createDefaultGeometry();
 
+    /**
+     * @brief Set camera to front view (looking along -Z axis)
+     */
+    Q_INVOKABLE void setFrontView();
+
+    /**
+     * @brief Set camera to top view (looking along -Y axis)
+     */
+    Q_INVOKABLE void setTopView();
+
+    /**
+     * @brief Set camera to left view (looking along +X axis)
+     */
+    Q_INVOKABLE void setLeftView();
+
+    /**
+     * @brief Set camera to right view (looking along -X axis)
+     */
+    Q_INVOKABLE void setRightView();
+
 signals:
     /// Emitted when geometry data changes and viewport needs redraw
     void geometryChanged();

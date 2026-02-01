@@ -183,6 +183,9 @@ qt_add_qml_module(
   resources/qml/MainPages.qml
   resources/qml/Theme.qml
   resources/qml/ThemedIcon.qml
+  resources/qml/DocumentSidebar.qml
+  resources/qml/ViewToolbar.qml
+  resources/qml/ViewToolButton.qml
   resources/qml/RibbonMenu/RibbonToolBar.qml
   resources/qml/RibbonMenu/RibbonFileMenu.qml
   resources/qml/RibbonMenu/RibbonFileMenuButton.qml
@@ -261,9 +264,8 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE SPDLOG_ACTIVE_LEVEL=SPDLOG_LE
 # ==============================================================================
 
 target_include_directories(
-  ${PROJECT_NAME}
-  PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include"
-          "${CMAKE_CURRENT_SOURCE_DIR}/include/app" # For Qt moc generated code
+  ${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include"
+                          "${CMAKE_CURRENT_SOURCE_DIR}/include/app" # For Qt moc generated code
 )
 
 # ==============================================================================

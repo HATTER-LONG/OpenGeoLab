@@ -136,6 +136,42 @@ void RenderService::createDefaultGeometry() {
     }
 }
 
+void RenderService::setFrontView() {
+    LOG_DEBUG("RenderService: Setting front view");
+    // Camera looks along -Z axis at the target
+    const float distance = (m_camera.m_position - m_camera.m_target).length();
+    m_camera.m_position = m_camera.m_target + QVector3D(0.0f, 0.0f, distance);
+    m_camera.m_up = QVector3D(0.0f, 1.0f, 0.0f);
+    emit cameraChanged();
+}
+
+void RenderService::setTopView() {
+    LOG_DEBUG("RenderService: Setting top view");
+    // Camera looks along -Y axis at the target
+    const float distance = (m_camera.m_position - m_camera.m_target).length();
+    m_camera.m_position = m_camera.m_target + QVector3D(0.0f, distance, 0.0f);
+    m_camera.m_up = QVector3D(0.0f, 0.0f, -1.0f);
+    emit cameraChanged();
+}
+
+void RenderService::setLeftView() {
+    LOG_DEBUG("RenderService: Setting left view");
+    // Camera looks along +X axis at the target
+    const float distance = (m_camera.m_position - m_camera.m_target).length();
+    m_camera.m_position = m_camera.m_target + QVector3D(-distance, 0.0f, 0.0f);
+    m_camera.m_up = QVector3D(0.0f, 1.0f, 0.0f);
+    emit cameraChanged();
+}
+
+void RenderService::setRightView() {
+    LOG_DEBUG("RenderService: Setting right view");
+    // Camera looks along -X axis at the target
+    const float distance = (m_camera.m_position - m_camera.m_target).length();
+    m_camera.m_position = m_camera.m_target + QVector3D(distance, 0.0f, 0.0f);
+    m_camera.m_up = QVector3D(0.0f, 1.0f, 0.0f);
+    emit cameraChanged();
+}
+
 void RenderService::onDocumentGeometryChanged(const Geometry::GeometryChangeEvent& event) {
     LOG_DEBUG("RenderService: Document geometry changed, type={}", static_cast<int>(event.m_type));
     updateRenderData();

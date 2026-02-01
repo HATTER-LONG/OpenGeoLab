@@ -96,10 +96,6 @@ public:
 
     [[nodiscard]] GeometryEntityPtr findByShape(const TopoDS_Shape& shape) const;
 
-    [[nodiscard]] size_t entityCount() const;
-
-    [[nodiscard]] size_t entityCountByType(EntityType entity_type) const;
-
     /**
      * @brief Get all entities of a specific type.
      * @param entity_type Type to filter by.
@@ -186,6 +182,16 @@ public:
     void invalidateRenderData() override;
 
     // =========================================================================
+    // Entity Query (GeometryDocument interface)
+    // =========================================================================
+
+    [[nodiscard]] size_t entityCount() const override;
+
+    [[nodiscard]] size_t entityCountByType(EntityType type) const override;
+
+    [[nodiscard]] std::vector<PartSummary> getPartSummaries() override;
+
+    // =========================================================================
     // Change Notification (GeometryDocument interface)
     // =========================================================================
 
@@ -241,6 +247,11 @@ private:
     mutable Render::DocumentRenderData m_cachedRenderData;
     mutable bool m_renderDataValid{false};
     mutable std::mutex m_renderDataMutex;
+
+    /// Cached part summaries
+    mutable std::vector<PartSummary> m_cachedPartSummaries;
+    mutable bool m_partSummariesValid{false};
+    mutable std::mutex m_partSummariesMutex;
 };
 
 } // namespace OpenGeoLab::Geometry

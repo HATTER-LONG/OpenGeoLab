@@ -112,8 +112,9 @@ private:
     Render::RenderService* m_renderService{nullptr}; ///< Associated render service
     Render::CameraState m_cameraState;               ///< Local camera state copy
 
-    QPointF m_lastMousePos;            ///< Last mouse position for delta calculation
-    Qt::MouseButtons m_pressedButtons; ///< Currently pressed mouse buttons
+    QPointF m_lastMousePos;                   ///< Last mouse position for delta calculation
+    Qt::MouseButtons m_pressedButtons;        ///< Currently pressed mouse buttons
+    Qt::KeyboardModifiers m_pressedModifiers; ///< Currently pressed keyboard modifiers
 };
 
 /**

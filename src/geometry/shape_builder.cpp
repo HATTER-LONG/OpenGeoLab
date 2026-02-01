@@ -119,10 +119,15 @@ void ShapeBuilder::buildRelationships(const TopoDS_Shape& root_shape,
                                       const GeometryEntityPtr& root_entity) {
     // Find the root shape's index and connect it to part
     const int root_index = shape_map.FindIndex(root_shape);
+    LOG_DEBUG("ShapeBuilder::buildRelationships: root_index={}, root_entity id={}, type={}",
+              root_index, root_entity->entityId(), static_cast<int>(root_entity->entityType()));
+
     if(root_index > 0) {
         auto it = shape_entity_map.find(root_index);
         if(it != shape_entity_map.end()) {
-            (void)root_entity->addChild(it->second);
+            bool added = root_entity->addChild(it->second);
+            LOG_DEBUG("ShapeBuilder: Adding child {} (type={}) to Part, result={}",
+                      it->second->entityId(), static_cast<int>(it->second->entityType()), added);
             // Now recursively build child relationships starting from root shape
             buildChildRelationships(root_shape, it->second, shape_map, shape_entity_map);
             return;
@@ -131,6 +136,7 @@ void ShapeBuilder::buildRelationships(const TopoDS_Shape& root_shape,
 
     // Root shape itself might not be in map (e.g., if it's the Part shape)
     // In this case, process direct children of root shape
+    LOG_DEBUG("ShapeBuilder: Root shape not in map, processing direct children");
     for(TopoDS_Iterator it(root_shape); it.More(); it.Next()) {
         const TopoDS_Shape& child_shape = it.Value();
         const int child_index = shape_map.FindIndex(child_shape);
@@ -154,6 +160,7 @@ void ShapeBuilder::buildChildRelationships(const TopoDS_Shape& parent_shape, // 
                                            const TopTools_IndexedMapOfShape& shape_map,
                                            const ShapeEntityMap& shape_entity_map) {
     // Iterate through direct children of this shape
+    int child_count = 0;
     for(TopoDS_Iterator it(parent_shape); it.More(); it.Next()) {
         const TopoDS_Shape& child_shape = it.Value();
         const int child_index = shape_map.FindIndex(child_shape);
@@ -169,11 +176,17 @@ void ShapeBuilder::buildChildRelationships(const TopoDS_Shape& parent_shape, // 
 
         // Add parent-child relationship
         // Note: This may add multiple parents to the same child (shared edges/vertices)
-        (void)parent_entity->addChild(entity_it->second);
+        bool added = parent_entity->addChild(entity_it->second);
+        if(added) {
+            ++child_count;
+        }
 
         // Recursively process children
         buildChildRelationships(child_shape, entity_it->second, shape_map, shape_entity_map);
     }
+    LOG_TRACE("ShapeBuilder: Entity {} (type={}) has {} direct children added",
+              parent_entity->entityId(), static_cast<int>(parent_entity->entityType()),
+              child_count);
 }
 
 void ShapeBuilder::updateEntityCounts(const TopoDS_Shape& shape, ShapeBuildResult& result) {

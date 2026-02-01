@@ -137,6 +137,44 @@ public:
     virtual void invalidateRenderData() = 0;
 
     // -------------------------------------------------------------------------
+    // Entity Query
+    // -------------------------------------------------------------------------
+
+    /**
+     * @brief Get total entity count in the document
+     * @return Number of entities
+     */
+    [[nodiscard]] virtual size_t entityCount() const = 0;
+
+    /**
+     * @brief Get entity count by type
+     * @param type Entity type to count
+     * @return Number of entities of the specified type
+     */
+    [[nodiscard]] virtual size_t entityCountByType(EntityType type) const = 0;
+
+    /**
+     * @brief Information about a Part entity for UI display
+     */
+    struct PartSummary {
+        EntityId m_entityId{INVALID_ENTITY_ID}; ///< Part entity ID
+        std::string m_name;                     ///< Part display name
+        size_t m_vertexCount{0};                ///< Number of vertex descendants
+        size_t m_edgeCount{0};                  ///< Number of edge descendants
+        size_t m_wireCount{0};                  ///< Number of wire descendants
+        size_t m_faceCount{0};                  ///< Number of face descendants
+        size_t m_shellCount{0};                 ///< Number of shell descendants
+        size_t m_solidCount{0};                 ///< Number of solid descendants
+    };
+
+    /**
+     * @brief Get summary information for all Part entities
+     * @return Vector of PartSummary for each Part in the document
+     * @note This method caches results internally for efficiency
+     */
+    [[nodiscard]] virtual std::vector<PartSummary> getPartSummaries() = 0;
+
+    // -------------------------------------------------------------------------
     // Change Notification
     // -------------------------------------------------------------------------
 

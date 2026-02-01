@@ -319,21 +319,33 @@ GeometryDocumentImpl::findRelatedEntities(EntityId edge_entity_id, EntityType re
 
 bool GeometryDocumentImpl::addChildEdge(EntityId parent_id, EntityId child_id) {
     if(parent_id == INVALID_ENTITY_ID || child_id == INVALID_ENTITY_ID) {
+        LOG_WARN("addChildEdge: Invalid entity IDs: parent={}, child={}", parent_id, child_id);
         return false;
     }
     if(parent_id == child_id) {
+        LOG_WARN("addChildEdge: Self-loop attempted: id={}", parent_id);
         return false;
     }
 
     const auto parent = findById(parent_id);
     const auto child = findById(child_id);
     if(!parent || !child) {
+        LOG_WARN("addChildEdge: Entity not found: parent={} ({}), child={} ({})", parent_id,
+                 parent ? "found" : "missing", child_id, child ? "found" : "missing");
         return false;
     }
 
     // Enforce type-level relationship constraints.
-    if(!parent->canAddChildType(child->entityType()) ||
-       !child->canAddParentType(parent->entityType())) {
+    bool can_add_child = parent->canAddChildType(child->entityType());
+    bool can_add_parent = child->canAddParentType(parent->entityType());
+
+    if(!can_add_child || !can_add_parent) {
+        // Additional debug for Part entities
+        EntityType parent_shape_type = GeometryEntity::detectEntityType(parent->shape());
+        LOG_DEBUG("addChildEdge: Type constraint failed: parent type={} (shape_type={}), "
+                  "child type={}, canAddChild={}, canAddParent={}",
+                  static_cast<int>(parent->entityType()), static_cast<int>(parent_shape_type),
+                  static_cast<int>(child->entityType()), can_add_child, can_add_parent);
         return false;
     }
 
@@ -494,8 +506,62 @@ GeometryDocumentImpl::getRenderData(const Render::TessellationOptions& options) 
 }
 
 void GeometryDocumentImpl::invalidateRenderData() {
-    std::lock_guard<std::mutex> lock(m_renderDataMutex);
-    m_renderDataValid = false;
+    {
+        std::lock_guard<std::mutex> lock(m_renderDataMutex);
+        m_renderDataValid = false;
+    }
+    {
+        std::lock_guard<std::mutex> lock(m_partSummariesMutex);
+        m_partSummariesValid = false;
+    }
+}
+
+std::vector<GeometryDocument::PartSummary> GeometryDocumentImpl::getPartSummaries() {
+    std::lock_guard<std::mutex> lock(m_partSummariesMutex);
+
+    if(m_partSummariesValid) {
+        return m_cachedPartSummaries;
+    }
+
+    m_cachedPartSummaries.clear();
+
+    // Get all Part entities
+    auto parts = entitiesByType(EntityType::Part);
+    LOG_DEBUG("getPartSummaries: Found {} parts in document", parts.size());
+
+    for(const auto& part : parts) {
+        PartSummary summary;
+        summary.m_entityId = part->entityId();
+        summary.m_name = part->name();
+
+        // Debug: check Part's direct children
+        LOG_DEBUG("getPartSummaries: Part '{}' (id={}) has {} direct children", part->name(),
+                  part->entityId(), part->childCount());
+
+        // Count descendants of each type
+        auto vertices = findDescendants(part->entityId(), EntityType::Vertex);
+        auto edges = findDescendants(part->entityId(), EntityType::Edge);
+        auto wires = findDescendants(part->entityId(), EntityType::Wire);
+        auto faces = findDescendants(part->entityId(), EntityType::Face);
+        auto shells = findDescendants(part->entityId(), EntityType::Shell);
+        auto solids = findDescendants(part->entityId(), EntityType::Solid);
+
+        summary.m_vertexCount = vertices.size();
+        summary.m_edgeCount = edges.size();
+        summary.m_wireCount = wires.size();
+        summary.m_faceCount = faces.size();
+        summary.m_shellCount = shells.size();
+        summary.m_solidCount = solids.size();
+
+        m_cachedPartSummaries.push_back(summary);
+
+        LOG_TRACE("getPartSummaries: Part '{}' (id={}) has {} vertices, {} edges, {} faces",
+                  summary.m_name, summary.m_entityId, summary.m_vertexCount, summary.m_edgeCount,
+                  summary.m_faceCount);
+    }
+
+    m_partSummariesValid = true;
+    return m_cachedPartSummaries;
 }
 
 Render::RenderMesh
