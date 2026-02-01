@@ -13,9 +13,9 @@ import OpenGeoLab 1.0
 Rectangle {
     id: viewToolbar
 
-    implicitWidth: buttonRow.implicitWidth + 18
-    implicitHeight: 34
-    radius: 8
+    implicitWidth: buttonRow.implicitWidth + 20
+    implicitHeight: 40
+    radius: 10
     color: Qt.rgba(Theme.surfaceAlt.r, Theme.surfaceAlt.g, Theme.surfaceAlt.b, 0.88)
     border.width: 1
     border.color: Theme.border
@@ -42,7 +42,7 @@ Rectangle {
         // Fit button
         ViewToolButton {
             iconSource: "qrc:/opengeolab/resources/icons/view_fit.svg"
-            toolTipText: qsTr("Fit to scene (F)")
+            toolTipText: qsTr("Fit to scene")
             onClicked: viewToolbar.send("ViewPortControl", {
                 view_ctrl: {
                     fit: true

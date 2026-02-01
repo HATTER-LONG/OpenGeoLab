@@ -1,6 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-  <path d="M4 8 L12 4 L20 8 L20 16 L12 20 L4 16 Z"/>
-  <line x1="4" y1="8" x2="12" y2="12"/>
-  <line x1="12" y1="12" x2="20" y2="8"/>
-  <line x1="12" y1="12" x2="12" y2="20"/>
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <!-- cube outline -->
+  <rect x="7" y="10" width="10" height="9" rx="1"
+    fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+  <path d="M7 10l4-4h10l-4 4z"
+    fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+  <path d="M17 10v9l4-4V6"
+    fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+
+  <!-- downward arrow (top view) -->
+  <path d="M12 3v4M9.5 5.5L12 8l2.5-2.5"
+    fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+    stroke-linejoin="round"/>
 </svg>

@@ -107,7 +107,7 @@ ApplicationWindow {
             BackendService.request("RenderService", JSON.stringify({
                 action: "ViewPortControl",
                 view_ctrl: {
-                    refresh: true
+                    fit: true
                 },
                 _meta: {
                     silent: true
