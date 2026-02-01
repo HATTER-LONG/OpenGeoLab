@@ -1,3 +1,8 @@
+/**
+ * @file ProgressOverlay.qml
+ * @brief Progress overlay component for backend operations
+ */
+
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls

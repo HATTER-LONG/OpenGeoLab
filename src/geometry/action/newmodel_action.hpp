@@ -1,5 +1,5 @@
 /**
- * @file new_model_action.hpp
+ * @file newmodel_action.hpp
  * @brief Action for creating a new empty model
  *
  * NewModelAction clears the current document and creates a fresh empty model.

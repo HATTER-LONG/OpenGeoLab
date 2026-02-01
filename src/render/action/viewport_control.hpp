@@ -1,11 +1,22 @@
+/**
+ * @file viewport_control.hpp
+ * @brief Render action for controlling viewport camera presets and refresh
+ */
+
 #pragma once
 
 #include "render/render_action.hpp"
 
 namespace OpenGeoLab::Render {
 
+/**
+ * @brief Predefined camera view presets
+ */
 enum class ViewPreset { Front = 0, Back = 1, Left = 2, Right = 3, Top = 4, Bottom = 5 };
 
+/**
+ * @brief Render action that controls camera presets or triggers a refresh
+ */
 class ViewPortControl : public RenderActionBase {
 public:
     ViewPortControl() = default;

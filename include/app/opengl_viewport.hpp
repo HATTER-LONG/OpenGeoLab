@@ -4,16 +4,17 @@
  *
  * GLViewport provides a QML-integrable 3D viewport that renders geometry
  * using OpenGL. It supports camera manipulation (rotate, pan, zoom) and
- * integrates with RenderCtrlService for scene management. The actual rendering
+ * integrates with RenderSceneController for scene management. The actual rendering
  * is delegated to SceneRenderer from the render module.
  */
 
 #pragma once
 
-#include "render/render_ctrl_service.hpp"
 #include "render/render_data.hpp"
+#include "render/render_scene_controller.hpp"
 #include "render/scene_renderer.hpp"
 #include "util/signal.hpp"
+
 
 #include <QMatrix4x4>
 #include <QQuickFramebufferObject>
@@ -28,7 +29,7 @@ class GLViewportRenderer;
  * @brief QML-integrable OpenGL viewport for 3D geometry visualization
  *
  * GLViewport provides:
- * - OpenGL rendering of geometry from RenderCtrlService via SceneRenderer
+ * - OpenGL rendering of geometry from RenderSceneController via SceneRenderer
  * - Mouse-based camera manipulation (orbit, pan, zoom)
  * - Integration with the application's render service
  *

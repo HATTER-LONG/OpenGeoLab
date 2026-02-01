@@ -2,7 +2,7 @@
  * @file ViewToolbar.qml
  * @brief Viewport control toolbar with view preset buttons
  *
- * Provides buttons for camera view presets (Fit, Front, Top, Left, Right)
+ * Provides buttons for camera view presets (Fit, Front, Back, Top, Bottom, Left, Right)
  * with icons. Positioned at the top-right of the viewport.
  */
 pragma ComponentBehavior: Bound
@@ -20,6 +20,11 @@ Rectangle {
     border.width: 1
     border.color: Theme.border
 
+    /**
+     * @brief Send a render action request
+     * @param actionName Render action id
+     * @param payload JSON payload object (merged into request)
+     */
     function send(actionName, payload) {
         const requestObj = payload || {};
         requestObj.action = actionName;
@@ -28,14 +33,7 @@ Rectangle {
         };
         BackendService.request("RenderService", JSON.stringify(requestObj));
     }
-    enum ViewPreset {
-        Front = 0,
-        Back = 1,
-        Left = 2,
-        Right = 3,
-        Top = 4,
-        Bottom = 5
-    }
+
     RowLayout {
         id: buttonRow
         anchors.centerIn: parent
@@ -45,13 +43,11 @@ Rectangle {
         ViewToolButton {
             iconSource: "qrc:/opengeolab/resources/icons/view_fit.svg"
             toolTipText: qsTr("Fit to scene (F)")
-            onClicked: {
-                viewToolbar.send("ViewPortControl", {
-                    view_ctrl: {
-                        refresh: true
-                    }
-                });
-            }
+            onClicked: viewToolbar.send("ViewPortControl", {
+                view_ctrl: {
+                    fit: true
+                }
+            })
         }
 
         // Separator
@@ -62,7 +58,14 @@ Rectangle {
             Layout.alignment: Qt.AlignVCenter
         }
 
+        // Front = 0,
+        // Back = 1,
+        // Left = 2,
+        // Right = 3,
+        // Top = 4,
+        // Bottom = 5
         // Front view
+
         ViewToolButton {
             iconSource: "qrc:/opengeolab/resources/icons/view_front.svg"
             toolTipText: qsTr("Front view")
@@ -72,9 +75,10 @@ Rectangle {
                 }
             })
         }
-        //Back view
+
+        // Back view
         ViewToolButton {
-            iconSource: "qrc:/opengeolab/resources/icons/view_bottom.svg"
+            iconSource: "qrc:/opengeolab/resources/icons/view_back.svg"
             toolTipText: qsTr("Back view")
             onClicked: viewToolbar.send("ViewPortControl", {
                 view_ctrl: {
@@ -82,6 +86,7 @@ Rectangle {
                 }
             })
         }
+
         // Top view
         ViewToolButton {
             iconSource: "qrc:/opengeolab/resources/icons/view_top.svg"

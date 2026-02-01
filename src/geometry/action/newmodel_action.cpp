@@ -1,5 +1,5 @@
 /**
- * @file new_model_action.cpp
+ * @file newmodel_action.cpp
  * @brief Implementation of new model action
  */
 

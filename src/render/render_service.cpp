@@ -1,3 +1,8 @@
+/**
+ * @file render_service.cpp
+ * @brief Implementation of RenderService for dispatching render actions
+ */
+
 #include "render/render_service.hpp"
 #include "action/viewport_control.hpp"
 

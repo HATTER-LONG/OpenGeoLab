@@ -1,5 +1,10 @@
+/**
+ * @file viewport_control.cpp
+ * @brief Implementation of ViewPortControl render action
+ */
+
 #include "viewport_control.hpp"
-#include "render/render_ctrl_service.hpp"
+#include "render/render_scene_controller.hpp"
 
 namespace OpenGeoLab::Render {
 nlohmann::json ViewPortControl::execute(const nlohmann::json& params,
@@ -15,8 +20,10 @@ nlohmann::json ViewPortControl::execute(const nlohmann::json& params,
         applyPreset(view);
     } else if(view_ctrl.contains("refresh") && view_ctrl["refresh"].is_boolean() &&
               view_ctrl["refresh"].get<bool>()) {
-        auto& render_service = RenderCtrlService::instance();
-        render_service.refreshScene();
+        RenderSceneController::instance().refreshScene();
+    } else if(view_ctrl.contains("fit") && view_ctrl["fit"].is_boolean() &&
+              view_ctrl["fit"].get<bool>()) {
+        RenderSceneController::instance().fitToScene();
     } else {
         throw std::runtime_error("Unsupported or missing view control action.");
     }
@@ -24,7 +31,7 @@ nlohmann::json ViewPortControl::execute(const nlohmann::json& params,
 }
 
 void ViewPortControl::applyPreset(ViewPreset preset) {
-    auto& render_service = RenderCtrlService::instance();
+    auto& render_service = RenderSceneController::instance();
 
     switch(preset) {
     case ViewPreset::Front:

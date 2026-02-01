@@ -24,18 +24,18 @@ GLViewport::GLViewport(QQuickItem* parent) : QQuickFramebufferObject(parent) {
     setFlag(ItemHasContents, true);
     setMirrorVertically(true);
 
-    auto& render_ctrl_service = Render::RenderCtrlService::instance();
-    m_cameraState = render_ctrl_service.camera();
-    m_hasGeometry = render_ctrl_service.hasGeometry();
+    auto& scene_controller = Render::RenderSceneController::instance();
+    m_cameraState = scene_controller.camera();
+    m_hasGeometry = scene_controller.hasGeometry();
 
     // Bridge service events (Util::Signal) onto the Qt/GUI thread
-    m_sceneNeedsUpdateConn = render_ctrl_service.subscribeSceneNeedsUpdate([this]() {
+    m_sceneNeedsUpdateConn = scene_controller.subscribeSceneNeedsUpdate([this]() {
         QMetaObject::invokeMethod(this, &GLViewport::onSceneNeedsUpdate, Qt::QueuedConnection);
     });
-    m_cameraChangedConn = render_ctrl_service.subscribeCameraChanged([this]() {
+    m_cameraChangedConn = scene_controller.subscribeCameraChanged([this]() {
         QMetaObject::invokeMethod(this, &GLViewport::onSceneNeedsUpdate, Qt::QueuedConnection);
     });
-    m_geometryChangedConn = render_ctrl_service.subscribeGeometryChanged([this]() {
+    m_geometryChangedConn = scene_controller.subscribeGeometryChanged([this]() {
         QMetaObject::invokeMethod(this, &GLViewport::onServiceGeometryChanged,
                                   Qt::QueuedConnection);
     });
@@ -55,16 +55,16 @@ const Render::CameraState& GLViewport::cameraState() const { return m_cameraStat
 
 const Render::DocumentRenderData& GLViewport::renderData() const {
     static Render::DocumentRenderData empty;
-    return Render::RenderCtrlService::instance().renderData();
+    return Render::RenderSceneController::instance().renderData();
 }
 
 void GLViewport::onSceneNeedsUpdate() {
-    m_cameraState = Render::RenderCtrlService::instance().camera();
+    m_cameraState = Render::RenderSceneController::instance().camera();
     update();
 }
 
 void GLViewport::onServiceGeometryChanged() {
-    const bool new_has_geometry = Render::RenderCtrlService::instance().hasGeometry();
+    const bool new_has_geometry = Render::RenderSceneController::instance().hasGeometry();
     if(new_has_geometry != m_hasGeometry) {
         m_hasGeometry = new_has_geometry;
         emit hasGeometryChanged();
@@ -136,7 +136,7 @@ void GLViewport::orbitCamera(float dx, float dy) {
 
     m_cameraState.m_position = m_cameraState.m_target + direction;
 
-    Render::RenderCtrlService::instance().setCamera(m_cameraState);
+    Render::RenderSceneController::instance().setCamera(m_cameraState);
     update();
 }
 
@@ -156,7 +156,7 @@ void GLViewport::panCamera(float dx, float dy) {
     m_cameraState.m_position += pan;
     m_cameraState.m_target += pan;
 
-    Render::RenderCtrlService::instance().setCamera(m_cameraState);
+    Render::RenderSceneController::instance().setCamera(m_cameraState);
 
     update();
 }
@@ -174,7 +174,7 @@ void GLViewport::zoomCamera(float delta) {
     direction = direction.normalized() * distance;
     m_cameraState.m_position = m_cameraState.m_target + direction;
 
-    Render::RenderCtrlService::instance().setCamera(m_cameraState);
+    Render::RenderSceneController::instance().setCamera(m_cameraState);
 
     update();
 }

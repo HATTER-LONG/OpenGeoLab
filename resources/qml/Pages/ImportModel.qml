@@ -1,3 +1,8 @@
+/**
+ * @file ImportModel.qml
+ * @brief File dialog page for importing 3D model files
+ */
+
 import QtQuick
 import QtQuick.Dialogs
 import OpenGeoLab 1.0 as OGL

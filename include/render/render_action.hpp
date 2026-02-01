@@ -1,3 +1,11 @@
+/**
+ * @file render_action.hpp
+ * @brief Base classes for render action commands
+ *
+ * Render actions are dispatched by RenderService and typically operate on
+ * RenderSceneController to modify viewport/camera/render state.
+ */
+
 #pragma once
 
 #include "util/progress_callback.hpp"
@@ -6,6 +14,10 @@
 #include <nlohmann/json.hpp>
 
 namespace OpenGeoLab::Render {
+
+/**
+ * @brief Abstract base class for render actions
+ */
 class RenderActionBase : public Kangaroo::Util::NonCopyMoveable {
 public:
     RenderActionBase() = default;
