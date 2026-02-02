@@ -1,36 +1,51 @@
-pragma ComponentBehavior: Bound
-import QtQuick
-import Qt5Compat.GraphicalEffects
-
 /**
  * @file ThemedIcon.qml
- * @brief Icon component that applies color overlay to SVG icons
+ * @brief Theme-aware icon component with color overlay support
  *
- * Uses ColorOverlay effect to colorize monochrome SVG icons.
- * This allows black SVG icons to be visible on dark backgrounds.
+ * Renders SVG/image icons with dynamic color tinting based on theme.
+ * Handles high-DPI scaling automatically.
  */
+import QtQuick
+import QtQuick.Window
+import Qt5Compat.GraphicalEffects
+import OpenGeoLab 1.0
+
 Item {
-    id: themedIcon
+    id: root
 
-    property alias source: iconImage.source
-    property color color: "#e1e1e1"
-    property alias fillMode: iconImage.fillMode
+    /// Icon source URL (SVG recommended)
+    property url source
+    /// Tint color applied via ColorOverlay
+    property color color: Theme.palette.text
+    /// Base icon size in logical pixels
+    property int size: 18
 
-    implicitWidth: 22
-    implicitHeight: 22
+    implicitWidth: size
+    implicitHeight: size
+
+    width: implicitWidth
+    height: implicitHeight
+
+    readonly property int _pixelWidth: Math.max(1, Math.round(width * Screen.devicePixelRatio))
+    readonly property int _pixelHeight: Math.max(1, Math.round(height * Screen.devicePixelRatio))
 
     Image {
-        id: iconImage
+        id: img
         anchors.fill: parent
+        source: root.source
         fillMode: Image.PreserveAspectFit
+        visible: false
         smooth: true
         antialiasing: true
-        visible: false
+        cache: true
+
+        sourceSize.width: root._pixelWidth
+        sourceSize.height: root._pixelHeight
     }
 
     ColorOverlay {
-        anchors.fill: iconImage
-        source: iconImage
-        color: themedIcon.color
+        anchors.fill: img
+        source: img
+        color: root.color
     }
 }

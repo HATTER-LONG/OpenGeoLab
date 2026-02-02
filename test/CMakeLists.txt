@@ -26,21 +26,44 @@ CPMAddPackage(
 )
 
 # ==============================================================================
+# Qt AUTOMOC Support for Tests
+# ==============================================================================
+
+set(CMAKE_AUTOMOC ON)
+
+# ==============================================================================
 # Test Sources Collection
 # ==============================================================================
 
 file(GLOB_RECURSE test_sources CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/source/*.cpp)
 
+# Include module sources for testing (with Qt classes needing MOC)
+set(module_sources ${CMAKE_CURRENT_SOURCE_DIR}/../src/util/logger.cpp
+                   ${CMAKE_CURRENT_SOURCE_DIR}/../src/util/signal.cpp
+)
+
+# Include header files for AUTOMOC to find Q_OBJECT macros
+set(module_headers "")
+
 # ==============================================================================
 # Test Executable
 # ==============================================================================
 
-add_executable(${PROJECT_NAME} ${test_sources})
+add_executable(${PROJECT_NAME} ${test_sources} ${module_sources} ${module_headers})
 
 target_link_libraries(
-  ${PROJECT_NAME} PRIVATE Catch2::Catch2WithMain Kangaroo::Kangaroo HighFive::HighFive
-                          ${OpenCASCADE_LIBS}
+  ${PROJECT_NAME}
+  PRIVATE Catch2::Catch2WithMain
+          Kangaroo::Kangaroo
+          HighFive::HighFive
+          Qt6::Core
+          Qt6::Gui
+          nlohmann_json::nlohmann_json
+          ${OpenCASCADE_LIBS}
 )
+
+# Allow trace/debug logs in tests.
+target_compile_definitions(${PROJECT_NAME} PRIVATE SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 17)
 

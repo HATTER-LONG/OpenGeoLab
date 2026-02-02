@@ -16,7 +16,8 @@
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
             "environment": [],
-            "console": "internalConsole"
+            "console": "internalConsole",
+            "visualizerFile": "${workspaceFolder}/.vscode/visualizers.natvis"
         }
     ]
 }

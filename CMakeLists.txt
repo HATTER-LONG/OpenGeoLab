@@ -18,7 +18,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # ==============================================================================
 
 option(ENABLE_CONSOLE "Enable console window on Windows for debugging" ON)
-
+option(ENABLE_TEST "Enable building tests" OFF)
 # ==============================================================================
 # Qt Configuration
 # ==============================================================================
@@ -56,13 +56,6 @@ include(./cmake/CPM.cmake)
 # CPM-managed Dependencies
 # ------------------------------------------------------------------------------
 
-# cxxopts: Command-line argument parsing library
-CPMAddPackage(
-  GITHUB_REPOSITORY jarro2783/cxxopts
-  VERSION 3.0.0
-  OPTIONS "CXXOPTS_BUILD_EXAMPLES NO" "CXXOPTS_BUILD_TESTS NO" "CXXOPTS_ENABLE_INSTALL YES"
-)
-
 # Kangaroo: Infrastructure and utility library Check for local version first, otherwise download
 # from GitHub
 set(LOCAL_KANGAROO_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../Kangaroo")
@@ -78,7 +71,7 @@ else()
   CPMAddPackage(
     NAME Kangaroo
     GITHUB_REPOSITORY HATTER-LONG/Kangaroo
-    VERSION 2.2.1
+    VERSION 2.2.2
     OPTIONS "BUILD_SHARED_LIBS ON"
   )
 endif()
@@ -90,6 +83,8 @@ CPMAddPackage(
   VERSION 3.2.0
   OPTIONS "HIGHFIVE_UNIT_TESTS OFF" "HIGHFIVE_EXAMPLES OFF" "HIGHFIVE_BUILD_DOCS OFF"
 )
+
+CPMAddPackage("gh:nlohmann/json@3.12.0")
 
 # ------------------------------------------------------------------------------
 # Pre-installed Dependencies
@@ -130,7 +125,7 @@ set(OpenCASCADE_LIBS
 )
 
 # Qt 6: GUI framework with QML support
-find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui Qml Quick)
+find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui Qml Quick OpenGL)
 qt_standard_project_setup(REQUIRES 6.8)
 
 # ==============================================================================
@@ -156,8 +151,15 @@ qt_add_executable(${PROJECT_NAME} ${sources} ${headers})
 # QML Module Configuration
 # ==============================================================================
 
-# Collect all SVG icon resources automatically (using relative paths)
-file(GLOB ICON_RESOURCES_ABS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/*.svg")
+# QML singletons must be declared for the generated qmldir/type system.
+set_source_files_properties(
+  resources/qml/Theme.qml resources/qml/MainPages.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE
+)
+
+# Collect icon resources automatically (using relative paths)
+file(GLOB ICON_RESOURCES_ABS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/*.svg"
+     "${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/*.png"
+)
 
 # Convert absolute paths to relative paths for Qt resource system
 set(ICON_RESOURCES "")
@@ -166,8 +168,6 @@ foreach(icon_file ${ICON_RESOURCES_ABS})
   list(APPEND ICON_RESOURCES "${icon_rel}")
 endforeach()
 
-# Register QML module with custom OpenGL 3D rendering components Only UI-related files (with
-# QML_ELEMENT) need to be listed here
 qt_add_qml_module(
   ${PROJECT_NAME}
   URI
@@ -175,37 +175,48 @@ qt_add_qml_module(
   VERSION
   1.0
   RESOURCE_PREFIX
-  /scenegraph/opengeolab
+  /opengeolab
   NO_RESOURCE_TARGET_PATH
+  SOURCES
   QML_FILES
   resources/qml/Main.qml
+  resources/qml/MainPages.qml
   resources/qml/Theme.qml
   resources/qml/ThemedIcon.qml
-  resources/qml/RibbonToolBar.qml
-  resources/qml/RibbonLargeButton.qml
-  resources/qml/RibbonGroup.qml
-  resources/qml/RibbonGroupSeparator.qml
-  resources/qml/RibbonFileMenu.qml
-  resources/qml/FileMenuItem.qml
-  resources/qml/RibbonButtonConfig.qml
-  resources/qml/RibbonTabContent.qml
-  resources/qml/OperationPanel.qml
-  resources/qml/OperationPanelManager.qml
-  resources/qml/ModelTreeView.qml
-  resources/qml/ViewControlToolbar.qml
-  resources/qml/ViewControlButton.qml
-  resources/qml/CreateBoxDialog.qml
+  resources/qml/RibbonMenu/RibbonToolBar.qml
+  resources/qml/RibbonMenu/RibbonFileMenu.qml
+  resources/qml/RibbonMenu/RibbonFileMenuButton.qml
+  resources/qml/RibbonMenu/RibbonTabContent.qml
+  resources/qml/RibbonMenu/RibbonLargeButton.qml
+  resources/qml/RibbonMenu/RibbonConfig.qml
+  resources/qml/Pages/ImportModel.qml
+  resources/qml/Pages/ProgressOverlay.qml
+  resources/qml/Pages/CornerOverlay.qml
+  resources/qml/Pages/LogPanel.qml
+  resources/qml/Pages/AddBoxPage.qml
+  resources/qml/Pages/AddLinePage.qml
+  resources/qml/Pages/AddPointPage.qml
+  resources/qml/Pages/AIChatPage.qml
+  resources/qml/Pages/AISuggestPage.qml
+  resources/qml/Pages/CoordinateField.qml
+  resources/qml/Pages/FunctionPageBase.qml
+  resources/qml/Pages/GenerateMeshPage.qml
+  resources/qml/Pages/OffsetPage.qml
+  resources/qml/Pages/ParamField.qml
+  resources/qml/Pages/SmoothMeshPage.qml
+  resources/qml/Pages/TrimPage.qml
+  resources/qml/util/BaseButton.qml
+  resources/qml/util/BaseComboBox.qml
+  resources/qml/util/SelectableButton.qml
+  resources/qml/util/ChipButton.qml
+  resources/qml/util/ViewportPickButton.qml
+  resources/qml/util/ViewToolbar.qml
+  resources/qml/util/ViewToolButton.qml
+  resources/qml/util/DocumentSideBar.qml
+  resources/qml/util/PartListItem.qml
+  resources/qml/util/EntityCountRow.qml
   RESOURCES
   ${ICON_RESOURCES}
-  SOURCES
-  src/ui/geometry3d.cpp
-  include/ui/geometry3d.hpp
-  src/ui/model_importer.cpp
-  include/ui/model_importer.hpp
-  src/geometry/geometry_creator.cpp
-  include/ui/geometry_creator.hpp
-  src/geometry/shape_triangulator.cpp
-  include/geometry/shape_triangulator.hpp
 )
 
 # ==============================================================================
@@ -239,22 +250,24 @@ target_link_libraries(
           Qt6::Gui
           Qt6::Qml
           Qt6::Quick
+          Qt6::OpenGL
           Kangaroo::Kangaroo
-          cxxopts
           fmt::fmt
           HighFive::HighFive
+          nlohmann_json::nlohmann_json
           ${OpenCASCADE_LIBS}
 )
+
+# Allow runtime control down to trace level (do not compile-out trace/debug).
+target_compile_definitions(${PROJECT_NAME} PRIVATE SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE)
 
 # ==============================================================================
 # Include Directories
 # ==============================================================================
 
 target_include_directories(
-  ${PROJECT_NAME}
-  PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include"
-          "${CMAKE_CURRENT_SOURCE_DIR}/include/ui" # For Qt moc generated code
-          "${CMAKE_CURRENT_SOURCE_DIR}/src"
+  ${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include"
+                          "${CMAKE_CURRENT_SOURCE_DIR}/include/app" # For Qt moc generated code
 )
 
 # ==============================================================================
@@ -292,5 +305,7 @@ install(SCRIPT ${deploy_script})
 # Testing Configuration
 # ==============================================================================
 
-enable_testing()
-add_subdirectory(test)
+if(ENABLE_TEST)
+  enable_testing()
+  add_subdirectory(test)
+endif(ENABLE_TEST)

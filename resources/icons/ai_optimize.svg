@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-  <!-- Gear with sparkles - representing auto optimization -->
-  <circle cx="12" cy="12" r="3"/>
-  <path d="M12 2v2M12 20v2M22 12h-2M4 12H2"/>
-  <path d="M19.07 4.93l-1.41 1.41M6.34 17.66l-1.41 1.41M19.07 19.07l-1.41-1.41M6.34 6.34L4.93 4.93"/>
-  <!-- Small stars for AI effect -->
-  <circle cx="18" cy="4" r="1" fill="currentColor"/>
-  <circle cx="20" cy="8" r="0.5" fill="currentColor"/>
-</svg>
