@@ -18,7 +18,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # ==============================================================================
 
 option(ENABLE_CONSOLE "Enable console window on Windows for debugging" ON)
-
+option(ENABLE_TEST "Enable building tests" OFF)
 # ==============================================================================
 # Qt Configuration
 # ==============================================================================
@@ -302,5 +302,7 @@ install(SCRIPT ${deploy_script})
 # Testing Configuration
 # ==============================================================================
 
-enable_testing()
-add_subdirectory(test)
+if(ENABLE_TEST)
+  enable_testing()
+  add_subdirectory(test)
+endif(ENABLE_TEST)

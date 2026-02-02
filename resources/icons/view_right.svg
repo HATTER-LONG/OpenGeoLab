@@ -1,14 +1,30 @@
 <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-  <!-- cube outline -->
-  <rect x="6" y="9" width="8" height="8" rx="1"
-    fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
-  <path d="M6 9l3-3h8l-3 3z"
-    fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
-  <path d="M14 9v8l3-3V6"
-    fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+  <!-- cube outline (same shape as left view, shifted left) -->
+  <rect x="4" y="10" width="10" height="9" rx="1"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.6"
+    stroke-linejoin="round"/>
 
-  <!-- arrow pointing to the box -->
-  <path d="M21 13H18M18 13l2-2M18 13l2 2"
-    fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+  <!-- top face -->
+  <path d="M4 10l4-4h10l-4 4z"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.6"
+    stroke-linejoin="round"/>
+
+  <!-- right face -->
+  <path d="M14 10v9l4-4V6"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.6"
+    stroke-linejoin="round"/>
+
+  <!-- arrow pointing to the box (shifted right) -->
+  <path d="M24 12H19M19 12l2-2M19 12l2 2"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.6"
+    stroke-linecap="round"
     stroke-linejoin="round"/>
 </svg>
