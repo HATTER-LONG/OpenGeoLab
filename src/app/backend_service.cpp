@@ -6,7 +6,6 @@
 #include "backend_service.hpp"
 #include "service_worker.hpp"
 #include "util/logger.hpp"
-#include "util/progress_callback.hpp"
 
 #include <nlohmann/json.hpp>
 
@@ -32,6 +31,23 @@ public:
     const auto& meta = params["_meta"];
     return meta.contains("silent") && meta["silent"].is_boolean() && meta["silent"].get<bool>();
 }
+
+[[nodiscard]] QString extractActionName(const nlohmann::json& params) {
+    if(!params.is_object()) {
+        return {};
+    }
+    auto it = params.find("action");
+    if(it == params.end()) {
+        return {};
+    }
+    if(it->is_string()) {
+        const auto value = QString::fromStdString(it->get<std::string>()).trimmed();
+        if(!value.isEmpty()) {
+            return value;
+        }
+    }
+    return {};
+}
 } // namespace
 
 BackendService::BackendService(QObject* parent) : QObject(parent) {}
@@ -43,8 +59,8 @@ QString BackendService::message() const { return m_message; }
 
 void BackendService::request(const QString& module_name, const QString& params) {
     if(module_name.trimmed().isEmpty()) {
-        emit operationFailed(module_name,
-                             QStringLiteral("Module name is empty. Aborting request."));
+        emit operationFailed(module_name, QStringLiteral("Module name is empty. Aborting request."),
+                             QString{});
         return;
     }
 
@@ -54,11 +70,15 @@ void BackendService::request(const QString& module_name, const QString& params) 
         try {
             param_json = nlohmann::json::parse(params.toStdString());
         } catch(const nlohmann::json::parse_error& e) {
-            emit operationFailed(module_name, QStringLiteral("Failed to parse params JSON: ") +
-                                                  QString::fromStdString(e.what()));
+            emit operationFailed(module_name,
+                                 QStringLiteral("Failed to parse params JSON: ") +
+                                     QString::fromStdString(e.what()),
+                                 QString{});
             return;
         }
     }
+
+    m_currentActionName = extractActionName(param_json);
 
     const bool silent = isSilentRequest(param_json);
     if(!silent) {
@@ -80,17 +100,24 @@ void BackendService::request(const QString& module_name, const QString& params) 
             }
 
             auto reporter = std::make_shared<NullProgressReporter>();
-            (void)service->processRequest(module_name.toStdString(), param_json, reporter);
+            auto result = service->processRequest(module_name.toStdString(), param_json, reporter);
+            LOG_DEBUG("Silent backend request [{}] completed successfully.",
+                      qPrintable(module_name));
+            emit operationFinished(module_name, m_currentActionName,
+                                   QString::fromStdString(result.dump()));
         } catch(const std::exception& e) {
             // Keep errors visible to logs, but don't trigger UI progress overlay.
             LOG_ERROR("Silent backend error [{}]: {}", qPrintable(module_name), e.what());
+            emit operationFailed(module_name, m_currentActionName,
+                                 QStringLiteral("Silent request error: ") +
+                                     QString::fromStdString(e.what()));
         }
         return;
     }
 
     if(m_busy) {
         const auto err = QStringLiteral("Service is currently busy. Cannot process new request.");
-        emit operationFailed(module_name, err);
+        emit operationFailed(module_name, m_currentActionName, err);
         return;
     }
     setBusyInternal(true);
@@ -100,7 +127,7 @@ void BackendService::request(const QString& module_name, const QString& params) 
 
     setProgressInternal(0.0);
     setMessage(QStringLiteral("Starting operation...[%1]").arg(module_name));
-    emit operationStarted(module_name);
+    emit operationStarted(module_name, m_currentActionName);
 
     cleanupWorker();
     m_workerThread = new QThread(this);
@@ -138,13 +165,13 @@ void BackendService::onWorkerProgress(double progress, const QString& message) {
     if(!message.isEmpty()) {
         setMessage(message);
     }
-    emit operationProgress(m_currentModuleName, progress, message);
+    emit operationProgress(m_currentModuleName, m_currentActionName, progress, message);
 }
 
 void BackendService::onWorkerFinished(const QString& module_name, const QString& result) {
     setProgressInternal(1.0);
     setMessage(QStringLiteral("Operation [%1] completed successfully.").arg(module_name));
-    emit operationFinished(module_name, result);
+    emit operationFinished(module_name, m_currentActionName, result);
     cleanupWorker();
     LOG_INFO("Backend operation [{}] finished successfully.", qPrintable(module_name));
     setBusyInternal(false);
@@ -153,7 +180,7 @@ void BackendService::onWorkerFinished(const QString& module_name, const QString&
 void BackendService::onWorkerError(const QString& module_name, const QString& error) {
     setProgressInternal(0.0);
     setMessage(QStringLiteral("Operation [%1] failed: %2").arg(module_name, error));
-    emit operationFailed(module_name, error);
+    emit operationFailed(module_name, m_currentActionName, error);
     cleanupWorker();
     LOG_ERROR("Backend error [{}]: {}", qPrintable(module_name), qPrintable(error));
     setBusyInternal(false);

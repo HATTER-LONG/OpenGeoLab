@@ -1,12 +1,15 @@
+/**
+ * @file ChipButton.qml
+ * @brief Pill-style small button for quick prompts and tags
+ *
+ * A compact button with rounded pill shape, suitable for
+ * chip-style UI elements like quick actions or tags.
+ */
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import ".."
 
-/**
- * @file ChipButton.qml
- * @brief Pill-style small button (used for quick prompts/tags).
- */
 AbstractButton {
     id: control
 

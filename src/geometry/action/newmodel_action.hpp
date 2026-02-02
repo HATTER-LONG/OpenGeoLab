@@ -33,10 +33,10 @@ public:
      * @brief Execute the new model action
      * @param params JSON parameters (not used)
      * @param progress_callback Progress reporting callback
-     * @return true if successful (always succeeds)
+     * @return JSON with "success" boolean and status info
      */
-    [[nodiscard]] bool execute(const nlohmann::json& params,
-                               Util::ProgressCallback progress_callback) override;
+    [[nodiscard]] nlohmann::json execute(const nlohmann::json& params,
+                                         Util::ProgressCallback progress_callback) override;
 };
 
 /**

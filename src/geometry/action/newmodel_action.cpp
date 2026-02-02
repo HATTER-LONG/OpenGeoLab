@@ -9,10 +9,14 @@
 
 namespace OpenGeoLab::Geometry {
 
-bool NewModelAction::execute(const nlohmann::json& /*params*/,
-                             Util::ProgressCallback progress_callback) {
+nlohmann::json NewModelAction::execute(const nlohmann::json& /*params*/,
+                                       Util::ProgressCallback progress_callback) {
+    nlohmann::json response;
+
     if(progress_callback && !progress_callback(0.1, "Creating new model...")) {
-        return false; // Cancelled
+        response["success"] = false;
+        response["error"] = "Operation cancelled";
+        return response;
     }
 
     // Create a new document (this clears the old one)
@@ -23,7 +27,9 @@ bool NewModelAction::execute(const nlohmann::json& /*params*/,
         if(progress_callback) {
             progress_callback(1.0, "Error: Failed to create new model.");
         }
-        return false;
+        response["success"] = false;
+        response["error"] = "Failed to create new document";
+        return response;
     }
 
     LOG_INFO("NewModelAction: Created new empty model");
@@ -32,7 +38,9 @@ bool NewModelAction::execute(const nlohmann::json& /*params*/,
         progress_callback(1.0, "New model created successfully.");
     }
 
-    return true;
+    response["success"] = true;
+    response["message"] = "New model created successfully";
+    return response;
 }
 
 } // namespace OpenGeoLab::Geometry

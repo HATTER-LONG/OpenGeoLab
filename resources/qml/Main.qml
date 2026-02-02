@@ -90,6 +90,8 @@ ApplicationWindow {
                     silent: true
                 }
             }));
+            // Refresh part list in sidebar
+            documentSideBar.refreshPartList();
         }
     }
 

@@ -183,50 +183,71 @@ namespace {
 
 } // anonymous namespace
 
-[[nodiscard]] bool CreateAction::execute(const nlohmann::json& params,
-                                         Util::ProgressCallback progress_callback) {
+[[nodiscard]] nlohmann::json CreateAction::execute(const nlohmann::json& params,
+                                                   Util::ProgressCallback progress_callback) {
+    nlohmann::json response;
+
     if(!params.contains("type")) {
         if(progress_callback) {
             progress_callback(1.0, "Error: Missing 'type' parameter.");
         }
         LOG_ERROR("CreateAction: Missing 'type' parameter");
-        return false;
+        response["success"] = false;
+        response["error"] = "Missing 'type' parameter";
+        return response;
     }
 
     std::string type = params["type"];
     std::string part_name = params.value("name", type);
 
     if(progress_callback && !progress_callback(0.1, "Creating " + type + "...")) {
-        return false;
+        response["success"] = false;
+        response["error"] = "Operation cancelled";
+        return response;
     }
 
     TopoDS_Shape shape;
 
-    if(type == "box") {
-        shape = createBox(params);
-    } else if(type == "cylinder") {
-        shape = createCylinder(params);
-    } else if(type == "sphere") {
-        shape = createSphere(params);
-    } else if(type == "cone") {
-        shape = createCone(params);
-    } else {
-        if(progress_callback) {
-            progress_callback(1.0, "Error: Unsupported shape type '" + type + "'.");
+    try {
+        if(type == "box") {
+            shape = createBox(params);
+        } else if(type == "cylinder") {
+            shape = createCylinder(params);
+        } else if(type == "sphere") {
+            shape = createSphere(params);
+        } else if(type == "cone") {
+            shape = createCone(params);
+        } else {
+            if(progress_callback) {
+                progress_callback(1.0, "Error: Unsupported shape type '" + type + "'.");
+            }
+            LOG_ERROR("CreateAction: Unsupported shape type '{}'", type);
+            response["success"] = false;
+            response["error"] = "Unsupported shape type '" + type + "'";
+            return response;
         }
-        LOG_ERROR("CreateAction: Unsupported shape type '{}'", type);
-        return false;
+    } catch(const std::exception& e) {
+        if(progress_callback) {
+            progress_callback(1.0, std::string("Error: ") + e.what());
+        }
+        response["success"] = false;
+        response["error"] = e.what();
+        return response;
     }
 
     if(shape.IsNull()) {
         if(progress_callback) {
             progress_callback(1.0, "Error: Failed to create shape.");
         }
-        return false;
+        response["success"] = false;
+        response["error"] = "Failed to create shape";
+        return response;
     }
 
     if(progress_callback && !progress_callback(0.5, "Building entity hierarchy...")) {
-        return false;
+        response["success"] = false;
+        response["error"] = "Operation cancelled";
+        return response;
     }
 
     // Add to current document using appendShape
@@ -237,7 +258,9 @@ namespace {
             progress_callback(1.0, "Error: No active document.");
         }
         LOG_ERROR("CreateAction: No active document");
-        return false;
+        response["success"] = false;
+        response["error"] = "No active document";
+        return response;
     }
 
     auto build_progress = Util::makeScaledProgressCallback(progress_callback, 0.5, 0.95);
@@ -248,7 +271,9 @@ namespace {
             progress_callback(1.0, "Error: " + result.m_errorMessage);
         }
         LOG_ERROR("CreateAction: Failed to build entity hierarchy: {}", result.m_errorMessage);
-        return false;
+        response["success"] = false;
+        response["error"] = result.m_errorMessage;
+        return response;
     }
 
     if(progress_callback) {
@@ -259,7 +284,12 @@ namespace {
     LOG_INFO("CreateAction: Created {} '{}' with {} entities", type, part_name,
              result.m_entityCount);
 
-    return true;
+    response["success"] = true;
+    response["entity_id"] = result.m_rootEntityId;
+    response["entity_count"] = result.m_entityCount;
+    response["name"] = part_name;
+    response["type"] = type;
+    return response;
 }
 
 } // namespace OpenGeoLab::Geometry

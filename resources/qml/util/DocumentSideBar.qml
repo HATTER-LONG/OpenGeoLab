@@ -1,3 +1,11 @@
+/**
+ * @file DocumentSideBar.qml
+ * @brief Document sidebar component for displaying part list
+ *
+ * Provides a collapsible sidebar that shows all parts in the current document
+ * with their names, colors, and entity counts. Communicates with BackendService
+ * to fetch and display part information.
+ */
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
@@ -16,6 +24,12 @@ Rectangle {
     /// Expanded width
     readonly property int expandedWidth: 240
 
+    /// Part list data model
+    property var partListModel: []
+
+    /// Whether data is being loaded
+    property bool isLoading: false
+
     width: sidebar.expanded ? sidebar.expandedWidth : sidebar.collapsedWidth
     color: Theme.surfaceAlt
 
@@ -25,6 +39,55 @@ Rectangle {
             easing.type: Easing.OutQuad
         }
     }
+
+    /**
+     * @brief Refresh the part list from BackendService
+     */
+    function refreshPartList() {
+        sidebar.isLoading = true;
+        BackendService.request("GeometryService", JSON.stringify({
+            action: "get_part_list",
+            _meta: {
+                silent: true
+            }
+        }));
+    }
+
+    // Listen for BackendService operation results
+    Connections {
+        target: BackendService
+        function onOperationFinished(moduleName, actionName, result) {
+            console.log("[DocumentSideBar] Operation finished:", moduleName, actionName);
+            if (moduleName !== "GeometryService")
+                return;
+            if (actionName !== "get_part_list")
+                return;
+
+            try {
+                const data = JSON.parse(result);
+                sidebar.partListModel = data.parts || [];
+                sidebar.isLoading = false;
+            } catch (e) {
+                console.warn("[DocumentSideBar] Failed to parse result:", e);
+                sidebar.isLoading = false;
+            }
+        }
+
+        function onOperationFailed(moduleName, error, actionName) {
+            if (moduleName === "GeometryService") {
+                if (actionName !== "get_part_list")
+                    return;
+                sidebar.isLoading = false;
+                console.warn("[DocumentSideBar] Failed to get part list:", error);
+            }
+        }
+    }
+
+    // Initial load on component completion
+    Component.onCompleted: {
+        refreshPartList();
+    }
+
     // Toggle button
     Rectangle {
         id: toggleButton
@@ -64,14 +127,55 @@ Rectangle {
         color: "transparent"
         visible: sidebar.expanded
 
-        Label {
-            anchors.left: parent.left
+        RowLayout {
+            anchors.fill: parent
             anchors.leftMargin: 12
-            anchors.verticalCenter: parent.verticalCenter
-            text: qsTr("Document")
-            font.pixelSize: 13
-            font.bold: true
-            color: Theme.textPrimary
+            anchors.rightMargin: 8
+            spacing: 8
+
+            Label {
+                text: qsTr("Document")
+                font.pixelSize: 13
+                font.bold: true
+                color: Theme.textPrimary
+                Layout.fillWidth: true
+            }
+
+            // Refresh button
+            Rectangle {
+                width: 20
+                height: 20
+                radius: 4
+                color: refreshArea.containsMouse ? Theme.hovered : "transparent"
+
+                ThemedIcon {
+                    anchors.centerIn: parent
+                    source: "qrc:/opengeolab/resources/icons/refresh.svg"
+                    size: 14
+                    rotation: sidebar.isLoading ? refreshAnimation.angle : 0
+                }
+
+                NumberAnimation on rotation {
+                    id: refreshAnimation
+                    property real angle: 0
+                    running: sidebar.isLoading
+                    from: 0
+                    to: 360
+                    duration: 1000
+                    loops: Animation.Infinite
+                }
+
+                MouseArea {
+                    id: refreshArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    onClicked: sidebar.refreshPartList()
+                }
+
+                ToolTip.visible: refreshArea.containsMouse
+                ToolTip.text: qsTr("Refresh part list")
+                ToolTip.delay: 500
+            }
         }
     }
 
@@ -84,5 +188,67 @@ Rectangle {
         height: 1
         color: Theme.border
         visible: sidebar.expanded
+    }
+
+    // Part count summary
+    Rectangle {
+        id: summaryBar
+        anchors.top: separator.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: 24
+        color: "transparent"
+        visible: sidebar.expanded
+
+        Label {
+            anchors.left: parent.left
+            anchors.leftMargin: 12
+            anchors.verticalCenter: parent.verticalCenter
+            text: qsTr("Parts: %1").arg(sidebar.partListModel.length)
+            font.pixelSize: 11
+            color: Theme.textSecondary
+        }
+    }
+
+    // Part list
+    ListView {
+        id: partListView
+        anchors.top: summaryBar.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        anchors.margins: 4
+        visible: sidebar.expanded
+        clip: true
+
+        model: sidebar.partListModel
+        spacing: 2
+
+        delegate: PartListItem {
+            required property var modelData
+            required property int index
+
+            width: partListView.width
+            partData: modelData
+            partIndex: index
+        }
+
+        // Empty state
+        Label {
+            anchors.centerIn: parent
+            visible: sidebar.partListModel.length === 0 && !sidebar.isLoading
+            text: qsTr("No parts in document")
+            font.pixelSize: 12
+            color: Theme.textSecondary
+        }
+
+        // Loading indicator
+        BusyIndicator {
+            anchors.centerIn: parent
+            visible: sidebar.isLoading
+            running: sidebar.isLoading
+            width: 32
+            height: 32
+        }
     }
 }

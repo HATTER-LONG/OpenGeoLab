@@ -34,12 +34,12 @@ public:
      * @brief Execute the geometry action
      * @param params Action-specific JSON parameters
      * @param progress_callback Optional callback for progress reporting
-     * @return true if action completed successfully
-     * @note Implementations should report progress through the callback
-     *       and return false if cancelled or on error.
+     * @return JSON result with "success" boolean and action-specific data
+     * @note Implementations should report progress through the callback.
+     *       Return {"success": false, "error": "message"} on failure.
      */
-    [[nodiscard]] virtual bool execute(const nlohmann::json& params,
-                                       Util::ProgressCallback progress_callback) = 0;
+    [[nodiscard]] virtual nlohmann::json execute(const nlohmann::json& params,
+                                                 Util::ProgressCallback progress_callback) = 0;
 };
 
 /**

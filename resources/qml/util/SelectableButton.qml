@@ -1,12 +1,15 @@
+/**
+ * @file SelectableButton.qml
+ * @brief AbstractButton with selectable state and themed background
+ *
+ * Provides a toggle-style button that maintains a selected state
+ * with visual feedback following the application's theme.
+ */
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import ".."
 
-/**
- * @file SelectableButton.qml
- * @brief AbstractButton with "selected" state + themed background.
- */
 AbstractButton {
     id: control
 

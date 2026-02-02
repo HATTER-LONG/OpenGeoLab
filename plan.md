@@ -7,8 +7,9 @@
 # 计划任务
 
 1. 了解当前实现，按如下要求完成开发：
-   - 审视不合理的设计，重复代码等进行优化。
-   - 重构 render_ctrl_service 组件，改为更合理的名称以及代码设计，应当作为 render 数据的中间层，上与渲染组件链接，下与 geometry document 数据关联，中间支持 render action 修改。
+   - 调整 geometry action 执行方法 execute 返回值为 json，打通 backend service 支持 qml 通过协议 get 获取 part list info，包括 part 所有的子 entity 数量、ID、颜色。
+   - 调整每个 part 不同的颜色，颜色list 稳定且不要纯白等这种纯色，看起来高级点。
+   - 完成 qml sidebar part list 展示，qml 与 C++ 交互都走 backend_service 不要私自加 service。
 2. 检查工程中所有的 qml cpp hpp 代码，完善或补充注释信息，当前注释不符合要求的也要进行修改。所有注释信息参考  doxygen_comment_style.md 文件中的要求进行编写。
 3. 完成前边修改后，仔细阅读项目中所有 qml cpp 代码，思考实现软件主题功能的前提下，代码是否足够清晰，重构不合理的代码以及架构。
 4. 保证最终代码可以编译通过，并正确执行。

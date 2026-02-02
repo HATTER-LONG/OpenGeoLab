@@ -102,6 +102,12 @@ constexpr EntityUID INVALID_ENTITY_UID = 0;
 void resetEntityUIDGenerator(EntityType type);
 
 /**
+ * @brief Reset all EntityUID generators (for testing purposes)
+ * @warning This function is intended for testing only
+ */
+void resetAllEntityUIDGenerators();
+
+/**
  * @brief Reset global EntityId generator (for testing purposes)
  * @warning This function is intended for testing only
  */

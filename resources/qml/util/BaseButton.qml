@@ -1,11 +1,14 @@
+/**
+ * @file BaseButton.qml
+ * @brief Themed button component with consistent styling
+ *
+ * Provides a reusable button with hover and press states,
+ * following the application's theme.
+ */
 import QtQuick
 import QtQuick.Controls
 import ".."
 
-/**
- * @file BaseButton.qml
- * @brief Themed button component with consistent styling
- */
 Button {
     id: control
 

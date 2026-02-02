@@ -39,10 +39,10 @@ public:
      * @brief Execute the shape creation action
      * @param params JSON with "type" and shape-specific parameters
      * @param progress_callback Progress reporting callback
-     * @return true if shape was created successfully
+     * @return JSON with "success", created entity info, or "error" on failure
      */
-    [[nodiscard]] bool execute(const nlohmann::json& params,
-                               Util::ProgressCallback progress_callback) override;
+    [[nodiscard]] nlohmann::json execute(const nlohmann::json& params,
+                                         Util::ProgressCallback progress_callback) override;
 };
 
 /**

@@ -55,10 +55,18 @@ signals:
     void progressChanged();
     void messageChanged();
 
-    void operationStarted(const QString& module_name);
-    void operationProgress(const QString& module_name, double progress, const QString& message);
-    void operationFinished(const QString& module_name, const QString& result);
-    void operationFailed(const QString& module_name, const QString& error);
+    void operationStarted(const QString& module_name, const QString& action_name);
+
+    void operationProgress(const QString& module_name,
+                           const QString& action_name,
+                           double progress,
+                           const QString& message);
+
+    void operationFinished(const QString& module_name,
+                           const QString& action_name,
+                           const QString& result);
+    void
+    operationFailed(const QString& module_name, const QString& action_name, const QString& error);
 
 private slots:
     void onWorkerProgress(double progress, const QString& message);
@@ -77,6 +85,7 @@ private:
 
     QString m_message;
     QString m_currentModuleName;
+    QString m_currentActionName;
 
     std::atomic<bool> m_cancelRequested{false};
     QPointer<QThread> m_workerThread;

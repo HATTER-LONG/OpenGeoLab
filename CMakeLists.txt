@@ -213,6 +213,8 @@ qt_add_qml_module(
   resources/qml/util/ViewToolbar.qml
   resources/qml/util/ViewToolButton.qml
   resources/qml/util/DocumentSideBar.qml
+  resources/qml/util/PartListItem.qml
+  resources/qml/util/EntityCountRow.qml
   RESOURCES
   ${ICON_RESOURCES}
 )

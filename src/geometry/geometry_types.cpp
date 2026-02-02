@@ -49,6 +49,12 @@ void resetEntityUIDGenerator(EntityType type) {
     }
 }
 
+void resetAllEntityUIDGenerators() {
+    for(auto& counter : g_next_entity_uids) {
+        counter.store(1, std::memory_order_relaxed);
+    }
+}
+
 void resetEntityIdGenerator() { g_next_entity_id.store(1, std::memory_order_relaxed); }
 
 } // namespace OpenGeoLab::Geometry

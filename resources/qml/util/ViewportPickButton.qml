@@ -1,12 +1,15 @@
+/**
+ * @file ViewportPickButton.qml
+ * @brief Icon button for viewport selection actions
+ *
+ * A compact button that triggers pick/select operations
+ * from the 3D viewport, with hover feedback and tooltip.
+ */
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import ".."
 
-/**
- * @file ViewportPickButton.qml
- * @brief Small icon button for "pick/select from viewport" actions.
- */
 AbstractButton {
     id: control
 

@@ -5,6 +5,7 @@
 
 #include "geometry_documentImpl.hpp"
 #include "entity/geometry_entity.hpp"
+#include "geometry/part_color.hpp"
 #include "shape_builder.hpp"
 #include "util/logger.hpp"
 #include "util/progress_callback.hpp"
@@ -511,6 +512,14 @@ GeometryDocumentImpl::generateFaceMesh(const GeometryEntityPtr& entity,
         return mesh;
     }
 
+    // Determine face color based on owning part
+    PartColor face_color(0.7f, 0.7f, 0.7f, 1.0f); // Default gray
+    auto owning_part = findOwningPart(entity->entityId());
+    if(owning_part) {
+        // Use entity ID for consistent color assignment
+        face_color = PartColorPalette::getColorByEntityId(owning_part->entityId());
+    }
+
     // Use OCC's triangulation (already computed by BRepMesh)
     TopLoc_Location loc;
     const Handle(Poly_Triangulation) triangulation =
@@ -547,6 +556,9 @@ GeometryDocumentImpl::generateFaceMesh(const GeometryEntityPtr& entity,
 
         Render::RenderVertex vertex(static_cast<float>(pnt.X()), static_cast<float>(pnt.Y()),
                                     static_cast<float>(pnt.Z()));
+
+        // Set face color based on owning part
+        vertex.setColor(face_color.r, face_color.g, face_color.b, face_color.a);
 
         // Get normal if available
         if(options.m_computeNormals && tri->HasNormals()) {

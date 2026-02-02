@@ -1,12 +1,15 @@
+/**
+ * @file BaseComboBox.qml
+ * @brief Themed ComboBox component with consistent styling
+ *
+ * Provides a reusable dropdown selection component following
+ * the application's theme with proper hover and selection states.
+ */
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import ".."
 
-/**
- * @file BaseComboBox.qml
- * @brief Themed ComboBox component with consistent styling
- */
 ComboBox {
     id: control
 
