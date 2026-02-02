@@ -38,7 +38,7 @@ public:
     }
 
     [[nodiscard]] bool canAddParentType(EntityType parent_type) const override {
-        return parent_type == EntityType::Shell;
+        return parent_type == EntityType::Shell || parent_type == EntityType::Compound;
     }
 
     [[nodiscard]] const TopoDS_Shape& shape() const override { return m_face; }

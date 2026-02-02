@@ -52,41 +52,18 @@ ApplicationWindow {
     Item {
         id: contentArea
         anchors.fill: parent
-
+        // Document sidebar on the left
+        DocumentSideBar {
+            id: documentSideBar
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            anchors.left: parent.left
+            z: 10
+        }
         // OpenGL 3D Viewport
         GLViewport {
             id: glViewport
             anchors.fill: parent
-
-            // Viewport info overlay
-            Rectangle {
-                anchors.bottom: parent.bottom
-                anchors.left: parent.left
-                anchors.margins: 8
-                width: viewportInfoRow.implicitWidth + 16
-                height: viewportInfoRow.implicitHeight + 8
-                radius: 4
-                color: Qt.rgba(0, 0, 0, 0.5)
-                visible: true
-
-                Row {
-                    id: viewportInfoRow
-                    anchors.centerIn: parent
-                    spacing: 16
-
-                    Label {
-                        text: glViewport.hasGeometry ? qsTr("Geometry loaded") : qsTr("No geometry")
-                        font.pixelSize: 11
-                        color: "white"
-                    }
-
-                    Label {
-                        text: qsTr("LMB: Rotate | MMB: Pan | RMB/Wheel: Zoom")
-                        font.pixelSize: 11
-                        color: Qt.rgba(1, 1, 1, 0.7)
-                    }
-                }
-            }
         }
 
         // View toolbar for viewport controls

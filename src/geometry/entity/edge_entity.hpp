@@ -38,7 +38,7 @@ public:
     }
 
     [[nodiscard]] bool canAddParentType(EntityType parent_type) const override {
-        return parent_type == EntityType::Wire;
+        return parent_type == EntityType::Wire || parent_type == EntityType::Compound;
     }
 
     [[nodiscard]] const TopoDS_Shape& shape() const override { return m_edge; }

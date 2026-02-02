@@ -212,6 +212,7 @@ qt_add_qml_module(
   resources/qml/util/ViewportPickButton.qml
   resources/qml/util/ViewToolbar.qml
   resources/qml/util/ViewToolButton.qml
+  resources/qml/util/DocumentSideBar.qml
   RESOURCES
   ${ICON_RESOURCES}
 )

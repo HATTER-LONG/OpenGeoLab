@@ -34,7 +34,7 @@ public:
     [[nodiscard]] bool canAddChildType(EntityType /*child_type*/) const override { return false; }
 
     [[nodiscard]] bool canAddParentType(EntityType parent_type) const override {
-        return parent_type == EntityType::Edge;
+        return parent_type == EntityType::Edge || parent_type == EntityType::Compound;
     }
 
     [[nodiscard]] const TopoDS_Shape& shape() const override { return m_vertex; }
