@@ -77,6 +77,7 @@ void GLViewport::onServiceGeometryChanged() {
 void GLViewport::mousePressEvent(QMouseEvent* event) {
     m_lastMousePos = event->position();
     m_pressedButtons = event->buttons();
+    m_pressedModifiers = event->modifiers();
     event->accept();
 }
 
@@ -84,10 +85,13 @@ void GLViewport::mouseMoveEvent(QMouseEvent* event) {
     const QPointF delta = event->position() - m_lastMousePos;
     m_lastMousePos = event->position();
 
-    if(m_pressedButtons & Qt::LeftButton) {
-        // Left button: orbit
+    if((m_pressedButtons & Qt::LeftButton) && (m_pressedModifiers & Qt::ControlModifier)) {
+        // Ctrl + Left button: orbit
         orbitCamera(static_cast<float>(delta.x()), static_cast<float>(delta.y()));
-    } else if(m_pressedButtons & Qt::MiddleButton) {
+
+    } else if((m_pressedButtons & Qt::LeftButton) && (m_pressedModifiers & Qt::ShiftModifier) ||
+              m_pressedButtons & Qt::MiddleButton) {
+        // Shift + Left button: pan
         // Middle button: pan
         panCamera(static_cast<float>(delta.x()), static_cast<float>(delta.y()));
     } else if(m_pressedButtons & Qt::RightButton) {
@@ -100,6 +104,7 @@ void GLViewport::mouseMoveEvent(QMouseEvent* event) {
 
 void GLViewport::mouseReleaseEvent(QMouseEvent* event) {
     m_pressedButtons = event->buttons();
+    m_pressedModifiers = event->modifiers();
     event->accept();
 }
 
@@ -136,12 +141,12 @@ void GLViewport::orbitCamera(float dx, float dy) {
 
     m_cameraState.m_position = m_cameraState.m_target + direction;
 
-    Render::RenderSceneController::instance().setCamera(m_cameraState);
+    Render::RenderSceneController::instance().setCamera(m_cameraState, false);
     update();
 }
 
 void GLViewport::panCamera(float dx, float dy) {
-    const float sensitivity = 0.01f;
+    const float sensitivity = 0.005f;
 
     // Calculate right and up vectors
     const QVector3D forward = (m_cameraState.m_target - m_cameraState.m_position).normalized();
@@ -156,7 +161,7 @@ void GLViewport::panCamera(float dx, float dy) {
     m_cameraState.m_position += pan;
     m_cameraState.m_target += pan;
 
-    Render::RenderSceneController::instance().setCamera(m_cameraState);
+    Render::RenderSceneController::instance().setCamera(m_cameraState, false);
 
     update();
 }

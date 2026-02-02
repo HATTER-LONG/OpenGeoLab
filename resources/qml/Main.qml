@@ -16,6 +16,9 @@ ApplicationWindow {
     height: 1080
     title: qsTr("OpenGeoLab")
 
+    // Expose key UI elements for floating pages positioning
+    property alias documentSideBar: documentSideBar
+
     palette: Theme.palette
 
     // Set main window reference for floating pages

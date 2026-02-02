@@ -13,6 +13,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import OpenGeoLab 1.0
+import ".."
 
 Item {
     id: root
@@ -54,9 +55,41 @@ Item {
     height: panelColumn.implicitHeight + 24
     z: 1000
 
-    /// Initial position: left top corner below ribbon
     x: 12
     y: 12
+
+    // =========================================================
+    // Positioning (avoid overlapping the left sidebar)
+    // =========================================================
+
+    /// Gap between sidebar and floating page
+    property int sidebarGap: 12
+
+    /// Track sidebar width changes so we can shift the page with it
+    property real _lastSidebarWidth: 0
+
+    function _getSidebarWidth() {
+        const mw = MainPages.mainWindow;
+        if (mw && mw.documentSideBar)
+            return mw.documentSideBar.width;
+        return 0;
+    }
+
+    function _clampX(value) {
+        const parentWidth = root.parent ? root.parent.width : 0;
+        if (parentWidth > 0)
+            return Math.max(0, Math.min(parentWidth - root.width, value));
+        return Math.max(0, value);
+    }
+
+    function _minXRightOfSidebar() {
+        return _getSidebarWidth() + sidebarGap;
+    }
+
+    function _ensureRightOfSidebar() {
+        const minX = _minXRightOfSidebar();
+        root.x = _clampX(Math.max(root.x, minX));
+    }
 
     // =========================================================
     // Methods
@@ -70,6 +103,11 @@ Item {
         if (payload) {
             parsePayload(payload);
         }
+
+        // Position the page to the right of the sidebar on open
+        _lastSidebarWidth = _getSidebarWidth();
+        root.x = _clampX(_minXRightOfSidebar());
+
         pageVisible = true;
         root.forceActiveFocus();
     }
@@ -240,7 +278,8 @@ Item {
                         if (pressed) {
                             const dx = mouse.x - lastPos.x;
                             const dy = mouse.y - lastPos.y;
-                            root.x = Math.max(0, Math.min(root.parent.width - root.width, root.x + dx));
+                            const minX = root._minXRightOfSidebar();
+                            root.x = Math.max(minX, Math.min(root.parent.width - root.width, root.x + dx));
                             root.y = Math.max(0, Math.min(root.parent.height - root.height, root.y + dy));
                         }
                     }
@@ -364,5 +403,23 @@ Item {
     Keys.onEscapePressed: {
         cancelled();
         close();
+    }
+
+    // Follow the sidebar expand/collapse width animation.
+    Connections {
+        target: (MainPages.mainWindow && MainPages.mainWindow.documentSideBar) ? MainPages.mainWindow.documentSideBar : null
+
+        function onWidthChanged() {
+            const sidebarWidth = root._getSidebarWidth();
+            const delta = sidebarWidth - root._lastSidebarWidth;
+            root._lastSidebarWidth = sidebarWidth;
+
+            if (!root.pageVisible)
+                return;
+
+            // Keep the page visually in the same spot relative to the sidebar.
+            root.x = root._clampX(root.x + delta);
+            root._ensureRightOfSidebar();
+        }
     }
 }

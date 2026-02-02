@@ -15,7 +15,6 @@
 #include "render/scene_renderer.hpp"
 #include "util/signal.hpp"
 
-
 #include <QMatrix4x4>
 #include <QQuickFramebufferObject>
 #include <QtQml/qqml.h>
@@ -110,8 +109,9 @@ private:
     Util::ScopedConnection m_cameraChangedConn;
     Util::ScopedConnection m_geometryChangedConn;
 
-    QPointF m_lastMousePos;            ///< Last mouse position for delta calculation
-    Qt::MouseButtons m_pressedButtons; ///< Currently pressed mouse buttons
+    QPointF m_lastMousePos;                   ///< Last mouse position for delta calculation
+    Qt::MouseButtons m_pressedButtons;        ///< Currently pressed mouse buttons
+    Qt::KeyboardModifiers m_pressedModifiers; ///< Currently pressed keyboard modifiers
 };
 
 /**

@@ -103,52 +103,52 @@ public:
      * @brief Replace camera state and notify listeners
      * @param camera New camera configuration
      */
-    void setCamera(const CameraState& camera);
+    void setCamera(const CameraState& camera, bool notify = true);
 
     /**
      * @brief Refresh render data from the current geometry document
      */
-    void refreshScene();
+    void refreshScene(bool notify = true);
 
     /**
      * @brief Fit camera to view all geometry
      */
-    void fitToScene();
+    void fitToScene(bool notify = true);
 
     /**
      * @brief Reset camera to default view
      */
-    void resetCamera();
+    void resetCamera(bool notify = true);
 
     /**
      * @brief Set camera to a front view (view direction along -Z)
      */
-    void setFrontView();
+    void setFrontView(bool notify = true);
 
     /**
      * @brief Set camera to a back view (view direction along +Z)
      */
-    void setBackView();
+    void setBackView(bool notify = true);
 
     /**
      * @brief Set camera to a top view (view direction along -Y)
      */
-    void setTopView();
+    void setTopView(bool notify = true);
 
     /**
      * @brief Set camera to a bottom view (view direction along +Y)
      */
-    void setBottomView();
+    void setBottomView(bool notify = true);
 
     /**
      * @brief Set camera to a left view (view direction along +X)
      */
-    void setLeftView();
+    void setLeftView(bool notify = true);
 
     /**
      * @brief Set camera to a right view (view direction along -X)
      */
-    void setRightView();
+    void setRightView(bool notify = true);
 
     // ---------------------------------------------------------------------
     // Signals (Util::Signal based)

@@ -86,79 +86,97 @@ CameraState& RenderSceneController::camera() { return m_camera; }
 
 const CameraState& RenderSceneController::camera() const { return m_camera; }
 
-void RenderSceneController::setCamera(const CameraState& camera) {
+void RenderSceneController::setCamera(const CameraState& camera, bool notify) {
     m_camera = camera;
-    m_cameraChanged.emitSignal();
-    m_sceneNeedsUpdate.emitSignal();
+    if(notify) {
+        m_cameraChanged.emitSignal();
+    }
 }
-
-void RenderSceneController::refreshScene() {
+void RenderSceneController::refreshScene(bool notify) {
     LOG_DEBUG("RenderSceneController: Refreshing scene");
     updateRenderData();
-    m_geometryChanged.emitSignal();
-    m_sceneNeedsUpdate.emitSignal();
+    if(notify) {
+        m_geometryChanged.emitSignal();
+        m_sceneNeedsUpdate.emitSignal();
+    }
 }
 
-void RenderSceneController::fitToScene() {
+void RenderSceneController::fitToScene(bool notify) {
     if(m_renderData.isEmpty()) {
         m_camera.reset();
     } else {
         m_camera.fitToBoundingBox(m_renderData.m_boundingBox);
     }
-    m_cameraChanged.emitSignal();
+    if(notify) {
+        m_cameraChanged.emitSignal();
+    }
 }
 
-void RenderSceneController::resetCamera() {
+void RenderSceneController::resetCamera(bool notify) {
     m_camera.reset();
-    m_cameraChanged.emitSignal();
+    if(notify) {
+        m_cameraChanged.emitSignal();
+    }
 }
 
-void RenderSceneController::setFrontView() {
+void RenderSceneController::setFrontView(bool notify) {
     LOG_DEBUG("RenderSceneController: Setting front view");
     const float distance = (m_camera.m_position - m_camera.m_target).length();
     m_camera.m_position = m_camera.m_target + QVector3D(0.0f, 0.0f, distance);
     m_camera.m_up = QVector3D(0.0f, 1.0f, 0.0f);
-    m_cameraChanged.emitSignal();
+    if(notify) {
+        m_cameraChanged.emitSignal();
+    }
 }
 
-void RenderSceneController::setTopView() {
+void RenderSceneController::setTopView(bool notify) {
     LOG_DEBUG("RenderSceneController: Setting top view");
     const float distance = (m_camera.m_position - m_camera.m_target).length();
     m_camera.m_position = m_camera.m_target + QVector3D(0.0f, distance, 0.0f);
     m_camera.m_up = QVector3D(0.0f, 0.0f, -1.0f);
-    m_cameraChanged.emitSignal();
+    if(notify) {
+        m_cameraChanged.emitSignal();
+    }
 }
 
-void RenderSceneController::setLeftView() {
+void RenderSceneController::setLeftView(bool notify) {
     LOG_DEBUG("RenderSceneController: Setting left view");
     const float distance = (m_camera.m_position - m_camera.m_target).length();
     m_camera.m_position = m_camera.m_target + QVector3D(-distance, 0.0f, 0.0f);
     m_camera.m_up = QVector3D(0.0f, 1.0f, 0.0f);
-    m_cameraChanged.emitSignal();
+    if(notify) {
+        m_cameraChanged.emitSignal();
+    }
 }
 
-void RenderSceneController::setRightView() {
+void RenderSceneController::setRightView(bool notify) {
     LOG_DEBUG("RenderSceneController: Setting right view");
     const float distance = (m_camera.m_position - m_camera.m_target).length();
     m_camera.m_position = m_camera.m_target + QVector3D(distance, 0.0f, 0.0f);
     m_camera.m_up = QVector3D(0.0f, 1.0f, 0.0f);
-    m_cameraChanged.emitSignal();
+    if(notify) {
+        m_cameraChanged.emitSignal();
+    }
 }
 
-void RenderSceneController::setBackView() {
+void RenderSceneController::setBackView(bool notify) {
     LOG_DEBUG("RenderSceneController: Setting back view");
     const float distance = (m_camera.m_position - m_camera.m_target).length();
     m_camera.m_position = m_camera.m_target + QVector3D(0.0f, 0.0f, -distance);
     m_camera.m_up = QVector3D(0.0f, 1.0f, 0.0f);
-    m_cameraChanged.emitSignal();
+    if(notify) {
+        m_cameraChanged.emitSignal();
+    }
 }
 
-void RenderSceneController::setBottomView() {
+void RenderSceneController::setBottomView(bool notify) {
     LOG_DEBUG("RenderSceneController: Setting bottom view");
     const float distance = (m_camera.m_position - m_camera.m_target).length();
     m_camera.m_position = m_camera.m_target + QVector3D(0.0f, -distance, 0.0f);
     m_camera.m_up = QVector3D(0.0f, 0.0f, 1.0f);
-    m_cameraChanged.emitSignal();
+    if(notify) {
+        m_cameraChanged.emitSignal();
+    }
 }
 
 Util::ScopedConnection
