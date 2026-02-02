@@ -281,8 +281,8 @@ namespace {
                                    " entities.");
     }
 
-    LOG_INFO("CreateAction: Created {} '{}' with {} entities", type, part_name,
-             result.m_entityCount);
+    LOG_TRACE("CreateAction: Created {} '{}' with {} entities", type, part_name,
+              result.m_entityCount);
 
     response["success"] = true;
     response["entity_id"] = result.m_rootEntityId;

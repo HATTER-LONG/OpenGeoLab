@@ -74,10 +74,16 @@ void GLViewport::onServiceGeometryChanged() {
     update();
 }
 
+void GLViewport::keyPressEvent(QKeyEvent* event) {
+    m_pressedModifiers = event->modifiers();
+    event->accept();
+}
 void GLViewport::mousePressEvent(QMouseEvent* event) {
+    if(!hasFocus()) {
+        forceActiveFocus();
+    }
     m_lastMousePos = event->position();
     m_pressedButtons = event->buttons();
-    m_pressedModifiers = event->modifiers();
     event->accept();
 }
 
@@ -104,13 +110,18 @@ void GLViewport::mouseMoveEvent(QMouseEvent* event) {
 
 void GLViewport::mouseReleaseEvent(QMouseEvent* event) {
     m_pressedButtons = event->buttons();
+    event->accept();
+}
+void GLViewport::keyReleaseEvent(QKeyEvent* event) {
     m_pressedModifiers = event->modifiers();
     event->accept();
 }
 
 void GLViewport::wheelEvent(QWheelEvent* event) {
-    const float delta = event->angleDelta().y() / 120.0f;
-    zoomCamera(delta * 5.0f);
+    if((m_pressedModifiers & Qt::ControlModifier)) {
+        const float delta = event->angleDelta().y() / 120.0f;
+        zoomCamera(delta * 5.0f);
+    }
     event->accept();
 }
 

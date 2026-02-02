@@ -25,6 +25,7 @@ ApplicationWindow {
     Component.onCompleted: {
         MainPages.mainWindow = root;
         initializeScene();
+        glViewport.focus = true;
     }
 
     /**

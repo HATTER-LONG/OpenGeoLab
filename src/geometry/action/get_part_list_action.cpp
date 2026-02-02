@@ -132,7 +132,7 @@ nlohmann::json GetPartListAction::execute(const nlohmann::json& /*params*/,
         progress_callback(1.0, "Part list retrieved successfully.");
     }
 
-    LOG_INFO("GetPartListAction: Retrieved {} parts", parts_array.size());
+    LOG_DEBUG("GetPartListAction: Retrieved {} parts", parts_array.size());
 
     response["success"] = true;
     response["parts"] = parts_array;

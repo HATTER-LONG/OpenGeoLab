@@ -23,7 +23,7 @@ nlohmann::json GeometryService::processRequest(const std::string& module_name,
     }
 
     const std::string action_name = params["action"].get<std::string>();
-    LOG_INFO("GeometryService: Executing action '{}'", action_name);
+    LOG_TRACE("GeometryService: Executing action '{}'", action_name);
 
     auto action = g_ComponentFactory.createObjectWithID<GeometryActionFactory>(action_name);
 
@@ -36,7 +36,7 @@ nlohmann::json GeometryService::processRequest(const std::string& module_name,
         throw std::runtime_error("Geometry action '" + action_name + "' failed: " + error_msg);
     }
 
-    LOG_INFO("GeometryService: Action '{}' completed successfully", action_name);
+    LOG_TRACE("GeometryService: Action '{}' completed successfully", action_name);
     return result;
 }
 
