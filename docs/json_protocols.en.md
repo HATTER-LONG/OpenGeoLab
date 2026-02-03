@@ -78,14 +78,14 @@ This document describes the current JSON-based protocols between QML and C++ (vi
 
 ### 3.3 create
 Common fields:
-- `type`: `box|cylinder|sphere|cone`
+- `type`: `box|cylinder|sphere|cone|torus`
 - `name` (optional)
 
 Response convention:
 - Success: `success: true` with `entity_id/entity_count/name/type`
 - Failure: `success: false` with an `error` string (this action typically does not throw)
 
-Box (nested format required):
+#### Box (nested format required):
 ```json
 {
   "action": "create",
@@ -94,6 +94,73 @@ Box (nested format required):
   "dimensions": {"x": 10.0, "y": 20.0, "z": 30.0},
   "origin": {"x": 0.0, "y": 0.0, "z": 0.0}
 }
+```
+
+#### Cylinder:
+```json
+{
+  "action": "create",
+  "type": "cylinder",
+  "name": "Cylinder-1",
+  "radius": 5.0,
+  "height": 10.0,
+  "x": 0.0, "y": 0.0, "z": 0.0
+}
+```
+
+#### Sphere:
+```json
+{
+  "action": "create",
+  "type": "sphere",
+  "name": "Sphere-1",
+  "radius": 5.0,
+  "x": 0.0, "y": 0.0, "z": 0.0
+}
+```
+
+#### Torus:
+```json
+{
+  "action": "create",
+  "type": "torus",
+  "name": "Torus-1",
+  "majorRadius": 10.0,
+  "minorRadius": 3.0,
+  "x": 0.0, "y": 0.0, "z": 0.0
+}
+```
+
+### 3.4 query_entity
+Query entity information by ID.
+
+#### Single entity:
+```json
+{ "action": "query_entity", "entity_id": 123 }
+```
+
+Response:
+```json
+{
+  "success": true,
+  "entity": {
+    "id": 123,
+    "uid": 45,
+    "type": "Face",
+    "name": "Face_45",
+    "owning_part_id": 1,
+    "owning_part_name": "Box-1",
+    "part_color": "#3498DB",
+    "bounding_box": { "min": [...], "max": [...] },
+    "center": [5.0, 5.0, 5.0],
+    "size": [10.0, 10.0, 10.0]
+  }
+}
+```
+
+#### Batch query:
+```json
+{ "action": "query_entity", "entity_ids": [123, 124, 125] }
 ```
 
 ---

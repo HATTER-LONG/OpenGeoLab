@@ -194,8 +194,9 @@ qt_add_qml_module(
   resources/qml/Pages/CornerOverlay.qml
   resources/qml/Pages/LogPanel.qml
   resources/qml/Pages/AddBoxPage.qml
-  resources/qml/Pages/AddLinePage.qml
-  resources/qml/Pages/AddPointPage.qml
+  resources/qml/Pages/AddCylinderPage.qml
+  resources/qml/Pages/AddSpherePage.qml
+  resources/qml/Pages/AddTorusPage.qml
   resources/qml/Pages/AIChatPage.qml
   resources/qml/Pages/AISuggestPage.qml
   resources/qml/Pages/CoordinateField.qml
@@ -205,6 +206,7 @@ qt_add_qml_module(
   resources/qml/Pages/ParamField.qml
   resources/qml/Pages/SmoothMeshPage.qml
   resources/qml/Pages/TrimPage.qml
+  resources/qml/Pages/GeoQueryPage.qml
   resources/qml/util/BaseButton.qml
   resources/qml/util/BaseComboBox.qml
   resources/qml/util/SelectableButton.qml
@@ -215,6 +217,7 @@ qt_add_qml_module(
   resources/qml/util/DocumentSideBar.qml
   resources/qml/util/PartListItem.qml
   resources/qml/util/EntityCountRow.qml
+  resources/qml/util/Selector.qml
   RESOURCES
   ${ICON_RESOURCES}
 )
