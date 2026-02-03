@@ -35,11 +35,23 @@ QMatrix4x4 CameraState::projectionMatrix(float aspect_ratio) const {
     return projection;
 }
 
+void CameraState::updateClipping(float distance) {
+    // Keep near plane proportional to distance, but allow very small values for tiny models.
+    // This avoids the "clipping/sinking" feeling when zooming close to small geometry.
+    const float d = std::max(distance, 1e-4f);
+    m_nearPlane = std::max(1e-4f, d * 0.001f);
+
+    // Ensure far plane is sufficiently larger than distance to avoid cutting geometry,
+    // and keep a reasonable ratio to preserve depth precision.
+    m_farPlane = std::max(d * 20.0f, m_nearPlane * 1000.0f);
+}
+
 void CameraState::reset() {
     m_position = QVector3D(0.0f, 0.0f, 50.0f);
     m_target = QVector3D(0.0f, 0.0f, 0.0f);
     m_up = QVector3D(0.0f, 1.0f, 0.0f);
     m_fov = 45.0f;
+    updateClipping((m_position - m_target).length());
     LOG_TRACE("CameraState: Reset to default position");
 }
 
@@ -60,8 +72,7 @@ void CameraState::fitToBoundingBox(const Geometry::BoundingBox3D& bbox) {
     m_position = m_target + QVector3D(0.0f, 0.0f, distance);
     m_up = QVector3D(0.0f, 1.0f, 0.0f);
 
-    m_nearPlane = std::max(0.1f, distance * 0.01f);
-    m_farPlane = distance * 10.0f;
+    updateClipping(distance);
 
     LOG_DEBUG("CameraState: Fit to bounding box, distance={:.2f}", distance);
 }

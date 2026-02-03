@@ -21,9 +21,8 @@ namespace {
 /**
  * @brief Create a box shape
  * @param params JSON with dimensions and optional origin
- *        Supports two formats:
- *        1. {dx, dy, dz, x, y, z} - legacy flat format
- *        2. {dimensions: {x, y, z}, origin: {x, y, z}} - nested format from QML
+ *        Required nested format from QML:
+ *        {dimensions: {x, y, z}, origin: {x, y, z}}
  * @return Created TopoDS_Shape or null shape on failure
  */
 [[nodiscard]] TopoDS_Shape createBox(const nlohmann::json& params) {

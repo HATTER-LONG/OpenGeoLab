@@ -28,7 +28,6 @@ namespace OpenGeoLab::Render {
  *
  * SceneRenderer is a self-contained component that handles:
  * - Shader compilation and management
- * - Grid rendering
  * - Mesh data upload to GPU
  * - Scene rendering with proper lighting
  *
@@ -89,8 +88,6 @@ public:
 
 private:
     void setupShaders();
-    void setupGrid();
-    void renderGrid(const QMatrix4x4& mvp);
     void renderMeshes(const QMatrix4x4& mvp,
                       const QMatrix4x4& model_matrix,
                       const QVector3D& camera_pos);
@@ -118,7 +115,6 @@ private:
 
     // Shaders
     std::unique_ptr<QOpenGLShaderProgram> m_meshShader;
-    std::unique_ptr<QOpenGLShaderProgram> m_gridShader;
 
     // Mesh shader uniform locations
     int m_mvpMatrixLoc{-1};
@@ -127,11 +123,6 @@ private:
     int m_lightPosLoc{-1};
     int m_viewPosLoc{-1};
     int m_pointSizeLoc{-1};
-
-    // Grid rendering
-    QOpenGLVertexArrayObject m_gridVAO;
-    QOpenGLBuffer m_gridVBO{QOpenGLBuffer::VertexBuffer};
-    int m_gridVertexCount{0};
 
     /**
      * @brief Internal structure for mesh GPU buffers

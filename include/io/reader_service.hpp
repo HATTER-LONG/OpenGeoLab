@@ -25,9 +25,18 @@ public:
     /**
      * @brief Process a model import request
      * @param module_name Service identifier
-     * @param params JSON with "file_path" key
+     * @param params JSON object.
+     *              Required fields:
+     *              - action: "load_model"
+     *              - file_path: absolute or relative file path
      * @param progress_reporter Progress callback interface
-     * @return JSON result with imported model metadata
+     * @return JSON result with imported model metadata.
+     *         On success:
+     *         - success: true
+     *         - action: "load_model"
+     *         - file_path: input file path
+     *         - reader: reader id (e.g., "StepReader", "BrepReader")
+     *         - entity_count: created entity count
      */
     [[nodiscard]] nlohmann::json
     processRequest(const std::string& module_name,

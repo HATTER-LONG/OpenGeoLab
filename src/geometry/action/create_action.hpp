@@ -17,10 +17,9 @@ namespace OpenGeoLab::Geometry {
  * @brief Action for creating basic geometric primitives
  *
  * Supports creating the following shapes:
- * - box: Requires dx, dy, dz (dimensions), optional x, y, z (origin)
- * - cylinder: Requires radius, height, optional x, y, z (base center)
- * - sphere: Requires radius, optional x, y, z (center)
- * - cone: Requires radius1 (base), radius2 (top), height, optional x, y, z (base center)
+ * - box: Requires nested parameters:
+ *        - dimensions: {x, y, z}
+ *        - origin: {x, y, z}
  *
  * All created shapes are added to the current GeometryDocument as Part entities.
  */

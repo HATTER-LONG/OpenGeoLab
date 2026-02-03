@@ -115,11 +115,11 @@ Item {
     Connections {
         target: OGL.BackendService
 
-        function onOperationFinished(moduleName, result) {
+        function onOperationFinished(moduleName, actionName, result) {
             root.resultState = "success";
         }
 
-        function onOperationFailed(moduleName, error) {
+        function onOperationFailed(moduleName, actionName, error) {
             root.resultState = "error";
         }
     }

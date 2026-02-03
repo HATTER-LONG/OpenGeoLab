@@ -7,9 +7,10 @@
 # 计划任务
 
 1. 了解当前实现，按如下要求完成开发：
-   - 调整 geometry action 执行方法 execute 返回值为 json，打通 backend service 支持 qml 通过协议 get 获取 part list info，包括 part 所有的子 entity 数量、ID、颜色。
-   - 调整每个 part 不同的颜色，颜色list 稳定且不要纯白等这种纯色，看起来高级点。
-   - 完成 qml sidebar part list 展示，qml 与 C++ 交互都走 backend_service 不要私自加 service。
+   - 为 io reader 增加 action，加载模型为 "load_model" （不用兼容之前的）使其与其他协议风格一致，并更新 docs。修复 docs 中 create 相关，当前支持情况看 cpp 代码;
+   - 完善 reademe 与 协议文档，并提供英文版本。
+   - render 渲染小模型会有当缩放时会有沉入水中的感觉，修复这个问题，并去掉参考网格显示。
+   - 为我解析下 render opengl 相关代码实现细节。
 2. 检查工程中所有的 qml cpp hpp 代码，完善或补充注释信息，当前注释不符合要求的也要进行修改。所有注释信息参考  doxygen_comment_style.md 文件中的要求进行编写。
-3. 完成前边修改后，仔细阅读项目中所有 qml cpp 代码，思考实现软件主题功能的前提下，代码是否足够清晰，重构不合理的代码以及架构。
+3. 注意更新 README.md 以及 docs/json_protocols.md 文件中的内容，确保与代码实现保持一致，以中文版本为准更新英文版本。
 4. 保证最终代码可以编译通过，并正确执行。

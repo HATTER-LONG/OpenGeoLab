@@ -32,6 +32,12 @@ struct CameraState {
     float m_farPlane{10000.0f};              ///< Far clipping plane
 
     /**
+     * @brief Update clipping planes based on the current camera distance
+     * @param distance Distance between camera position and target
+     */
+    void updateClipping(float distance);
+
+    /**
      * @brief Build a view matrix
      * @return View transformation matrix
      */

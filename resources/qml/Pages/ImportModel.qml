@@ -19,6 +19,7 @@ FileDialog {
         console.log("[ImportModel] Selected model file:", filePath);
 
         OGL.BackendService.request("ReaderService", JSON.stringify({
+            "action": "load_model",
             "file_path": filePath
         }));
     }

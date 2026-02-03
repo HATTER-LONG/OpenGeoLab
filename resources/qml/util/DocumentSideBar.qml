@@ -73,13 +73,13 @@ Rectangle {
             }
         }
 
-        function onOperationFailed(moduleName, error, actionName) {
-            if (moduleName === "GeometryService") {
-                if (actionName !== "get_part_list")
-                    return;
-                sidebar.isLoading = false;
-                console.warn("[DocumentSideBar] Failed to get part list:", error);
-            }
+        function onOperationFailed(moduleName, actionName, error) {
+            if (moduleName !== "GeometryService")
+                return;
+            if (actionName !== "get_part_list")
+                return;
+            sidebar.isLoading = false;
+            console.warn("[DocumentSideBar] Failed to get part list:", error);
         }
     }
 

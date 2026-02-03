@@ -74,31 +74,6 @@ void main() {
 }
 )";
 
-const char* const GRID_VERTEX_SHADER = R"(
-#version 330 core
-layout(location = 0) in vec3 aPosition;
-layout(location = 1) in vec4 aColor;
-
-uniform mat4 uMVPMatrix;
-
-out vec4 vColor;
-
-void main() {
-    vColor = aColor;
-    gl_Position = uMVPMatrix * vec4(aPosition, 1.0);
-}
-)";
-
-const char* const GRID_FRAGMENT_SHADER = R"(
-#version 330 core
-in vec4 vColor;
-out vec4 fragColor;
-
-void main() {
-    fragColor = vColor;
-}
-)";
-
 } // namespace
 
 // =============================================================================
@@ -142,7 +117,6 @@ void SceneRenderer::initialize() {
 
     initializeOpenGLFunctions();
     setupShaders();
-    setupGrid();
 
     m_initialized = true;
     LOG_DEBUG("SceneRenderer: OpenGL initialized");
@@ -167,71 +141,7 @@ void SceneRenderer::setupShaders() {
     m_viewPosLoc = m_meshShader->uniformLocation("uViewPos");
     m_pointSizeLoc = m_meshShader->uniformLocation("uPointSize");
 
-    // Grid shader
-    m_gridShader = std::make_unique<QOpenGLShaderProgram>();
-    m_gridShader->addShaderFromSourceCode(QOpenGLShader::Vertex, GRID_VERTEX_SHADER);
-    m_gridShader->addShaderFromSourceCode(QOpenGLShader::Fragment, GRID_FRAGMENT_SHADER);
-    if(!m_gridShader->link()) {
-        LOG_ERROR("SceneRenderer: Failed to link grid shader: {}",
-                  m_gridShader->log().toStdString());
-    }
-
     LOG_DEBUG("SceneRenderer: Shaders compiled and linked");
-}
-
-void SceneRenderer::setupGrid() {
-    m_gridVAO.create();
-    m_gridVBO.create();
-
-    // Generate grid vertices
-    std::vector<float> grid_vertices;
-    const float grid_size = 100.0f;
-    const float grid_step = 5.0f;
-    const int grid_lines = static_cast<int>(grid_size / grid_step);
-
-    // Grid color (subtle gray)
-    const float grid_color[4] = {0.3f, 0.3f, 0.35f, 0.5f};
-    const float axis_color_x[4] = {0.8f, 0.2f, 0.2f, 0.8f}; // Red for X
-    const float axis_color_z[4] = {0.2f, 0.2f, 0.8f, 0.8f}; // Blue for Z
-
-    for(int i = -grid_lines; i <= grid_lines; ++i) {
-        const float pos = i * grid_step;
-
-        // Choose color based on whether this is an axis line
-        const float* color_x = (i == 0) ? axis_color_z : grid_color;
-        const float* color_z = (i == 0) ? axis_color_x : grid_color;
-
-        // Lines parallel to X axis
-        grid_vertices.insert(grid_vertices.end(), {-grid_size, 0.0f, pos});
-        grid_vertices.insert(grid_vertices.end(), {color_x[0], color_x[1], color_x[2], color_x[3]});
-        grid_vertices.insert(grid_vertices.end(), {grid_size, 0.0f, pos});
-        grid_vertices.insert(grid_vertices.end(), {color_x[0], color_x[1], color_x[2], color_x[3]});
-
-        // Lines parallel to Z axis
-        grid_vertices.insert(grid_vertices.end(), {pos, 0.0f, -grid_size});
-        grid_vertices.insert(grid_vertices.end(), {color_z[0], color_z[1], color_z[2], color_z[3]});
-        grid_vertices.insert(grid_vertices.end(), {pos, 0.0f, grid_size});
-        grid_vertices.insert(grid_vertices.end(), {color_z[0], color_z[1], color_z[2], color_z[3]});
-    }
-
-    m_gridVertexCount = static_cast<int>(grid_vertices.size()) / 7;
-
-    m_gridVAO.bind();
-    m_gridVBO.bind();
-    m_gridVBO.allocate(grid_vertices.data(),
-                       static_cast<int>(grid_vertices.size() * sizeof(float)));
-
-    // Position attribute
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 7 * sizeof(float), nullptr);
-
-    // Color attribute
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 7 * sizeof(float),
-                          reinterpret_cast<void*>(3 * sizeof(float)));
-
-    m_gridVBO.release();
-    m_gridVAO.release();
 }
 
 void SceneRenderer::uploadMeshData(const DocumentRenderData& render_data) {
@@ -370,30 +280,11 @@ void SceneRenderer::render(const QVector3D& camera_pos,
     const QMatrix4x4 model; // Identity
     const QMatrix4x4 mvp = projection_matrix * view_matrix * model;
 
-    // Render grid
-    renderGrid(mvp);
-
     // Render meshes
     renderMeshes(mvp, model, camera_pos);
 
     glDisable(GL_BLEND);
     glDisable(GL_DEPTH_TEST);
-}
-
-void SceneRenderer::renderGrid(const QMatrix4x4& mvp) {
-    if(!m_gridShader || !m_gridShader->isLinked()) {
-        return;
-    }
-
-    m_gridShader->bind();
-    m_gridShader->setUniformValue("uMVPMatrix", mvp);
-
-    glLineWidth(1.0f);
-    m_gridVAO.bind();
-    glDrawArrays(GL_LINES, 0, m_gridVertexCount);
-    m_gridVAO.release();
-
-    m_gridShader->release();
 }
 
 void SceneRenderer::renderMeshes(const QMatrix4x4& mvp,
@@ -478,15 +369,7 @@ void SceneRenderer::renderMeshes(const QMatrix4x4& mvp,
 void SceneRenderer::cleanup() {
     clearMeshBuffers();
 
-    if(m_gridVAO.isCreated()) {
-        m_gridVAO.destroy();
-    }
-    if(m_gridVBO.isCreated()) {
-        m_gridVBO.destroy();
-    }
-
     m_meshShader.reset();
-    m_gridShader.reset();
     m_initialized = false;
 
     LOG_DEBUG("SceneRenderer: Cleanup complete");

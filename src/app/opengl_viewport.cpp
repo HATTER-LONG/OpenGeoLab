@@ -190,6 +190,8 @@ void GLViewport::zoomCamera(float delta) {
     direction = direction.normalized() * distance;
     m_cameraState.m_position = m_cameraState.m_target + direction;
 
+    m_cameraState.updateClipping(distance);
+
     Render::RenderSceneController::instance().setCamera(m_cameraState);
 
     update();

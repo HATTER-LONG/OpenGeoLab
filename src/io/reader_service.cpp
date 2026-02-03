@@ -18,7 +18,18 @@ nlohmann::json ReaderService::processRequest(const std::string& /*module_name*/,
                                              App::IProgressReporterPtr progress_reporter) {
     nlohmann::json result;
 
-    progress_reporter->reportProgress(0.0, "Starting model import...");
+    if(!params.is_object()) {
+        throw std::invalid_argument("Invalid request parameters: expected JSON object.");
+    }
+
+    const std::string action = params.value("action", "");
+    if(action != "load_model") {
+        throw std::invalid_argument("Unsupported action for ReaderService: '" + action + "'.");
+    }
+
+    if(progress_reporter) {
+        progress_reporter->reportProgress(0.0, "Starting model import...");
+    }
 
     if(!params.contains("file_path") || !params["file_path"].is_string()) {
         LOG_ERROR("ReaderService: Missing or invalid 'file_path' parameter");
@@ -29,10 +40,14 @@ nlohmann::json ReaderService::processRequest(const std::string& /*module_name*/,
 
     std::string reader_type = detectFileFormat(file_path);
     LOG_DEBUG("ReaderService: Detected file format, using reader: {}", reader_type);
-    progress_reporter->reportProgress(0.01, "Creating reader [" + reader_type + "]...");
+    if(progress_reporter) {
+        progress_reporter->reportProgress(0.01, "Creating reader [" + reader_type + "]...");
+    }
     auto reader = g_ComponentFactory.createObjectWithID<ReaderFactory>(reader_type);
 
-    progress_reporter->reportProgress(0.05, "Reading file...");
+    if(progress_reporter) {
+        progress_reporter->reportProgress(0.05, "Reading file...");
+    }
 
     auto reader_result = reader->readFile(
         file_path, OpenGeoLab::Util::makeProgressCallback(progress_reporter, 0.05, 0.75));
@@ -43,6 +58,12 @@ nlohmann::json ReaderService::processRequest(const std::string& /*module_name*/,
 
     LOG_INFO("ReaderService: Model import completed successfully, entityCount={}",
              reader_result.m_entityCount);
+
+    result["success"] = true;
+    result["action"] = action;
+    result["file_path"] = file_path;
+    result["reader"] = reader_type;
+    result["entity_count"] = reader_result.m_entityCount;
     return result;
 }
 
