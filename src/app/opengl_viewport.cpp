@@ -84,6 +84,7 @@ void GLViewport::mousePressEvent(QMouseEvent* event) {
     }
     m_lastMousePos = event->position();
     m_pressedButtons = event->buttons();
+    m_pressedModifiers = event->modifiers();
     event->accept();
 }
 

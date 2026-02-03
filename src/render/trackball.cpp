@@ -6,7 +6,7 @@
  * This implementation uses Qt's QQuaternion for rotation representation.
  */
 
-#include <render/trackball.hpp>
+#include "trackball.hpp"
 
 #include <QtMath>
 #include <cmath>
