@@ -86,6 +86,15 @@ enum class RenderPrimitiveType : uint8_t {
 };
 
 /**
+ * @brief Highlight state for rendering entities
+ */
+enum class HighlightState : uint8_t {
+    None = 0,    ///< Normal rendering
+    Preview = 1, ///< Mouse hover preview highlight
+    Selected = 2 ///< Selected/confirmed highlight
+};
+
+/**
  * @brief Mesh data for a single renderable entity
  *
  * Contains vertex and index data for rendering a geometry entity.
@@ -96,6 +105,7 @@ struct RenderMesh {
     Geometry::EntityType m_entityType{Geometry::EntityType::None}; ///< Entity type
 
     RenderPrimitiveType m_primitiveType{RenderPrimitiveType::Triangles}; ///< Primitive type
+    HighlightState m_highlightState{HighlightState::None}; ///< Current highlight state
 
     std::vector<RenderVertex> m_vertices; ///< Vertex data
     std::vector<uint32_t> m_indices;      ///< Index data (empty for non-indexed draw)

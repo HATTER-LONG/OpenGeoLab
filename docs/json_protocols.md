@@ -182,6 +182,164 @@
 }
 ```
 
+### 3.4 query_entity
+- action：`"query_entity"`
+- 用途：查询实体的详细信息（类型、层级关系、包围盒等）
+
+#### 3.4.1 单个实体查询
+请求：
+```json
+{
+  "action": "query_entity",
+  "entity_id": 123,
+  "_meta": { "silent": true }
+}
+```
+响应：
+```json
+{
+  "success": true,
+  "entity": {
+    "id": 123,
+    "uid": 45,
+    "type": "Face",
+    "type_enum": 4,
+    "name": "Face_45",
+    "parent_ids": [100],
+    "child_ids": [200, 201],
+    "owning_part_id": 1,
+    "owning_part_name": "Box-1",
+    "part_color": "#FF6B35FF",
+    "bounding_box": {
+      "min": [0.0, 0.0, 0.0],
+      "max": [10.0, 10.0, 10.0]
+    },
+    "center": [5.0, 5.0, 5.0],
+    "size": [10.0, 10.0, 10.0]
+  }
+}
+```
+
+#### 3.4.2 批量实体查询
+请求：
+```json
+{
+  "action": "query_entity",
+  "entity_ids": [123, 124, 125],
+  "_meta": { "silent": true }
+}
+```
+响应：
+```json
+{
+  "success": true,
+  "entities": [
+    { "id": 123, "type": "Face", ... },
+    { "id": 124, "type": "Edge", ... }
+  ],
+  "queried_count": 2
+}
+```
+
+### 3.5 highlight
+- action：`"highlight"`
+- 用途：管理实体的高亮状态（用于选择、预览显示）
+- 高亮状态：
+  - `"none"`：无高亮（正常状态）
+  - `"preview"`：预览高亮（鼠标悬停，青色）
+  - `"selected"`：选中高亮（已选择，橙色）
+
+#### 3.5.1 设置单个实体高亮
+请求：
+```json
+{
+  "action": "highlight",
+  "operation": "set",
+  "entity_id": 123,
+  "state": "selected",
+  "_meta": { "silent": true }
+}
+```
+响应：
+```json
+{
+  "success": true,
+  "entity_id": 123,
+  "state": "selected"
+}
+```
+
+#### 3.5.2 批量设置高亮
+请求：
+```json
+{
+  "action": "highlight",
+  "operation": "set",
+  "entity_ids": [123, 124, 125],
+  "state": "selected",
+  "_meta": { "silent": true }
+}
+```
+响应：
+```json
+{
+  "success": true,
+  "affected_count": 3,
+  "state": "selected"
+}
+```
+
+#### 3.5.3 清除特定实体高亮
+请求：
+```json
+{
+  "action": "highlight",
+  "operation": "clear",
+  "entity_ids": [123, 124],
+  "_meta": { "silent": true }
+}
+```
+响应：
+```json
+{
+  "success": true,
+  "cleared_count": 2
+}
+```
+
+#### 3.5.4 清除所有高亮
+请求：
+```json
+{
+  "action": "highlight",
+  "operation": "clear_all",
+  "_meta": { "silent": true }
+}
+```
+响应：
+```json
+{ "success": true }
+```
+
+#### 3.5.5 获取当前高亮状态
+请求：
+```json
+{
+  "action": "highlight",
+  "operation": "get",
+  "_meta": { "silent": true }
+}
+```
+响应：
+```json
+{
+  "success": true,
+  "preview_ids": [100, 101],
+  "selected_ids": [200, 201, 202],
+  "total_highlighted": 5
+}
+```
+
 
 ---
 

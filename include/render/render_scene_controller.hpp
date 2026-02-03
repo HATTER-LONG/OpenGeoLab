@@ -17,6 +17,8 @@
 #include <QMatrix4x4>
 #include <QVector3D>
 #include <functional>
+#include <unordered_map>
+#include <unordered_set>
 
 namespace OpenGeoLab::Render {
 
@@ -157,6 +159,64 @@ public:
     void setRightView(bool notify = true);
 
     // ---------------------------------------------------------------------
+    // Highlight Management
+    // ---------------------------------------------------------------------
+
+    /**
+     * @brief Set highlight state for a single entity
+     * @param entity_id Entity to highlight
+     * @param state Highlight state to set
+     */
+    void setHighlight(Geometry::EntityId entity_id, HighlightState state);
+
+    /**
+     * @brief Set highlight state for multiple entities
+     * @param entity_ids Entities to highlight
+     * @param state Highlight state to set
+     */
+    void setHighlight(const std::vector<Geometry::EntityId>& entity_ids, HighlightState state);
+
+    /**
+     * @brief Clear highlight for specific entities
+     * @param entity_ids Entities to clear highlight from
+     */
+    void clearHighlight(const std::vector<Geometry::EntityId>& entity_ids);
+
+    /**
+     * @brief Clear all highlights
+     */
+    void clearAllHighlights();
+
+    /**
+     * @brief Get current highlight state for an entity
+     * @param entity_id Entity to query
+     * @return Current highlight state
+     */
+    [[nodiscard]] HighlightState getHighlightState(Geometry::EntityId entity_id) const;
+
+    /**
+     * @brief Get all entities with a specific highlight state
+     * @param state Highlight state to query
+     * @return Set of entity IDs with the specified state
+     */
+    [[nodiscard]] std::vector<Geometry::EntityId>
+    getHighlightedEntities(HighlightState state) const;
+
+    /**
+     * @brief Get all currently highlighted entities (preview or selected)
+     * @return Map of entity ID to highlight state
+     */
+    [[nodiscard]] const std::unordered_map<Geometry::EntityId, HighlightState>&
+    allHighlights() const;
+
+    /**
+     * @brief Subscribe to highlight changes
+     * @param callback Callback executed when highlight state changes
+     * @return Scoped connection that disconnects on destruction
+     */
+    [[nodiscard]] Util::ScopedConnection subscribeHighlightChanged(std::function<void()> callback);
+
+    // ---------------------------------------------------------------------
     // Signals (Util::Signal based)
     // ---------------------------------------------------------------------
 
@@ -185,6 +245,7 @@ private:
     void subscribeToCurrentDocument();
     void subscribeToDocument(const Geometry::GeometryDocumentPtr& document);
     void updateRenderData();
+    void applyHighlightsToRenderData();
 
     void handleDocumentGeometryChanged(const Geometry::GeometryChangeEvent& event);
 
@@ -195,9 +256,13 @@ private:
     Util::ScopedConnection m_documentConnection;     ///< Connection to document changes
     bool m_hasGeometry{false};                       ///< Whether geometry is loaded
 
+    /// Entity highlight states (entityId -> state)
+    std::unordered_map<Geometry::EntityId, HighlightState> m_highlightStates;
+
     Util::Signal<> m_geometryChanged;
     Util::Signal<> m_cameraChanged;
     Util::Signal<> m_sceneNeedsUpdate;
+    Util::Signal<> m_highlightChanged;
 };
 
 } // namespace OpenGeoLab::Render

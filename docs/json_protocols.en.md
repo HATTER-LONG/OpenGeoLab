@@ -96,6 +96,139 @@ Box (nested format required):
 }
 ```
 
+### 3.4 query_entity
+Query detailed information for one or more geometric entities.
+
+#### 3.4.1 Single Entity Query
+Request:
+```json
+{
+  "action": "query_entity",
+  "entity_id": 12345,
+  "_meta": { "silent": true }
+}
+```
+
+Response:
+```json
+{
+  "success": true,
+  "action": "query_entity",
+  "entity": {
+    "id": 12345,
+    "uid": 1,
+    "type": "Face",
+    "name": "Face-1",
+    "parent_ids": [10001],
+    "child_ids": [],
+    "owning_part": 10000,
+    "bounding_box": {
+      "min": {"x": 0.0, "y": 0.0, "z": 0.0},
+      "max": {"x": 10.0, "y": 20.0, "z": 30.0}
+    },
+    "center": {"x": 5.0, "y": 10.0, "z": 15.0},
+    "size": {"x": 10.0, "y": 20.0, "z": 30.0}
+  }
+}
+```
+
+#### 3.4.2 Batch Query
+Request:
+```json
+{
+  "action": "query_entity",
+  "entity_ids": [12345, 12346, 12347],
+  "_meta": { "silent": true }
+}
+```
+
+Response:
+```json
+{
+  "success": true,
+  "action": "query_entity",
+  "entities": [
+    { "id": 12345, "uid": 1, "type": "Face", ... },
+    { "id": 12346, "uid": 2, "type": "Edge", ... },
+    { "id": 12347, "uid": 3, "type": "Vertex", ... }
+  ]
+}
+```
+
+### 3.5 highlight
+Manage geometric entity highlight state for visual preview/selection.
+
+#### 3.5.1 HighlightState Enum
+- `"none"`: No highlight
+- `"preview"`: Preview state (typically cyan)
+- `"selected"`: Selected state (typically orange)
+
+#### 3.5.2 Set Highlight
+Request:
+```json
+{
+  "action": "highlight",
+  "operation": "set",
+  "entity_id": 12345,
+  "state": "preview",
+  "_meta": { "silent": true }
+}
+```
+
+Response:
+```json
+{
+  "success": true,
+  "action": "highlight",
+  "operation": "set",
+  "entity_id": 12345,
+  "state": "preview"
+}
+```
+
+#### 3.5.3 Clear Highlight (Single)
+Request:
+```json
+{
+  "action": "highlight",
+  "operation": "clear",
+  "entity_id": 12345,
+  "_meta": { "silent": true }
+}
+```
+
+#### 3.5.4 Clear All Highlights
+Request:
+```json
+{
+  "action": "highlight",
+  "operation": "clear_all",
+  "_meta": { "silent": true }
+}
+```
+
+#### 3.5.5 Get Highlight State
+Request:
+```json
+{
+  "action": "highlight",
+  "operation": "get",
+  "entity_id": 12345,
+  "_meta": { "silent": true }
+}
+```
+
+Response:
+```json
+{
+  "success": true,
+  "action": "highlight",
+  "operation": "get",
+  "entity_id": 12345,
+  "state": "selected"
+}
+```
+
 ---
 
 ## 4. ReaderService

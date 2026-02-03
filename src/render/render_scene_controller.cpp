@@ -205,6 +205,107 @@ RenderSceneController::subscribeSceneNeedsUpdate(std::function<void()> callback)
     return m_sceneNeedsUpdate.connect(std::move(callback));
 }
 
+// =============================================================================
+// Highlight Management
+// =============================================================================
+
+void RenderSceneController::setHighlight(Geometry::EntityId entity_id, HighlightState state) {
+    if(entity_id == Geometry::INVALID_ENTITY_ID) {
+        return;
+    }
+
+    if(state == HighlightState::None) {
+        m_highlightStates.erase(entity_id);
+    } else {
+        m_highlightStates[entity_id] = state;
+    }
+
+    applyHighlightsToRenderData();
+    m_highlightChanged.emitSignal();
+    m_sceneNeedsUpdate.emitSignal();
+}
+
+void RenderSceneController::setHighlight(const std::vector<Geometry::EntityId>& entity_ids,
+                                         HighlightState state) {
+    for(const auto& id : entity_ids) {
+        if(id == Geometry::INVALID_ENTITY_ID) {
+            continue;
+        }
+
+        if(state == HighlightState::None) {
+            m_highlightStates.erase(id);
+        } else {
+            m_highlightStates[id] = state;
+        }
+    }
+
+    applyHighlightsToRenderData();
+    m_highlightChanged.emitSignal();
+    m_sceneNeedsUpdate.emitSignal();
+}
+
+void RenderSceneController::clearHighlight(const std::vector<Geometry::EntityId>& entity_ids) {
+    for(const auto& id : entity_ids) {
+        m_highlightStates.erase(id);
+    }
+
+    applyHighlightsToRenderData();
+    m_highlightChanged.emitSignal();
+    m_sceneNeedsUpdate.emitSignal();
+}
+
+void RenderSceneController::clearAllHighlights() {
+    m_highlightStates.clear();
+    applyHighlightsToRenderData();
+    m_highlightChanged.emitSignal();
+    m_sceneNeedsUpdate.emitSignal();
+}
+
+HighlightState RenderSceneController::getHighlightState(Geometry::EntityId entity_id) const {
+    auto it = m_highlightStates.find(entity_id);
+    if(it != m_highlightStates.end()) {
+        return it->second;
+    }
+    return HighlightState::None;
+}
+
+std::vector<Geometry::EntityId>
+RenderSceneController::getHighlightedEntities(HighlightState state) const {
+    std::vector<Geometry::EntityId> result;
+    for(const auto& [id, s] : m_highlightStates) {
+        if(s == state) {
+            result.push_back(id);
+        }
+    }
+    return result;
+}
+
+const std::unordered_map<Geometry::EntityId, HighlightState>&
+RenderSceneController::allHighlights() const {
+    return m_highlightStates;
+}
+
+Util::ScopedConnection
+RenderSceneController::subscribeHighlightChanged(std::function<void()> callback) {
+    return m_highlightChanged.connect(std::move(callback));
+}
+
+void RenderSceneController::applyHighlightsToRenderData() {
+    // Apply highlight states to render meshes
+    auto applyToMeshes = [this](std::vector<RenderMesh>& meshes) {
+        for(auto& mesh : meshes) {
+            auto it = m_highlightStates.find(mesh.m_entityId);
+            mesh.m_highlightState =
+                (it != m_highlightStates.end()) ? it->second : HighlightState::None;
+        }
+    };
+
+    applyToMeshes(m_renderData.m_faceMeshes);
+    applyToMeshes(m_renderData.m_edgeMeshes);
+    applyToMeshes(m_renderData.m_vertexMeshes);
+    m_renderData.markModified();
+}
+
 void RenderSceneController::handleDocumentGeometryChanged(
     const Geometry::GeometryChangeEvent& event) {
     LOG_DEBUG("RenderSceneController: Document geometry changed, type={}",
@@ -278,7 +379,7 @@ void RenderSceneController::updateRenderData() {
         }
 
         m_renderData = document->getRenderData(TessellationOptions::defaultOptions());
-        m_renderData.markModified();
+        applyHighlightsToRenderData();
         m_hasGeometry = !m_renderData.isEmpty();
 
         LOG_DEBUG(

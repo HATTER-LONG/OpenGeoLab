@@ -60,11 +60,26 @@ cmake --build build
 完整协议清单见：`docs/json_protocols.md`
 
 ## 后续开发任务（来自 plan.md，做了轻度工程化拆分）
-- 几何交互：选择（点/边/面/Part）、高亮、拾取、变换与编辑操作（trim/offset 等）
+- 几何交互：~~选择（点/边/面/Part）、高亮、拾取~~ ✅（已完成 EntitySelector 控件及 QueryPage）、变换与编辑操作（trim/offset 等）
 - 网格：面网格剖分、网格质量指标、平滑/修复工具链
-- 渲染：更一致的光照（可能引入 PBR/IBL）、选择高亮/描边、可视化辅助（法线/网格）
+- 渲染：更一致的光照（可能引入 PBR/IBL）、~~选择高亮/描边~~ ✅（已完成基于 HighlightState 的高亮渲染）、可视化辅助（法线/网格）
 - IO：导入进度与错误回传更完整；导出 STEP/BREP/网格格式
 - AI：网格质量诊断与修复建议、交互式问答与操作编排
+
+## 功能特性
+
+### 几何选择与查询
+- **Select 控件**（EntitySelector.qml）：通用实体拾取组件
+  - 支持选择模式过滤：Vertex（点）、Edge（边）、Face（面）、Solid（体）、Part（零件）
+  - 悬停预览：鼠标悬停时临时高亮实体（青色）
+  - 点击选择：单击选中实体（橙色高亮）
+  - 框选支持：按住鼠标拖拽进行批量框选
+  - 右键取消：右键清除所有选择
+  - 支持多选及选择上限配置
+- **Query 界面**：Geometry 选项卡中的查询功能页
+  - 选择模式切换：None / Vertex / Edge / Face / Solid / Part
+  - 已选实体列表：显示选中实体的类型和 ID
+  - 实体详细信息查询：包括包围盒、中心点、尺寸、父子关系等
 
 ## 代码规范与注释
 - Doxygen 注释风格参考：`doxygen_comment_style.md`

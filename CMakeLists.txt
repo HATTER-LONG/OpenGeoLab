@@ -205,6 +205,7 @@ qt_add_qml_module(
   resources/qml/Pages/ParamField.qml
   resources/qml/Pages/SmoothMeshPage.qml
   resources/qml/Pages/TrimPage.qml
+  resources/qml/Pages/QueryPage.qml
   resources/qml/util/BaseButton.qml
   resources/qml/util/BaseComboBox.qml
   resources/qml/util/SelectableButton.qml
@@ -215,6 +216,7 @@ qt_add_qml_module(
   resources/qml/util/DocumentSideBar.qml
   resources/qml/util/PartListItem.qml
   resources/qml/util/EntityCountRow.qml
+  resources/qml/util/EntitySelector.qml
   RESOURCES
   ${ICON_RESOURCES}
 )

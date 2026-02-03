@@ -64,6 +64,18 @@ QtObject {
                                 tooltip: qsTr("Offset Geometry")
                             }
                         ]
+                    },
+                    {
+                        title: qsTr("Query"),
+                        items: [
+                            {
+                                type: "button",
+                                id: "queryEntity",
+                                text: qsTr("Query"),
+                                iconSource: ribbonConfig.iconBasePath + "query.svg",
+                                tooltip: qsTr("Query Entity Information")
+                            }
+                        ]
                     }
                 ]
             },
