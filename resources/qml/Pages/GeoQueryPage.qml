@@ -4,7 +4,7 @@
  *
  * Allows user to select entities from the viewport using the Selector control
  * and displays detailed information about the selected entities through
- * the query_entity backend action.
+ * the query_entity backend action. Supports entity picking with type filtering.
  */
 import QtQuick
 import QtQuick.Controls
@@ -43,6 +43,34 @@ FunctionPageBase {
     }
 
     // ===============================
+    // Entity Picking Integration
+    // ===============================
+
+    /**
+     * @brief Handle entity picked from viewport
+     * @param entityType Type of picked entity
+     * @param entityUid UID of picked entity
+     */
+    function handleEntityPicked(entityType, entityUid) {
+        console.log("[GeoQueryPage] Entity picked: type=" + entityType + ", uid=" + entityUid);
+        // Add to selection via Selector
+        picker.addSelection(entityType, entityUid);
+    }
+
+    /**
+     * @brief Handle pick cancelled from viewport
+     */
+    function handlePickCancelled() {
+        console.log("[GeoQueryPage] Pick cancelled");
+        picker.deactivatePickMode();
+        // Disable pick mode on viewport
+        let viewport = MainPages.getViewport();
+        if (viewport) {
+            viewport.pickModeEnabled = false;
+        }
+    }
+
+    // ===============================
     // UI Content
     // ===============================
 
@@ -57,6 +85,16 @@ FunctionPageBase {
 
             onSelectionChanged: entities => {
                 root.selectedEntities = entities;
+            }
+
+            onPickModeChanged: (enabled, entityType) => {
+                console.log("[GeoQueryPage] Pick mode changed: enabled=" + enabled + ", type=" + entityType);
+                // Update viewport pick mode
+                let viewport = MainPages.getViewport();
+                if (viewport) {
+                    viewport.pickModeEnabled = enabled;
+                    viewport.pickEntityType = entityType;
+                }
             }
         }
 

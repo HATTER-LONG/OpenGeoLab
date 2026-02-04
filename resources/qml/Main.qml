@@ -67,6 +67,7 @@ ApplicationWindow {
         // OpenGL 3D Viewport
         GLViewport {
             id: glViewport
+            objectName: "glViewport"
             anchors.fill: parent
         }
 
@@ -96,6 +97,25 @@ ApplicationWindow {
             }));
             // Refresh part list in sidebar
             documentSideBar.refreshPartList();
+        }
+
+        /**
+         * @brief Handle entity pick event from viewport
+         * @param entityType Type of picked entity
+         * @param entityUid UID of picked entity
+         */
+        function onEntityPicked(entityType, entityUid) {
+            console.log("[Main] Entity picked: type=" + entityType + ", uid=" + entityUid);
+            // Forward to MainPages for handling by active page
+            MainPages.handleEntityPicked(entityType, entityUid);
+        }
+
+        /**
+         * @brief Handle pick cancelled event
+         */
+        function onPickCancelled() {
+            console.log("[Main] Pick cancelled");
+            MainPages.handlePickCancelled();
         }
     }
 

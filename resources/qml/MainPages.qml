@@ -161,4 +161,56 @@ QtObject {
         const page = pageCache[actionId];
         return page && page.visible;
     }
+
+    /**
+     * @brief Handle entity picked event from viewport
+     * @param entityType Type of picked entity
+     * @param entityUid UID of picked entity
+     *
+     * Forwards the pick event to the currently open page if it has
+     * a handleEntityPicked method.
+     */
+    function handleEntityPicked(entityType, entityUid) {
+        if (currentOpenPage) {
+            const page = pageCache[currentOpenPage];
+            if (page && typeof page.handleEntityPicked === "function") {
+                page.handleEntityPicked(entityType, entityUid);
+            }
+        }
+    }
+
+    /**
+     * @brief Handle pick cancelled event from viewport
+     *
+     * Forwards the cancellation to the currently open page if it has
+     * a handlePickCancelled method.
+     */
+    function handlePickCancelled() {
+        if (currentOpenPage) {
+            const page = pageCache[currentOpenPage];
+            if (page && typeof page.handlePickCancelled === "function") {
+                page.handlePickCancelled();
+            }
+        }
+    }
+
+    /**
+     * @brief Get the GLViewport reference from main window
+     * @return GLViewport instance or null
+     */
+    function getViewport() {
+        if (mainWindow && mainWindow.contentItem) {
+            // Find glViewport in the content area
+            let contentArea = mainWindow.contentItem.children[0];
+            if (contentArea) {
+                for (let i = 0; i < contentArea.children.length; i++) {
+                    let child = contentArea.children[i];
+                    if (child.objectName === "glViewport" || child.toString().indexOf("GLViewport") >= 0) {
+                        return child;
+                    }
+                }
+            }
+        }
+        return null;
+    }
 }

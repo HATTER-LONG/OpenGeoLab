@@ -165,9 +165,80 @@ Response:
 
 ---
 
-## 4. ReaderService
+## 4. Entity Picking
 
-### 4.1 Load model
+### 4.1 Overview
+The GLViewport component supports picking geometry entities by clicking in the 3D viewport. The picking mechanism encodes entity UID and type into the OpenGL color buffer for precise entity selection.
+
+### 4.2 QML Property Interface
+
+GLViewport provides the following properties for controlling pick mode:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `pickModeEnabled` | bool | Whether pick mode is enabled |
+| `pickEntityType` | string | Entity type filter (Vertex/Edge/Face/Solid/Part) |
+
+### 4.3 QML Signals
+
+| Signal | Parameters | Description |
+|--------|------------|-------------|
+| `entityPicked` | (entityType: string, entityUid: int) | Emitted when an entity is picked |
+| `pickCancelled` | none | Emitted when picking is cancelled (right-click) |
+
+### 4.4 Picking Workflow
+
+1. **Enable Pick Mode**
+   - Set `viewport.pickModeEnabled = true`
+   - Set `viewport.pickEntityType = "Face"` (optional, filters specific type)
+
+2. **User Interaction**
+   - Left-click: Search for matching entities around the click position (5 pixel snap radius)
+   - Right-click: Cancel pick mode
+
+3. **Receive Pick Results**
+   ```qml
+   Connections {
+       target: viewport
+       function onEntityPicked(entityType, entityUid) {
+           console.log("Picked:", entityType, entityUid);
+       }
+       function onPickCancelled() {
+           console.log("Pick cancelled");
+       }
+   }
+   ```
+
+### 4.5 Selector Component Integration
+
+The Selector component (`resources/qml/util/Selector.qml`) provides a complete picking UI:
+
+**Properties:**
+| Property | Type | Description |
+|----------|------|-------------|
+| `visibleEntityTypes` | object | Controls which entity type buttons are displayed |
+| `selectedEntities` | array | List of selected entities [{type, uid}, ...] |
+| `pickModeActive` | bool | Whether currently in pick mode |
+| `selectedType` | string | Currently selected entity type |
+
+**Example: Show only Face type**
+```qml
+Selector {
+    visibleEntityTypes: {
+        "Vertex": false,
+        "Edge": false,
+        "Face": true,
+        "Solid": false,
+        "Part": false
+    }
+}
+```
+
+---
+
+## 5. ReaderService
+
+### 5.1 Load model
 - action: `"load_model"`
 - fields:
   - `file_path`: string

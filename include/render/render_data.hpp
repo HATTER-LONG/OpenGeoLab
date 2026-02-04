@@ -93,6 +93,7 @@ enum class RenderPrimitiveType : uint8_t {
  */
 struct RenderMesh {
     Geometry::EntityId m_entityId{Geometry::INVALID_ENTITY_ID};    ///< Source entity ID
+    Geometry::EntityUID m_entityUid{Geometry::INVALID_ENTITY_UID}; ///< Source entity UID
     Geometry::EntityType m_entityType{Geometry::EntityType::None}; ///< Entity type
 
     RenderPrimitiveType m_primitiveType{RenderPrimitiveType::Triangles}; ///< Primitive type
@@ -195,16 +196,17 @@ struct DocumentRenderData {
  * @brief Options for tessellation and mesh generation
  */
 struct TessellationOptions {
-    double m_linearDeflection{0.1};  ///< Linear deflection for surface tessellation
-    double m_angularDeflection{0.5}; ///< Angular deflection in radians
+    double m_linearDeflection{0.05}; ///< Linear deflection for surface tessellation
+    double m_angularDeflection{0.3}; ///< Angular deflection in radians
     bool m_computeNormals{true};     ///< Compute vertex normals
+    int m_minEdgePoints{16};         ///< Minimum points per edge for curved edges
 
     /**
      * @brief Create default options suitable for visualization
      * @return TessellationOptions with balanced quality/performance
      */
     [[nodiscard]] static TessellationOptions defaultOptions() {
-        return TessellationOptions{0.1, 0.5, true};
+        return TessellationOptions{0.05, 0.3, true, 16};
     }
 
     /**
@@ -212,7 +214,7 @@ struct TessellationOptions {
      * @return TessellationOptions with higher quality
      */
     [[nodiscard]] static TessellationOptions highQuality() {
-        return TessellationOptions{0.01, 0.1, true};
+        return TessellationOptions{0.01, 0.1, true, 32};
     }
 
     /**
@@ -220,7 +222,7 @@ struct TessellationOptions {
      * @return TessellationOptions with lower quality
      */
     [[nodiscard]] static TessellationOptions fastPreview() {
-        return TessellationOptions{0.5, 1.0, false};
+        return TessellationOptions{0.2, 0.5, false, 8};
     }
 };
 

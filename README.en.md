@@ -4,7 +4,26 @@ OpenGeoLab is a Qt Quick (QML) + OpenGL prototype for CAD-like geometry visualiz
 - Import BREP / STEP (STP) model files
 - Manage topology and geometry via OpenCASCADE (OCC)
 - Render with OpenGL and provide basic viewport controls (orbit/pan/zoom, view presets, fit)
-- Planned: interactive editing (e.g., trim/offset), meshing, and AI-assisted mesh quality diagnostics & repair
+- Entity picking (vertex/edge/face/solid/part) with snap-to-entity and type filtering
+- Planned: meshing and AI-assisted mesh quality diagnostics & repair
+
+## Main Features
+
+### Geometry Display and Interaction
+- STEP/BREP model import and display
+- Basic geometry creation (box, cylinder, sphere, torus, etc.)
+- Viewport controls: rotate (Ctrl+LMB), pan (Shift+LMB/MMB), zoom (RMB/Ctrl+scroll)
+- View presets: front/back/left/right/top/bottom, fit-all
+
+### Entity Picking
+- Pick vertices, edges, faces, solids, and parts
+- Snap-to-entity: automatically find the nearest entity around click position
+- Type filtering: restrict picking to specific entity types
+- Selection management: multi-select, remove, clear operations
+
+### Entity Query
+- Query entity details (type, name, parent part, bounding box, etc.)
+- Single or batch entity query support
 
 ## Repository Layout
 - `include/`: public headers / cross-module interfaces (modules should depend on each other via `include/` only)
@@ -45,7 +64,7 @@ Signals:
 See: `docs/json_protocols.en.md`.
 
 ## Next Steps (high-level)
-- Selection & picking (vertex/edge/face/part), highlight, and transform/edit operations (trim/offset, etc.)
+- Transform/edit operations (trim/offset, etc.)
 - Meshing: surface tessellation, quality metrics, smoothing/repair
 - Rendering: consistent lighting (potential PBR/IBL), selection outline, debugging overlays
 - IO: richer import/export metadata and error reporting

@@ -299,9 +299,80 @@
 
 ---
 
-## 4. ReaderService
+## 4. 实体拾取 (Entity Picking)
 
-### 4.1 导入模型文件
+### 4.1 概述
+GLViewport 组件支持通过鼠标点击在3D视口中拾取几何实体。拾取功能将实体 UID 和类型编码到 OpenGL 颜色缓冲区中，实现精确的实体选择。
+
+### 4.2 QML 属性接口
+
+GLViewport 提供以下属性用于控制拾取模式：
+
+| 属性 | 类型 | 说明 |
+|------|------|------|
+| `pickModeEnabled` | bool | 是否启用拾取模式 |
+| `pickEntityType` | string | 实体类型过滤器（Vertex/Edge/Face/Solid/Part） |
+
+### 4.3 QML 信号
+
+| 信号 | 参数 | 说明 |
+|------|------|------|
+| `entityPicked` | (entityType: string, entityUid: int) | 拾取到实体时触发 |
+| `pickCancelled` | 无 | 右键取消拾取时触发 |
+
+### 4.4 拾取流程
+
+1. **启用拾取模式**
+   - 设置 `viewport.pickModeEnabled = true`
+   - 设置 `viewport.pickEntityType = "Face"` （可选，过滤特定类型）
+
+2. **用户交互**
+   - 左键点击：在点击位置周围搜索匹配的实体（吸附半径 5 像素）
+   - 右键点击：取消拾取模式
+
+3. **接收拾取结果**
+   ```qml
+   Connections {
+       target: viewport
+       function onEntityPicked(entityType, entityUid) {
+           console.log("Picked:", entityType, entityUid);
+       }
+       function onPickCancelled() {
+           console.log("Pick cancelled");
+       }
+   }
+   ```
+
+### 4.5 Selector 组件集成
+
+Selector 组件（`resources/qml/util/Selector.qml`）提供了完整的拾取 UI：
+
+**属性：**
+| 属性 | 类型 | 说明 |
+|------|------|------|
+| `visibleEntityTypes` | object | 控制显示哪些实体类型按钮 |
+| `selectedEntities` | array | 已选择的实体列表 [{type, uid}, ...] |
+| `pickModeActive` | bool | 当前是否处于拾取模式 |
+| `selectedType` | string | 当前选择的实体类型 |
+
+**示例：仅显示 Face 类型**
+```qml
+Selector {
+    visibleEntityTypes: {
+        "Vertex": false,
+        "Edge": false,
+        "Face": true,
+        "Solid": false,
+        "Part": false
+    }
+}
+```
+
+---
+
+## 5. ReaderService
+
+### 5.1 导入模型文件
 - module：`"ReaderService"`
 - action：`"load_model"`
 - 字段：

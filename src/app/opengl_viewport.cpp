@@ -58,6 +58,115 @@ const Render::DocumentRenderData& GLViewport::renderData() const {
     return Render::RenderSceneController::instance().renderData();
 }
 
+// =============================================================================
+// Entity Picking Implementation
+// =============================================================================
+
+bool GLViewport::pickModeEnabled() const { return m_pickModeEnabled; }
+
+void GLViewport::setPickModeEnabled(bool enabled) {
+    if(m_pickModeEnabled != enabled) {
+        m_pickModeEnabled = enabled;
+        emit pickModeEnabledChanged();
+        LOG_DEBUG("GLViewport: Pick mode {}", enabled ? "enabled" : "disabled");
+    }
+}
+
+QString GLViewport::pickEntityType() const { return m_pickEntityType; }
+
+void GLViewport::setPickEntityType(const QString& type) {
+    if(m_pickEntityType != type) {
+        m_pickEntityType = type;
+        emit pickEntityTypeChanged();
+        LOG_DEBUG("GLViewport: Pick entity type set to '{}'", type.toStdString());
+    }
+}
+
+void GLViewport::requestPick(int x, int y, int radius) {
+    if(!m_pickModeEnabled) {
+        return;
+    }
+    performPick(x, y, radius);
+}
+
+bool GLViewport::consumePickRequest(int& x, int& y, int& radius, Geometry::EntityType& filterType) {
+    if(!m_pendingPickRequest.pending) {
+        return false;
+    }
+    x = m_pendingPickRequest.x;
+    y = m_pendingPickRequest.y;
+    radius = m_pendingPickRequest.radius;
+    filterType = m_pendingPickRequest.filterType;
+    m_pendingPickRequest.pending = false;
+    return true;
+}
+
+void GLViewport::handlePickResult(const PickResult& result) {
+    m_lastPickResult = result;
+
+    if(result.m_valid) {
+        QString typeStr = entityTypeToString(result.m_entityType);
+        LOG_DEBUG("GLViewport: Entity picked - type={}, uid={}", typeStr.toStdString(),
+                  result.m_entityUid);
+
+        // Use QMetaObject::invokeMethod to safely emit signal from render thread
+        QMetaObject::invokeMethod(
+            this,
+            [this, typeStr, uid = result.m_entityUid]() {
+                emit entityPicked(typeStr, static_cast<int>(uid));
+            },
+            Qt::QueuedConnection);
+    }
+}
+
+const PickResult& GLViewport::lastPickResult() const { return m_lastPickResult; }
+
+Geometry::EntityType GLViewport::stringToEntityType(const QString& type) {
+    if(type == "Vertex")
+        return Geometry::EntityType::Vertex;
+    if(type == "Edge")
+        return Geometry::EntityType::Edge;
+    if(type == "Face")
+        return Geometry::EntityType::Face;
+    if(type == "Solid")
+        return Geometry::EntityType::Solid;
+    if(type == "Part")
+        return Geometry::EntityType::Part;
+    return Geometry::EntityType::None;
+}
+
+QString GLViewport::entityTypeToString(Geometry::EntityType type) {
+    switch(type) {
+    case Geometry::EntityType::Vertex:
+        return "Vertex";
+    case Geometry::EntityType::Edge:
+        return "Edge";
+    case Geometry::EntityType::Face:
+        return "Face";
+    case Geometry::EntityType::Solid:
+        return "Solid";
+    case Geometry::EntityType::Part:
+        return "Part";
+    default:
+        return "";
+    }
+}
+
+void GLViewport::performPick(int x, int y, int radius) {
+    // Store the pick request - it will be processed by the renderer
+    // during the next synchronize/render cycle
+    m_pendingPickRequest.pending = true;
+    m_pendingPickRequest.x = x;
+    m_pendingPickRequest.y = y;
+    m_pendingPickRequest.radius = radius;
+    m_pendingPickRequest.filterType = stringToEntityType(m_pickEntityType);
+
+    LOG_DEBUG("GLViewport: Pick requested at ({}, {}) with radius {}", x, y, radius);
+
+    // Trigger an update to process the pick request
+    update();
+}
+
 void GLViewport::onSceneNeedsUpdate() {
     m_cameraState = Render::RenderSceneController::instance().camera();
     update();
@@ -78,12 +187,31 @@ void GLViewport::keyPressEvent(QKeyEvent* event) {
     m_pressedModifiers = event->modifiers();
     event->accept();
 }
+
 void GLViewport::mousePressEvent(QMouseEvent* event) {
     if(!hasFocus()) {
         forceActiveFocus();
     }
     m_lastMousePos = event->position();
     m_pressedButtons = event->buttons();
+
+    // Handle picking in pick mode
+    if(m_pickModeEnabled) {
+        if(event->button() == Qt::LeftButton) {
+            // Left click: perform pick
+            int x = static_cast<int>(event->position().x());
+            int y = static_cast<int>(event->position().y());
+            requestPick(x, y, 5); // 5 pixel radius for snap-to-entity
+            event->accept();
+            return;
+        } else if(event->button() == Qt::RightButton) {
+            // Right click: cancel pick mode
+            emit pickCancelled();
+            event->accept();
+            return;
+        }
+    }
+
     event->accept();
 }
 
@@ -236,6 +364,17 @@ void GLViewportRenderer::synchronize(QQuickFramebufferObject* item) {
         m_renderData = new_render_data;
         m_needsDataUpload = true;
     }
+
+    // Check for pending pick request
+    int pickX, pickY, pickRadius;
+    Geometry::EntityType filterType;
+    if(viewport->consumePickRequest(pickX, pickY, pickRadius, filterType)) {
+        m_pendingPick = true;
+        m_pickX = pickX;
+        m_pickY = pickY;
+        m_pickRadius = pickRadius;
+        m_pickFilterType = filterType;
+    }
 }
 
 void GLViewportRenderer::render() {
@@ -253,8 +392,77 @@ void GLViewportRenderer::render() {
     const QMatrix4x4 projection = m_cameraState.projectionMatrix(aspect_ratio);
     const QMatrix4x4 view = m_cameraState.viewMatrix();
 
+    // Handle pending pick request
+    if(m_pendingPick) {
+        m_pendingPick = false;
+        performPickInRenderThread(view, projection);
+    }
+
     // Delegate rendering to SceneRenderer
     m_sceneRenderer->render(m_cameraState.m_position, view, projection);
+}
+
+void GLViewportRenderer::performPickInRenderThread(const QMatrix4x4& view,
+                                                   const QMatrix4x4& projection) {
+    // Perform picking with snap-to-entity in a radius
+    PickResult bestResult;
+    int bestDistance = m_pickRadius * m_pickRadius + 1;
+
+    // Search in a square area around the click point
+    for(int dy = -m_pickRadius; dy <= m_pickRadius; ++dy) {
+        for(int dx = -m_pickRadius; dx <= m_pickRadius; ++dx) {
+            int dist_sq = dx * dx + dy * dy;
+            if(dist_sq > m_pickRadius * m_pickRadius) {
+                continue;
+            }
+
+            auto pixelResult =
+                m_sceneRenderer->pickAtPixel(m_pickX + dx, m_pickY + dy, view, projection);
+            if(pixelResult.m_valid) {
+                // Check if this matches our filter
+                if(m_pickFilterType != Geometry::EntityType::None &&
+                   pixelResult.m_entityType != m_pickFilterType) {
+                    continue;
+                }
+
+                if(dist_sq < bestDistance) {
+                    bestDistance = dist_sq;
+                    bestResult.m_valid = true;
+                    bestResult.m_entityType = pixelResult.m_entityType;
+                    bestResult.m_entityUid = pixelResult.m_entityUid;
+                }
+            }
+        }
+    }
+
+    // Report result back to viewport (will be delivered via queued connection)
+    if(m_viewport) {
+        const_cast<GLViewport*>(m_viewport)->handlePickResult(bestResult);
+    }
+}
+
+PickResult GLViewportRenderer::pickAt(int x, int y, int radius, Geometry::EntityType filterType) {
+    PickResult result;
+
+    if(!m_sceneRenderer->isInitialized()) {
+        return result;
+    }
+
+    // Calculate matrices
+    const float aspect_ratio = m_viewportSize.width() / static_cast<float>(m_viewportSize.height());
+    const QMatrix4x4 projection = m_cameraState.projectionMatrix(aspect_ratio);
+    const QMatrix4x4 view = m_cameraState.viewMatrix();
+
+    // Perform single-pixel pick
+    auto pixelResult = m_sceneRenderer->pickAtPixel(x, y, view, projection);
+
+    if(pixelResult.m_valid) {
+        result.m_valid = true;
+        result.m_entityType = pixelResult.m_entityType;
+        result.m_entityUid = pixelResult.m_entityUid;
+    }
+
+    return result;
 }
 
 } // namespace OpenGeoLab::App
