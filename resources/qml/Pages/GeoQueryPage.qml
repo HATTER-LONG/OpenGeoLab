@@ -4,7 +4,7 @@
  *
  * Allows user to select entities from the viewport using the Selector control
  * and displays detailed information about the selected entities through
- * the query_entity backend action.
+ * the query_entity backend action. Supports entity picking with type filtering.
  */
 import QtQuick
 import QtQuick.Controls
@@ -20,6 +20,8 @@ FunctionPageBase {
     serviceName: "GeometryService"
     actionId: "query_entity"
 
+    usesPicking: true
+
     width: 360
 
     // ===============================
@@ -27,7 +29,7 @@ FunctionPageBase {
     // ===============================
 
     /// Currently selected entities for query
-    property var selectedEntities: []
+    property var selectedEntities: PickManager.selectedEntities
 
     function getParameters() {
         // Build entity_ids array from selected entities
@@ -54,10 +56,6 @@ FunctionPageBase {
         Selector {
             id: picker
             width: parent.width
-
-            onSelectionChanged: entities => {
-                root.selectedEntities = entities;
-            }
         }
 
         // Divider

@@ -12,6 +12,8 @@
 
 #include <BRepMesh_IncrementalMesh.hxx>
 #include <BRep_Tool.hxx>
+#include <GCPnts_AbscissaPoint.hxx>
+#include <GCPnts_UniformAbscissa.hxx>
 #include <GCPnts_UniformDeflection.hxx>
 #include <GeomAdaptor_Curve.hxx>
 #include <Poly_Polygon3D.hxx>
@@ -504,6 +506,7 @@ GeometryDocumentImpl::generateFaceMesh(const GeometryEntityPtr& entity,
                                        const Render::TessellationOptions& options) {
     Render::RenderMesh mesh;
     mesh.m_entityId = entity->entityId();
+    mesh.m_entityUid = entity->entityUID();
     mesh.m_entityType = EntityType::Face;
     mesh.m_primitiveType = Render::RenderPrimitiveType::Triangles;
 
@@ -604,6 +607,7 @@ GeometryDocumentImpl::generateEdgeMesh(const GeometryEntityPtr& entity,
                                        const Render::TessellationOptions& options) {
     Render::RenderMesh mesh;
     mesh.m_entityId = entity->entityId();
+    mesh.m_entityUid = entity->entityUID();
     mesh.m_entityType = EntityType::Edge;
     mesh.m_primitiveType = Render::RenderPrimitiveType::LineStrip;
 
@@ -640,11 +644,33 @@ GeometryDocumentImpl::generateEdgeMesh(const GeometryEntityPtr& entity,
         return mesh;
     }
 
-    // Sample the curve
-    GCPnts_UniformDeflection sampler(GeomAdaptor_Curve(curve, first, last),
-                                     options.m_linearDeflection);
+    // Sample the curve with improved quality for curved edges
+    // Use adaptive deflection based on curve length for better circular arc display
+    GeomAdaptor_Curve adaptor(curve, first, last);
+
+    // Calculate a good deflection based on curve characteristics
+    double curve_length = GCPnts_AbscissaPoint::Length(adaptor);
+    double effective_deflection =
+        std::min(options.m_linearDeflection, curve_length / options.m_minEdgePoints);
+
+    GCPnts_UniformDeflection sampler(adaptor, effective_deflection);
 
     if(!sampler.IsDone()) {
+        // Fallback: use uniform abscissa sampling for problematic curves
+        GCPnts_UniformAbscissa uniform_sampler(adaptor, options.m_minEdgePoints);
+        if(uniform_sampler.IsDone()) {
+            const Standard_Integer nb_pts = uniform_sampler.NbPoints();
+            mesh.m_vertices.reserve(static_cast<size_t>(nb_pts));
+            for(Standard_Integer i = 1; i <= nb_pts; ++i) {
+                gp_Pnt pnt;
+                adaptor.D0(uniform_sampler.Parameter(i), pnt);
+                auto& vertex = mesh.m_vertices.emplace_back(static_cast<float>(pnt.X()),
+                                                            static_cast<float>(pnt.Y()),
+                                                            static_cast<float>(pnt.Z()));
+                vertex.setColor(edge_color[0], edge_color[1], edge_color[2], edge_color[3]);
+                mesh.m_boundingBox.expand(Point3D(pnt.X(), pnt.Y(), pnt.Z()));
+            }
+        }
         return mesh;
     }
 
@@ -665,6 +691,7 @@ GeometryDocumentImpl::generateEdgeMesh(const GeometryEntityPtr& entity,
 Render::RenderMesh GeometryDocumentImpl::generateVertexMesh(const GeometryEntityPtr& entity) {
     Render::RenderMesh mesh;
     mesh.m_entityId = entity->entityId();
+    mesh.m_entityUid = entity->entityUID();
     mesh.m_entityType = EntityType::Vertex;
     mesh.m_primitiveType = Render::RenderPrimitiveType::Points;
     constexpr float vertex_color[4] = {0.2f, 1.0f, 0.4f, 1.0f};

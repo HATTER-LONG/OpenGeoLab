@@ -30,6 +30,7 @@ class GLViewportRenderer;
  * GLViewport provides:
  * - OpenGL rendering of geometry from RenderSceneController via SceneRenderer
  * - Mouse-based camera manipulation (orbit, pan, zoom)
+ * - Entity picking with type filtering and snap-to-entity
  * - Integration with the application's render service
  *
  * @note This class handles QML integration and input; rendering logic is
@@ -40,7 +41,10 @@ class GLViewport : public QQuickFramebufferObject {
     QML_ELEMENT
 
     Q_PROPERTY(bool hasGeometry READ hasGeometry NOTIFY hasGeometryChanged)
-
+    Q_PROPERTY(bool pickModeEnabled READ pickModeEnabled WRITE setPickModeEnabled NOTIFY
+                   pickModeEnabledChanged)
+    Q_PROPERTY(Geometry::EntityType pickEntityType READ pickEntityType WRITE setPickEntityType
+                   NOTIFY pickEntityTypeChanged)
 public:
     explicit GLViewport(QQuickItem* parent = nullptr);
     ~GLViewport() override;
@@ -65,9 +69,35 @@ public:
      */
     [[nodiscard]] const Render::DocumentRenderData& renderData() const;
 
+    // =========================================================
+    // Entity picking interface
+    // =========================================================
+
+    [[nodiscard]] bool pickModeEnabled() const;
+
+    void setPickModeEnabled(bool enabled);
+
+    [[nodiscard]] Geometry::EntityType pickEntityType() const;
+
+    void setPickEntityType(const Geometry::EntityType& type);
+
+    Q_INVOKABLE void requestPick(int x, int y, int radius = 5);
+
+    [[nodiscard]] const Render::PickPixelResult& lastPickResult() const;
+
+    bool consumePickRequest(int& x, int& y, int& radius, Geometry::EntityType& filter_type);
+
+    void handlePickResult(const Render::PickPixelResult& result);
+
 signals:
     void hasGeometryChanged();
     void geometryChanged();
+    void pickModeEnabledChanged();
+    void pickEntityTypeChanged();
+
+    void entityPicked(const QString& entity_type, int entity_uid);
+
+    void pickCancelled();
 
 protected:
     void keyPressEvent(QKeyEvent* event) override;
@@ -102,11 +132,25 @@ private:
      */
     void zoomCamera(float delta);
 
+    void performPick(int x, int y, int radius);
+
 private:
     Render::CameraState m_cameraState; ///< Local camera state copy
 
     bool m_hasGeometry{false};
+    bool m_pickModeEnabled{false};            ///< Whether pick mode is active
+    Geometry::EntityType m_pickEntityType;    ///< Entity type filter for picking
+    Render::PickPixelResult m_lastPickResult; ///< Last pick operation result
 
+    // Pick request data for communication with renderer
+    struct PickRequest {
+        bool m_pending{false}; ///< Whether there's a pending pick request
+        int m_x{0};            ///< Screen X coordinate
+        int m_y{0};            ///< Screen Y coordinate
+        int m_radius{5};       ///< Search radius
+        Geometry::EntityType m_filterType{Geometry::EntityType::None}; ///< Entity type filter
+    };
+    PickRequest m_pendingPickRequest; ///< Pending pick request for renderer
     Util::ScopedConnection m_sceneNeedsUpdateConn;
     Util::ScopedConnection m_cameraChangedConn;
     Util::ScopedConnection m_geometryChangedConn;
@@ -120,6 +164,7 @@ private:
  * @brief OpenGL renderer for GLViewport
  *
  * Handles the actual OpenGL rendering of geometry meshes using SceneRenderer.
+ * Also supports ID buffer rendering for entity picking.
  * Created by GLViewport::createRenderer().
  */
 class GLViewportRenderer : public QQuickFramebufferObject::Renderer {
@@ -144,6 +189,11 @@ public:
      * @param item The viewport item
      */
     void synchronize(QQuickFramebufferObject* item) override;
+    [[nodiscard]] Render::PickPixelResult
+    pickAt(int x, int y, int radius, Geometry::EntityType filter_type);
+
+private:
+    void performPickInRenderThread(const QMatrix4x4& view, const QMatrix4x4& projection);
 
 private:
     const GLViewport* m_viewport{nullptr};                  ///< Parent viewport item
@@ -155,6 +205,13 @@ private:
     Render::DocumentRenderData m_renderData;
     Render::CameraState m_cameraState;
     QSize m_viewportSize;
+
+    // Pending pick request data
+    bool m_pendingPick{false}; ///< Whether there's a pending pick
+    int m_pickX{0};            ///< Pick screen X
+    int m_pickY{0};            ///< Pick screen Y
+    int m_pickRadius{5};       ///< Pick search radius
+    Geometry::EntityType m_pickFilterType{Geometry::EntityType::None}; ///< Pick type filter
 };
 
 } // namespace OpenGeoLab::App

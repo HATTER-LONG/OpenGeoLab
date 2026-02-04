@@ -24,6 +24,7 @@ ApplicationWindow {
     // Set main window reference for floating pages
     Component.onCompleted: {
         MainPages.mainWindow = root;
+        PickManager.setViewport(glViewport);
         initializeScene();
         glViewport.focus = true;
     }

@@ -54,34 +54,6 @@ EntityType GeometryEntity::detectEntityType(const TopoDS_Shape& shape) {
     }
 }
 
-std::string_view GeometryEntity::entityTypeToString(EntityType type) {
-    switch(type) {
-    case EntityType::None:
-        return "None";
-    case EntityType::Vertex:
-        return "Vertex";
-    case EntityType::Edge:
-        return "Edge";
-    case EntityType::Wire:
-        return "Wire";
-    case EntityType::Face:
-        return "Face";
-    case EntityType::Shell:
-        return "Shell";
-    case EntityType::Solid:
-        return "Solid";
-    case EntityType::CompSolid:
-        return "CompSolid";
-    case EntityType::Compound:
-        return "Compound";
-    case EntityType::Part:
-        return "Part";
-    default:
-        return "Unknown";
-    }
-    return "Unknown";
-}
-
 BoundingBox3D GeometryEntity::boundingBox() const {
     if(!m_boundingBoxValid) {
         computeBoundingBox();

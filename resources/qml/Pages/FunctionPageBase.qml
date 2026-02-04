@@ -31,6 +31,9 @@ Item {
     /// Unique action identifier
     property string actionId: ""
 
+    /// Opt-in: whether this page participates in viewport picking via PickManager
+    property bool usesPicking: false
+
     /// Whether the page is currently visible
     property bool pageVisible: false
 
@@ -114,6 +117,10 @@ Item {
 
         pageVisible = true;
         root.forceActiveFocus();
+
+        if (usesPicking) {
+            PickManager.setActiveConsumer(root.actionId);
+        }
     }
 
     /**
@@ -121,6 +128,12 @@ Item {
      */
     function close() {
         pageVisible = false;
+
+        if (usesPicking && PickManager.activeConsumerKey === root.actionId) {
+            PickManager.deactivatePickMode();
+            PickManager.clearActiveConsumer();
+        }
+
         // Notify MainPages that this page is closed
         if (MainPages.currentOpenPage === root.actionId) {
             MainPages.currentOpenPage = "";

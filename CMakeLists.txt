@@ -153,9 +153,9 @@ qt_add_executable(${PROJECT_NAME} ${sources} ${headers})
 
 # QML singletons must be declared for the generated qmldir/type system.
 set_source_files_properties(
-  resources/qml/Theme.qml resources/qml/MainPages.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE
+  resources/qml/Theme.qml resources/qml/MainPages.qml resources/qml/util/PickManager.qml
+  PROPERTIES QT_QML_SINGLETON_TYPE TRUE
 )
-
 # Collect icon resources automatically (using relative paths)
 file(GLOB ICON_RESOURCES_ABS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/*.svg"
      "${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/*.png"

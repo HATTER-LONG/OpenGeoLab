@@ -15,7 +15,7 @@ namespace {
     nlohmann::json info;
     info["id"] = entity->entityId();
     info["uid"] = entity->entityUID();
-    info["type"] = GeometryEntity::entityTypeToString(entity->entityType());
+    info["type"] = entityTypeToString(entity->entityType());
     info["type_enum"] = static_cast<int>(entity->entityType());
     info["name"] = entity->name();
 

@@ -57,6 +57,80 @@ const Render::DocumentRenderData& GLViewport::renderData() const {
     static Render::DocumentRenderData empty;
     return Render::RenderSceneController::instance().renderData();
 }
+// =============================================================================
+// Entity Picking Implementation
+// =============================================================================
+
+bool GLViewport::pickModeEnabled() const { return m_pickModeEnabled; }
+void GLViewport::setPickModeEnabled(bool enabled) {
+    if(m_pickModeEnabled != enabled) {
+        m_pickModeEnabled = enabled;
+        emit pickModeEnabledChanged();
+        LOG_DEBUG("GLViewport: Pick mode {}", enabled ? "enabled" : "disabled");
+    }
+}
+
+Geometry::EntityType GLViewport::pickEntityType() const { return m_pickEntityType; }
+
+void GLViewport::setPickEntityType(const Geometry::EntityType& type) {
+    if(m_pickEntityType != type) {
+        m_pickEntityType = type;
+        emit pickEntityTypeChanged();
+        LOG_DEBUG("GLViewport: Pick entity type set to '{}'", static_cast<int>(type));
+    }
+}
+
+void GLViewport::requestPick(int x, int y, int radius) {
+    if(!m_pickModeEnabled) {
+        return;
+    }
+    performPick(x, y, radius);
+}
+bool GLViewport::consumePickRequest(int& x,
+                                    int& y,
+                                    int& radius,
+                                    Geometry::EntityType& filter_type) {
+    if(!m_pendingPickRequest.m_pending) {
+        return false;
+    }
+    x = m_pendingPickRequest.m_x;
+    y = m_pendingPickRequest.m_y;
+    radius = m_pendingPickRequest.m_radius;
+    filter_type = m_pendingPickRequest.m_filterType;
+    m_pendingPickRequest.m_pending = false;
+    return true;
+}
+void GLViewport::handlePickResult(const Render::PickPixelResult& result) {
+    m_lastPickResult = result;
+
+    if(result.m_valid) {
+        QString type_str = entityTypeToString(result.m_entityType).data();
+        LOG_DEBUG("GLViewport: Entity picked - type={}, uid={}", type_str.toStdString(),
+                  result.m_entityUid);
+
+        // Use QMetaObject::invokeMethod to safely emit signal from render thread
+        QMetaObject::invokeMethod(
+            this,
+            [this, type_str, uid = result.m_entityUid]() {
+                emit entityPicked(type_str, static_cast<int>(uid));
+            },
+            Qt::QueuedConnection);
+    }
+}
+void GLViewport::performPick(int x, int y, int radius) {
+    // Store the pick request - it will be processed by the renderer
+    // during the next synchronize/render cycle
+    m_pendingPickRequest.m_pending = true;
+    m_pendingPickRequest.m_x = x;
+    m_pendingPickRequest.m_y = y;
+    m_pendingPickRequest.m_radius = radius;
+    m_pendingPickRequest.m_filterType = m_pickEntityType;
+    LOG_DEBUG("GLViewport: Pick requested at ({}, {}) with radius {}", x, y, radius);
+
+    // Trigger an update to process the pick request
+    update();
+}
+const Render::PickPixelResult& GLViewport::lastPickResult() const { return m_lastPickResult; }
 
 void GLViewport::onSceneNeedsUpdate() {
     m_cameraState = Render::RenderSceneController::instance().camera();
@@ -110,6 +184,20 @@ void GLViewport::mouseMoveEvent(QMouseEvent* event) {
 
 void GLViewport::mouseReleaseEvent(QMouseEvent* event) {
     m_pressedButtons = event->buttons();
+    // Handle picking in pick mode
+    if(m_pickModeEnabled) {
+        if(event->button() == Qt::LeftButton && !(m_pressedModifiers & Qt::ControlModifier) &&
+           !(m_pressedModifiers & Qt::ShiftModifier)) {
+            // Left click: perform pick
+            int x = static_cast<int>(event->position().x());
+            int y = static_cast<int>(event->position().y());
+            requestPick(x, y, 5); // 5 pixel radius for snap-to-entity
+        }
+        if(event->button() == Qt::RightButton) {
+            // Right click: cancel pick mode
+            emit pickCancelled();
+        }
+    }
     event->accept();
 }
 void GLViewport::keyReleaseEvent(QKeyEvent* event) {
@@ -236,6 +324,17 @@ void GLViewportRenderer::synchronize(QQuickFramebufferObject* item) {
         m_renderData = new_render_data;
         m_needsDataUpload = true;
     }
+
+    // Check for pending pick request
+    int pick_x, pick_y, pick_radius;
+    Geometry::EntityType filter_type;
+    if(viewport->consumePickRequest(pick_x, pick_y, pick_radius, filter_type)) {
+        m_pendingPick = true;
+        m_pickX = pick_x;
+        m_pickY = pick_y;
+        m_pickRadius = pick_radius;
+        m_pickFilterType = filter_type;
+    }
 }
 
 void GLViewportRenderer::render() {
@@ -252,9 +351,76 @@ void GLViewportRenderer::render() {
     const float aspect_ratio = m_viewportSize.width() / static_cast<float>(m_viewportSize.height());
     const QMatrix4x4 projection = m_cameraState.projectionMatrix(aspect_ratio);
     const QMatrix4x4 view = m_cameraState.viewMatrix();
-
+    // Handle pending pick request
+    if(m_pendingPick) {
+        m_pendingPick = false;
+        performPickInRenderThread(view, projection);
+    }
     // Delegate rendering to SceneRenderer
     m_sceneRenderer->render(m_cameraState.m_position, view, projection);
 }
 
+void GLViewportRenderer::performPickInRenderThread(const QMatrix4x4& view,
+                                                   const QMatrix4x4& projection) {
+    // Perform picking with snap-to-entity in a radius
+    Render::PickPixelResult best_result;
+    int best_distance = m_pickRadius * m_pickRadius + 1;
+
+    // Search in a square area around the click point
+    for(int dy = -m_pickRadius; dy <= m_pickRadius; ++dy) {
+        for(int dx = -m_pickRadius; dx <= m_pickRadius; ++dx) {
+            int dist_sq = dx * dx + dy * dy;
+            if(dist_sq > m_pickRadius * m_pickRadius) {
+                continue;
+            }
+
+            auto pixel_result =
+                m_sceneRenderer->pickAtPixel(m_pickX + dx, m_pickY + dy, view, projection);
+            if(pixel_result.m_valid) {
+                // Check if this matches our filter
+                if(m_pickFilterType != Geometry::EntityType::None &&
+                   pixel_result.m_entityType != m_pickFilterType) {
+                    continue;
+                }
+
+                if(dist_sq < best_distance) {
+                    best_distance = dist_sq;
+                    best_result.m_valid = true;
+                    best_result.m_entityType = pixel_result.m_entityType;
+                    best_result.m_entityUid = pixel_result.m_entityUid;
+                }
+            }
+        }
+    }
+
+    // Report result back to viewport (will be delivered via queued connection)
+    if(m_viewport) {
+        const_cast<GLViewport*>(m_viewport)->handlePickResult(best_result);
+    }
+}
+
+Render::PickPixelResult
+GLViewportRenderer::pickAt(int x, int y, int /*radius*/, Geometry::EntityType /*filterType*/) {
+    Render::PickPixelResult result;
+
+    if(!m_sceneRenderer->isInitialized()) {
+        return result;
+    }
+
+    // Calculate matrices
+    const float aspect_ratio = m_viewportSize.width() / static_cast<float>(m_viewportSize.height());
+    const QMatrix4x4 projection = m_cameraState.projectionMatrix(aspect_ratio);
+    const QMatrix4x4 view = m_cameraState.viewMatrix();
+
+    // Perform single-pixel pick
+    auto pixel_result = m_sceneRenderer->pickAtPixel(x, y, view, projection);
+
+    if(pixel_result.m_valid) {
+        result.m_valid = true;
+        result.m_entityType = pixel_result.m_entityType;
+        result.m_entityUid = pixel_result.m_entityUid;
+    }
+
+    return result;
+}
 } // namespace OpenGeoLab::App

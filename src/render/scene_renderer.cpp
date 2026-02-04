@@ -74,6 +74,31 @@ void main() {
 }
 )";
 
+/// ID buffer vertex shader for entity picking
+const char* const ID_VERTEX_SHADER = R"(
+#version 330 core
+layout(location = 0) in vec3 aPosition;
+
+uniform mat4 uMVPMatrix;
+uniform float uPointSize;
+
+void main() {
+    gl_Position = uMVPMatrix * vec4(aPosition, 1.0);
+    gl_PointSize = uPointSize;
+}
+)";
+
+/// ID buffer fragment shader for entity picking
+const char* const ID_FRAGMENT_SHADER = R"(
+#version 330 core
+uniform vec4 uIdColor;
+
+out vec4 fragColor;
+
+void main() {
+    fragColor = uIdColor;
+}
+)";
 } // namespace
 
 // =============================================================================
@@ -141,6 +166,17 @@ void SceneRenderer::setupShaders() {
     m_viewPosLoc = m_meshShader->uniformLocation("uViewPos");
     m_pointSizeLoc = m_meshShader->uniformLocation("uPointSize");
 
+    // ID shader for picking
+    m_idShader = std::make_unique<QOpenGLShaderProgram>();
+    m_idShader->addShaderFromSourceCode(QOpenGLShader::Vertex, ID_VERTEX_SHADER);
+    m_idShader->addShaderFromSourceCode(QOpenGLShader::Fragment, ID_FRAGMENT_SHADER);
+    if(!m_idShader->link()) {
+        LOG_ERROR("SceneRenderer: Failed to link ID shader: {}", m_idShader->log().toStdString());
+    }
+    m_idMvpMatrixLoc = m_idShader->uniformLocation("uMVPMatrix");
+    m_idColorLoc = m_idShader->uniformLocation("uIdColor");
+    m_idPointSizeLoc = m_idShader->uniformLocation("uPointSize");
+
     LOG_DEBUG("SceneRenderer: Shaders compiled and linked");
 }
 
@@ -165,6 +201,8 @@ void SceneRenderer::uploadMeshData(const DocumentRenderData& render_data) {
         buffers.m_vertexCount = static_cast<int>(mesh.vertexCount());
         buffers.m_indexCount = static_cast<int>(mesh.indexCount());
         buffers.m_primitiveType = mesh.m_primitiveType;
+        buffers.m_entityUid = mesh.m_entityUid;
+        buffers.m_entityType = mesh.m_entityType;
 
         m_faceMeshBuffers.push_back(std::move(buffers));
     }
@@ -187,6 +225,8 @@ void SceneRenderer::uploadMeshData(const DocumentRenderData& render_data) {
         buffers.m_vertexCount = static_cast<int>(mesh.vertexCount());
         buffers.m_indexCount = static_cast<int>(mesh.indexCount());
         buffers.m_primitiveType = mesh.m_primitiveType;
+        buffers.m_entityUid = mesh.m_entityUid;
+        buffers.m_entityType = mesh.m_entityType;
 
         m_edgeMeshBuffers.push_back(std::move(buffers));
     }
@@ -205,6 +245,8 @@ void SceneRenderer::uploadMeshData(const DocumentRenderData& render_data) {
 
         buffers.m_vertexCount = static_cast<int>(mesh.vertexCount());
         buffers.m_primitiveType = mesh.m_primitiveType;
+        buffers.m_entityUid = mesh.m_entityUid;
+        buffers.m_entityType = mesh.m_entityType;
 
         m_vertexMeshBuffers.push_back(std::move(buffers));
     }
@@ -370,9 +412,167 @@ void SceneRenderer::cleanup() {
     clearMeshBuffers();
 
     m_meshShader.reset();
+    m_idShader.reset();
     m_initialized = false;
 
     LOG_DEBUG("SceneRenderer: Cleanup complete");
+}
+
+// =============================================================================
+// ID Buffer Rendering for Picking
+// =============================================================================
+
+void SceneRenderer::encodeEntityId(Geometry::EntityUID entity_uid, // NOLINT
+                                   Geometry::EntityType entity_type,
+                                   uint8_t& r,
+                                   uint8_t& g,
+                                   uint8_t& b,
+                                   uint8_t& a) {
+    // Encoding scheme:
+    // R: Low 8 bits of entityUid
+    // G: Mid 8 bits of entityUid
+    // B: High 8 bits of entityUid (limited to 24-bit UIDs)
+    // A: EntityType enum value
+    r = static_cast<uint8_t>(entity_uid & 0xFF);
+    g = static_cast<uint8_t>((entity_uid >> 8) & 0xFF);
+    b = static_cast<uint8_t>((entity_uid >> 16) & 0xFF);
+    a = static_cast<uint8_t>(entity_type);
+}
+bool SceneRenderer::decodeEntityId(uint8_t r, // NOLINT
+                                   uint8_t g,
+                                   uint8_t b,
+                                   uint8_t a,
+                                   Geometry::EntityUID& entity_uid,
+                                   Geometry::EntityType& entity_type) {
+    // Background is encoded as (0, 0, 0, 0)
+    if(r == 0 && g == 0 && b == 0 && a == 0) {
+        return false;
+    }
+
+    entity_uid = static_cast<Geometry::EntityUID>(r) | (static_cast<Geometry::EntityUID>(g) << 8) |
+                 (static_cast<Geometry::EntityUID>(b) << 16);
+    entity_type = static_cast<Geometry::EntityType>(a);
+    return true;
+}
+
+void SceneRenderer::renderIdBuffer(const QMatrix4x4& mvp) {
+    if(!m_idShader || !m_idShader->isLinked()) {
+        return;
+    }
+
+    m_idShader->bind();
+    m_idShader->setUniformValue(m_idMvpMatrixLoc, mvp);
+
+    auto get_primitive_type = [](RenderPrimitiveType type) -> GLenum {
+        switch(type) {
+        case RenderPrimitiveType::Points:
+            return GL_POINTS;
+        case RenderPrimitiveType::Lines:
+            return GL_LINES;
+        case RenderPrimitiveType::LineStrip:
+            return GL_LINE_STRIP;
+        case RenderPrimitiveType::Triangles:
+            return GL_TRIANGLES;
+        case RenderPrimitiveType::TriangleStrip:
+            return GL_TRIANGLE_STRIP;
+        case RenderPrimitiveType::TriangleFan:
+            return GL_TRIANGLE_FAN;
+        default:
+            return GL_TRIANGLES;
+        }
+    };
+
+    auto render_buffers_with_id = [&](std::vector<MeshBuffers>& buffers, float point_size) {
+        m_idShader->setUniformValue(m_idPointSizeLoc, point_size);
+        for(auto& buf : buffers) {
+            uint8_t r, g, b, a;
+            encodeEntityId(buf.m_entityUid, buf.m_entityType, r, g, b, a);
+            m_idShader->setUniformValue(m_idColorLoc,
+                                        QVector4D(r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f));
+
+            buf.m_vao->bind();
+            if(buf.m_indexCount > 0) {
+                buf.m_ebo->bind();
+                glDrawElements(get_primitive_type(buf.m_primitiveType), buf.m_indexCount,
+                               GL_UNSIGNED_INT, nullptr);
+            } else {
+                glDrawArrays(get_primitive_type(buf.m_primitiveType), 0, buf.m_vertexCount);
+            }
+            buf.m_vao->release();
+        }
+    };
+
+    glEnable(GL_PROGRAM_POINT_SIZE);
+
+    // Render faces
+    render_buffers_with_id(m_faceMeshBuffers, 1.0f);
+
+    // Render edges with increased line width for better picking
+    glLineWidth(4.0f);
+    render_buffers_with_id(m_edgeMeshBuffers, 1.0f);
+
+    // Render vertices with large point size for picking
+    render_buffers_with_id(m_vertexMeshBuffers, 10.0f);
+
+    m_idShader->release();
+}
+
+PickPixelResult SceneRenderer::pickAtPixel(int x,
+                                           int y,
+                                           const QMatrix4x4& view_matrix,
+                                           const QMatrix4x4& projection_matrix) {
+    PickPixelResult result;
+
+    if(!m_initialized) {
+        LOG_WARN("SceneRenderer: pickAtPixel() called before initialize()");
+        return result;
+    }
+
+    // Create temporary FBO for ID buffer rendering
+    QOpenGLFramebufferObjectFormat format;
+    format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
+    format.setSamples(0); // No MSAA for picking - need exact colors
+    QOpenGLFramebufferObject fbo(m_viewportSize, format);
+
+    if(!fbo.bind()) {
+        LOG_ERROR("SceneRenderer: Failed to bind picking FBO");
+        return result;
+    }
+
+    // Clear with background color (0, 0, 0, 0)
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    glEnable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND); // Disable blending for ID buffer
+
+    // Calculate matrices
+    const QMatrix4x4 model; // Identity
+    const QMatrix4x4 mvp = projection_matrix * view_matrix * model;
+
+    // Render ID buffer
+    renderIdBuffer(mvp);
+
+    // Read pixel at pick position
+    // Note: OpenGL Y is inverted compared to screen coordinates
+    int gl_y = m_viewportSize.height() - y - 1;
+
+    uint8_t pixel[4] = {0, 0, 0, 0};
+    glReadPixels(x, gl_y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
+
+    fbo.release();
+
+    // Decode picked entity
+    Geometry::EntityUID uid;
+    Geometry::EntityType type;
+    if(decodeEntityId(pixel[0], pixel[1], pixel[2], pixel[3], uid, type)) {
+        result.m_valid = true;
+        result.m_entityUid = uid;
+        result.m_entityType = type;
+        LOG_TRACE("SceneRenderer: Picked entity UID={}, type={}", uid, static_cast<int>(type));
+    }
+
+    return result;
 }
 
 } // namespace OpenGeoLab::Render

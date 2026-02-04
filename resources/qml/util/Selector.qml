@@ -1,3 +1,11 @@
+/**
+ * @file Selector.qml
+ * @brief Entity selection component for geometry picking
+ *
+ * Provides entity type buttons for selecting geometry entities (Vertex, Edge,
+ * Face, Solid, Part) from the viewport. Supports pick mode activation and
+ * displays selected entities with removal capability.
+ */
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
@@ -5,23 +13,45 @@ import QtQuick.Layouts
 import OpenGeoLab 1.0
 import ".."
 
+/**
+ * @brief Entity selector component for geometry picking operations
+ *
+ * Features:
+ * - Entity type buttons with configurable visibility
+ * - Pick mode indicator with visual feedback
+ * - Selected entities display with removal support
+ * - Integration with viewport for entity picking
+ */
 Item {
     id: root
 
     /// Currently selected entity type for picking
-    property string selectedType: ""
+    property string selectedType: PickManager.selectedType
 
     /// Whether pick mode is active
-    property bool pickModeActive: false
+    property bool pickModeActive: PickManager.pickModeActive
 
     /// List of selected entities as [{type: "Face", uid: 123}, ...]
-    property var selectedEntities: []
+    property var selectedEntities: PickManager.selectedEntities
+
+    /// Controls which entity types are visible/enabled
+    /// Format: {Vertex: true, Edge: true, Face: true, Solid: true, Part: true}
+    property var visibleEntityTypes: ({
+            "Vertex": true,
+            "Edge": true,
+            "Face": true,
+            "Solid": true,
+            "Part": true
+        })
 
     /// Signal emitted when pick mode changes
     signal pickModeChanged(bool enabled, string entityType)
 
     /// Signal emitted when selection changes
     signal selectionChanged(var entities)
+
+    /// Signal emitted when an entity is picked from viewport
+    signal entityPicked(string entityType, int entityUid)
 
     implicitHeight: contentColumn.implicitHeight
     implicitWidth: 300
@@ -30,8 +60,7 @@ Item {
      * @brief Clear all selections
      */
     function clearSelection() {
-        selectedEntities = [];
-        selectionChanged(selectedEntities);
+        PickManager.clearSelection();
     }
 
     /**
@@ -40,19 +69,7 @@ Item {
      * @param entityUid The unique ID of the entity
      */
     function addSelection(entityType, entityUid) {
-        // Check for duplicate
-        for (let i = 0; i < selectedEntities.length; i++) {
-            if (selectedEntities[i].type === entityType && selectedEntities[i].uid === entityUid) {
-                return; // Already selected
-            }
-        }
-        let newEntities = selectedEntities.slice();
-        newEntities.push({
-            type: entityType,
-            uid: entityUid
-        });
-        selectedEntities = newEntities;
-        selectionChanged(selectedEntities);
+        PickManager.addSelection(entityType, entityUid);
     }
 
     /**
@@ -61,11 +78,7 @@ Item {
      * @param entityUid The unique ID of the entity
      */
     function removeSelection(entityType, entityUid) {
-        let newEntities = selectedEntities.filter(function (e) {
-            return !(e.type === entityType && e.uid === entityUid);
-        });
-        selectedEntities = newEntities;
-        selectionChanged(selectedEntities);
+        PickManager.removeSelection(entityType, entityUid);
     }
 
     /**
@@ -73,24 +86,61 @@ Item {
      * @param entityType The type to pick (Vertex, Edge, Face, Solid, Part)
      */
     function activatePickMode(entityType) {
-        if (selectedType === entityType && pickModeActive) {
-            // Toggle off
-            selectedType = "";
-            pickModeActive = false;
-        } else {
-            selectedType = entityType;
-            pickModeActive = true;
-        }
-        pickModeChanged(pickModeActive, selectedType);
+        PickManager.activatePickMode(entityType);
     }
 
     /**
      * @brief Deactivate pick mode
      */
     function deactivatePickMode() {
-        selectedType = "";
-        pickModeActive = false;
-        pickModeChanged(false, "");
+        PickManager.deactivatePickMode();
+    }
+
+    Connections {
+        target: PickManager
+
+        function onPickModeChanged(contextKey, enabled, entityType) {
+            root.pickModeChanged(enabled, entityType);
+        }
+
+        function onSelectionChanged(contextKey, entities) {
+            root.selectionChanged(entities);
+        }
+
+        function onEntityPicked(contextKey, entityType, entityUid) {
+            root.entityPicked(entityType, entityUid);
+        }
+    }
+
+    /**
+     * @brief Check if an entity type is visible
+     * @param entityType The entity type to check
+     * @return true if the entity type should be displayed
+     */
+    function isEntityTypeVisible(entityType) {
+        if (visibleEntityTypes === null || visibleEntityTypes === undefined) {
+            return true;
+        }
+        return visibleEntityTypes[entityType] !== false;
+    }
+
+    /**
+     * @brief Get the count of visible entity types
+     * @return Number of visible entity type buttons
+     */
+    function visibleTypeCount() {
+        let count = 0;
+        if (isEntityTypeVisible("Vertex"))
+            count++;
+        if (isEntityTypeVisible("Edge"))
+            count++;
+        if (isEntityTypeVisible("Face"))
+            count++;
+        if (isEntityTypeVisible("Solid"))
+            count++;
+        if (isEntityTypeVisible("Part"))
+            count++;
+        return count;
     }
 
     Column {
@@ -103,14 +153,18 @@ Item {
             text: qsTr("Select Entity Type")
             font.pixelSize: 11
             color: Theme.textSecondary
+            visible: root.visibleTypeCount() > 0
         }
 
         RowLayout {
             width: parent.width
             spacing: 4
+            visible: root.visibleTypeCount() > 0
 
             EntityTypeButton {
                 Layout.fillWidth: true
+                Layout.preferredWidth: 56
+                visible: root.isEntityTypeVisible("Vertex")
                 entityType: "Vertex"
                 iconSource: "qrc:/opengeolab/resources/icons/vertex.svg"
                 selected: root.selectedType === "Vertex" && root.pickModeActive
@@ -119,6 +173,8 @@ Item {
 
             EntityTypeButton {
                 Layout.fillWidth: true
+                Layout.preferredWidth: 56
+                visible: root.isEntityTypeVisible("Edge")
                 entityType: "Edge"
                 iconSource: "qrc:/opengeolab/resources/icons/edge.svg"
                 selected: root.selectedType === "Edge" && root.pickModeActive
@@ -127,6 +183,8 @@ Item {
 
             EntityTypeButton {
                 Layout.fillWidth: true
+                Layout.preferredWidth: 56
+                visible: root.isEntityTypeVisible("Face")
                 entityType: "Face"
                 iconSource: "qrc:/opengeolab/resources/icons/face.svg"
                 selected: root.selectedType === "Face" && root.pickModeActive
@@ -135,6 +193,8 @@ Item {
 
             EntityTypeButton {
                 Layout.fillWidth: true
+                Layout.preferredWidth: 56
+                visible: root.isEntityTypeVisible("Solid")
                 entityType: "Solid"
                 iconSource: "qrc:/opengeolab/resources/icons/solid.svg"
                 selected: root.selectedType === "Solid" && root.pickModeActive
@@ -143,6 +203,8 @@ Item {
 
             EntityTypeButton {
                 Layout.fillWidth: true
+                Layout.preferredWidth: 56
+                visible: root.isEntityTypeVisible("Part")
                 entityType: "Part"
                 iconSource: "qrc:/opengeolab/resources/icons/box.svg"
                 selected: root.selectedType === "Part" && root.pickModeActive
@@ -328,14 +390,27 @@ Item {
     // =========================================================
     // Internal entity type button component
     // =========================================================
+
+    /**
+     * @brief Button for selecting entity type in pick mode
+     *
+     * Displays icon and label with selection highlight.
+     * All buttons have uniform width for consistent layout.
+     */
     component EntityTypeButton: AbstractButton {
         id: typeBtn
 
+        /// Entity type identifier (Vertex, Edge, Face, Solid, Part)
         property string entityType: ""
+
+        /// Icon source URL
         property string iconSource: ""
+
+        /// Whether this type is currently selected
         property bool selected: false
 
-        implicitHeight: 32
+        implicitHeight: 40
+        implicitWidth: 56
         hoverEnabled: true
 
         ToolTip.visible: hovered
@@ -355,25 +430,29 @@ Item {
             }
         }
 
-        contentItem: Column {
-            anchors.centerIn: parent
-            spacing: 2
+        contentItem: Item {
+            anchors.fill: parent
 
-            Image {
-                anchors.horizontalCenter: parent.horizontalCenter
-                width: 16
-                height: 16
-                source: typeBtn.iconSource
-                sourceSize: Qt.size(16, 16)
-                opacity: typeBtn.selected ? 1.0 : 0.7
-            }
+            Column {
+                anchors.centerIn: parent
+                spacing: 3
 
-            Label {
-                anchors.horizontalCenter: parent.horizontalCenter
-                text: typeBtn.entityType
-                font.pixelSize: 9
-                font.bold: typeBtn.selected
-                color: typeBtn.selected ? Theme.white : Theme.textSecondary
+                Image {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: 16
+                    height: 16
+                    source: typeBtn.iconSource
+                    sourceSize: Qt.size(16, 16)
+                    opacity: typeBtn.selected ? 1.0 : 0.7
+                }
+
+                Label {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: typeBtn.entityType
+                    font.pixelSize: 9
+                    font.bold: typeBtn.selected
+                    color: typeBtn.selected ? Theme.white : Theme.textSecondary
+                }
             }
         }
     }

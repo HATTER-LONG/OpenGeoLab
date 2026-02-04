@@ -253,13 +253,6 @@ public:
      */
     [[nodiscard]] static EntityType detectEntityType(const TopoDS_Shape& shape);
 
-    /**
-     * @brief Convert EntityType to string
-     * @param type EntityType value
-     * @return Corresponding type name string
-     */
-    [[nodiscard]] static std::string_view entityTypeToString(EntityType type);
-
 protected:
     /**
      * @brief Protected constructor for derived classes
