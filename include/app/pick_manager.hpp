@@ -1,4 +1,14 @@
+/**
+ * @file pick_manager.hpp
+ * @brief QML singleton for managing entity picking and selection
+ *
+ * PickManager coordinates entity picking between the viewport and QML UI.
+ * It maintains selection state per context and handles pick mode activation.
+ */
+
 #pragma once
+
+#include "geometry/geometry_types.hpp"
 
 #include <QHash>
 #include <QObject>
@@ -8,6 +18,15 @@
 
 namespace OpenGeoLab::App {
 
+/**
+ * @brief QML singleton service for entity picking and selection management
+ *
+ * Provides:
+ * - Pick mode activation with entity type filtering
+ * - Selection storage per context key
+ * - Single-pick mode for one-shot selections
+ * - Integration with GLViewport for pick detection
+ */
 class PickManager final : public QObject {
     Q_OBJECT
 
@@ -35,12 +54,27 @@ public:
     ~PickManager() override;
 
     QObject* viewport() const;
+
+    /**
+     * @brief Set the viewport for pick detection
+     * @param vp Pointer to GLViewport instance
+     */
     Q_INVOKABLE void setViewport(QObject* vp);
 
     QString activeConsumerKey() const;
+
+    /**
+     * @brief Set the active consumer key for context switching
+     * @param key Consumer identifier
+     */
     Q_INVOKABLE void setActiveConsumer(const QString& key);
 
     QString contextKey() const;
+
+    /**
+     * @brief Set the context key for selection storage
+     * @param key Context identifier
+     */
     Q_INVOKABLE void setContext(const QString& key);
 
     Q_INVOKABLE void clearActiveConsumer();
@@ -56,15 +90,44 @@ public:
     bool singlePickActive() const;
 
     // Selection management
+
+    /**
+     * @brief Clear all selected entities
+     */
     Q_INVOKABLE void clearSelection();
+
+    /**
+     * @brief Add an entity to the selection
+     * @param entityType Entity type string (Face, Edge, Vertex, etc.)
+     * @param entityUid Entity unique identifier
+     */
     Q_INVOKABLE void addSelection(const QString& entityType, int entityUid);
+
+    /**
+     * @brief Remove an entity from the selection
+     * @param entityType Entity type string
+     * @param entityUid Entity unique identifier
+     */
     Q_INVOKABLE void removeSelection(const QString& entityType, int entityUid);
 
     // Pick mode management
+
+    /**
+     * @brief Activate pick mode for a specific entity type
+     * @param entityType Entity type to pick (Face, Edge, Vertex, Solid, Part)
+     */
     Q_INVOKABLE void activatePickMode(const QString& entityType);
+
+    /**
+     * @brief Deactivate pick mode
+     */
     Q_INVOKABLE void deactivatePickMode();
 
-    // Single-pick mode (signal callback)
+    /**
+     * @brief Request single-pick mode for one-shot selection
+     * @param entityType Entity type to pick
+     * @param consumerKey Optional consumer key for context
+     */
     Q_INVOKABLE void requestSinglePick(const QString& entityType, const QString& consumerKey = {});
 
 signals:
@@ -94,6 +157,7 @@ signals:
 
 private slots:
     void onViewportEntityPicked(const QString& entityType, int entityUid);
+    void onViewportEntityUnpicked(const QString& entityType, int entityUid);
     void onViewportPickCancelled();
 
 private:
@@ -105,6 +169,11 @@ private:
     void applyViewportState();
     void setPickModeInternal(bool enabled, const QString& entityType);
     void setSelectedEntitiesInternal(const QVariantList& entities);
+
+    /**
+     * @brief Sync selected entity UIDs to viewport for hover highlight exclusion
+     */
+    void syncSelectedUidsToViewport();
 
 private:
     QPointer<QObject> m_viewport;

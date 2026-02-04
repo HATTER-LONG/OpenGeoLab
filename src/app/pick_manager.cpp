@@ -1,4 +1,5 @@
 #include "app/pick_manager.hpp"
+#include "app/opengl_viewport.hpp"
 #include "geometry/geometry_types.hpp"
 #include <QMetaObject>
 #include <QVariantMap>
@@ -30,6 +31,9 @@ void PickManager::setViewport(QObject* vp) {
                                         SLOT(onViewportEntityPicked(QString, int)));
         m_connCancelled = QObject::connect(m_viewport, SIGNAL(pickCancelled()), this,
                                            SLOT(onViewportPickCancelled()));
+        // Connect unpick signal for right-click removal
+        QObject::connect(m_viewport, SIGNAL(entityUnpicked(QString, int)), this,
+                         SLOT(onViewportEntityUnpicked(QString, int)));
     }
 
     applyViewportState();
@@ -193,6 +197,29 @@ void PickManager::onViewportEntityPicked(const QString& entityType, int entityUi
     }
 }
 
+void PickManager::onViewportEntityUnpicked(const QString& entityType, int entityUid) {
+    // Right-click unpick: remove entity from selection if it exists
+    if(!m_pickModeActive) {
+        return;
+    }
+
+    // Check if entity is in selection
+    bool found = false;
+    for(const auto& v : m_selectedEntities) {
+        const auto map = v.toMap();
+        if(map.value("type").toString() == entityType && map.value("uid").toInt() == entityUid) {
+            found = true;
+            break;
+        }
+    }
+
+    if(found) {
+        // Entity is selected, remove it
+        removeSelection(entityType, entityUid);
+    }
+    // If not found, do nothing (right-click on unselected entity has no effect)
+}
+
 void PickManager::onViewportPickCancelled() {
     const QString ctx = effectiveContextKey();
 
@@ -279,7 +306,30 @@ void PickManager::setSelectedEntitiesInternal(const QVariantList& entities) {
         return;
     }
     m_selectedEntities = entities;
+
+    // Sync selected UIDs to viewport for hover highlight exclusion
+    syncSelectedUidsToViewport();
+
     emit selectedEntitiesChanged();
+}
+
+void PickManager::syncSelectedUidsToViewport() {
+    if(!m_viewport) {
+        return;
+    }
+
+    // Extract UIDs from selected entities and set to viewport
+    // Cast to GLViewport to call the method directly
+    auto* glViewport = qobject_cast<OpenGeoLab::App::GLViewport*>(m_viewport.data());
+    if(glViewport) {
+        std::vector<Geometry::EntityUID> uids;
+        uids.reserve(m_selectedEntities.size());
+        for(const auto& v : m_selectedEntities) {
+            const auto map = v.toMap();
+            uids.push_back(static_cast<Geometry::EntityUID>(map.value("uid").toInt()));
+        }
+        glViewport->setSelectedEntityUids(uids);
+    }
 }
 
 } // namespace OpenGeoLab::App

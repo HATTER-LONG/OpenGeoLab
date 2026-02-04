@@ -92,6 +92,19 @@ public:
                 const QMatrix4x4& projection_matrix);
 
     /**
+     * @brief Set the entity UID to highlight during rendering
+     * @param uid Entity UID to highlight, or INVALID_ENTITY_UID for none
+     * @note Highlighted entity will be rendered with a different color
+     */
+    void setHighlightedEntityUid(Geometry::EntityUID uid);
+
+    /**
+     * @brief Get the currently highlighted entity UID
+     * @return Highlighted entity UID
+     */
+    [[nodiscard]] Geometry::EntityUID highlightedEntityUid() const;
+
+    /**
      * @brief Render ID buffer for picking and read pixel at position
      * @param x Screen X coordinate
      * @param y Screen Y coordinate
@@ -183,6 +196,7 @@ private:
     int m_lightPosLoc{-1};
     int m_viewPosLoc{-1};
     int m_pointSizeLoc{-1};
+    int m_highlightedLoc{-1}; ///< Uniform location for highlight flag
 
     // ID shader uniform locations
     int m_idMvpMatrixLoc{-1};
@@ -217,6 +231,9 @@ private:
     std::vector<MeshBuffers> m_faceMeshBuffers;
     std::vector<MeshBuffers> m_edgeMeshBuffers;
     std::vector<MeshBuffers> m_vertexMeshBuffers;
+
+    // Highlight state
+    Geometry::EntityUID m_highlightedEntityUid{Geometry::INVALID_ENTITY_UID}; ///< UID to highlight
 };
 
 } // namespace OpenGeoLab::Render

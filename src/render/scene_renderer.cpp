@@ -25,18 +25,21 @@ uniform mat4 uMVPMatrix;
 uniform mat4 uModelMatrix;
 uniform mat3 uNormalMatrix;
 uniform float uPointSize;
+uniform bool uHighlighted;
 
 out vec3 vWorldPos;
 out vec3 vNormal;
 out vec4 vColor;
+flat out int vHighlighted;
 
 void main() {
     vec4 worldPos = uModelMatrix * vec4(aPosition, 1.0);
     vWorldPos = worldPos.xyz;
     vNormal = normalize(uNormalMatrix * aNormal);
     vColor = aColor;
+    vHighlighted = uHighlighted ? 1 : 0;
     gl_Position = uMVPMatrix * vec4(aPosition, 1.0);
-    gl_PointSize = uPointSize;
+    gl_PointSize = uHighlighted ? uPointSize * 1.5 : uPointSize;
 }
 )";
 
@@ -45,6 +48,7 @@ const char* const MESH_FRAGMENT_SHADER = R"(
 in vec3 vWorldPos;
 in vec3 vNormal;
 in vec4 vColor;
+flat in int vHighlighted;
 
 uniform vec3 uLightPos;
 uniform vec3 uViewPos;
@@ -69,7 +73,14 @@ void main() {
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
     vec3 specular = specularStrength * spec * vec3(1.0);
 
-    vec3 result = (ambient + diffuse + specular) * vColor.rgb;
+    vec3 baseColor = vColor.rgb;
+    
+    // Apply highlight effect - brighter orange/yellow tint
+    if (vHighlighted == 1) {
+        baseColor = mix(baseColor, vec3(1.0, 0.65, 0.15), 0.75);
+    }
+
+    vec3 result = (ambient + diffuse + specular) * baseColor;
     fragColor = vec4(result, vColor.a);
 }
 )";
@@ -165,6 +176,7 @@ void SceneRenderer::setupShaders() {
     m_lightPosLoc = m_meshShader->uniformLocation("uLightPos");
     m_viewPosLoc = m_meshShader->uniformLocation("uViewPos");
     m_pointSizeLoc = m_meshShader->uniformLocation("uPointSize");
+    m_highlightedLoc = m_meshShader->uniformLocation("uHighlighted");
 
     // ID shader for picking
     m_idShader = std::make_unique<QOpenGLShaderProgram>();
@@ -367,43 +379,51 @@ void SceneRenderer::renderMeshes(const QMatrix4x4& mvp,
     // Enable shader-controlled point size
     glEnable(GL_PROGRAM_POINT_SIZE);
 
-    // Set default point size for faces/edges
-    m_meshShader->setUniformValue(m_pointSizeLoc, 1.0f);
+    // Helper lambda to render buffers with highlight support
+    auto render_with_highlight = [&](std::vector<MeshBuffers>& buffers, float point_size) {
+        m_meshShader->setUniformValue(m_pointSizeLoc, point_size);
+        for(auto& buf : buffers) {
+            // Check if this entity should be highlighted
+            const bool is_highlighted = (m_highlightedEntityUid != Geometry::INVALID_ENTITY_UID &&
+                                         buf.m_entityUid == m_highlightedEntityUid);
+            m_meshShader->setUniformValue(m_highlightedLoc, is_highlighted);
+
+            buf.m_vao->bind();
+            if(buf.m_indexCount > 0) {
+                buf.m_ebo->bind();
+                glDrawElements(get_primitive_type(buf.m_primitiveType), buf.m_indexCount,
+                               GL_UNSIGNED_INT, nullptr);
+            } else {
+                glDrawArrays(get_primitive_type(buf.m_primitiveType), 0, buf.m_vertexCount);
+            }
+            buf.m_vao->release();
+        }
+    };
 
     // Render face meshes
-    for(auto& buffers : m_faceMeshBuffers) {
-        buffers.m_vao->bind();
-        if(buffers.m_indexCount > 0) {
-            buffers.m_ebo->bind();
-            glDrawElements(get_primitive_type(buffers.m_primitiveType), buffers.m_indexCount,
-                           GL_UNSIGNED_INT, nullptr);
-        } else {
-            glDrawArrays(get_primitive_type(buffers.m_primitiveType), 0, buffers.m_vertexCount);
-        }
-        buffers.m_vao->release();
-    }
+    render_with_highlight(m_faceMeshBuffers, 1.0f);
 
     // Render edge meshes (with line width)
-    glLineWidth(2.0f);
-    for(auto& buffers : m_edgeMeshBuffers) {
-        buffers.m_vao->bind();
-        if(buffers.m_indexCount > 0) {
-            buffers.m_ebo->bind();
-            glDrawElements(get_primitive_type(buffers.m_primitiveType), buffers.m_indexCount,
+    m_meshShader->setUniformValue(m_pointSizeLoc, 1.0f);
+    for(auto& buf : m_edgeMeshBuffers) {
+        const bool is_highlighted = (m_highlightedEntityUid != Geometry::INVALID_ENTITY_UID &&
+                                     buf.m_entityUid == m_highlightedEntityUid);
+        m_meshShader->setUniformValue(m_highlightedLoc, is_highlighted);
+        glLineWidth(is_highlighted ? 4.0f : 2.0f);
+
+        buf.m_vao->bind();
+        if(buf.m_indexCount > 0) {
+            buf.m_ebo->bind();
+            glDrawElements(get_primitive_type(buf.m_primitiveType), buf.m_indexCount,
                            GL_UNSIGNED_INT, nullptr);
         } else {
-            glDrawArrays(get_primitive_type(buffers.m_primitiveType), 0, buffers.m_vertexCount);
+            glDrawArrays(get_primitive_type(buf.m_primitiveType), 0, buf.m_vertexCount);
         }
-        buffers.m_vao->release();
+        buf.m_vao->release();
     }
 
     // Render vertex meshes (with larger point size)
-    m_meshShader->setUniformValue(m_pointSizeLoc, 5.0f);
-    for(auto& buffers : m_vertexMeshBuffers) {
-        buffers.m_vao->bind();
-        glDrawArrays(GL_POINTS, 0, buffers.m_vertexCount);
-        buffers.m_vao->release();
-    }
+    render_with_highlight(m_vertexMeshBuffers, 6.0f);
 
     m_meshShader->release();
 }
@@ -417,6 +437,12 @@ void SceneRenderer::cleanup() {
 
     LOG_DEBUG("SceneRenderer: Cleanup complete");
 }
+
+void SceneRenderer::setHighlightedEntityUid(Geometry::EntityUID uid) {
+    m_highlightedEntityUid = uid;
+}
+
+Geometry::EntityUID SceneRenderer::highlightedEntityUid() const { return m_highlightedEntityUid; }
 
 // =============================================================================
 // ID Buffer Rendering for Picking
@@ -504,15 +530,23 @@ void SceneRenderer::renderIdBuffer(const QMatrix4x4& mvp) {
 
     glEnable(GL_PROGRAM_POINT_SIZE);
 
+    // Render order is important for picking priority:
+    // 1. Faces first (lowest priority)
+    // 2. Edges second (medium priority)
+    // 3. Vertices last (highest priority)
+    // This ensures vertices and edges are drawn on top of faces in the ID buffer
+
     // Render faces
     render_buffers_with_id(m_faceMeshBuffers, 1.0f);
 
     // Render edges with increased line width for better picking
-    glLineWidth(4.0f);
+    // Using larger line width for easier picking of thin edges
+    glLineWidth(6.0f);
     render_buffers_with_id(m_edgeMeshBuffers, 1.0f);
 
     // Render vertices with large point size for picking
-    render_buffers_with_id(m_vertexMeshBuffers, 10.0f);
+    // Larger point size makes vertices easier to pick
+    render_buffers_with_id(m_vertexMeshBuffers, 14.0f);
 
     m_idShader->release();
 }
@@ -525,6 +559,10 @@ PickPixelResult SceneRenderer::pickAtPixel(int x,
 
     if(!m_initialized) {
         LOG_WARN("SceneRenderer: pickAtPixel() called before initialize()");
+        return result;
+    }
+
+    if(x < 0 || y < 0 || x >= m_viewportSize.width() || y >= m_viewportSize.height()) {
         return result;
     }
 
