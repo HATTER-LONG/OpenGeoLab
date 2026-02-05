@@ -92,7 +92,9 @@ enum class RenderPrimitiveType : uint8_t {
  * Each mesh corresponds to one entity (vertex, edge, face, etc.).
  */
 struct RenderMesh {
-    Geometry::EntityId m_entityId{Geometry::INVALID_ENTITY_ID};    ///< Source entity ID
+    Geometry::EntityId m_entityId{Geometry::INVALID_ENTITY_ID}; ///< Source entity ID
+    Geometry::EntityUID m_entityUid{
+        Geometry::INVALID_ENTITY_UID}; ///< Type-scoped UID (for picking)
     Geometry::EntityType m_entityType{Geometry::EntityType::None}; ///< Entity type
 
     RenderPrimitiveType m_primitiveType{RenderPrimitiveType::Triangles}; ///< Primitive type

@@ -13,13 +13,17 @@
 #include "render/render_data.hpp"
 #include "render/render_scene_controller.hpp"
 #include "render/scene_renderer.hpp"
+#include "render/trackball_controller.hpp"
 #include "util/signal.hpp"
 
 #include <QMatrix4x4>
 #include <QQuickFramebufferObject>
+#include <QSizeF>
 #include <QtQml/qqml.h>
 #include <memory>
 
+class QHoverEvent;
+class QOpenGLFramebufferObject;
 namespace OpenGeoLab::App {
 
 class GLViewportRenderer;
@@ -65,6 +69,11 @@ public:
      */
     [[nodiscard]] const Render::DocumentRenderData& renderData() const;
 
+    [[nodiscard]] QPointF cursorPos() const { return m_cursorPos; }
+
+    [[nodiscard]] QSizeF itemSize() const { return size(); }
+
+    [[nodiscard]] qreal devicePixelRatio() const { return m_devicePixelRatio; }
 signals:
     void hasGeometryChanged();
     void geometryChanged();
@@ -76,44 +85,25 @@ protected:
     void mouseMoveEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
     void wheelEvent(QWheelEvent* event) override;
-
+    void hoverMoveEvent(QHoverEvent* event) override;
 private slots:
     void onSceneNeedsUpdate();
     void onServiceGeometryChanged();
 
 private:
-    /**
-     * @brief Perform orbit camera rotation
-     * @param dx Horizontal mouse delta
-     * @param dy Vertical mouse delta
-     */
-    void orbitCamera(float dx, float dy);
-
-    /**
-     * @brief Perform camera panning
-     * @param dx Horizontal mouse delta
-     * @param dy Vertical mouse delta
-     */
-    void panCamera(float dx, float dy);
-
-    /**
-     * @brief Perform camera zoom
-     * @param delta Zoom amount
-     */
-    void zoomCamera(float delta);
-
-private:
-    Render::CameraState m_cameraState; ///< Local camera state copy
-
+    Render::CameraState m_cameraState;                 ///< Local camera state copy
+    Render::TrackballController m_trackballController; ///< Camera manipulation controller
     bool m_hasGeometry{false};
 
     Util::ScopedConnection m_sceneNeedsUpdateConn;
     Util::ScopedConnection m_cameraChangedConn;
     Util::ScopedConnection m_geometryChangedConn;
 
-    QPointF m_lastMousePos;                   ///< Last mouse position for delta calculation
     Qt::MouseButtons m_pressedButtons;        ///< Currently pressed mouse buttons
     Qt::KeyboardModifiers m_pressedModifiers; ///< Currently pressed keyboard modifiers
+
+    QPointF m_cursorPos;           ///< Latest cursor position (for hover picking)
+    qreal m_devicePixelRatio{1.0}; ///< Cached device pixel ratio
 };
 
 /**
@@ -155,6 +145,14 @@ private:
     Render::DocumentRenderData m_renderData;
     Render::CameraState m_cameraState;
     QSize m_viewportSize;
+    QSizeF m_itemSize;
+
+    QPointF m_cursorPos;
+    qreal m_devicePixelRatio{1.0};
+
+    std::unique_ptr<QOpenGLFramebufferObject> m_pickFbo;
+    Geometry::EntityType m_lastHoverType{Geometry::EntityType::None};
+    Geometry::EntityUID m_lastHoverUid{Geometry::INVALID_ENTITY_UID};
 };
 
 } // namespace OpenGeoLab::App
