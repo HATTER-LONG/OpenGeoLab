@@ -74,6 +74,20 @@ public:
     [[nodiscard]] QSizeF itemSize() const { return size(); }
 
     [[nodiscard]] qreal devicePixelRatio() const { return m_devicePixelRatio; }
+
+    /**
+     * @brief Pending pick action requested by mouse input
+     */
+    enum class PickAction : uint8_t {
+        None = 0,
+        Add = 1,
+        Remove = 2,
+    };
+
+    /**
+     * @brief Consume the pending pick action (used by the render thread)
+     */
+    [[nodiscard]] PickAction consumePickAction();
 signals:
     void hasGeometryChanged();
     void geometryChanged();
@@ -98,12 +112,18 @@ private:
     Util::ScopedConnection m_sceneNeedsUpdateConn;
     Util::ScopedConnection m_cameraChangedConn;
     Util::ScopedConnection m_geometryChangedConn;
+    Util::ScopedConnection m_pickSettingsChangedConn;
+    Util::ScopedConnection m_selectionChangedConn;
 
     Qt::MouseButtons m_pressedButtons;        ///< Currently pressed mouse buttons
     Qt::KeyboardModifiers m_pressedModifiers; ///< Currently pressed keyboard modifiers
 
     QPointF m_cursorPos;           ///< Latest cursor position (for hover picking)
     qreal m_devicePixelRatio{1.0}; ///< Cached device pixel ratio
+
+    QPointF m_pressPos;            ///< Position at last mouse press (for click/drag detection)
+    bool m_movedSincePress{false}; ///< Whether cursor moved beyond threshold since press
+    PickAction m_pendingPickAction{PickAction::None}; ///< Pending add/remove selection request
 };
 
 /**
@@ -153,6 +173,8 @@ private:
     std::unique_ptr<QOpenGLFramebufferObject> m_pickFbo;
     Geometry::EntityType m_lastHoverType{Geometry::EntityType::None};
     Geometry::EntityUID m_lastHoverUid{Geometry::INVALID_ENTITY_UID};
+
+    GLViewport::PickAction m_pendingPickAction{GLViewport::PickAction::None};
 };
 
 } // namespace OpenGeoLab::App

@@ -562,6 +562,11 @@ GeometryDocumentImpl::generateFaceMesh(const GeometryEntityPtr& entity,
         face_color = PartColorPalette::getColorByEntityId(owning_part->entityId());
     }
 
+    // Mesh-level colors (base/hover/selected). Base is kept consistent with per-vertex colors.
+    mesh.m_baseColor = Render::RenderColor{face_color.r, face_color.g, face_color.b, face_color.a};
+    mesh.m_hoverColor = Render::RenderColor{0.310f, 0.765f, 0.969f, face_color.a};
+    mesh.m_selectedColor = Render::RenderColor{0.118f, 0.533f, 0.898f, face_color.a};
+
     // (Re)mesh with current tessellation options to avoid reusing a coarse cached triangulation.
     // This is important for curved primitives (cylinder/torus) to look smooth.
     const double linear_deflection = std::max(1e-6, options.m_linearDeflection);
@@ -648,7 +653,10 @@ GeometryDocumentImpl::generateEdgeMesh(const GeometryEntityPtr& entity,
 
     // Edge color: yellow for visibility
     constexpr float edge_color[4] = {1.0f, 0.8f, 0.2f, 1.0f};
-
+    mesh.m_baseColor =
+        Render::RenderColor{edge_color[0], edge_color[1], edge_color[2], edge_color[3]};
+    mesh.m_hoverColor = Render::RenderColor{1.0f, 0.6f, 0.6f, edge_color[3]};
+    mesh.m_selectedColor = Render::RenderColor{1.0f, 0.0f, 0.0f, edge_color[3]};
     const auto& shape = entity->shape();
     if(shape.IsNull()) {
         return mesh;
@@ -726,6 +734,11 @@ Render::RenderMesh GeometryDocumentImpl::generateVertexMesh(const GeometryEntity
     mesh.m_entityType = EntityType::Vertex;
     mesh.m_primitiveType = Render::RenderPrimitiveType::Points;
     constexpr float vertex_color[4] = {0.2f, 1.0f, 0.4f, 1.0f};
+
+    mesh.m_baseColor =
+        Render::RenderColor{vertex_color[0], vertex_color[1], vertex_color[2], vertex_color[3]};
+    mesh.m_hoverColor = Render::RenderColor{1.0f, 0.6f, 0.0f, vertex_color[3]};
+    mesh.m_selectedColor = Render::RenderColor{1.0f, 0.3f, 0.0f, vertex_color[3]};
     const auto& shape = entity->shape();
     if(shape.IsNull()) {
         return mesh;

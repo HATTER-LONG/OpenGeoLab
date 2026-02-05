@@ -16,15 +16,25 @@
 namespace OpenGeoLab::Render {
 
 /**
+ * @brief Simple RGBA color used by the render layer
+ */
+struct RenderColor {
+    float m_r{0.8f}; ///< Red component [0, 1]
+    float m_g{0.8f}; ///< Green component [0, 1]
+    float m_b{0.8f}; ///< Blue component [0, 1]
+    float m_a{1.0f}; ///< Alpha component [0, 1]
+};
+
+/**
  * @brief Vertex data for rendering with position, normal, and color
  *
  * Packed structure for efficient GPU memory usage.
  * Layout: position (3 floats), normal (3 floats), color (4 floats)
  */
 struct RenderVertex {
-    float m_position[3]{0.0f, 0.0f, 0.0f};    ///< Vertex position (x, y, z)
-    float m_normal[3]{0.0f, 0.0f, 1.0f};      ///< Vertex normal for lighting
-    float m_color[4]{0.8f, 0.8f, 0.8f, 1.0f}; ///< RGBA color
+    float m_position[3]{0.0f, 0.0f, 0.0f};       ///< Vertex position (x, y, z)
+    float m_normal[3]{0.0f, 0.0f, 1.0f};         ///< Vertex normal for lighting
+    RenderColor m_color{0.8f, 0.8f, 0.8f, 1.0f}; ///< RGBA color
 
     RenderVertex() = default;
 
@@ -66,10 +76,10 @@ struct RenderVertex {
      * @param a Alpha component [0, 1]
      */
     void setColor(float r, float g, float b, float a = 1.0f) {
-        m_color[0] = r;
-        m_color[1] = g;
-        m_color[2] = b;
-        m_color[3] = a;
+        m_color.m_r = r;
+        m_color.m_g = g;
+        m_color.m_b = b;
+        m_color.m_a = a;
     }
 };
 
@@ -103,6 +113,10 @@ struct RenderMesh {
     std::vector<uint32_t> m_indices;      ///< Index data (empty for non-indexed draw)
 
     Geometry::BoundingBox3D m_boundingBox; ///< Mesh bounding box
+
+    RenderColor m_baseColor{};     ///< Base color associated with this mesh (informational)
+    RenderColor m_hoverColor{};    ///< Hover highlight color for this mesh
+    RenderColor m_selectedColor{}; ///< Selected/picked highlight color for this mesh
 
     /**
      * @brief Check if mesh has valid data
@@ -206,7 +220,7 @@ struct TessellationOptions {
      * @return TessellationOptions with balanced quality/performance
      */
     [[nodiscard]] static TessellationOptions defaultOptions() {
-        return TessellationOptions{0.1, 0.5, true};
+        return TessellationOptions{0.05, 0.25, true};
     }
 
     /**
@@ -222,7 +236,7 @@ struct TessellationOptions {
      * @return TessellationOptions with lower quality
      */
     [[nodiscard]] static TessellationOptions fastPreview() {
-        return TessellationOptions{0.5, 1.0, false};
+        return TessellationOptions{0.1, 0.5, false};
     }
 };
 

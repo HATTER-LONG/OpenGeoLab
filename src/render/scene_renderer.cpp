@@ -4,6 +4,7 @@
  */
 
 #include "render/scene_renderer.hpp"
+#include "render/select_manager.hpp"
 #include "util/logger.hpp"
 
 #include <QOpenGLFramebufferObject>
@@ -266,73 +267,35 @@ void SceneRenderer::setupShaders() {
 void SceneRenderer::uploadMeshData(const DocumentRenderData& render_data) {
     clearMeshBuffers();
 
-    // Upload face meshes
-    for(const auto& mesh : render_data.m_faceMeshes) {
-        if(!mesh.isValid()) {
-            continue;
+    auto upload_meshes = [this](const std::vector<RenderMesh>& meshes,
+                                std::vector<MeshBuffers>& out_buffers, bool need_index) {
+        for(const auto& mesh : meshes) {
+            if(!mesh.isValid()) {
+                continue;
+            }
+            MeshBuffers buffers;
+            buffers.m_vao->create();
+            buffers.m_vbo->create();
+            if(need_index && mesh.isIndexed()) {
+                buffers.m_ebo->create();
+            }
+            uploadMesh(mesh, *buffers.m_vao, *buffers.m_vbo, *buffers.m_ebo);
+            buffers.m_vertexCount = static_cast<int>(mesh.vertexCount());
+            buffers.m_indexCount = need_index ? static_cast<int>(mesh.indexCount()) : 0;
+            buffers.m_primitiveType = mesh.m_primitiveType;
+            buffers.m_entityType = mesh.m_entityType;
+            buffers.m_entityUid = mesh.m_entityUid;
+            buffers.m_hoverColor = QVector4D(mesh.m_hoverColor.m_r, mesh.m_hoverColor.m_g,
+                                             mesh.m_hoverColor.m_b, mesh.m_hoverColor.m_a);
+            buffers.m_selectedColor = QVector4D(mesh.m_selectedColor.m_r, mesh.m_selectedColor.m_g,
+                                                mesh.m_selectedColor.m_b, mesh.m_selectedColor.m_a);
+            out_buffers.push_back(std::move(buffers));
         }
+    };
 
-        MeshBuffers buffers;
-        buffers.m_vao->create();
-        buffers.m_vbo->create();
-        if(mesh.isIndexed()) {
-            buffers.m_ebo->create();
-        }
-
-        uploadMesh(mesh, *buffers.m_vao, *buffers.m_vbo, *buffers.m_ebo);
-
-        buffers.m_vertexCount = static_cast<int>(mesh.vertexCount());
-        buffers.m_indexCount = static_cast<int>(mesh.indexCount());
-        buffers.m_primitiveType = mesh.m_primitiveType;
-        buffers.m_entityType = mesh.m_entityType;
-        buffers.m_entityUid = mesh.m_entityUid;
-
-        m_faceMeshBuffers.push_back(std::move(buffers));
-    }
-
-    // Upload edge meshes
-    for(const auto& mesh : render_data.m_edgeMeshes) {
-        if(!mesh.isValid()) {
-            continue;
-        }
-
-        MeshBuffers buffers;
-        buffers.m_vao->create();
-        buffers.m_vbo->create();
-        if(mesh.isIndexed()) {
-            buffers.m_ebo->create();
-        }
-
-        uploadMesh(mesh, *buffers.m_vao, *buffers.m_vbo, *buffers.m_ebo);
-
-        buffers.m_vertexCount = static_cast<int>(mesh.vertexCount());
-        buffers.m_indexCount = static_cast<int>(mesh.indexCount());
-        buffers.m_primitiveType = mesh.m_primitiveType;
-        buffers.m_entityType = mesh.m_entityType;
-        buffers.m_entityUid = mesh.m_entityUid;
-
-        m_edgeMeshBuffers.push_back(std::move(buffers));
-    }
-
-    // Upload vertex meshes
-    for(const auto& mesh : render_data.m_vertexMeshes) {
-        if(!mesh.isValid()) {
-            continue;
-        }
-
-        MeshBuffers buffers;
-        buffers.m_vao->create();
-        buffers.m_vbo->create();
-
-        uploadMesh(mesh, *buffers.m_vao, *buffers.m_vbo, *buffers.m_ebo);
-
-        buffers.m_vertexCount = static_cast<int>(mesh.vertexCount());
-        buffers.m_primitiveType = mesh.m_primitiveType;
-        buffers.m_entityType = mesh.m_entityType;
-        buffers.m_entityUid = mesh.m_entityUid;
-
-        m_vertexMeshBuffers.push_back(std::move(buffers));
-    }
+    upload_meshes(render_data.m_faceMeshes, m_faceMeshBuffers, true);
+    upload_meshes(render_data.m_edgeMeshes, m_edgeMeshBuffers, true);
+    upload_meshes(render_data.m_vertexMeshes, m_vertexMeshBuffers, false);
 
     LOG_DEBUG("SceneRenderer: Uploaded {} face meshes, {} edge meshes, {} vertex meshes",
               m_faceMeshBuffers.size(), m_edgeMeshBuffers.size(), m_vertexMeshBuffers.size());
@@ -462,17 +425,19 @@ void SceneRenderer::renderMeshes(const QMatrix4x4& mvp,
     glEnable(GL_POLYGON_OFFSET_FILL);
     glPolygonOffset(1.0f, 1.0f);
     for(auto& buffers : m_faceMeshBuffers) {
-        const bool is_highlight =
-            (m_highlightType != Geometry::EntityType::None) &&
-            (buffers.m_entityType == m_highlightType) &&
-            ((buffers.m_entityUid & 0xFFFFFFu) == (m_highlightUid & 0xFFFFFFu));
-        if(is_highlight) {
+        const bool is_selected = Render::SelectManager::instance().containsSelection(
+            buffers.m_entityUid, buffers.m_entityType);
+        if(is_selected) {
             m_meshShader->setUniformValue(m_useOverrideColorLoc, 1);
-            m_meshShader->setUniformValue(m_overrideColorLoc, QVector4D(0.15f, 0.65f, 1.0f, 1.0f));
+            m_meshShader->setUniformValue(m_overrideColorLoc, buffers.m_selectedColor);
+        } else if((m_hoverHighlightType != Geometry::EntityType::None) &&
+                  (buffers.m_entityType == m_hoverHighlightType) &&
+                  ((buffers.m_entityUid & 0xFFFFFFu) == (m_hoverHighlightUid & 0xFFFFFFu))) {
+            m_meshShader->setUniformValue(m_useOverrideColorLoc, 1);
+            m_meshShader->setUniformValue(m_overrideColorLoc, buffers.m_hoverColor);
         } else {
             m_meshShader->setUniformValue(m_useOverrideColorLoc, 0);
         }
-
         buffers.m_vao->bind();
         if(buffers.m_indexCount > 0) {
             buffers.m_ebo->bind();
@@ -489,15 +454,21 @@ void SceneRenderer::renderMeshes(const QMatrix4x4& mvp,
     // Allow edges at the same depth to pass (and stay visible on faces).
     glDepthFunc(GL_LEQUAL);
     m_meshShader->setUniformValue(m_useLightingLoc, 0);
-    glLineWidth(2.0f);
     for(auto& buffers : m_edgeMeshBuffers) {
-        const bool is_highlight =
-            (m_highlightType != Geometry::EntityType::None) &&
-            (buffers.m_entityType == m_highlightType) &&
-            ((buffers.m_entityUid & 0xFFFFFFu) == (m_highlightUid & 0xFFFFFFu));
-        if(is_highlight) {
+        bool is_hover = (m_hoverHighlightType == Geometry::EntityType::Edge) &&
+                        (buffers.m_entityType == m_hoverHighlightType) &&
+                        ((buffers.m_entityUid & 0xFFFFFFu) == (m_hoverHighlightUid & 0xFFFFFFu));
+        float line_width = is_hover ? 4.0f : 2.0f;
+        glLineWidth(line_width);
+        const bool is_selected = Render::SelectManager::instance().containsSelection(
+            buffers.m_entityUid, buffers.m_entityType);
+
+        if(is_selected) {
             m_meshShader->setUniformValue(m_useOverrideColorLoc, 1);
-            m_meshShader->setUniformValue(m_overrideColorLoc, QVector4D(1.0f, 0.3f, 0.1f, 1.0f));
+            m_meshShader->setUniformValue(m_overrideColorLoc, buffers.m_selectedColor);
+        } else if(is_hover) {
+            m_meshShader->setUniformValue(m_useOverrideColorLoc, 1);
+            m_meshShader->setUniformValue(m_overrideColorLoc, buffers.m_hoverColor);
         } else {
             m_meshShader->setUniformValue(m_useOverrideColorLoc, 0);
         }
@@ -518,16 +489,25 @@ void SceneRenderer::renderMeshes(const QMatrix4x4& mvp,
     glDepthFunc(GL_LEQUAL);
     m_meshShader->setUniformValue(m_useLightingLoc, 0);
     for(auto& buffers : m_vertexMeshBuffers) {
-        const bool is_highlight =
-            (m_highlightType != Geometry::EntityType::None) &&
-            (buffers.m_entityType == m_highlightType) &&
-            ((buffers.m_entityUid & 0xFFFFFFu) == (m_highlightUid & 0xFFFFFFu));
-        if(is_highlight) {
-            m_meshShader->setUniformValue(m_pointSizeLoc, 9.0f);
+        const bool is_hover =
+            (m_hoverHighlightType == Geometry::EntityType::Vertex) &&
+            (buffers.m_entityType == m_hoverHighlightType) &&
+            ((buffers.m_entityUid & 0xFFFFFFu) == (m_hoverHighlightUid & 0xFFFFFFu));
+        const bool is_selected = Render::SelectManager::instance().containsSelection(
+            buffers.m_entityUid, buffers.m_entityType);
+
+        float vertex_size = is_hover ? 9.0f : is_selected ? 7.0f : 6.0f;
+        m_meshShader->setUniformValue(m_pointSizeLoc, vertex_size);
+        if(is_selected) {
             m_meshShader->setUniformValue(m_useOverrideColorLoc, 1);
-            m_meshShader->setUniformValue(m_overrideColorLoc, QVector4D(0.0f, 1.0f, 0.35f, 1.0f));
+            m_meshShader->setUniformValue(m_overrideColorLoc, buffers.m_selectedColor);
+        } else if((m_hoverHighlightType != Geometry::EntityType::None) &&
+                  (buffers.m_entityType == m_hoverHighlightType) &&
+                  ((buffers.m_entityUid & 0xFFFFFFu) == (m_hoverHighlightUid & 0xFFFFFFu))) {
+
+            m_meshShader->setUniformValue(m_useOverrideColorLoc, 1);
+            m_meshShader->setUniformValue(m_overrideColorLoc, buffers.m_hoverColor);
         } else {
-            m_meshShader->setUniformValue(m_pointSizeLoc, 6.0f);
             m_meshShader->setUniformValue(m_useOverrideColorLoc, 0);
         }
 
@@ -640,15 +620,14 @@ void SceneRenderer::renderPicking(const QMatrix4x4& view_matrix,
     glDepthFunc(GL_LESS);
 }
 
-void SceneRenderer::setHighlightedEntity(Geometry::EntityType type, Geometry::EntityUID uid) {
+void SceneRenderer::setHighlightedEntity(Geometry::EntityUID uid, Geometry::EntityType type) {
     if(type == Geometry::EntityType::None || uid == Geometry::INVALID_ENTITY_UID) {
-        m_highlightType = Geometry::EntityType::None;
-        m_highlightUid = Geometry::INVALID_ENTITY_UID;
+        m_hoverHighlightType = Geometry::EntityType::None;
+        m_hoverHighlightUid = Geometry::INVALID_ENTITY_UID;
         return;
     }
-
-    m_highlightType = type;
-    m_highlightUid = static_cast<Geometry::EntityUID>(uid & 0xFFFFFFu);
+    m_hoverHighlightType = type;
+    m_hoverHighlightUid = static_cast<Geometry::EntityUID>(uid & 0xFFFFFFu);
 }
 
 void SceneRenderer::cleanup() {

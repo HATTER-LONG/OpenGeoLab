@@ -82,7 +82,7 @@ public:
      * @brief Highlight a specific entity (matched by type + uid).
      * @note Pass EntityType::None or INVALID_ENTITY_UID to clear highlight.
      */
-    void setHighlightedEntity(Geometry::EntityType type, Geometry::EntityUID uid);
+    void setHighlightedEntity(Geometry::EntityUID uid, Geometry::EntityType type);
 
     /**
      * @brief Render the complete scene
@@ -167,6 +167,9 @@ private:
         Geometry::EntityType m_entityType{Geometry::EntityType::None};
         Geometry::EntityUID m_entityUid{Geometry::INVALID_ENTITY_UID};
 
+        QVector4D m_hoverColor{1.0f, 1.0f, 1.0f, 1.0f};
+        QVector4D m_selectedColor{1.0f, 1.0f, 1.0f, 1.0f};
+
         MeshBuffers();
         ~MeshBuffers();
 
@@ -183,8 +186,8 @@ private:
     std::vector<MeshBuffers> m_edgeMeshBuffers;
     std::vector<MeshBuffers> m_vertexMeshBuffers;
 
-    Geometry::EntityType m_highlightType{Geometry::EntityType::None};
-    Geometry::EntityUID m_highlightUid{Geometry::INVALID_ENTITY_UID};
+    Geometry::EntityType m_hoverHighlightType{Geometry::EntityType::None};
+    Geometry::EntityUID m_hoverHighlightUid{Geometry::INVALID_ENTITY_UID};
 };
 
 } // namespace OpenGeoLab::Render

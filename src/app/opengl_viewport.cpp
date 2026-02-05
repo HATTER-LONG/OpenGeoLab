@@ -4,6 +4,7 @@
  */
 
 #include "app/opengl_viewport.hpp"
+#include "render/select_manager.hpp"
 #include "util/logger.hpp"
 
 #include <QMouseEvent>
@@ -60,10 +61,24 @@ GLViewport::GLViewport(QQuickItem* parent) : QQuickFramebufferObject(parent) {
                                   Qt::QueuedConnection);
     });
 
+    auto& select_manager = Render::SelectManager::instance();
+    m_pickSettingsChangedConn = select_manager.subscribePickSettingsChanged([this]() {
+        QMetaObject::invokeMethod(this, &GLViewport::onSceneNeedsUpdate, Qt::QueuedConnection);
+    });
+    m_selectionChangedConn = select_manager.subscribeSelectionChanged([this]() {
+        QMetaObject::invokeMethod(this, &GLViewport::onSceneNeedsUpdate, Qt::QueuedConnection);
+    });
+
     LOG_TRACE("GLViewport created");
 }
 
 GLViewport::~GLViewport() { LOG_TRACE("GLViewport destroyed"); }
+
+GLViewport::PickAction GLViewport::consumePickAction() {
+    const auto action = m_pendingPickAction;
+    m_pendingPickAction = PickAction::None;
+    return action;
+}
 
 QQuickFramebufferObject::Renderer* GLViewport::createRenderer() const {
     return new GLViewportRenderer(this);
@@ -106,16 +121,24 @@ void GLViewport::mousePressEvent(QMouseEvent* event) {
         forceActiveFocus();
     }
     m_cursorPos = event->position();
+    m_pressPos = event->position();
+    m_movedSincePress = false;
     if(window()) {
         m_devicePixelRatio = window()->devicePixelRatio();
     }
     m_pressedButtons = event->buttons();
 
-    m_trackballController.setViewportSize(size());
-    const auto mode = pickMode(m_pressedButtons, m_pressedModifiers);
-    if(mode != Render::TrackballController::Mode::None) {
-        m_trackballController.begin(event->position(), mode, m_cameraState);
-    }
+    // const bool pick_enabled = Render::SelectManager::instance().isPickEnabled();
+
+    // // In picking mode, use right-click for removing picked entities.
+    // // Keep camera zoom on right button only when not in picking mode.
+    // if(!(pick_enabled && (event->buttons() & Qt::RightButton))) {
+    //     m_trackballController.setViewportSize(size());
+    //     const auto mode = pickMode(m_pressedButtons, m_pressedModifiers);
+    //     if(mode != Render::TrackballController::Mode::None) {
+    //         m_trackballController.begin(event->position(), mode, m_cameraState);
+    //     }
+    // }
     event->accept();
 }
 
@@ -123,6 +146,14 @@ void GLViewport::mouseMoveEvent(QMouseEvent* event) {
     m_cursorPos = event->position();
     if(window()) {
         m_devicePixelRatio = window()->devicePixelRatio();
+    }
+
+    constexpr qreal drag_threshold = 4.0;
+    if((m_pressedButtons != Qt::NoButton) && !m_movedSincePress) {
+        const auto delta = m_cursorPos - m_pressPos;
+        if((delta.x() * delta.x() + delta.y() * delta.y()) > (drag_threshold * drag_threshold)) {
+            m_movedSincePress = true;
+        }
     }
 
     // If modifiers/buttons changed mid-drag, switch mode seamlessly.
@@ -146,11 +177,21 @@ void GLViewport::mouseMoveEvent(QMouseEvent* event) {
 }
 
 void GLViewport::mouseReleaseEvent(QMouseEvent* event) {
+    m_cursorPos = event->position();
     m_pressedButtons = event->buttons();
 
     if(m_trackballController.isActive() && m_pressedButtons == Qt::NoButton) {
         m_trackballController.end();
         Render::RenderSceneController::instance().setCamera(m_cameraState, true);
+    }
+
+    const bool pick_enabled = Render::SelectManager::instance().isPickEnabled();
+    if(pick_enabled && !m_trackballController.isActive() && !m_movedSincePress) {
+        if(event->button() == Qt::LeftButton) {
+            m_pendingPickAction = PickAction::Add;
+        } else if(event->button() == Qt::RightButton) {
+            m_pendingPickAction = PickAction::Remove;
+        }
     }
 
     event->accept();
@@ -173,11 +214,13 @@ void GLViewport::wheelEvent(QWheelEvent* event) {
 }
 
 void GLViewport::hoverMoveEvent(QHoverEvent* event) {
-    m_cursorPos = event->position();
-    if(window()) {
-        m_devicePixelRatio = window()->devicePixelRatio();
+    if(Render::SelectManager::instance().isPickEnabled()) {
+        m_cursorPos = event->position();
+        if(window()) {
+            m_devicePixelRatio = window()->devicePixelRatio();
+        }
+        update();
     }
-    update();
     event->accept();
 }
 // =============================================================================
@@ -220,6 +263,8 @@ void GLViewportRenderer::synchronize(QQuickFramebufferObject* item) {
     m_devicePixelRatio = viewport->devicePixelRatio();
     m_itemSize = viewport->itemSize();
 
+    m_pendingPickAction = viewport->consumePickAction();
+
     // Check if render data changed using version number
     const auto& new_render_data = viewport->renderData();
     if(new_render_data.m_version != m_renderData.m_version) {
@@ -245,6 +290,10 @@ namespace {
         return 1;
     case OpenGeoLab::Geometry::EntityType::Face:
         return 2;
+    case OpenGeoLab::Geometry::EntityType::Solid:
+        return 3;
+    case OpenGeoLab::Geometry::EntityType::Part:
+        return 4;
     default:
         return 99;
     }
@@ -279,7 +328,10 @@ void GLViewportRenderer::render() {
     const QMatrix4x4 projection = m_cameraState.projectionMatrix(aspect_ratio);
     const QMatrix4x4 view = m_cameraState.viewMatrix();
 
-    if(m_pickFbo && m_renderData.meshCount() > 0 && m_viewportSize.width() > 0 &&
+    auto& select_manager = Render::SelectManager::instance();
+    const bool pick_enabled = select_manager.isPickEnabled();
+    const auto types = select_manager.pickTypes();
+    if(pick_enabled && m_pickFbo && m_renderData.meshCount() > 0 && m_viewportSize.width() > 0 &&
        m_viewportSize.height() > 0) {
         const bool has_item_size = (m_itemSize.width() > 0.0) && (m_itemSize.height() > 0.0);
         int px = 0;
@@ -345,7 +397,8 @@ void GLViewportRenderer::render() {
 
                     const auto uid = decodeUid24(r, g, b);
                     const auto type = static_cast<Geometry::EntityType>(a);
-                    if(type == Geometry::EntityType::None || uid == Geometry::INVALID_ENTITY_UID) {
+                    if(type == Geometry::EntityType::None || uid == Geometry::INVALID_ENTITY_UID ||
+                       !select_manager.isTypePickable(type)) {
                         continue;
                     }
 
@@ -367,15 +420,25 @@ void GLViewportRenderer::render() {
             if(type != m_lastHoverType || uid != m_lastHoverUid) {
                 m_lastHoverType = type;
                 m_lastHoverUid = uid;
-                if(type == Geometry::EntityType::None || uid == Geometry::INVALID_ENTITY_UID) {
-                    m_sceneRenderer->setHighlightedEntity(Geometry::EntityType::None,
-                                                          Geometry::INVALID_ENTITY_UID);
-                } else {
-                    m_sceneRenderer->setHighlightedEntity(type, uid);
+                m_sceneRenderer->setHighlightedEntity(uid, type);
+            }
+
+            // Apply pending click action (add/remove selection).
+            if(m_pendingPickAction != GLViewport::PickAction::None &&
+               type != Geometry::EntityType::None && uid != Geometry::INVALID_ENTITY_UID) {
+                if(m_pendingPickAction == GLViewport::PickAction::Add) {
+                    select_manager.addSelection(uid, type);
+                } else if(m_pendingPickAction == GLViewport::PickAction::Remove) {
+                    if(select_manager.containsSelection(uid, type)) {
+                        select_manager.removeSelection(uid, type);
+                    }
                 }
             }
         }
     }
+
+    // Clear request after processing (or ignoring).
+    m_pendingPickAction = GLViewport::PickAction::None;
     // Delegate rendering to SceneRenderer
     m_sceneRenderer->render(m_cameraState.m_position, view, projection);
 }
