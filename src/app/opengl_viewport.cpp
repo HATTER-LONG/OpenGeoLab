@@ -189,8 +189,10 @@ void GLViewport::mouseReleaseEvent(QMouseEvent* event) {
     if(pick_enabled && !m_trackballController.isActive() && !m_movedSincePress) {
         if(event->button() == Qt::LeftButton) {
             m_pendingPickAction = PickAction::Add;
+            update();
         } else if(event->button() == Qt::RightButton) {
             m_pendingPickAction = PickAction::Remove;
+            update();
         }
     }
 
@@ -312,6 +314,196 @@ struct PickHit {
     }
     return a.m_dist2 < b.m_dist2;
 }
+
+[[nodiscard]] QPoint cursorToFboPixel(const QPointF& cursor_pos,
+                                      const QSize& viewport_size,
+                                      const QSizeF& item_size,
+                                      qreal device_pixel_ratio) {
+    const bool has_item_size = (item_size.width() > 0.0) && (item_size.height() > 0.0);
+    if(has_item_size) {
+        const double fx = cursor_pos.x() / item_size.width();
+        const double fy = cursor_pos.y() / item_size.height();
+        return QPoint(
+            static_cast<int>(std::lround(fx * static_cast<double>(viewport_size.width()))),
+            static_cast<int>(std::lround(fy * static_cast<double>(viewport_size.height()))));
+    }
+
+    const qreal dpr = (device_pixel_ratio > 0.0) ? device_pixel_ratio : 1.0;
+    return QPoint(static_cast<int>(std::lround(cursor_pos.x() * dpr)),
+                  static_cast<int>(std::lround(cursor_pos.y() * dpr)));
+}
+
+[[nodiscard]] QPoint clampToViewport(QPoint p, const QSize& viewport_size) {
+    if(viewport_size.width() <= 0 || viewport_size.height() <= 0) {
+        return QPoint(0, 0);
+    }
+    p.setX(std::clamp(p.x(), 0, viewport_size.width() - 1));
+    p.setY(std::clamp(p.y(), 0, viewport_size.height() - 1));
+    return p;
+}
+
+struct PickRegion {
+    int m_px{0};
+    int m_py{0};
+    int m_x0{0};
+    int m_y0Gl{0};
+    int m_readW{0};
+    int m_readH{0};
+};
+
+struct PickingContext {
+    Render::SceneRenderer& m_sceneRenderer;
+    QOpenGLFramebufferObject& m_pickFbo;
+    const Render::DocumentRenderData& m_renderData;
+    const QSize& m_viewportSize;
+    const QSizeF& m_itemSize;
+    const QPointF& m_cursorPos;
+    qreal m_devicePixelRatio{1.0};
+    const QMatrix4x4& m_view;
+    const QMatrix4x4& m_projection;
+    Render::SelectManager& m_selectManager;
+    GLViewport::PickAction m_pendingPickAction{GLViewport::PickAction::None};
+    Geometry::EntityType& m_lastHoverType;
+    Geometry::EntityUID& m_lastHoverUid;
+};
+
+[[nodiscard]] PickRegion computePickRegion(const QSize& viewport_size,
+                                           const QSizeF& item_size,
+                                           const QPointF& cursor_pos,
+                                           qreal device_pixel_ratio) {
+    PickRegion region;
+    const QPoint pxy = clampToViewport(
+        cursorToFboPixel(cursor_pos, viewport_size, item_size, device_pixel_ratio), viewport_size);
+    region.m_px = pxy.x();
+    region.m_py = pxy.y();
+
+    const int gl_y = viewport_size.height() - 1 - region.m_py;
+
+    // Scan radius in FBO pixels. Larger radius makes thin edges/points easier to pick.
+    constexpr int pick_radius = 8; // 17x17
+    const int x1 = std::min(viewport_size.width() - 1, region.m_px + pick_radius);
+    const int y1_gl = std::min(viewport_size.height() - 1, gl_y + pick_radius);
+    region.m_x0 = std::max(0, region.m_px - pick_radius);
+    region.m_y0Gl = std::max(0, gl_y - pick_radius);
+    region.m_readW = x1 - region.m_x0 + 1;
+    region.m_readH = y1_gl - region.m_y0Gl + 1;
+    return region;
+}
+
+[[nodiscard]] bool
+readPickPixels(PickingContext& ctx, const PickRegion& region, std::vector<uint8_t>& out_pixels) {
+    auto* gl_ctx = QOpenGLContext::currentContext();
+    auto* f = gl_ctx ? gl_ctx->functions() : nullptr;
+    if(!f) {
+        return false;
+    }
+
+    GLint prev_fbo = 0;
+    f->glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prev_fbo);
+
+    ctx.m_pickFbo.bind();
+    ctx.m_sceneRenderer.renderPicking(ctx.m_view, ctx.m_projection);
+
+    out_pixels.assign(static_cast<size_t>(region.m_readW * region.m_readH * 4), 0);
+    f->glReadPixels(region.m_x0, region.m_y0Gl, region.m_readW, region.m_readH, GL_RGBA,
+                    GL_UNSIGNED_BYTE, out_pixels.data());
+
+    ctx.m_pickFbo.release();
+    f->glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(prev_fbo));
+    return true;
+}
+
+[[nodiscard]] PickHit findBestPickHit(const QSize& viewport_size,
+                                      const PickRegion& region,
+                                      const std::vector<uint8_t>& pixels,
+                                      Render::SelectManager& select_manager) {
+    PickHit best;
+
+    for(int iy = 0; iy < region.m_readH; ++iy) {
+        const int sample_gl_y = region.m_y0Gl + iy;
+        const int sample_top_y = viewport_size.height() - 1 - sample_gl_y;
+        const int dy = sample_top_y - region.m_py;
+
+        for(int ix = 0; ix < region.m_readW; ++ix) {
+            const int sample_x = region.m_x0 + ix;
+            const int dx = sample_x - region.m_px;
+            const int dist2 = dx * dx + dy * dy;
+
+            const size_t off = static_cast<size_t>((iy * region.m_readW + ix) * 4);
+            const uint8_t r = pixels[off + 0];
+            const uint8_t g = pixels[off + 1];
+            const uint8_t b = pixels[off + 2];
+            const uint8_t a = pixels[off + 3];
+
+            const auto uid = decodeUid24(r, g, b);
+            const auto type = static_cast<Geometry::EntityType>(a);
+            if(type == Geometry::EntityType::None || uid == Geometry::INVALID_ENTITY_UID ||
+               !select_manager.isTypePickable(type)) {
+                continue;
+            }
+
+            PickHit candidate;
+            candidate.m_type = type;
+            candidate.m_uid = uid;
+            candidate.m_priority = pickPriority(type);
+            candidate.m_dist2 = dist2;
+
+            if(isBetterHit(candidate, best)) {
+                best = candidate;
+            }
+        }
+    }
+
+    return best;
+}
+
+void applyPendingPickAction(Render::SelectManager& select_manager,
+                            GLViewport::PickAction pending_pick_action,
+                            Geometry::EntityUID uid,
+                            Geometry::EntityType type) {
+    if(pending_pick_action == GLViewport::PickAction::None || type == Geometry::EntityType::None ||
+       uid == Geometry::INVALID_ENTITY_UID) {
+        return;
+    }
+
+    if(pending_pick_action == GLViewport::PickAction::Add) {
+        select_manager.addSelection(uid, type);
+        return;
+    }
+
+    if(pending_pick_action == GLViewport::PickAction::Remove) {
+        if(select_manager.containsSelection(uid, type)) {
+            select_manager.removeSelection(uid, type);
+        }
+    }
+}
+
+void processPicking(PickingContext& ctx) {
+    if(ctx.m_renderData.meshCount() <= 0 || ctx.m_viewportSize.width() <= 0 ||
+       ctx.m_viewportSize.height() <= 0) {
+        return;
+    }
+
+    const PickRegion region = computePickRegion(ctx.m_viewportSize, ctx.m_itemSize, ctx.m_cursorPos,
+                                                ctx.m_devicePixelRatio);
+
+    std::vector<uint8_t> pixels;
+    if(!readPickPixels(ctx, region, pixels)) {
+        return;
+    }
+
+    const PickHit best = findBestPickHit(ctx.m_viewportSize, region, pixels, ctx.m_selectManager);
+    const auto type = best.m_type;
+    const auto uid = best.m_uid;
+
+    if(type != ctx.m_lastHoverType || uid != ctx.m_lastHoverUid) {
+        ctx.m_lastHoverType = type;
+        ctx.m_lastHoverUid = uid;
+        ctx.m_sceneRenderer.setHighlightedEntity(uid, type);
+    }
+
+    applyPendingPickAction(ctx.m_selectManager, ctx.m_pendingPickAction, uid, type);
+}
 } // namespace
 void GLViewportRenderer::render() {
     if(!m_sceneRenderer->isInitialized()) {
@@ -330,111 +522,13 @@ void GLViewportRenderer::render() {
 
     auto& select_manager = Render::SelectManager::instance();
     const bool pick_enabled = select_manager.isPickEnabled();
-    const auto types = select_manager.pickTypes();
-    if(pick_enabled && m_pickFbo && m_renderData.meshCount() > 0 && m_viewportSize.width() > 0 &&
-       m_viewportSize.height() > 0) {
-        const bool has_item_size = (m_itemSize.width() > 0.0) && (m_itemSize.height() > 0.0);
-        int px = 0;
-        int py = 0;
-        if(has_item_size) {
-            const double fx = m_cursorPos.x() / m_itemSize.width();
-            const double fy = m_cursorPos.y() / m_itemSize.height();
-            px = static_cast<int>(std::lround(fx * static_cast<double>(m_viewportSize.width())));
-            py = static_cast<int>(std::lround(fy * static_cast<double>(m_viewportSize.height())));
-        } else {
-            const qreal dpr = (m_devicePixelRatio > 0.0) ? m_devicePixelRatio : 1.0;
-            px = static_cast<int>(std::lround(m_cursorPos.x() * dpr));
-            py = static_cast<int>(std::lround(m_cursorPos.y() * dpr));
-        }
-        px = std::clamp(px, 0, m_viewportSize.width() - 1);
-        py = std::clamp(py, 0, m_viewportSize.height() - 1);
-        const int gl_y = m_viewportSize.height() - 1 - py;
 
-        // Scan radius in FBO pixels. Larger radius makes thin edges/points easier to pick.
-        constexpr int pick_radius = 8; // 17x17
-        const int x0 = std::max(0, px - pick_radius);
-        const int x1 = std::min(m_viewportSize.width() - 1, px + pick_radius);
-        const int y0_gl = std::max(0, gl_y - pick_radius);
-        const int y1_gl = std::min(m_viewportSize.height() - 1, gl_y + pick_radius);
-        const int read_w = x1 - x0 + 1;
-        const int read_h = y1_gl - y0_gl + 1;
-
-        auto* ctx = QOpenGLContext::currentContext();
-        auto* f = ctx ? ctx->functions() : nullptr;
-        if(f) {
-            GLint prev_fbo = 0;
-            f->glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prev_fbo);
-
-            m_pickFbo->bind();
-            m_sceneRenderer->renderPicking(view, projection);
-
-            std::vector<uint8_t> pixels(static_cast<size_t>(read_w * read_h * 4), 0);
-            f->glReadPixels(x0, y0_gl, read_w, read_h, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
-
-            m_pickFbo->release();
-            f->glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(prev_fbo));
-
-            PickHit best;
-
-            // Evaluate all pixels in the neighborhood.
-            // Readback is in GL coordinate space (origin at bottom-left).
-            // Compute distance in "top-left" pixel space to match px/py.
-            for(int iy = 0; iy < read_h; ++iy) {
-                const int sample_gl_y = y0_gl + iy;
-                const int sample_top_y = m_viewportSize.height() - 1 - sample_gl_y;
-                const int dy = sample_top_y - py;
-
-                for(int ix = 0; ix < read_w; ++ix) {
-                    const int sample_x = x0 + ix;
-                    const int dx = sample_x - px;
-                    const int dist2 = dx * dx + dy * dy;
-
-                    const size_t off = static_cast<size_t>((iy * read_w + ix) * 4);
-                    const uint8_t r = pixels[off + 0];
-                    const uint8_t g = pixels[off + 1];
-                    const uint8_t b = pixels[off + 2];
-                    const uint8_t a = pixels[off + 3];
-
-                    const auto uid = decodeUid24(r, g, b);
-                    const auto type = static_cast<Geometry::EntityType>(a);
-                    if(type == Geometry::EntityType::None || uid == Geometry::INVALID_ENTITY_UID ||
-                       !select_manager.isTypePickable(type)) {
-                        continue;
-                    }
-
-                    PickHit candidate;
-                    candidate.m_type = type;
-                    candidate.m_uid = uid;
-                    candidate.m_priority = pickPriority(type);
-                    candidate.m_dist2 = dist2;
-
-                    if(isBetterHit(candidate, best)) {
-                        best = candidate;
-                    }
-                }
-            }
-
-            const auto type = best.m_type;
-            const auto uid = best.m_uid;
-
-            if(type != m_lastHoverType || uid != m_lastHoverUid) {
-                m_lastHoverType = type;
-                m_lastHoverUid = uid;
-                m_sceneRenderer->setHighlightedEntity(uid, type);
-            }
-
-            // Apply pending click action (add/remove selection).
-            if(m_pendingPickAction != GLViewport::PickAction::None &&
-               type != Geometry::EntityType::None && uid != Geometry::INVALID_ENTITY_UID) {
-                if(m_pendingPickAction == GLViewport::PickAction::Add) {
-                    select_manager.addSelection(uid, type);
-                } else if(m_pendingPickAction == GLViewport::PickAction::Remove) {
-                    if(select_manager.containsSelection(uid, type)) {
-                        select_manager.removeSelection(uid, type);
-                    }
-                }
-            }
-        }
+    if(pick_enabled && m_pickFbo) {
+        PickingContext ctx{*m_sceneRenderer, *m_pickFbo,     m_renderData,        m_viewportSize,
+                           m_itemSize,       m_cursorPos,    m_devicePixelRatio,  view,
+                           projection,       select_manager, m_pendingPickAction, m_lastHoverType,
+                           m_lastHoverUid};
+        processPicking(ctx);
     }
 
     // Clear request after processing (or ignoring).

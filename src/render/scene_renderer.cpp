@@ -413,6 +413,28 @@ void SceneRenderer::renderMeshes(const QMatrix4x4& mvp,
         }
     };
 
+    auto uid_matches_24 = [](Geometry::EntityUID a, Geometry::EntityUID b) {
+        return (static_cast<uint32_t>(a) & 0xFFFFFFu) == (static_cast<uint32_t>(b) & 0xFFFFFFu);
+    };
+
+    auto set_override_color = [&](bool enabled, const QVector4D& color) {
+        m_meshShader->setUniformValue(m_useOverrideColorLoc, enabled ? 1 : 0);
+        if(enabled) {
+            m_meshShader->setUniformValue(m_overrideColorLoc, color);
+        }
+    };
+
+    auto draw_mesh = [&](MeshBuffers& buffers, GLenum primitive) {
+        buffers.m_vao->bind();
+        if(buffers.m_indexCount > 0) {
+            buffers.m_ebo->bind();
+            glDrawElements(primitive, buffers.m_indexCount, GL_UNSIGNED_INT, nullptr);
+        } else {
+            glDrawArrays(primitive, 0, buffers.m_vertexCount);
+        }
+        buffers.m_vao->release();
+    };
+
     // Enable shader-controlled point size
     glEnable(GL_PROGRAM_POINT_SIZE);
 
@@ -427,26 +449,19 @@ void SceneRenderer::renderMeshes(const QMatrix4x4& mvp,
     for(auto& buffers : m_faceMeshBuffers) {
         const bool is_selected = Render::SelectManager::instance().containsSelection(
             buffers.m_entityUid, buffers.m_entityType);
+        const bool is_hover = (m_hoverHighlightType != Geometry::EntityType::None) &&
+                              (buffers.m_entityType == m_hoverHighlightType) &&
+                              uid_matches_24(buffers.m_entityUid, m_hoverHighlightUid);
+
         if(is_selected) {
-            m_meshShader->setUniformValue(m_useOverrideColorLoc, 1);
-            m_meshShader->setUniformValue(m_overrideColorLoc, buffers.m_selectedColor);
-        } else if((m_hoverHighlightType != Geometry::EntityType::None) &&
-                  (buffers.m_entityType == m_hoverHighlightType) &&
-                  ((buffers.m_entityUid & 0xFFFFFFu) == (m_hoverHighlightUid & 0xFFFFFFu))) {
-            m_meshShader->setUniformValue(m_useOverrideColorLoc, 1);
-            m_meshShader->setUniformValue(m_overrideColorLoc, buffers.m_hoverColor);
+            set_override_color(true, buffers.m_selectedColor);
+        } else if(is_hover) {
+            set_override_color(true, buffers.m_hoverColor);
         } else {
-            m_meshShader->setUniformValue(m_useOverrideColorLoc, 0);
+            set_override_color(false, QVector4D());
         }
-        buffers.m_vao->bind();
-        if(buffers.m_indexCount > 0) {
-            buffers.m_ebo->bind();
-            glDrawElements(get_primitive_type(buffers.m_primitiveType), buffers.m_indexCount,
-                           GL_UNSIGNED_INT, nullptr);
-        } else {
-            glDrawArrays(get_primitive_type(buffers.m_primitiveType), 0, buffers.m_vertexCount);
-        }
-        buffers.m_vao->release();
+
+        draw_mesh(buffers, get_primitive_type(buffers.m_primitiveType));
     }
     glDisable(GL_POLYGON_OFFSET_FILL);
 
@@ -455,33 +470,23 @@ void SceneRenderer::renderMeshes(const QMatrix4x4& mvp,
     glDepthFunc(GL_LEQUAL);
     m_meshShader->setUniformValue(m_useLightingLoc, 0);
     for(auto& buffers : m_edgeMeshBuffers) {
-        bool is_hover = (m_hoverHighlightType == Geometry::EntityType::Edge) &&
-                        (buffers.m_entityType == m_hoverHighlightType) &&
-                        ((buffers.m_entityUid & 0xFFFFFFu) == (m_hoverHighlightUid & 0xFFFFFFu));
+        const bool is_hover = (m_hoverHighlightType == Geometry::EntityType::Edge) &&
+                              (buffers.m_entityType == m_hoverHighlightType) &&
+                              uid_matches_24(buffers.m_entityUid, m_hoverHighlightUid);
         float line_width = is_hover ? 4.0f : 2.0f;
         glLineWidth(line_width);
         const bool is_selected = Render::SelectManager::instance().containsSelection(
             buffers.m_entityUid, buffers.m_entityType);
 
         if(is_selected) {
-            m_meshShader->setUniformValue(m_useOverrideColorLoc, 1);
-            m_meshShader->setUniformValue(m_overrideColorLoc, buffers.m_selectedColor);
+            set_override_color(true, buffers.m_selectedColor);
         } else if(is_hover) {
-            m_meshShader->setUniformValue(m_useOverrideColorLoc, 1);
-            m_meshShader->setUniformValue(m_overrideColorLoc, buffers.m_hoverColor);
+            set_override_color(true, buffers.m_hoverColor);
         } else {
-            m_meshShader->setUniformValue(m_useOverrideColorLoc, 0);
+            set_override_color(false, QVector4D());
         }
 
-        buffers.m_vao->bind();
-        if(buffers.m_indexCount > 0) {
-            buffers.m_ebo->bind();
-            glDrawElements(get_primitive_type(buffers.m_primitiveType), buffers.m_indexCount,
-                           GL_UNSIGNED_INT, nullptr);
-        } else {
-            glDrawArrays(get_primitive_type(buffers.m_primitiveType), 0, buffers.m_vertexCount);
-        }
-        buffers.m_vao->release();
+        draw_mesh(buffers, get_primitive_type(buffers.m_primitiveType));
     }
 
     // Render vertex meshes (with larger point size)
@@ -489,31 +494,23 @@ void SceneRenderer::renderMeshes(const QMatrix4x4& mvp,
     glDepthFunc(GL_LEQUAL);
     m_meshShader->setUniformValue(m_useLightingLoc, 0);
     for(auto& buffers : m_vertexMeshBuffers) {
-        const bool is_hover =
-            (m_hoverHighlightType == Geometry::EntityType::Vertex) &&
-            (buffers.m_entityType == m_hoverHighlightType) &&
-            ((buffers.m_entityUid & 0xFFFFFFu) == (m_hoverHighlightUid & 0xFFFFFFu));
+        const bool is_hover = (m_hoverHighlightType == Geometry::EntityType::Vertex) &&
+                              (buffers.m_entityType == m_hoverHighlightType) &&
+                              uid_matches_24(buffers.m_entityUid, m_hoverHighlightUid);
         const bool is_selected = Render::SelectManager::instance().containsSelection(
             buffers.m_entityUid, buffers.m_entityType);
 
         float vertex_size = is_hover ? 9.0f : is_selected ? 7.0f : 6.0f;
         m_meshShader->setUniformValue(m_pointSizeLoc, vertex_size);
         if(is_selected) {
-            m_meshShader->setUniformValue(m_useOverrideColorLoc, 1);
-            m_meshShader->setUniformValue(m_overrideColorLoc, buffers.m_selectedColor);
-        } else if((m_hoverHighlightType != Geometry::EntityType::None) &&
-                  (buffers.m_entityType == m_hoverHighlightType) &&
-                  ((buffers.m_entityUid & 0xFFFFFFu) == (m_hoverHighlightUid & 0xFFFFFFu))) {
-
-            m_meshShader->setUniformValue(m_useOverrideColorLoc, 1);
-            m_meshShader->setUniformValue(m_overrideColorLoc, buffers.m_hoverColor);
+            set_override_color(true, buffers.m_selectedColor);
+        } else if(is_hover) {
+            set_override_color(true, buffers.m_hoverColor);
         } else {
-            m_meshShader->setUniformValue(m_useOverrideColorLoc, 0);
+            set_override_color(false, QVector4D());
         }
 
-        buffers.m_vao->bind();
-        glDrawArrays(GL_POINTS, 0, buffers.m_vertexCount);
-        buffers.m_vao->release();
+        draw_mesh(buffers, GL_POINTS);
     }
 
     glDepthFunc(GL_LESS);
@@ -540,6 +537,17 @@ void SceneRenderer::renderPicking(const QMatrix4x4& view_matrix,
         return;
     }
 
+    auto draw_pick_mesh = [&](MeshBuffers& buffers, GLenum primitive) {
+        buffers.m_vao->bind();
+        if(buffers.m_indexCount > 0) {
+            buffers.m_ebo->bind();
+            glDrawElements(primitive, buffers.m_indexCount, GL_UNSIGNED_INT, nullptr);
+        } else {
+            glDrawArrays(primitive, 0, buffers.m_vertexCount);
+        }
+        buffers.m_vao->release();
+    };
+
     glViewport(0, 0, m_viewportSize.width(), m_viewportSize.height());
     glDisable(GL_BLEND);
     glDisable(GL_MULTISAMPLE);
@@ -565,14 +573,7 @@ void SceneRenderer::renderPicking(const QMatrix4x4& view_matrix,
     for(auto& buffers : m_faceMeshBuffers) {
         m_pickShader->setUniformValue(m_pickColorLoc,
                                       encodePickColor(buffers.m_entityType, buffers.m_entityUid));
-        buffers.m_vao->bind();
-        if(buffers.m_indexCount > 0) {
-            buffers.m_ebo->bind();
-            glDrawElements(GL_TRIANGLES, buffers.m_indexCount, GL_UNSIGNED_INT, nullptr);
-        } else {
-            glDrawArrays(GL_TRIANGLES, 0, buffers.m_vertexCount);
-        }
-        buffers.m_vao->release();
+        draw_pick_mesh(buffers, GL_TRIANGLES);
     }
     glDisable(GL_POLYGON_OFFSET_FILL);
 
@@ -610,9 +611,7 @@ void SceneRenderer::renderPicking(const QMatrix4x4& view_matrix,
     for(auto& buffers : m_vertexMeshBuffers) {
         m_pickShader->setUniformValue(m_pickColorLoc,
                                       encodePickColor(buffers.m_entityType, buffers.m_entityUid));
-        buffers.m_vao->bind();
-        glDrawArrays(GL_POINTS, 0, buffers.m_vertexCount);
-        buffers.m_vao->release();
+        draw_pick_mesh(buffers, GL_POINTS);
     }
 
     m_pickShader->release();
