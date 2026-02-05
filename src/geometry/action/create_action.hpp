@@ -20,6 +20,18 @@ namespace OpenGeoLab::Geometry {
  * - box: Requires nested parameters:
  *        - dimensions: {x, y, z}
  *        - origin: {x, y, z}
+ * - cylinder: Requires parameters:
+ *        - radius, height
+ *        - x, y, z (optional, base center position)
+ * - sphere: Requires parameters:
+ *        - radius
+ *        - x, y, z (optional, center position)
+ * - cone: Requires parameters:
+ *        - radius1 (base), radius2 (top), height
+ *        - x, y, z (optional, base center position)
+ * - torus: Requires parameters:
+ *        - majorRadius (ring radius), minorRadius (tube radius)
+ *        - x, y, z (optional, center position)
  *
  * All created shapes are added to the current GeometryDocument as Part entities.
  */

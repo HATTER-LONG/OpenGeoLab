@@ -246,6 +246,13 @@ public:
      */
     void setName(const std::string& name) { m_name = name; }
 
+    /**
+     * @brief Detect entity type from OCC shape
+     * @param shape Shape to analyze
+     * @return Detected EntityType
+     */
+    [[nodiscard]] static EntityType detectEntityType(const TopoDS_Shape& shape);
+
 protected:
     /**
      * @brief Protected constructor for derived classes
@@ -257,13 +264,6 @@ protected:
      * @brief Compute bounding box from OCC shape
      */
     void computeBoundingBox() const;
-
-    /**
-     * @brief Detect entity type from OCC shape
-     * @param shape Shape to analyze
-     * @return Detected EntityType
-     */
-    [[nodiscard]] static EntityType detectEntityType(const TopoDS_Shape& shape);
 
 protected:
     EntityId m_entityId{INVALID_ENTITY_ID};    ///< Global unique ID

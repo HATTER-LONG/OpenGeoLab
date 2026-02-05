@@ -16,16 +16,29 @@ enum class ViewPreset { Front = 0, Back = 1, Left = 2, Right = 3, Top = 4, Botto
 
 /**
  * @brief Render action that controls camera presets or triggers a refresh
+ *
+ * Handles view_ctrl action parameters to set camera to predefined views
+ * or refresh/fit the scene.
  */
 class ViewPortControl : public RenderActionBase {
 public:
     ViewPortControl() = default;
     ~ViewPortControl() override = default;
 
+    /**
+     * @brief Execute the viewport control action
+     * @param params JSON parameters containing view_ctrl object
+     * @param progress_callback Progress callback (unused)
+     * @return JSON response with status and action name
+     */
     [[nodiscard]] nlohmann::json execute(const nlohmann::json& params,
                                          Util::ProgressCallback progress_callback) override;
 
 private:
+    /**
+     * @brief Apply a camera view preset
+     * @param preset The view preset to apply
+     */
     void applyPreset(ViewPreset preset);
 
 private:

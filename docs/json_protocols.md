@@ -149,7 +149,7 @@
 - action：`"create"`
 - 用途：创建基础几何体并追加到当前文档（作为 Part）
 - 公共字段：
-  - `type`: `box|cylinder|sphere|cone`
+  - `type`: `box|cylinder|sphere|cone|torus`
   - `name`（可选）：Part 名称，缺省为 `type`
 
 响应约定：
@@ -182,6 +182,120 @@
 }
 ```
 
+#### 3.3.2 cylinder
+圆柱体创建：
+- `radius`: 半径
+- `height`: 高度
+- `x, y, z`（可选）：底面圆心位置，缺省为原点
+
+请求：
+```json
+{
+  "action": "create",
+  "type": "cylinder",
+  "name": "Cylinder-1",
+  "radius": 5.0,
+  "height": 10.0,
+  "x": 0.0,
+  "y": 0.0,
+  "z": 0.0
+}
+```
+
+#### 3.3.3 sphere
+球体创建：
+- `radius`: 半径
+- `x, y, z`（可选）：球心位置，缺省为原点
+
+请求：
+```json
+{
+  "action": "create",
+  "type": "sphere",
+  "name": "Sphere-1",
+  "radius": 5.0,
+  "x": 0.0,
+  "y": 0.0,
+  "z": 0.0
+}
+```
+
+#### 3.3.4 torus
+圆环创建：
+- `majorRadius`: 主半径（环中心到管道中心的距离）
+- `minorRadius`: 次半径（管道半径）
+- `x, y, z`（可选）：中心位置，缺省为原点
+
+请求：
+```json
+{
+  "action": "create",
+  "type": "torus",
+  "name": "Torus-1",
+  "majorRadius": 10.0,
+  "minorRadius": 3.0,
+  "x": 0.0,
+  "y": 0.0,
+  "z": 0.0
+}
+```
+
+### 3.4 query_entity
+- action：`"query_entity"`
+- 用途：查询实体详细信息
+
+#### 3.4.1 单个实体查询
+请求：
+```json
+{
+  "action": "query_entity",
+  "entity_id": 123
+}
+```
+响应：
+```json
+{
+  "success": true,
+  "entity": {
+    "id": 123,
+    "uid": 45,
+    "type": "Face",
+    "type_enum": 4,
+    "name": "Face_45",
+    "parent_ids": [100],
+    "child_ids": [200, 201],
+    "owning_part_id": 1,
+    "owning_part_name": "Box-1",
+    "part_color": "#3498DB",
+    "bounding_box": {
+      "min": [0.0, 0.0, 0.0],
+      "max": [10.0, 10.0, 10.0]
+    },
+    "center": [5.0, 5.0, 5.0],
+    "size": [10.0, 10.0, 10.0]
+  }
+}
+```
+
+#### 3.4.2 批量实体查询
+请求：
+```json
+{
+  "action": "query_entity",
+  "entity_ids": [123, 124, 125]
+}
+```
+响应：
+```json
+{
+  "success": true,
+  "entities": [
+    { "id": 123, "uid": 45, "type": "Face", ... },
+    { "id": 124, "uid": 46, "type": "Face", ... }
+  ],
+  "queried_count": 2
+}
+```
 
 ---
 

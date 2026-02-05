@@ -3,12 +3,13 @@
  * @brief OpenGL scene renderer for geometry visualization
  *
  * Provides a self-contained OpenGL rendering component that handles
- * shader management, mesh data upload, and scene rendering. This component
- * is independent of the QML layer and can be used by any OpenGL context.
+ * shader management, mesh data upload, scene rendering, and entity picking.
+ * This component is independent of the QML layer and can be used by any OpenGL context.
  */
 
 #pragma once
 
+#include "geometry/geometry_types.hpp"
 #include "render/render_data.hpp"
 
 #include <QMatrix4x4>
@@ -24,12 +25,22 @@
 namespace OpenGeoLab::Render {
 
 /**
+ * @brief Result of picking operation at a single pixel
+ */
+struct PickPixelResult {
+    bool m_valid{false};                                           ///< Whether valid entity found
+    Geometry::EntityType m_entityType{Geometry::EntityType::None}; ///< Entity type
+    Geometry::EntityUID m_entityUid{0};                            ///< Entity UID
+};
+
+/**
  * @brief OpenGL scene renderer for geometry visualization
  *
  * SceneRenderer is a self-contained component that handles:
  * - Shader compilation and management
  * - Mesh data upload to GPU
  * - Scene rendering with proper lighting
+ * - ID buffer rendering for entity picking
  *
  * @note Must be used within a valid OpenGL context.
  * @note Thread safety: Not thread-safe, all calls must be from the render thread.
@@ -81,6 +92,30 @@ public:
                 const QMatrix4x4& projection_matrix);
 
     /**
+     * @brief Set the entity UID to highlight during rendering
+     * @param uid Entity UID to highlight, or INVALID_ENTITY_UID for none
+     * @note Highlighted entity will be rendered with a different color
+     */
+    void setHighlightedEntityUid(Geometry::EntityUID uid);
+
+    /**
+     * @brief Get the currently highlighted entity UID
+     * @return Highlighted entity UID
+     */
+    [[nodiscard]] Geometry::EntityUID highlightedEntityUid() const;
+
+    /**
+     * @brief Render ID buffer for picking and read pixel at position
+     * @param x Screen X coordinate
+     * @param y Screen Y coordinate
+     * @param view_matrix View transformation matrix
+     * @param projection_matrix Projection matrix
+     * @return Picking result at the pixel
+     */
+    [[nodiscard]] PickPixelResult
+    pickAtPixel(int x, int y, const QMatrix4x4& view_matrix, const QMatrix4x4& projection_matrix);
+
+    /**
      * @brief Cleanup GPU resources
      * @note Call before destroying OpenGL context
      */
@@ -91,7 +126,11 @@ private:
     void renderMeshes(const QMatrix4x4& mvp,
                       const QMatrix4x4& model_matrix,
                       const QVector3D& camera_pos);
-
+    /**
+     * @brief Render meshes to ID buffer (for picking)
+     * @param mvp Model-View-Projection matrix
+     */
+    void renderIdBuffer(const QMatrix4x4& mvp);
     /**
      * @brief Upload a single mesh to GPU buffers
      * @param mesh Mesh data to upload
@@ -109,12 +148,46 @@ private:
      */
     void clearMeshBuffers();
 
+    /**
+     * @brief Encode entity ID and type into RGBA color
+     * @param entity_uid Entity UID to encode
+     * @param entity_type Entity type to encode
+     * @param r Output red component
+     * @param g Output green component
+     * @param b Output blue component
+     * @param a Output alpha component
+     */
+    static void encodeEntityId(Geometry::EntityUID entity_uid,
+                               Geometry::EntityType entity_type,
+                               uint8_t& r,
+                               uint8_t& g,
+                               uint8_t& b,
+                               uint8_t& a);
+
+    /**
+     * @brief Decode entity ID and type from RGBA color
+     * @param r Red component
+     * @param g Green component
+     * @param b Blue component
+     * @param a Alpha component
+     * @param entity_uid Output entity UID
+     * @param entity_type Output entity type
+     * @return true if valid entity decoded
+     */
+    [[nodiscard]] static bool decodeEntityId(uint8_t r,
+                                             uint8_t g,
+                                             uint8_t b,
+                                             uint8_t a,
+                                             Geometry::EntityUID& entity_uid,
+                                             Geometry::EntityType& entity_type);
+
 private:
     bool m_initialized{false};
     QSize m_viewportSize{800, 600};
 
     // Shaders
     std::unique_ptr<QOpenGLShaderProgram> m_meshShader;
+    std::unique_ptr<QOpenGLShaderProgram> m_idShader;
 
     // Mesh shader uniform locations
     int m_mvpMatrixLoc{-1};
@@ -123,7 +196,12 @@ private:
     int m_lightPosLoc{-1};
     int m_viewPosLoc{-1};
     int m_pointSizeLoc{-1};
+    int m_highlightedLoc{-1}; ///< Uniform location for highlight flag
 
+    // ID shader uniform locations
+    int m_idMvpMatrixLoc{-1};
+    int m_idColorLoc{-1};
+    int m_idPointSizeLoc{-1};
     /**
      * @brief Internal structure for mesh GPU buffers
      */
@@ -134,6 +212,9 @@ private:
         int m_vertexCount{0};
         int m_indexCount{0};
         RenderPrimitiveType m_primitiveType{RenderPrimitiveType::Triangles};
+
+        Geometry::EntityUID m_entityUid{0};                            ///< Entity UID for picking
+        Geometry::EntityType m_entityType{Geometry::EntityType::None}; ///< Entity type
 
         MeshBuffers();
         ~MeshBuffers();
@@ -150,6 +231,9 @@ private:
     std::vector<MeshBuffers> m_faceMeshBuffers;
     std::vector<MeshBuffers> m_edgeMeshBuffers;
     std::vector<MeshBuffers> m_vertexMeshBuffers;
+
+    // Highlight state
+    Geometry::EntityUID m_highlightedEntityUid{Geometry::INVALID_ENTITY_UID}; ///< UID to highlight
 };
 
 } // namespace OpenGeoLab::Render

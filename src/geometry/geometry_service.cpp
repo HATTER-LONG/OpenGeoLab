@@ -7,6 +7,7 @@
 #include "action/create_action.hpp"
 #include "action/get_part_list_action.hpp"
 #include "action/newmodel_action.hpp"
+#include "action/query_entity_action.hpp"
 #include "geometry_document_managerImpl.hpp"
 #include "util/logger.hpp"
 #include "util/progress_bridge.hpp"
@@ -49,6 +50,9 @@ void registerServices() {
     g_ComponentFactory.registInstanceFactoryWithID<GeometryServiceFactory>("GeometryService");
     g_ComponentFactory.registFactoryWithID<CreateActionFactory>(CreateAction::actionName());
     g_ComponentFactory.registFactoryWithID<NewModelActionFactory>(NewModelAction::actionName());
+    g_ComponentFactory.registFactoryWithID<QueryEntityActionFactory>(
+        QueryEntityAction::actionName());
+
     g_ComponentFactory.registFactoryWithID<GetPartListActionFactory>(
         GetPartListAction::actionName());
     g_ComponentFactory.registInstanceFactory<GeometryDocumentManagerImplSingletonFactory>();

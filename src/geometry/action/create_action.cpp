@@ -11,6 +11,7 @@
 #include <BRepPrimAPI_MakeCone.hxx>
 #include <BRepPrimAPI_MakeCylinder.hxx>
 #include <BRepPrimAPI_MakeSphere.hxx>
+#include <BRepPrimAPI_MakeTorus.hxx>
 #include <gp_Ax2.hxx>
 #include <gp_Pnt.hxx>
 
@@ -180,6 +181,47 @@ namespace {
     }
 }
 
+/**
+ * @brief Create a torus shape
+ * @param params JSON with majorRadius, minorRadius, and optional center position
+ * @return Created TopoDS_Shape or null shape on failure
+ */
+[[nodiscard]] TopoDS_Shape createTorus(const nlohmann::json& params) {
+    double major_radius = params.value("majorRadius", 10.0);
+    double minor_radius = params.value("minorRadius", 3.0);
+
+    double x = params.value("x", 0.0);
+    double y = params.value("y", 0.0);
+    double z = params.value("z", 0.0);
+
+    if(major_radius <= 0.0 || minor_radius <= 0.0) {
+        LOG_ERROR("CreateAction: Torus radii must be positive");
+        throw std::invalid_argument("Invalid torus creation parameters");
+    }
+
+    if(minor_radius >= major_radius) {
+        LOG_WARN("CreateAction: Torus minor radius >= major radius, may produce invalid geometry");
+    }
+
+    try {
+        gp_Pnt center(x, y, z);
+        gp_Dir direction(0, 0, 1); // Z-up
+        gp_Ax2 axis(center, direction);
+
+        BRepPrimAPI_MakeTorus maker(axis, major_radius, minor_radius);
+        maker.Build();
+        if(!maker.IsDone()) {
+            LOG_ERROR("CreateAction: Failed to create torus");
+            throw std::runtime_error("Failed to create torus");
+        }
+        return maker.Shape();
+    } catch(const Standard_Failure& e) {
+        LOG_ERROR("CreateAction: OCC error creating torus: {}",
+                  e.GetMessageString() ? e.GetMessageString() : "Unknown");
+        throw std::runtime_error("Failed to create torus");
+    }
+}
+
 } // anonymous namespace
 
 [[nodiscard]] nlohmann::json CreateAction::execute(const nlohmann::json& params,
@@ -216,6 +258,8 @@ namespace {
             shape = createSphere(params);
         } else if(type == "cone") {
             shape = createCone(params);
+        } else if(type == "torus") {
+            shape = createTorus(params);
         } else {
             if(progress_callback) {
                 progress_callback(1.0, "Error: Unsupported shape type '" + type + "'.");

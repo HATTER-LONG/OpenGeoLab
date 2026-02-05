@@ -93,6 +93,8 @@ private:
 
 /**
  * @brief Proxy model for filtering log entries by level
+ *
+ * Provides level-based filtering with individual level enable/disable support.
  * @internal This class is used internally by LogService
  */
 class LogEntryFilterModel final : public QSortFilterProxyModel {
@@ -101,10 +103,30 @@ class LogEntryFilterModel final : public QSortFilterProxyModel {
 public:
     explicit LogEntryFilterModel(QObject* parent = nullptr);
 
+    /**
+     * @brief Get the minimum log level for filtering
+     * @return Minimum level value
+     */
     [[nodiscard]] int minLevel() const;
+
+    /**
+     * @brief Set the minimum log level for filtering
+     * @param level Minimum level value (entries below this are filtered out)
+     */
     void setMinLevel(int level);
 
+    /**
+     * @brief Check if a specific log level is enabled
+     * @param level Log level to check
+     * @return true if the level is enabled for display
+     */
     [[nodiscard]] bool levelEnabled(int level) const;
+
+    /**
+     * @brief Enable or disable a specific log level
+     * @param level Log level to modify
+     * @param enabled true to enable, false to disable
+     */
     void setLevelEnabled(int level, bool enabled);
 
 signals:
