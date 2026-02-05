@@ -7,6 +7,8 @@
 
 #include <array>
 #include <atomic>
+#include <stdexcept>
+#include <unordered_map>
 
 namespace OpenGeoLab::Geometry {
 
@@ -31,7 +33,48 @@ std::array<std::atomic<EntityUID>, 10> g_next_entity_uids = {
 };
 
 } // namespace
+EntityType entityTypeFromString(std::string_view value) {
+    static const std::unordered_map<std::string_view, EntityType> type_map = {
+        {"None", EntityType::None},         {"Vertex", EntityType::Vertex},
+        {"Edge", EntityType::Edge},         {"Wire", EntityType::Wire},
+        {"Face", EntityType::Face},         {"Shell", EntityType::Shell},
+        {"Solid", EntityType::Solid},       {"CompSolid", EntityType::CompSolid},
+        {"Compound", EntityType::Compound}, {"Part", EntityType::Part},
+    };
+    auto it = type_map.find(value);
+    if(it != type_map.end()) {
+        return it->second;
+    }
+    throw std::invalid_argument("Invalid entity type string: " + std::string(value));
+}
 
+std::string entityTypeToString(EntityType type) {
+    switch(type) {
+    case EntityType::None:
+        return "None";
+    case EntityType::Vertex:
+        return "Vertex";
+    case EntityType::Edge:
+        return "Edge";
+    case EntityType::Wire:
+        return "Wire";
+    case EntityType::Face:
+        return "Face";
+    case EntityType::Shell:
+        return "Shell";
+    case EntityType::Solid:
+        return "Solid";
+    case EntityType::CompSolid:
+        return "CompSolid";
+    case EntityType::Compound:
+        return "Compound";
+    case EntityType::Part:
+        return "Part";
+    default:
+        break;
+    }
+    throw std::invalid_argument("Invalid entity type enum value");
+}
 EntityId generateEntityId() { return g_next_entity_id.fetch_add(1, std::memory_order_relaxed); }
 
 EntityUID generateEntityUID(EntityType type) {

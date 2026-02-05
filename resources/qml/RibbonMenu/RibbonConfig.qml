@@ -25,24 +25,31 @@ QtObject {
                         items: [
                             {
                                 type: "button",
-                                id: "addPoint",
-                                text: qsTr("Point"),
-                                iconSource: ribbonConfig.iconBasePath + "point.svg",
-                                tooltip: qsTr("Create Point")
-                            },
-                            {
-                                type: "button",
-                                id: "addLine",
-                                text: qsTr("Line"),
-                                iconSource: ribbonConfig.iconBasePath + "line.svg",
-                                tooltip: qsTr("Create Line")
-                            },
-                            {
-                                type: "button",
                                 id: "addBox",
                                 text: qsTr("Box"),
                                 iconSource: ribbonConfig.iconBasePath + "box.svg",
                                 tooltip: qsTr("Create Box")
+                            },
+                            {
+                                type: "button",
+                                id: "addCylinder",
+                                text: qsTr("Cylinder"),
+                                iconSource: ribbonConfig.iconBasePath + "cylinder.svg",
+                                tooltip: qsTr("Create Cylinder")
+                            },
+                            {
+                                type: "button",
+                                id: "addSphere",
+                                text: qsTr("Sphere"),
+                                iconSource: ribbonConfig.iconBasePath + "sphere.svg",
+                                tooltip: qsTr("Create Sphere")
+                            },
+                            {
+                                type: "button",
+                                id: "addTorus",
+                                text: qsTr("Torus"),
+                                iconSource: ribbonConfig.iconBasePath + "torus.svg",
+                                tooltip: qsTr("Create Torus")
                             }
                         ]
                     },

@@ -22,26 +22,59 @@ QtObject {
 
     /// Component path mapping for all available pages
     readonly property var componentMap: ({
-        // File operations
-        "importModel": { path: "Pages/ImportModel.qml", floating: false },
+            // File operations
+            "importModel": {
+                path: "Pages/ImportModel.qml",
+                floating: false
+            },
 
-        // Geometry - Create
-        "addPoint": { path: "Pages/AddPointPage.qml", floating: true },
-        "addLine": { path: "Pages/AddLinePage.qml", floating: true },
-        "addBox": { path: "Pages/AddBoxPage.qml", floating: true },
+            // Geometry - Create
+            "addBox": {
+                path: "Pages/AddBoxPage.qml",
+                floating: true
+            },
+            "addCylinder": {
+                path: "Pages/AddCylinderPage.qml",
+                floating: true
+            },
+            "addSphere": {
+                path: "Pages/AddSpherePage.qml",
+                floating: true
+            },
+            "addTorus": {
+                path: "Pages/AddTorusPage.qml",
+                floating: true
+            },
+            // Geometry - Modify
+            "trim": {
+                path: "Pages/TrimPage.qml",
+                floating: true
+            },
+            "offset": {
+                path: "Pages/OffsetPage.qml",
+                floating: true
+            },
 
-        // Geometry - Modify
-        "trim": { path: "Pages/TrimPage.qml", floating: true },
-        "offset": { path: "Pages/OffsetPage.qml", floating: true },
+            // Mesh
+            "generateMesh": {
+                path: "Pages/GenerateMeshPage.qml",
+                floating: true
+            },
+            "smoothMesh": {
+                path: "Pages/SmoothMeshPage.qml",
+                floating: true
+            },
 
-        // Mesh
-        "generateMesh": { path: "Pages/GenerateMeshPage.qml", floating: true },
-        "smoothMesh": { path: "Pages/SmoothMeshPage.qml", floating: true },
-
-        // AI
-        "aiSuggest": { path: "Pages/AISuggestPage.qml", floating: true },
-        "aiChat": { path: "Pages/AIChatPage.qml", floating: true }
-    })
+            // AI
+            "aiSuggest": {
+                path: "Pages/AISuggestPage.qml",
+                floating: true
+            },
+            "aiChat": {
+                path: "Pages/AIChatPage.qml",
+                floating: true
+            }
+        })
 
     /**
      * @brief Get or create a page component by action ID

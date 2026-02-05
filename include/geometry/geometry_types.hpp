@@ -14,6 +14,7 @@
 #include <cmath>
 #include <cstdint>
 #include <limits>
+#include <string>
 
 namespace OpenGeoLab::Geometry {
 
@@ -38,7 +39,20 @@ enum class EntityType : uint8_t {
     Compound = 8,  ///< Compound entity (collection of shapes)
     Part = 9       ///< UI-level part (independent component)
 };
+/**
+ * @brief Convert string to EntityType
+ * @param value String representation of entity type
+ * @return Corresponding EntityType enumeration value
+ * @throws std::invalid_argument if the string is not a valid type
+ */
+[[nodiscard]] EntityType entityTypeFromString(std::string_view value);
 
+/**
+ * @brief Convert EntityType to string
+ * @param type EntityType value
+ * @return Corresponding type name string
+ */
+[[nodiscard]] std::string entityTypeToString(EntityType type);
 /**
  * @brief Selection mode for interactive geometry picking
  */
