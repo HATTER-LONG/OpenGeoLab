@@ -16,6 +16,16 @@
 namespace OpenGeoLab::Render {
 
 /**
+ * @brief Simple RGBA color used by the render layer
+ */
+struct RenderColor {
+    float m_r{0.8f}; ///< Red component [0, 1]
+    float m_g{0.8f}; ///< Green component [0, 1]
+    float m_b{0.8f}; ///< Blue component [0, 1]
+    float m_a{1.0f}; ///< Alpha component [0, 1]
+};
+
+/**
  * @brief Vertex data for rendering with position, normal, and color
  *
  * Packed structure for efficient GPU memory usage.
@@ -103,6 +113,10 @@ struct RenderMesh {
     std::vector<uint32_t> m_indices;      ///< Index data (empty for non-indexed draw)
 
     Geometry::BoundingBox3D m_boundingBox; ///< Mesh bounding box
+
+    RenderColor m_baseColor{};     ///< Base color associated with this mesh (informational)
+    RenderColor m_hoverColor{};    ///< Hover highlight color for this mesh
+    RenderColor m_selectedColor{}; ///< Selected/picked highlight color for this mesh
 
     /**
      * @brief Check if mesh has valid data

@@ -18,7 +18,9 @@
 #include <QOpenGLVertexArrayObject>
 #include <QSize>
 #include <QVector3D>
+#include <QVector4D>
 #include <memory>
+#include <unordered_set>
 #include <vector>
 
 namespace OpenGeoLab::Render {
@@ -36,6 +38,14 @@ namespace OpenGeoLab::Render {
  */
 class SceneRenderer : protected QOpenGLFunctions {
 public:
+    /**
+     * @brief Entity reference used by SceneRenderer for selection highlighting
+     */
+    struct EntityRef {
+        Geometry::EntityType m_type{Geometry::EntityType::None};
+        Geometry::EntityUID m_uid{Geometry::INVALID_ENTITY_UID};
+    };
+
     SceneRenderer();
     ~SceneRenderer();
 
@@ -83,6 +93,13 @@ public:
      * @note Pass EntityType::None or INVALID_ENTITY_UID to clear highlight.
      */
     void setHighlightedEntity(Geometry::EntityType type, Geometry::EntityUID uid);
+
+    /**
+     * @brief Set entities that should be rendered as selected/picked
+     *
+     * This is independent from the hover highlight (setHighlightedEntity).
+     */
+    void setSelectedEntities(const std::vector<EntityRef>& entities);
 
     /**
      * @brief Render the complete scene
@@ -167,6 +184,9 @@ private:
         Geometry::EntityType m_entityType{Geometry::EntityType::None};
         Geometry::EntityUID m_entityUid{Geometry::INVALID_ENTITY_UID};
 
+        QVector4D m_hoverColor{1.0f, 1.0f, 1.0f, 1.0f};
+        QVector4D m_selectedColor{1.0f, 1.0f, 1.0f, 1.0f};
+
         MeshBuffers();
         ~MeshBuffers();
 
@@ -185,6 +205,8 @@ private:
 
     Geometry::EntityType m_highlightType{Geometry::EntityType::None};
     Geometry::EntityUID m_highlightUid{Geometry::INVALID_ENTITY_UID};
+
+    std::unordered_set<uint64_t> m_selectedKeys;
 };
 
 } // namespace OpenGeoLab::Render

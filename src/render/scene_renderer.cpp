@@ -9,7 +9,18 @@
 #include <QOpenGLFramebufferObject>
 #include <QVector4D>
 
+#include <unordered_set>
+
 namespace OpenGeoLab::Render {
+
+namespace {
+[[nodiscard]] constexpr inline uint64_t makeEntityKey(OpenGeoLab::Geometry::EntityType type,
+                                                      OpenGeoLab::Geometry::EntityUID uid) {
+    const uint64_t uid24 = static_cast<uint64_t>(uid & 0xFFFFFFu);
+    const uint64_t t = static_cast<uint64_t>(type) & 0xFFu;
+    return (t << 56u) | uid24;
+}
+} // namespace
 
 // =============================================================================
 // Shader Sources
@@ -286,6 +297,10 @@ void SceneRenderer::uploadMeshData(const DocumentRenderData& render_data) {
         buffers.m_primitiveType = mesh.m_primitiveType;
         buffers.m_entityType = mesh.m_entityType;
         buffers.m_entityUid = mesh.m_entityUid;
+        buffers.m_hoverColor = QVector4D(mesh.m_hoverColor.m_r, mesh.m_hoverColor.m_g,
+                                         mesh.m_hoverColor.m_b, mesh.m_hoverColor.m_a);
+        buffers.m_selectedColor = QVector4D(mesh.m_selectedColor.m_r, mesh.m_selectedColor.m_g,
+                                            mesh.m_selectedColor.m_b, mesh.m_selectedColor.m_a);
 
         m_faceMeshBuffers.push_back(std::move(buffers));
     }
@@ -310,6 +325,10 @@ void SceneRenderer::uploadMeshData(const DocumentRenderData& render_data) {
         buffers.m_primitiveType = mesh.m_primitiveType;
         buffers.m_entityType = mesh.m_entityType;
         buffers.m_entityUid = mesh.m_entityUid;
+        buffers.m_hoverColor = QVector4D(mesh.m_hoverColor.m_r, mesh.m_hoverColor.m_g,
+                                         mesh.m_hoverColor.m_b, mesh.m_hoverColor.m_a);
+        buffers.m_selectedColor = QVector4D(mesh.m_selectedColor.m_r, mesh.m_selectedColor.m_g,
+                                            mesh.m_selectedColor.m_b, mesh.m_selectedColor.m_a);
 
         m_edgeMeshBuffers.push_back(std::move(buffers));
     }
@@ -330,6 +349,10 @@ void SceneRenderer::uploadMeshData(const DocumentRenderData& render_data) {
         buffers.m_primitiveType = mesh.m_primitiveType;
         buffers.m_entityType = mesh.m_entityType;
         buffers.m_entityUid = mesh.m_entityUid;
+        buffers.m_hoverColor = QVector4D(mesh.m_hoverColor.m_r, mesh.m_hoverColor.m_g,
+                                         mesh.m_hoverColor.m_b, mesh.m_hoverColor.m_a);
+        buffers.m_selectedColor = QVector4D(mesh.m_selectedColor.m_r, mesh.m_selectedColor.m_g,
+                                            mesh.m_selectedColor.m_b, mesh.m_selectedColor.m_a);
 
         m_vertexMeshBuffers.push_back(std::move(buffers));
     }
@@ -462,13 +485,20 @@ void SceneRenderer::renderMeshes(const QMatrix4x4& mvp,
     glEnable(GL_POLYGON_OFFSET_FILL);
     glPolygonOffset(1.0f, 1.0f);
     for(auto& buffers : m_faceMeshBuffers) {
-        const bool is_highlight =
-            (m_highlightType != Geometry::EntityType::None) &&
-            (buffers.m_entityType == m_highlightType) &&
-            ((buffers.m_entityUid & 0xFFFFFFu) == (m_highlightUid & 0xFFFFFFu));
-        if(is_highlight) {
+        const bool is_hover = (m_highlightType != Geometry::EntityType::None) &&
+                              (buffers.m_entityType == m_highlightType) &&
+                              ((buffers.m_entityUid & 0xFFFFFFu) == (m_highlightUid & 0xFFFFFFu));
+
+        const bool is_selected =
+            m_selectedKeys.find(makeEntityKey(buffers.m_entityType, buffers.m_entityUid)) !=
+            m_selectedKeys.end();
+
+        if(is_hover) {
             m_meshShader->setUniformValue(m_useOverrideColorLoc, 1);
-            m_meshShader->setUniformValue(m_overrideColorLoc, QVector4D(0.15f, 0.65f, 1.0f, 1.0f));
+            m_meshShader->setUniformValue(m_overrideColorLoc, buffers.m_hoverColor);
+        } else if(is_selected) {
+            m_meshShader->setUniformValue(m_useOverrideColorLoc, 1);
+            m_meshShader->setUniformValue(m_overrideColorLoc, buffers.m_selectedColor);
         } else {
             m_meshShader->setUniformValue(m_useOverrideColorLoc, 0);
         }
@@ -491,13 +521,20 @@ void SceneRenderer::renderMeshes(const QMatrix4x4& mvp,
     m_meshShader->setUniformValue(m_useLightingLoc, 0);
     glLineWidth(2.0f);
     for(auto& buffers : m_edgeMeshBuffers) {
-        const bool is_highlight =
-            (m_highlightType != Geometry::EntityType::None) &&
-            (buffers.m_entityType == m_highlightType) &&
-            ((buffers.m_entityUid & 0xFFFFFFu) == (m_highlightUid & 0xFFFFFFu));
-        if(is_highlight) {
+        const bool is_hover = (m_highlightType != Geometry::EntityType::None) &&
+                              (buffers.m_entityType == m_highlightType) &&
+                              ((buffers.m_entityUid & 0xFFFFFFu) == (m_highlightUid & 0xFFFFFFu));
+
+        const bool is_selected =
+            m_selectedKeys.find(makeEntityKey(buffers.m_entityType, buffers.m_entityUid)) !=
+            m_selectedKeys.end();
+
+        if(is_hover) {
             m_meshShader->setUniformValue(m_useOverrideColorLoc, 1);
-            m_meshShader->setUniformValue(m_overrideColorLoc, QVector4D(1.0f, 0.3f, 0.1f, 1.0f));
+            m_meshShader->setUniformValue(m_overrideColorLoc, buffers.m_hoverColor);
+        } else if(is_selected) {
+            m_meshShader->setUniformValue(m_useOverrideColorLoc, 1);
+            m_meshShader->setUniformValue(m_overrideColorLoc, buffers.m_selectedColor);
         } else {
             m_meshShader->setUniformValue(m_useOverrideColorLoc, 0);
         }
@@ -518,14 +555,22 @@ void SceneRenderer::renderMeshes(const QMatrix4x4& mvp,
     glDepthFunc(GL_LEQUAL);
     m_meshShader->setUniformValue(m_useLightingLoc, 0);
     for(auto& buffers : m_vertexMeshBuffers) {
-        const bool is_highlight =
-            (m_highlightType != Geometry::EntityType::None) &&
-            (buffers.m_entityType == m_highlightType) &&
-            ((buffers.m_entityUid & 0xFFFFFFu) == (m_highlightUid & 0xFFFFFFu));
-        if(is_highlight) {
+        const bool is_hover = (m_highlightType != Geometry::EntityType::None) &&
+                              (buffers.m_entityType == m_highlightType) &&
+                              ((buffers.m_entityUid & 0xFFFFFFu) == (m_highlightUid & 0xFFFFFFu));
+
+        const bool is_selected =
+            m_selectedKeys.find(makeEntityKey(buffers.m_entityType, buffers.m_entityUid)) !=
+            m_selectedKeys.end();
+
+        if(is_hover) {
             m_meshShader->setUniformValue(m_pointSizeLoc, 9.0f);
             m_meshShader->setUniformValue(m_useOverrideColorLoc, 1);
-            m_meshShader->setUniformValue(m_overrideColorLoc, QVector4D(0.0f, 1.0f, 0.35f, 1.0f));
+            m_meshShader->setUniformValue(m_overrideColorLoc, buffers.m_hoverColor);
+        } else if(is_selected) {
+            m_meshShader->setUniformValue(m_pointSizeLoc, 8.0f);
+            m_meshShader->setUniformValue(m_useOverrideColorLoc, 1);
+            m_meshShader->setUniformValue(m_overrideColorLoc, buffers.m_selectedColor);
         } else {
             m_meshShader->setUniformValue(m_pointSizeLoc, 6.0f);
             m_meshShader->setUniformValue(m_useOverrideColorLoc, 0);
@@ -649,6 +694,18 @@ void SceneRenderer::setHighlightedEntity(Geometry::EntityType type, Geometry::En
 
     m_highlightType = type;
     m_highlightUid = static_cast<Geometry::EntityUID>(uid & 0xFFFFFFu);
+}
+
+void SceneRenderer::setSelectedEntities(const std::vector<EntityRef>& entities) {
+    m_selectedKeys.clear();
+    m_selectedKeys.reserve(entities.size());
+
+    for(const auto& e : entities) {
+        if(e.m_type == Geometry::EntityType::None || e.m_uid == Geometry::INVALID_ENTITY_UID) {
+            continue;
+        }
+        m_selectedKeys.insert(makeEntityKey(e.m_type, e.m_uid));
+    }
 }
 
 void SceneRenderer::cleanup() {

@@ -42,6 +42,71 @@
 { "status": "success", "action": "ViewPortControl" }
 ```
 
+### 2.2 SelectControl
+- 入口：`RenderService::processRequest()`
+- action：`"SelectControl"`
+- 用途：控制视口拾取模式（开关/拾取类型），并获取或清空当前拾取结果集合。
+
+#### 2.2.1 启用/关闭拾取模式
+请求：
+```json
+{
+  "action": "SelectControl",
+  "select_ctrl": { "enabled": true },
+  "_meta": { "silent": true }
+}
+```
+响应：
+```json
+{ "status": "success", "action": "SelectControl" }
+```
+
+#### 2.2.2 设置拾取类型
+说明：
+- `vertex/edge/face` 可组合。
+- `solid/part` 为互斥模式（且与 `vertex/edge/face` 互斥）。
+
+请求（字符串数组）：
+```json
+{
+  "action": "SelectControl",
+  "select_ctrl": { "types": ["vertex", "edge", "face"] },
+  "_meta": { "silent": true }
+}
+```
+
+#### 2.2.3 获取当前拾取结果
+请求：
+```json
+{
+  "action": "SelectControl",
+  "select_ctrl": { "get": true },
+  "_meta": { "silent": true }
+}
+```
+响应：
+```json
+{
+  "status": "success",
+  "action": "SelectControl",
+  "pick_enabled": true,
+  "pick_types": 7,
+  "selections": [
+    { "type": "Face", "uid": 123 }
+  ]
+}
+```
+
+#### 2.2.4 清空拾取结果
+请求：
+```json
+{
+  "action": "SelectControl",
+  "select_ctrl": { "clear": true },
+  "_meta": { "silent": true }
+}
+```
+
 #### 2.1.2 Fit to Scene
 请求：
 ```json

@@ -562,6 +562,19 @@ GeometryDocumentImpl::generateFaceMesh(const GeometryEntityPtr& entity,
         face_color = PartColorPalette::getColorByEntityId(owning_part->entityId());
     }
 
+    auto clamp01 = [](float v) { return std::max(0.0f, std::min(1.0f, v)); };
+
+    auto lerp = [&](float a, float b, float t) { return a + (b - a) * t; };
+
+    // Mesh-level colors (base/hover/selected). Base is kept consistent with per-vertex colors.
+    mesh.m_baseColor = Render::RenderColor{face_color.r, face_color.g, face_color.b, face_color.a};
+    mesh.m_hoverColor = Render::RenderColor{clamp01(lerp(face_color.r, 1.0f, 0.35f)),
+                                            clamp01(lerp(face_color.g, 1.0f, 0.35f)),
+                                            clamp01(lerp(face_color.b, 1.0f, 0.35f)), face_color.a};
+    mesh.m_selectedColor = Render::RenderColor{
+        clamp01(lerp(face_color.r, 1.0f, 0.65f)), clamp01(lerp(face_color.g, 1.0f, 0.65f)),
+        clamp01(lerp(face_color.b, 1.0f, 0.65f)), face_color.a};
+
     // (Re)mesh with current tessellation options to avoid reusing a coarse cached triangulation.
     // This is important for curved primitives (cylinder/torus) to look smooth.
     const double linear_deflection = std::max(1e-6, options.m_linearDeflection);
@@ -649,6 +662,17 @@ GeometryDocumentImpl::generateEdgeMesh(const GeometryEntityPtr& entity,
     // Edge color: yellow for visibility
     constexpr float edge_color[4] = {1.0f, 0.8f, 0.2f, 1.0f};
 
+    auto clamp01 = [](float v) { return std::max(0.0f, std::min(1.0f, v)); };
+    auto lerp = [&](float a, float b, float t) { return a + (b - a) * t; };
+    mesh.m_baseColor =
+        Render::RenderColor{edge_color[0], edge_color[1], edge_color[2], edge_color[3]};
+    mesh.m_hoverColor = Render::RenderColor{
+        clamp01(lerp(edge_color[0], 1.0f, 0.25f)), clamp01(lerp(edge_color[1], 1.0f, 0.25f)),
+        clamp01(lerp(edge_color[2], 1.0f, 0.25f)), edge_color[3]};
+    mesh.m_selectedColor = Render::RenderColor{
+        clamp01(lerp(edge_color[0], 1.0f, 0.55f)), clamp01(lerp(edge_color[1], 1.0f, 0.55f)),
+        clamp01(lerp(edge_color[2], 1.0f, 0.55f)), edge_color[3]};
+
     const auto& shape = entity->shape();
     if(shape.IsNull()) {
         return mesh;
@@ -726,6 +750,17 @@ Render::RenderMesh GeometryDocumentImpl::generateVertexMesh(const GeometryEntity
     mesh.m_entityType = EntityType::Vertex;
     mesh.m_primitiveType = Render::RenderPrimitiveType::Points;
     constexpr float vertex_color[4] = {0.2f, 1.0f, 0.4f, 1.0f};
+
+    auto clamp01 = [](float v) { return std::max(0.0f, std::min(1.0f, v)); };
+    auto lerp = [&](float a, float b, float t) { return a + (b - a) * t; };
+    mesh.m_baseColor =
+        Render::RenderColor{vertex_color[0], vertex_color[1], vertex_color[2], vertex_color[3]};
+    mesh.m_hoverColor = Render::RenderColor{
+        clamp01(lerp(vertex_color[0], 1.0f, 0.25f)), clamp01(lerp(vertex_color[1], 1.0f, 0.25f)),
+        clamp01(lerp(vertex_color[2], 1.0f, 0.25f)), vertex_color[3]};
+    mesh.m_selectedColor = Render::RenderColor{
+        clamp01(lerp(vertex_color[0], 1.0f, 0.55f)), clamp01(lerp(vertex_color[1], 1.0f, 0.55f)),
+        clamp01(lerp(vertex_color[2], 1.0f, 0.55f)), vertex_color[3]};
     const auto& shape = entity->shape();
     if(shape.IsNull()) {
         return mesh;

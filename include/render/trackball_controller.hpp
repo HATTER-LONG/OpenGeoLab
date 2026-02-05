@@ -1,3 +1,8 @@
+/**
+ * @file trackball_controller.hpp
+ * @brief Trackball-style camera controller for viewport interaction
+ */
+
 #pragma once
 
 #include "render/render_scene_controller.hpp"
@@ -10,13 +15,22 @@
 
 namespace OpenGeoLab::Render {
 
+/**
+ * @brief Trackball-style camera manipulation helper
+ *
+ * This controller updates a Render::CameraState based on mouse input to provide
+ * orbit/pan/zoom behavior.
+ */
 class TrackballController {
 public:
+    /**
+     * @brief Interaction mode
+     */
     enum class Mode {
-        None,
-        Orbit,
-        Pan,
-        Zoom,
+        None,  ///< No active interaction
+        Orbit, ///< Orbit around target
+        Pan,   ///< Pan in view plane
+        Zoom,  ///< Dolly/zoom
     };
 
     TrackballController();
@@ -29,8 +43,24 @@ public:
     bool isActive() const;
     Mode mode() const;
 
+    /**
+     * @brief Begin a drag interaction
+     * @param pos Initial cursor position in item coordinates
+     * @param mode Interaction mode
+     * @param camera Current camera snapshot (used to initialize internal state)
+     */
     void begin(const QPointF& pos, Mode mode, const Render::CameraState& camera);
+
+    /**
+     * @brief Update camera during an active drag
+     * @param pos Current cursor position in item coordinates
+     * @param camera Camera state to be updated
+     */
     void update(const QPointF& pos, Render::CameraState& camera);
+
+    /**
+     * @brief End the active drag interaction
+     */
     void end();
 
     void wheelZoom(float steps, Render::CameraState& camera);

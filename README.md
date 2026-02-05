@@ -6,6 +6,7 @@ OpenGeoLab 是一个基于 Qt Quick(QML) + OpenGL 的几何/模型可视化与�
 - 读取 BREP / STEP(STP) 等模型文件
 - 基于 OpenCASCADE(OCC) 管理几何拓扑（点/边/面/Part）
 - OpenGL 渲染显示，并提供基础视口交互（旋转/平移/缩放、视图预设、Fit）
+- 支持拾取/选择管理：进入拾取模式后 hover 高亮；左键点击添加拾取结果；右键点击移除已拾取实体
 - 后续将支持鼠标编辑（如 trim/offset）、网格剖分、以及 AI 辅助网格质量诊断与修复
 
 ## 目录结构（约定）
@@ -58,6 +59,9 @@ cmake --build build
 - `operationFailed(moduleName, actionName, error)`
 
 完整协议清单见：`docs/json_protocols.md`
+
+与拾取/选择相关的 RenderService action：
+- `SelectControl`：设置拾取模式开关、拾取类型（点/边/面/solid/part）、获取/清空拾取结果集合
 
 ## 后续开发任务（来自 plan.md，做了轻度工程化拆分）
 - 几何交互：选择（点/边/面/Part）、高亮、拾取、变换与编辑操作（trim/offset 等）

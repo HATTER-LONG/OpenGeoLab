@@ -4,6 +4,7 @@ OpenGeoLab is a Qt Quick (QML) + OpenGL prototype for CAD-like geometry visualiz
 - Import BREP / STEP (STP) model files
 - Manage topology and geometry via OpenCASCADE (OCC)
 - Render with OpenGL and provide basic viewport controls (orbit/pan/zoom, view presets, fit)
+- Picking/selection management: when picking mode is enabled, hover highlights entities; left-click adds selections; right-click removes selected entities
 - Planned: interactive editing (e.g., trim/offset), meshing, and AI-assisted mesh quality diagnostics & repair
 
 ## Repository Layout
@@ -43,6 +44,9 @@ Signals:
 - `operationFailed(moduleName, actionName, error)`
 
 See: `docs/json_protocols.en.md`.
+
+Picking/selection related RenderService action:
+- `SelectControl`: enable/disable picking mode, set pick types, query/clear current selections
 
 ## Next Steps (high-level)
 - Selection & picking (vertex/edge/face/part), highlight, and transform/edit operations (trim/offset, etc.)
