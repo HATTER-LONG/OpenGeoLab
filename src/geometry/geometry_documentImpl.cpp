@@ -25,8 +25,10 @@
 #include <gp_Pnt.hxx>
 #include <gp_Trsf.hxx>
 
+#include <cmath>
 #include <queue>
 #include <unordered_set>
+#include <vector>
 
 namespace OpenGeoLab::Geometry {
 
@@ -39,6 +41,77 @@ namespace {
 bool isIdentityTrsf(const gp_Trsf& trsf) {
     return trsf.IsNegative() == Standard_False && trsf.ScaleFactor() == 1.0 &&
            trsf.TranslationPart().SquareModulus() == 0.0;
+}
+
+struct Vec3D {
+    double m_x{0.0};
+    double m_y{0.0};
+    double m_z{0.0};
+};
+
+[[nodiscard]] Vec3D operator+(const Vec3D& a, const Vec3D& b) {
+    return Vec3D{a.m_x + b.m_x, a.m_y + b.m_y, a.m_z + b.m_z};
+}
+
+Vec3D& operator+=(Vec3D& a, const Vec3D& b) {
+    a.m_x += b.m_x;
+    a.m_y += b.m_y;
+    a.m_z += b.m_z;
+    return a;
+}
+
+[[nodiscard]] Vec3D operator-(const Vec3D& a, const Vec3D& b) {
+    return Vec3D{a.m_x - b.m_x, a.m_y - b.m_y, a.m_z - b.m_z};
+}
+
+[[nodiscard]] Vec3D cross(const Vec3D& a, const Vec3D& b) {
+    return Vec3D{a.m_y * b.m_z - a.m_z * b.m_y, a.m_z * b.m_x - a.m_x * b.m_z,
+                 a.m_x * b.m_y - a.m_y * b.m_x};
+}
+
+[[nodiscard]] double lengthSquared(const Vec3D& v) {
+    return v.m_x * v.m_x + v.m_y * v.m_y + v.m_z * v.m_z;
+}
+
+void computeSmoothVertexNormals(Render::RenderMesh& mesh) {
+    if(mesh.m_vertices.empty() || mesh.m_indices.size() < 3) {
+        return;
+    }
+
+    std::vector<Vec3D> accum(mesh.m_vertices.size());
+    for(size_t i = 0; i + 2 < mesh.m_indices.size(); i += 3) {
+        const uint32_t i0 = mesh.m_indices[i + 0];
+        const uint32_t i1 = mesh.m_indices[i + 1];
+        const uint32_t i2 = mesh.m_indices[i + 2];
+        if(i0 >= mesh.m_vertices.size() || i1 >= mesh.m_vertices.size() ||
+           i2 >= mesh.m_vertices.size()) {
+            continue;
+        }
+
+        const auto& v0 = mesh.m_vertices[i0];
+        const auto& v1 = mesh.m_vertices[i1];
+        const auto& v2 = mesh.m_vertices[i2];
+
+        const Vec3D p0{v0.m_position[0], v0.m_position[1], v0.m_position[2]};
+        const Vec3D p1{v1.m_position[0], v1.m_position[1], v1.m_position[2]};
+        const Vec3D p2{v2.m_position[0], v2.m_position[1], v2.m_position[2]};
+
+        const Vec3D n = cross(p1 - p0, p2 - p0);
+        accum[i0] += n;
+        accum[i1] += n;
+        accum[i2] += n;
+    }
+
+    for(size_t i = 0; i < mesh.m_vertices.size(); ++i) {
+        const auto lsq = lengthSquared(accum[i]);
+        if(lsq < 1e-24) {
+            continue;
+        }
+        const double inv_len = 1.0 / std::sqrt(lsq);
+        mesh.m_vertices[i].m_normal[0] = static_cast<float>(accum[i].m_x * inv_len);
+        mesh.m_vertices[i].m_normal[1] = static_cast<float>(accum[i].m_y * inv_len);
+        mesh.m_vertices[i].m_normal[2] = static_cast<float>(accum[i].m_z * inv_len);
+    }
 }
 } // namespace
 
@@ -505,6 +578,7 @@ GeometryDocumentImpl::generateFaceMesh(const GeometryEntityPtr& entity,
     Render::RenderMesh mesh;
     mesh.m_entityId = entity->entityId();
     mesh.m_entityType = EntityType::Face;
+    mesh.m_entityUid = entity->entityUID();
     mesh.m_primitiveType = Render::RenderPrimitiveType::Triangles;
 
     const auto& shape = entity->shape();
@@ -520,22 +594,14 @@ GeometryDocumentImpl::generateFaceMesh(const GeometryEntityPtr& entity,
         face_color = PartColorPalette::getColorByEntityId(owning_part->entityId());
     }
 
-    // Use OCC's triangulation (already computed by BRepMesh)
+    // (Re)mesh with current tessellation options to avoid reusing a coarse cached triangulation.
+    // This is important for curved primitives (cylinder/torus) to look smooth.
+    const double linear_deflection = std::max(1e-6, options.m_linearDeflection);
+    BRepMesh_IncrementalMesh mesher(shape, linear_deflection, Standard_False,
+                                    options.m_angularDeflection);
+
+    // Use OCC's triangulation (computed by BRepMesh)
     TopLoc_Location loc;
-    const Handle(Poly_Triangulation) triangulation =
-        BRep_Tool::Triangulation(TopoDS::Face(shape), loc);
-
-    if(triangulation.IsNull()) {
-        // Try to mesh the face first
-        BRepMesh_IncrementalMesh mesher(shape, options.m_linearDeflection, Standard_False,
-                                        options.m_angularDeflection);
-
-        const Handle(Poly_Triangulation) tri2 = BRep_Tool::Triangulation(TopoDS::Face(shape), loc);
-        if(tri2.IsNull()) {
-            return mesh;
-        }
-    }
-
     const Handle(Poly_Triangulation) tri = BRep_Tool::Triangulation(TopoDS::Face(shape), loc);
     if(tri.IsNull()) {
         return mesh;
@@ -560,7 +626,7 @@ GeometryDocumentImpl::generateFaceMesh(const GeometryEntityPtr& entity,
         // Set face color based on owning part
         vertex.setColor(face_color.r, face_color.g, face_color.b, face_color.a);
 
-        // Get normal if available
+        // Get normal if available; otherwise compute smooth normals after indices are built.
         if(options.m_computeNormals && tri->HasNormals()) {
             gp_Dir normal = tri->Normal(i);
             if(has_transform) {
@@ -596,6 +662,10 @@ GeometryDocumentImpl::generateFaceMesh(const GeometryEntityPtr& entity,
         mesh.m_indices.push_back(static_cast<uint32_t>(n3 - 1));
     }
 
+    if(options.m_computeNormals && !tri->HasNormals()) {
+        computeSmoothVertexNormals(mesh);
+    }
+
     return mesh;
 }
 
@@ -605,6 +675,7 @@ GeometryDocumentImpl::generateEdgeMesh(const GeometryEntityPtr& entity,
     Render::RenderMesh mesh;
     mesh.m_entityId = entity->entityId();
     mesh.m_entityType = EntityType::Edge;
+    mesh.m_entityUid = entity->entityUID();
     mesh.m_primitiveType = Render::RenderPrimitiveType::LineStrip;
 
     // Edge color: yellow for visibility
@@ -616,11 +687,15 @@ GeometryDocumentImpl::generateEdgeMesh(const GeometryEntityPtr& entity,
     }
 
     const TopoDS_Edge& edge = TopoDS::Edge(shape);
-    Standard_Real first, last;
-    const Handle(Geom_Curve) curve = BRep_Tool::Curve(edge, first, last);
 
-    if(curve.IsNull()) {
-        // Try polygon on triangulation
+    // Generate/refresh polygonal representation using the same deflection as faces.
+    // This helps edges visually match the tessellated surface and avoids "not贴合".
+    const double linear_deflection = std::max(1e-6, options.m_linearDeflection);
+    BRepMesh_IncrementalMesh mesher(shape, linear_deflection, Standard_False,
+                                    options.m_angularDeflection);
+
+    // Prefer polygonal data generated by meshing (most consistent with surface triangulation).
+    {
         TopLoc_Location loc;
         const Handle(Poly_Polygon3D) polygon = BRep_Tool::Polygon3D(edge, loc);
         if(!polygon.IsNull()) {
@@ -629,20 +704,33 @@ GeometryDocumentImpl::generateEdgeMesh(const GeometryEntityPtr& entity,
 
             for(Standard_Integer i = nodes.Lower(); i <= nodes.Upper(); ++i) {
                 gp_Pnt pnt = nodes(i);
-                pnt.Transform(trsf);
+                if(!isIdentityTrsf(trsf)) {
+                    pnt.Transform(trsf);
+                }
                 auto& vertex = mesh.m_vertices.emplace_back(static_cast<float>(pnt.X()),
                                                             static_cast<float>(pnt.Y()),
                                                             static_cast<float>(pnt.Z()));
                 vertex.setColor(edge_color[0], edge_color[1], edge_color[2], edge_color[3]);
                 mesh.m_boundingBox.expand(Point3D(pnt.X(), pnt.Y(), pnt.Z()));
             }
+
+            return mesh;
         }
+    }
+
+    Standard_Real first, last;
+    TopLoc_Location curve_loc;
+    const Handle(Geom_Curve) curve = BRep_Tool::Curve(edge, curve_loc, first, last);
+
+    if(curve.IsNull()) {
         return mesh;
     }
 
+    const gp_Trsf& curve_trsf = curve_loc.Transformation();
+    const bool has_transform = !isIdentityTrsf(curve_trsf);
+
     // Sample the curve
-    GCPnts_UniformDeflection sampler(GeomAdaptor_Curve(curve, first, last),
-                                     options.m_linearDeflection);
+    GCPnts_UniformDeflection sampler(GeomAdaptor_Curve(curve, first, last), linear_deflection);
 
     if(!sampler.IsDone()) {
         return mesh;
@@ -652,7 +740,10 @@ GeometryDocumentImpl::generateEdgeMesh(const GeometryEntityPtr& entity,
     mesh.m_vertices.reserve(static_cast<size_t>(nb_points));
 
     for(Standard_Integer i = 1; i <= nb_points; ++i) {
-        const gp_Pnt& pnt = sampler.Value(i);
+        gp_Pnt pnt = sampler.Value(i);
+        if(has_transform) {
+            pnt.Transform(curve_trsf);
+        }
         auto& vertex = mesh.m_vertices.emplace_back(
             static_cast<float>(pnt.X()), static_cast<float>(pnt.Y()), static_cast<float>(pnt.Z()));
         vertex.setColor(edge_color[0], edge_color[1], edge_color[2], edge_color[3]);
@@ -666,6 +757,7 @@ Render::RenderMesh GeometryDocumentImpl::generateVertexMesh(const GeometryEntity
     Render::RenderMesh mesh;
     mesh.m_entityId = entity->entityId();
     mesh.m_entityType = EntityType::Vertex;
+    mesh.m_entityUid = entity->entityUID();
     mesh.m_primitiveType = Render::RenderPrimitiveType::Points;
     constexpr float vertex_color[4] = {0.2f, 1.0f, 0.4f, 1.0f};
     const auto& shape = entity->shape();

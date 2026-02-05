@@ -94,6 +94,8 @@ enum class RenderPrimitiveType : uint8_t {
 struct RenderMesh {
     Geometry::EntityId m_entityId{Geometry::INVALID_ENTITY_ID};    ///< Source entity ID
     Geometry::EntityType m_entityType{Geometry::EntityType::None}; ///< Entity type
+    Geometry::EntityUID m_entityUid{
+        Geometry::INVALID_ENTITY_UID}; ///< Type-scoped UID (for picking)
 
     RenderPrimitiveType m_primitiveType{RenderPrimitiveType::Triangles}; ///< Primitive type
 
@@ -204,7 +206,8 @@ struct TessellationOptions {
      * @return TessellationOptions with balanced quality/performance
      */
     [[nodiscard]] static TessellationOptions defaultOptions() {
-        return TessellationOptions{0.1, 0.5, true};
+        // Default tuned for visually smooth curved surfaces.
+        return TessellationOptions{0.02, 0.2, true};
     }
 
     /**

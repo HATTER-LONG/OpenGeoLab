@@ -71,6 +71,20 @@ public:
     void uploadMeshData(const DocumentRenderData& render_data);
 
     /**
+     * @brief Render a picking pass encoding (uid+type) into the framebuffer color.
+     *
+     * Caller should bind the desired framebuffer before calling, and use glReadPixels
+     * to read back the pixel under the cursor.
+     */
+    void renderPicking(const QMatrix4x4& view_matrix, const QMatrix4x4& projection_matrix);
+
+    /**
+     * @brief Highlight a specific entity (matched by type + uid).
+     * @note Pass EntityType::None or INVALID_ENTITY_UID to clear highlight.
+     */
+    void setHighlightedEntity(Geometry::EntityType type, Geometry::EntityUID uid);
+
+    /**
      * @brief Render the complete scene
      * @param camera_pos Camera position for lighting
      * @param view_matrix View transformation matrix
@@ -115,6 +129,8 @@ private:
 
     // Shaders
     std::unique_ptr<QOpenGLShaderProgram> m_meshShader;
+    std::unique_ptr<QOpenGLShaderProgram> m_pickShader;
+    std::unique_ptr<QOpenGLShaderProgram> m_pickEdgeShader;
 
     // Mesh shader uniform locations
     int m_mvpMatrixLoc{-1};
@@ -123,6 +139,19 @@ private:
     int m_lightPosLoc{-1};
     int m_viewPosLoc{-1};
     int m_pointSizeLoc{-1};
+    int m_useLightingLoc{-1};
+
+    int m_useOverrideColorLoc{-1};
+    int m_overrideColorLoc{-1};
+
+    int m_pickMvpMatrixLoc{-1};
+    int m_pickColorLoc{-1};
+    int m_pickPointSizeLoc{-1};
+
+    int m_pickEdgeMvpMatrixLoc{-1};
+    int m_pickEdgeColorLoc{-1};
+    int m_pickEdgeViewportLoc{-1};
+    int m_pickEdgeThicknessLoc{-1};
 
     /**
      * @brief Internal structure for mesh GPU buffers
@@ -134,6 +163,9 @@ private:
         int m_vertexCount{0};
         int m_indexCount{0};
         RenderPrimitiveType m_primitiveType{RenderPrimitiveType::Triangles};
+
+        Geometry::EntityType m_entityType{Geometry::EntityType::None};
+        Geometry::EntityUID m_entityUid{Geometry::INVALID_ENTITY_UID};
 
         MeshBuffers();
         ~MeshBuffers();
@@ -150,6 +182,9 @@ private:
     std::vector<MeshBuffers> m_faceMeshBuffers;
     std::vector<MeshBuffers> m_edgeMeshBuffers;
     std::vector<MeshBuffers> m_vertexMeshBuffers;
+
+    Geometry::EntityType m_highlightType{Geometry::EntityType::None};
+    Geometry::EntityUID m_highlightUid{Geometry::INVALID_ENTITY_UID};
 };
 
 } // namespace OpenGeoLab::Render
