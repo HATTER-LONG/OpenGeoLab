@@ -15,6 +15,7 @@
 
 #include <memory>
 #include <mutex>
+#include <unordered_map>
 #include <vector>
 
 namespace OpenGeoLab::Geometry {
@@ -146,6 +147,26 @@ public:
     [[nodiscard]] GeometryEntityPtr findOwningPart(EntityId entity_id) const;
 
     /**
+     * @brief Fast lookup: owning Part id for an entity.
+     * @return Part entity id, or INVALID_ENTITY_ID if none.
+     * @note Uses a cached ownership index (O(1) average). Cache is rebuilt lazily when needed.
+     */
+    [[nodiscard]] EntityId owningPartIdOf(EntityId entity_id) const;
+
+    /**
+     * @brief Fast lookup: owning Solid id for an entity.
+     * @return Solid entity id, or INVALID_ENTITY_ID if none.
+     * @note Uses a cached ownership index (O(1) average). Cache is rebuilt lazily when needed.
+     */
+    [[nodiscard]] EntityId owningSolidIdOf(EntityId entity_id) const;
+
+    /**
+     * @brief Find the owning Solid entity for a given entity.
+     * @return Solid entity that owns this entity, or nullptr if not found.
+     */
+    [[nodiscard]] GeometryEntityPtr findOwningSolid(EntityId entity_id) const;
+
+    /**
      * @brief Find related entities of a specific type for an edge entity.
      * @param edge_entity_id Edge entity id.
      * @param related_type Type of related entities (e.g., Face).
@@ -231,6 +252,10 @@ private:
      */
     void emitChangeEvent(const GeometryChangeEvent& event);
 
+    void invalidateOwnershipIndex();
+    void ensureOwnershipIndex() const;
+    void rebuildOwnershipIndex() const;
+
 private:
     EntityIndex m_entityIndex;
 
@@ -241,6 +266,12 @@ private:
     mutable Render::DocumentRenderData m_cachedRenderData;
     mutable bool m_renderDataValid{false};
     mutable std::mutex m_renderDataMutex;
+
+    // Cached ownership (entityId -> owning Part/Solid id)
+    mutable std::unordered_map<EntityId, EntityId> m_ownerPartByEntityId;
+    mutable std::unordered_map<EntityId, EntityId> m_ownerSolidByEntityId;
+    mutable bool m_ownershipIndexValid{false};
+    mutable std::mutex m_ownershipIndexMutex;
 };
 
 } // namespace OpenGeoLab::Geometry

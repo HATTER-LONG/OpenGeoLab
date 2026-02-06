@@ -107,6 +107,13 @@ struct RenderMesh {
         Geometry::INVALID_ENTITY_UID}; ///< Type-scoped UID (for picking)
     Geometry::EntityType m_entityType{Geometry::EntityType::None}; ///< Entity type
 
+    // Ownership (precomputed on the geometry side)
+    // Allows render layer to highlight an entire Part/Solid efficiently.
+    Geometry::EntityId m_ownerPartId{Geometry::INVALID_ENTITY_ID};
+    Geometry::EntityUID m_ownerPartUid{Geometry::INVALID_ENTITY_UID};
+    Geometry::EntityId m_ownerSolidId{Geometry::INVALID_ENTITY_ID};
+    Geometry::EntityUID m_ownerSolidUid{Geometry::INVALID_ENTITY_UID};
+
     RenderPrimitiveType m_primitiveType{RenderPrimitiveType::Triangles}; ///< Primitive type
 
     std::vector<RenderVertex> m_vertices; ///< Vertex data

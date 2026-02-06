@@ -184,6 +184,24 @@ public:
     /// Count valid children (auto-prunes expired references).
     [[nodiscard]] size_t childCount() const;
 
+    // ---------------------------------------------------------------------
+    // Ownership Queries (fast)
+    // ---------------------------------------------------------------------
+
+    /**
+     * @brief Fast lookup: owning Part id of this entity (if any).
+     * @return Part entity id, or INVALID_ENTITY_ID.
+     * @note Requires the entity to be indexed in a GeometryDocument.
+     */
+    [[nodiscard]] EntityId owningPartId() const;
+
+    /**
+     * @brief Fast lookup: owning Solid id of this entity (if any).
+     * @return Solid entity id, or INVALID_ENTITY_ID.
+     * @note Requires the entity to be indexed in a GeometryDocument.
+     */
+    [[nodiscard]] EntityId owningSolidId() const;
+
     /**
      * @brief Add a child edge (this -> child), automatically syncing both sides.
      *

@@ -167,6 +167,10 @@ private:
         Geometry::EntityType m_entityType{Geometry::EntityType::None};
         Geometry::EntityUID m_entityUid{Geometry::INVALID_ENTITY_UID};
 
+        // Ownership (uid24), used for Part/Solid-wide highlight.
+        Geometry::EntityUID m_ownerPartUid{Geometry::INVALID_ENTITY_UID};
+        Geometry::EntityUID m_ownerSolidUid{Geometry::INVALID_ENTITY_UID};
+
         QVector4D m_hoverColor{1.0f, 1.0f, 1.0f, 1.0f};
         QVector4D m_selectedColor{1.0f, 1.0f, 1.0f, 1.0f};
 

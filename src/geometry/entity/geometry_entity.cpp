@@ -155,6 +155,22 @@ size_t GeometryEntity::parentCount() const { return m_parentIds.size(); }
 
 size_t GeometryEntity::childCount() const { return m_childIds.size(); }
 
+EntityId GeometryEntity::owningPartId() const {
+    const auto doc = document();
+    if(!doc) {
+        return INVALID_ENTITY_ID;
+    }
+    return doc->owningPartIdOf(entityId());
+}
+
+EntityId GeometryEntity::owningSolidId() const {
+    const auto doc = document();
+    if(!doc) {
+        return INVALID_ENTITY_ID;
+    }
+    return doc->owningSolidIdOf(entityId());
+}
+
 bool GeometryEntity::addChild(const GeometryEntityPtr& child) {
     if(!child) {
         return false;

@@ -21,6 +21,8 @@
 #include <QSizeF>
 #include <QtQml/qqml.h>
 #include <memory>
+#include <unordered_map>
+
 
 class QHoverEvent;
 class QOpenGLFramebufferObject;
@@ -173,6 +175,11 @@ private:
     std::unique_ptr<QOpenGLFramebufferObject> m_pickFbo;
     Geometry::EntityType m_lastHoverType{Geometry::EntityType::None};
     Geometry::EntityUID m_lastHoverUid{Geometry::INVALID_ENTITY_UID};
+
+    // Cache for mapping a picked sub-entity (type+uid24) to its owning Part/Solid uid24.
+    // Key: (type << 24) | uid24
+    std::unordered_map<uint32_t, Geometry::EntityUID> m_ownerPartUidByPickKey;
+    std::unordered_map<uint32_t, Geometry::EntityUID> m_ownerSolidUidByPickKey;
 
     GLViewport::PickAction m_pendingPickAction{GLViewport::PickAction::None};
 };

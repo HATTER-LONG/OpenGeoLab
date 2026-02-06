@@ -14,6 +14,8 @@
 #include <QtCore/QMetaObject>
 #include <QtMath>
 
+#include <unordered_map>
+
 namespace OpenGeoLab::App {
 namespace {
 [[nodiscard]] Render::TrackballController::Mode pickMode(Qt::MouseButtons buttons,
@@ -276,6 +278,29 @@ void GLViewportRenderer::synchronize(QQuickFramebufferObject* item) {
                   m_renderData.m_version, new_render_data.m_version, new_render_data.meshCount());
         m_renderData = new_render_data;
         m_needsDataUpload = true;
+
+        m_ownerPartUidByPickKey.clear();
+        m_ownerSolidUidByPickKey.clear();
+        auto make_pick_key = [](Geometry::EntityType type, Geometry::EntityUID uid24) {
+            return (static_cast<uint32_t>(type) << 24u) |
+                   (static_cast<uint32_t>(uid24) & 0xFFFFFFu);
+        };
+
+        auto index_meshes = [&](const std::vector<Render::RenderMesh>& meshes) {
+            for(const auto& m : meshes) {
+                const auto key = make_pick_key(m.m_entityType, m.m_entityUid);
+                if(m.m_ownerPartUid != Geometry::INVALID_ENTITY_UID) {
+                    m_ownerPartUidByPickKey.emplace(key, m.m_ownerPartUid);
+                }
+                if(m.m_ownerSolidUid != Geometry::INVALID_ENTITY_UID) {
+                    m_ownerSolidUidByPickKey.emplace(key, m.m_ownerSolidUid);
+                }
+            }
+        };
+
+        index_meshes(m_renderData.m_faceMeshes);
+        index_meshes(m_renderData.m_edgeMeshes);
+        index_meshes(m_renderData.m_vertexMeshes);
     }
 }
 namespace {
@@ -367,6 +392,9 @@ struct PickingContext {
     GLViewport::PickAction m_pendingPickAction{GLViewport::PickAction::None};
     Geometry::EntityType& m_lastHoverType;
     Geometry::EntityUID& m_lastHoverUid;
+
+    const std::unordered_map<uint32_t, Geometry::EntityUID>& m_ownerPartUidByPickKey;
+    const std::unordered_map<uint32_t, Geometry::EntityUID>& m_ownerSolidUidByPickKey;
 };
 
 [[nodiscard]] PickRegion computePickRegion(const QSize& viewport_size,
@@ -421,6 +449,10 @@ readPickPixels(PickingContext& ctx, const PickRegion& region, std::vector<uint8_
                                       Render::SelectManager& select_manager) {
     PickHit best;
 
+    const auto pick_types = select_manager.pickTypes();
+    const bool owner_pick_mode = (pick_types == Render::SelectManager::PickTypes::Part) ||
+                                 (pick_types == Render::SelectManager::PickTypes::Solid);
+
     for(int iy = 0; iy < region.m_readH; ++iy) {
         const int sample_gl_y = region.m_y0Gl + iy;
         const int sample_top_y = viewport_size.height() - 1 - sample_gl_y;
@@ -439,8 +471,12 @@ readPickPixels(PickingContext& ctx, const PickRegion& region, std::vector<uint8_
 
             const auto uid = decodeUid24(r, g, b);
             const auto type = static_cast<Geometry::EntityType>(a);
-            if(type == Geometry::EntityType::None || uid == Geometry::INVALID_ENTITY_UID ||
-               !select_manager.isTypePickable(type)) {
+            if(type == Geometry::EntityType::None || uid == Geometry::INVALID_ENTITY_UID) {
+                continue;
+            }
+
+            // In Part/Solid pick modes we still pick a sub-entity, then map it to its owner.
+            if(!owner_pick_mode && !select_manager.isTypePickable(type)) {
                 continue;
             }
 
@@ -495,8 +531,42 @@ void processPicking(PickingContext& ctx) {
     }
 
     const PickHit best = findBestPickHit(ctx.m_viewportSize, region, pixels, ctx.m_selectManager);
-    const auto type = best.m_type;
-    const auto uid = best.m_uid;
+
+    auto type = best.m_type;
+    auto uid = best.m_uid;
+
+    // Map sub-entity -> owning Part/Solid when pick mode requests it.
+    const auto pick_types = ctx.m_selectManager.pickTypes();
+    const bool wants_part = pick_types == Render::SelectManager::PickTypes::Part;
+    const bool wants_solid = pick_types == Render::SelectManager::PickTypes::Solid;
+
+    if((wants_part || wants_solid) && (type != Geometry::EntityType::None) &&
+       (uid != Geometry::INVALID_ENTITY_UID)) {
+        auto make_pick_key = [](Geometry::EntityType t, Geometry::EntityUID u24) {
+            return (static_cast<uint32_t>(t) << 24u) | (static_cast<uint32_t>(u24) & 0xFFFFFFu);
+        };
+        const uint32_t key = make_pick_key(type, uid);
+
+        if(wants_part) {
+            const auto it = ctx.m_ownerPartUidByPickKey.find(key);
+            if(it != ctx.m_ownerPartUidByPickKey.end()) {
+                type = Geometry::EntityType::Part;
+                uid = it->second;
+            } else {
+                type = Geometry::EntityType::None;
+                uid = Geometry::INVALID_ENTITY_UID;
+            }
+        } else if(wants_solid) {
+            const auto it = ctx.m_ownerSolidUidByPickKey.find(key);
+            if(it != ctx.m_ownerSolidUidByPickKey.end()) {
+                type = Geometry::EntityType::Solid;
+                uid = it->second;
+            } else {
+                type = Geometry::EntityType::None;
+                uid = Geometry::INVALID_ENTITY_UID;
+            }
+        }
+    }
 
     if(type != ctx.m_lastHoverType || uid != ctx.m_lastHoverUid) {
         ctx.m_lastHoverType = type;
@@ -526,10 +596,21 @@ void GLViewportRenderer::render() {
     const bool pick_enabled = select_manager.isPickEnabled();
 
     if(pick_enabled && m_pickFbo) {
-        PickingContext ctx{*m_sceneRenderer, *m_pickFbo,     m_renderData,        m_viewportSize,
-                           m_itemSize,       m_cursorPos,    m_devicePixelRatio,  view,
-                           projection,       select_manager, m_pendingPickAction, m_lastHoverType,
-                           m_lastHoverUid};
+        PickingContext ctx{*m_sceneRenderer,
+                           *m_pickFbo,
+                           m_renderData,
+                           m_viewportSize,
+                           m_itemSize,
+                           m_cursorPos,
+                           m_devicePixelRatio,
+                           view,
+                           projection,
+                           select_manager,
+                           m_pendingPickAction,
+                           m_lastHoverType,
+                           m_lastHoverUid,
+                           m_ownerPartUidByPickKey,
+                           m_ownerSolidUidByPickKey};
         processPicking(ctx);
     }
 

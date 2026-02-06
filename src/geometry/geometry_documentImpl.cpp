@@ -28,6 +28,8 @@
 #include <queue>
 #include <unordered_set>
 
+#include <unordered_map>
+
 namespace OpenGeoLab::Geometry {
 
 namespace {
@@ -89,6 +91,7 @@ bool GeometryDocumentImpl::addEntity(const GeometryEntityPtr& entity) {
         return false;
     }
     entity->setDocument(shared_from_this());
+    invalidateOwnershipIndex();
     LOG_TRACE("GeometryDocument: Added entity id={}, type={}", entity->entityId(),
               static_cast<int>(entity->entityType()));
     return true;
@@ -107,6 +110,7 @@ bool GeometryDocumentImpl::removeEntity(EntityId entity_id) {
     }
 
     entity->setDocument({});
+    invalidateOwnershipIndex();
     LOG_TRACE("GeometryDocument: Removed entity id={}", entity_id);
     return true;
 }
@@ -143,6 +147,7 @@ void GeometryDocumentImpl::removeEntityRecursive(EntityId entity_id, // NOLINT
 void GeometryDocumentImpl::clear() {
     const size_t count = m_entityIndex.entityCount();
     m_entityIndex.clear();
+    invalidateOwnershipIndex();
     LOG_INFO("GeometryDocument: Cleared document, removed {} entities", count);
     emitChangeEvent(GeometryChangeEvent(GeometryChangeType::EntityRemoved, INVALID_ENTITY_ID));
 }
@@ -271,52 +276,103 @@ GeometryDocumentImpl::findDescendants(EntityId entity_id, EntityType descendant_
 }
 
 GeometryEntityPtr GeometryDocumentImpl::findOwningPart(EntityId entity_id) const {
-    const auto entity = findById(entity_id);
-    if(!entity) {
+    const EntityId part_id = owningPartIdOf(entity_id);
+    if(part_id == INVALID_ENTITY_ID) {
         return nullptr;
     }
+    return findById(part_id);
+}
 
-    // If this is already a Part, return it
-    if(entity->entityType() == EntityType::Part) {
-        return entity;
+GeometryEntityPtr GeometryDocumentImpl::findOwningSolid(EntityId entity_id) const {
+    const EntityId solid_id = owningSolidIdOf(entity_id);
+    if(solid_id == INVALID_ENTITY_ID) {
+        return nullptr;
     }
+    return findById(solid_id);
+}
 
-    // Traverse up the parent chain to find a Part
-    std::unordered_set<EntityId> visited;
-    std::queue<EntityId> to_visit;
-
-    for(const auto& parent : entity->parents()) {
-        if(parent) {
-            to_visit.push(parent->entityId());
-        }
+EntityId GeometryDocumentImpl::owningPartIdOf(EntityId entity_id) const {
+    if(entity_id == INVALID_ENTITY_ID) {
+        return INVALID_ENTITY_ID;
     }
+    ensureOwnershipIndex();
+    const auto it = m_ownerPartByEntityId.find(entity_id);
+    return (it != m_ownerPartByEntityId.end()) ? it->second : INVALID_ENTITY_ID;
+}
 
-    while(!to_visit.empty()) {
-        EntityId current_id = to_visit.front();
-        to_visit.pop();
+EntityId GeometryDocumentImpl::owningSolidIdOf(EntityId entity_id) const {
+    if(entity_id == INVALID_ENTITY_ID) {
+        return INVALID_ENTITY_ID;
+    }
+    ensureOwnershipIndex();
+    const auto it = m_ownerSolidByEntityId.find(entity_id);
+    return (it != m_ownerSolidByEntityId.end()) ? it->second : INVALID_ENTITY_ID;
+}
 
-        if(visited.count(current_id) > 0) {
-            continue;
+void GeometryDocumentImpl::invalidateOwnershipIndex() {
+    std::lock_guard<std::mutex> lock(m_ownershipIndexMutex);
+    m_ownershipIndexValid = false;
+}
+
+void GeometryDocumentImpl::ensureOwnershipIndex() const {
+    if(m_ownershipIndexValid) {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(m_ownershipIndexMutex);
+    if(m_ownershipIndexValid) {
+        return;
+    }
+    rebuildOwnershipIndex();
+    m_ownershipIndexValid = true;
+}
+
+void GeometryDocumentImpl::rebuildOwnershipIndex() const {
+    m_ownerPartByEntityId.clear();
+    m_ownerSolidByEntityId.clear();
+
+    auto assign_owner_downwards = [this](const std::vector<GeometryEntityPtr>& roots,
+                                         std::unordered_map<EntityId, EntityId>& out_owner_map) {
+        std::queue<std::pair<EntityId, EntityId>> q;
+        for(const auto& root : roots) {
+            if(!root) {
+                continue;
+            }
+            const EntityId root_id = root->entityId();
+            if(root_id == INVALID_ENTITY_ID) {
+                continue;
+            }
+            q.emplace(root_id, root_id);
         }
-        visited.insert(current_id);
 
-        auto current = findById(current_id);
-        if(!current) {
-            continue;
-        }
+        while(!q.empty()) {
+            const auto [entity_id, owner_id] = q.front();
+            q.pop();
 
-        if(current->entityType() == EntityType::Part) {
-            return current;
-        }
+            const auto inserted = out_owner_map.emplace(entity_id, owner_id).second;
+            if(!inserted) {
+                // Already assigned; do not traverse again to keep ownership deterministic.
+                continue;
+            }
 
-        for(const auto& parent : current->parents()) {
-            if(parent && visited.count(parent->entityId()) == 0) {
-                to_visit.push(parent->entityId());
+            const auto entity = findById(entity_id);
+            if(!entity) {
+                continue;
+            }
+
+            // Traverse raw child ids (no pointer allocations/resolution).
+            for(const EntityId child_id : entity->m_childIds) {
+                if(child_id != INVALID_ENTITY_ID) {
+                    q.emplace(child_id, owner_id);
+                }
             }
         }
-    }
+    };
 
-    return nullptr;
+    // Part ownership: Part -> all descendants.
+    assign_owner_downwards(entitiesByType(EntityType::Part), m_ownerPartByEntityId);
+
+    // Solid ownership: Solid -> all descendants.
+    assign_owner_downwards(entitiesByType(EntityType::Solid), m_ownerSolidByEntityId);
 }
 
 std::vector<GeometryEntityPtr>
@@ -385,6 +441,7 @@ bool GeometryDocumentImpl::addChildEdge(EntityId parent_id, EntityId child_id) {
     }
 
     (void)child->addParentNoSync(parent_id);
+    invalidateOwnershipIndex();
     return true;
 }
 
@@ -410,6 +467,8 @@ bool GeometryDocumentImpl::removeChildEdge(EntityId parent_id, EntityId child_id
     if(const auto child = findById(child_id)) {
         (void)child->removeParentNoSync(parent_id);
     }
+
+    invalidateOwnershipIndex();
 
     return true;
 }
@@ -546,8 +605,22 @@ GeometryDocumentImpl::generateFaceMesh(const GeometryEntityPtr& entity,
     Render::RenderMesh mesh;
     mesh.m_entityId = entity->entityId();
     mesh.m_entityType = EntityType::Face;
-    mesh.m_entityUid = entity->entityUID();
+    mesh.m_entityUid = static_cast<EntityUID>(entity->entityUID() & 0xFFFFFFu);
     mesh.m_primitiveType = Render::RenderPrimitiveType::Triangles;
+
+    // Precompute ownership for fast render-layer part/solid highlighting.
+    mesh.m_ownerPartId = owningPartIdOf(mesh.m_entityId);
+    if(mesh.m_ownerPartId != INVALID_ENTITY_ID) {
+        if(const auto p = findById(mesh.m_ownerPartId)) {
+            mesh.m_ownerPartUid = static_cast<EntityUID>(p->entityUID() & 0xFFFFFFu);
+        }
+    }
+    mesh.m_ownerSolidId = owningSolidIdOf(mesh.m_entityId);
+    if(mesh.m_ownerSolidId != INVALID_ENTITY_ID) {
+        if(const auto s = findById(mesh.m_ownerSolidId)) {
+            mesh.m_ownerSolidUid = static_cast<EntityUID>(s->entityUID() & 0xFFFFFFu);
+        }
+    }
 
     const auto& shape = entity->shape();
     if(shape.IsNull()) {
@@ -556,10 +629,9 @@ GeometryDocumentImpl::generateFaceMesh(const GeometryEntityPtr& entity,
 
     // Determine face color based on owning part
     PartColor face_color(0.7f, 0.7f, 0.7f, 1.0f); // Default gray
-    auto owning_part = findOwningPart(entity->entityId());
-    if(owning_part) {
+    if(mesh.m_ownerPartId != INVALID_ENTITY_ID) {
         // Use entity ID for consistent color assignment
-        face_color = PartColorPalette::getColorByEntityId(owning_part->entityId());
+        face_color = PartColorPalette::getColorByEntityId(mesh.m_ownerPartId);
     }
 
     // Mesh-level colors (base/hover/selected). Base is kept consistent with per-vertex colors.
@@ -648,8 +720,21 @@ GeometryDocumentImpl::generateEdgeMesh(const GeometryEntityPtr& entity,
     Render::RenderMesh mesh;
     mesh.m_entityId = entity->entityId();
     mesh.m_entityType = EntityType::Edge;
-    mesh.m_entityUid = entity->entityUID();
+    mesh.m_entityUid = static_cast<EntityUID>(entity->entityUID() & 0xFFFFFFu);
     mesh.m_primitiveType = Render::RenderPrimitiveType::LineStrip;
+
+    mesh.m_ownerPartId = owningPartIdOf(mesh.m_entityId);
+    if(mesh.m_ownerPartId != INVALID_ENTITY_ID) {
+        if(const auto p = findById(mesh.m_ownerPartId)) {
+            mesh.m_ownerPartUid = static_cast<EntityUID>(p->entityUID() & 0xFFFFFFu);
+        }
+    }
+    mesh.m_ownerSolidId = owningSolidIdOf(mesh.m_entityId);
+    if(mesh.m_ownerSolidId != INVALID_ENTITY_ID) {
+        if(const auto s = findById(mesh.m_ownerSolidId)) {
+            mesh.m_ownerSolidUid = static_cast<EntityUID>(s->entityUID() & 0xFFFFFFu);
+        }
+    }
 
     // Edge color: yellow for visibility
     constexpr float edge_color[4] = {1.0f, 0.8f, 0.2f, 1.0f};
@@ -730,9 +815,22 @@ GeometryDocumentImpl::generateEdgeMesh(const GeometryEntityPtr& entity,
 Render::RenderMesh GeometryDocumentImpl::generateVertexMesh(const GeometryEntityPtr& entity) {
     Render::RenderMesh mesh;
     mesh.m_entityId = entity->entityId();
-    mesh.m_entityUid = entity->entityUID();
+    mesh.m_entityUid = static_cast<EntityUID>(entity->entityUID() & 0xFFFFFFu);
     mesh.m_entityType = EntityType::Vertex;
     mesh.m_primitiveType = Render::RenderPrimitiveType::Points;
+
+    mesh.m_ownerPartId = owningPartIdOf(mesh.m_entityId);
+    if(mesh.m_ownerPartId != INVALID_ENTITY_ID) {
+        if(const auto p = findById(mesh.m_ownerPartId)) {
+            mesh.m_ownerPartUid = static_cast<EntityUID>(p->entityUID() & 0xFFFFFFu);
+        }
+    }
+    mesh.m_ownerSolidId = owningSolidIdOf(mesh.m_entityId);
+    if(mesh.m_ownerSolidId != INVALID_ENTITY_ID) {
+        if(const auto s = findById(mesh.m_ownerSolidId)) {
+            mesh.m_ownerSolidUid = static_cast<EntityUID>(s->entityUID() & 0xFFFFFFu);
+        }
+    }
     constexpr float vertex_color[4] = {0.2f, 1.0f, 0.4f, 1.0f};
 
     mesh.m_baseColor =

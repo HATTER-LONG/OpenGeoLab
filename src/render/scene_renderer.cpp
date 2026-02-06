@@ -284,7 +284,12 @@ void SceneRenderer::uploadMeshData(const DocumentRenderData& render_data) {
             buffers.m_indexCount = need_index ? static_cast<int>(mesh.indexCount()) : 0;
             buffers.m_primitiveType = mesh.m_primitiveType;
             buffers.m_entityType = mesh.m_entityType;
-            buffers.m_entityUid = mesh.m_entityUid;
+            // Keep uid in the same 24-bit space as picking/selection.
+            buffers.m_entityUid = static_cast<Geometry::EntityUID>(mesh.m_entityUid & 0xFFFFFFu);
+            buffers.m_ownerPartUid =
+                static_cast<Geometry::EntityUID>(mesh.m_ownerPartUid & 0xFFFFFFu);
+            buffers.m_ownerSolidUid =
+                static_cast<Geometry::EntityUID>(mesh.m_ownerSolidUid & 0xFFFFFFu);
             buffers.m_hoverColor = QVector4D(mesh.m_hoverColor.m_r, mesh.m_hoverColor.m_g,
                                              mesh.m_hoverColor.m_b, mesh.m_hoverColor.m_a);
             buffers.m_selectedColor = QVector4D(mesh.m_selectedColor.m_r, mesh.m_selectedColor.m_g,
@@ -417,6 +422,31 @@ void SceneRenderer::renderMeshes(const QMatrix4x4& mvp,
         return (static_cast<uint32_t>(a) & 0xFFFFFFu) == (static_cast<uint32_t>(b) & 0xFFFFFFu);
     };
 
+    auto hovered_owner_matches = [&](const MeshBuffers& buffers) {
+        if(m_hoverHighlightType == Geometry::EntityType::Part) {
+            return (buffers.m_ownerPartUid != Geometry::INVALID_ENTITY_UID) &&
+                   uid_matches_24(buffers.m_ownerPartUid, m_hoverHighlightUid);
+        }
+        if(m_hoverHighlightType == Geometry::EntityType::Solid) {
+            return (buffers.m_ownerSolidUid != Geometry::INVALID_ENTITY_UID) &&
+                   uid_matches_24(buffers.m_ownerSolidUid, m_hoverHighlightUid);
+        }
+        return false;
+    };
+
+    auto selected_owner_matches = [&](const MeshBuffers& buffers) {
+        auto& sm = Render::SelectManager::instance();
+        if(buffers.m_ownerPartUid != Geometry::INVALID_ENTITY_UID &&
+           sm.containsSelection(buffers.m_ownerPartUid, Geometry::EntityType::Part)) {
+            return true;
+        }
+        if(buffers.m_ownerSolidUid != Geometry::INVALID_ENTITY_UID &&
+           sm.containsSelection(buffers.m_ownerSolidUid, Geometry::EntityType::Solid)) {
+            return true;
+        }
+        return false;
+    };
+
     auto set_override_color = [&](bool enabled, const QVector4D& color) {
         m_meshShader->setUniformValue(m_useOverrideColorLoc, enabled ? 1 : 0);
         if(enabled) {
@@ -448,10 +478,12 @@ void SceneRenderer::renderMeshes(const QMatrix4x4& mvp,
     glPolygonOffset(1.0f, 1.0f);
     for(auto& buffers : m_faceMeshBuffers) {
         const bool is_selected = Render::SelectManager::instance().containsSelection(
-            buffers.m_entityUid, buffers.m_entityType);
-        const bool is_hover = (m_hoverHighlightType != Geometry::EntityType::None) &&
-                              (buffers.m_entityType == m_hoverHighlightType) &&
-                              uid_matches_24(buffers.m_entityUid, m_hoverHighlightUid);
+                                     buffers.m_entityUid, buffers.m_entityType) ||
+                                 selected_owner_matches(buffers);
+        const bool is_hover_direct = (m_hoverHighlightType != Geometry::EntityType::None) &&
+                                     (buffers.m_entityType == m_hoverHighlightType) &&
+                                     uid_matches_24(buffers.m_entityUid, m_hoverHighlightUid);
+        const bool is_hover = is_hover_direct || hovered_owner_matches(buffers);
 
         if(is_selected) {
             set_override_color(true, buffers.m_selectedColor);
@@ -470,13 +502,15 @@ void SceneRenderer::renderMeshes(const QMatrix4x4& mvp,
     glDepthFunc(GL_LEQUAL);
     m_meshShader->setUniformValue(m_useLightingLoc, 0);
     for(auto& buffers : m_edgeMeshBuffers) {
-        const bool is_hover = (m_hoverHighlightType == Geometry::EntityType::Edge) &&
-                              (buffers.m_entityType == m_hoverHighlightType) &&
-                              uid_matches_24(buffers.m_entityUid, m_hoverHighlightUid);
+        const bool is_hover_direct = (m_hoverHighlightType == Geometry::EntityType::Edge) &&
+                                     (buffers.m_entityType == m_hoverHighlightType) &&
+                                     uid_matches_24(buffers.m_entityUid, m_hoverHighlightUid);
+        const bool is_hover = is_hover_direct || hovered_owner_matches(buffers);
         float line_width = is_hover ? 4.0f : 2.0f;
         glLineWidth(line_width);
         const bool is_selected = Render::SelectManager::instance().containsSelection(
-            buffers.m_entityUid, buffers.m_entityType);
+                                     buffers.m_entityUid, buffers.m_entityType) ||
+                                 selected_owner_matches(buffers);
 
         if(is_selected) {
             set_override_color(true, buffers.m_selectedColor);
@@ -494,11 +528,13 @@ void SceneRenderer::renderMeshes(const QMatrix4x4& mvp,
     glDepthFunc(GL_LEQUAL);
     m_meshShader->setUniformValue(m_useLightingLoc, 0);
     for(auto& buffers : m_vertexMeshBuffers) {
-        const bool is_hover = (m_hoverHighlightType == Geometry::EntityType::Vertex) &&
-                              (buffers.m_entityType == m_hoverHighlightType) &&
-                              uid_matches_24(buffers.m_entityUid, m_hoverHighlightUid);
+        const bool is_hover_direct = (m_hoverHighlightType == Geometry::EntityType::Vertex) &&
+                                     (buffers.m_entityType == m_hoverHighlightType) &&
+                                     uid_matches_24(buffers.m_entityUid, m_hoverHighlightUid);
+        const bool is_hover = is_hover_direct || hovered_owner_matches(buffers);
         const bool is_selected = Render::SelectManager::instance().containsSelection(
-            buffers.m_entityUid, buffers.m_entityType);
+                                     buffers.m_entityUid, buffers.m_entityType) ||
+                                 selected_owner_matches(buffers);
 
         float vertex_size = is_hover ? 9.0f : is_selected ? 7.0f : 6.0f;
         m_meshShader->setUniformValue(m_pointSizeLoc, vertex_size);
