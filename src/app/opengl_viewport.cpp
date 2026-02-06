@@ -208,7 +208,7 @@ void GLViewport::wheelEvent(QWheelEvent* event) {
     if((m_pressedModifiers & Qt::ControlModifier)) {
         m_trackballController.setViewportSize(size());
         const float steps = event->angleDelta().y() / 120.0f;
-        m_trackballController.wheelZoom(steps * 5.0f, m_cameraState);
+        m_trackballController.wheelZoom(steps * 2.0f, m_cameraState);
         Render::RenderSceneController::instance().setCamera(m_cameraState, true);
         update();
     }

@@ -7,16 +7,11 @@
 # 计划任务
 
 1. 当拾取类型是 part 或者 solid 则自动查找当前子类型的父类，并对父类所有的面进行选取高亮。
-    - 更新 entity 更好的查找 part solid 父类的方法；
+    - 更新 geometry entity 相关组件更好的查找 part solid 父类的方法，优化查找效率；
     - 更新 opengl 视口的拾取逻辑；
 
-2. 构建一个通用的数据订阅方式，使得 qml 可以订阅 select manager 中的拾取结果变化信号，从而更新界面显示当前拾取的实体列表；
+2. 构建一个 SelectManagerService 中间层，用于 qml 订阅；
 
-
-2. 更新 opengl view port：
-    - 当 SelectManager 状态进入拾取模式才开始 hover 高亮，并且鼠标左键点击时（过滤掉拖拽旋转模型等）将拾取结果存入管理单例中，右键则检查当前鼠标下的 entity 已经拾取过则从单例中移除。
-    - 订阅 SelectManager 中拾取结果变化信号，当有变化时触发视图更新，重新渲染高亮显示当前拾取结果（与 hover 显示效果要不同）。
-3. 重新构建下颜色管理，每个模型除了自身的颜色还要包含 hover 颜色与拾取颜色；
 4. 检查工程中所有的 qml cpp hpp 代码，完善或补充注释信息，当前注释不符合要求的也要进行修改。所有注释信息参考  doxygen_comment_style.md 文件中的要求进行编写。
 5. 注意更新 README.md 以及 docs/json_protocols.md 文件中的内容，确保与代码实现保持一致，以中文版本为准更新英文版本。
 6. 保证最终代码可以编译通过，并正确执行。

@@ -62,6 +62,63 @@ This document describes the current JSON-based protocols between QML and C++ (vi
 }
 ```
 
+### 2.2 SelectControl
+- action: `"SelectControl"`
+- purpose: control viewport picking mode (enable + pick types) and query/clear current selections.
+
+#### Enable/disable picking
+```json
+{
+  "action": "SelectControl",
+  "select_ctrl": { "enabled": true },
+  "_meta": { "silent": true }
+}
+```
+
+#### Set pick types
+Notes:
+- `vertex/edge/face` can be combined.
+- `solid/part` are exclusive (and also exclusive with `vertex/edge/face`).
+
+```json
+{
+  "action": "SelectControl",
+  "select_ctrl": { "types": ["vertex", "edge", "face"] },
+  "_meta": { "silent": true }
+}
+```
+
+#### Get selections
+```json
+{
+  "action": "SelectControl",
+  "select_ctrl": { "get": true },
+  "_meta": { "silent": true }
+}
+```
+
+Example response:
+```json
+{
+  "status": "success",
+  "action": "SelectControl",
+  "pick_enabled": true,
+  "pick_types": 7,
+  "selections": [
+    { "type": "Face", "uid": 123 }
+  ]
+}
+```
+
+#### Clear selections
+```json
+{
+  "action": "SelectControl",
+  "select_ctrl": { "clear": true },
+  "_meta": { "silent": true }
+}
+```
+
 ---
 
 ## 3. GeometryService

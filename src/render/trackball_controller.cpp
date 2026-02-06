@@ -199,9 +199,10 @@ QQuaternion TrackballController::rotationBetweenVectors(const QVector3D& u,
         return QQuaternion::fromAxisAndAngle(axis, 180.0f);
     }
 
-    if(cos_theta > 1.0f - eps) {
-        return QQuaternion(1.0f, 0.0f, 0.0f, 0.0f);
-    }
+    // when cos_theta is close to 1, the model hasn't moved enough to create a meaningful rotation.
+    // if(cos_theta > 1.0f - eps) {
+    //     return QQuaternion(1.0f, 0.0f, 0.0f, 0.0f);
+    // }
 
     const float theta = qAcos(qBound(-1.0f, cos_theta, 1.0f));
     QVector3D axis = QVector3D::crossProduct(u, v);
