@@ -31,10 +31,11 @@ Item {
     /// Unique action identifier
     property string actionId: ""
 
+    /// Opt-in: whether this page participates in viewport picking via PickManager
+    property bool usesPicking: false
+
     /// Whether the page is currently visible
     property bool pageVisible: false
-    /// Whether this page uses the global picking/selection service
-    property bool usesPicking: false
 
     /// Default content to be overridden by subclasses
     default property alias content: contentColumn.data
@@ -54,7 +55,7 @@ Item {
 
     visible: pageVisible
     width: 320
-    height: panelColumn.implicitHeight + 24
+    height: panelColumn.implicitHeight
     z: 1000
 
     x: 12
@@ -108,10 +109,18 @@ Item {
 
         // Position the page to the right of the sidebar on open
         _lastSidebarWidth = _getSidebarWidth();
-        root.x = _clampX(_minXRightOfSidebar());
+
+        var tempx = _clampX(_minXRightOfSidebar());
+        if (tempx > root.x) {
+            root.x = tempx;
+        }
 
         pageVisible = true;
         root.forceActiveFocus();
+
+        if (usesPicking) {
+            // PickManager.setActiveConsumer(root.actionId);
+        }
     }
 
     /**
@@ -119,6 +128,12 @@ Item {
      */
     function close() {
         pageVisible = false;
+
+        // if (usesPicking && PickManager.activeConsumerKey === root.actionId) {
+        //     // PickManager.deactivatePickMode();
+        //     // PickManager.clearActiveConsumer();
+        // }
+
         // Notify MainPages that this page is closed
         if (MainPages.currentOpenPage === root.actionId) {
             MainPages.currentOpenPage = "";
@@ -282,7 +297,7 @@ Item {
                             const dy = mouse.y - lastPos.y;
                             const minX = root._minXRightOfSidebar();
                             root.x = Math.max(minX, Math.min(root.parent.width - root.width, root.x + dx));
-                            root.y = Math.max(0, Math.min(root.parent.height - root.height, root.y + dy));
+                            root.y = Math.max(12, Math.min(root.parent.height - root.height, root.y + dy));
                         }
                     }
                 }
