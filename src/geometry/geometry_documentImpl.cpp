@@ -540,6 +540,48 @@ void GeometryDocumentImpl::invalidateRenderData() {
     m_renderDataValid = false;
 }
 
+// =============================================================================
+// Entity Query (GeometryDocument interface)
+// =============================================================================
+
+EntityId GeometryDocumentImpl::findEntityId(EntityUID uid, EntityType type) const {
+    auto entity = findByUIDAndType(uid, type);
+    if(entity) {
+        return entity->entityId();
+    }
+    return INVALID_ENTITY_ID;
+}
+
+std::vector<std::pair<EntityType, EntityUID>>
+GeometryDocumentImpl::getDescendantFaces(EntityUID entity_uid, EntityType entity_type) const {
+    std::vector<std::pair<EntityType, EntityUID>> result;
+
+    // Find the entity by UID and type
+    auto entity = findByUIDAndType(entity_uid, entity_type);
+    if(!entity) {
+        LOG_WARN("GeometryDocumentImpl::getDescendantFaces - entity not found: {}:{}",
+                 static_cast<int>(entity_type), entity_uid);
+        return result;
+    }
+
+    // Get all descendant faces
+    auto descendants = findDescendants(entity->entityId(), EntityType::Face);
+
+    result.reserve(descendants.size());
+    for(const auto& desc : descendants) {
+        result.emplace_back(desc->entityType(), desc->entityUID());
+    }
+
+    LOG_TRACE("GeometryDocumentImpl::getDescendantFaces - found {} faces for {}:{}", result.size(),
+              static_cast<int>(entity_type), entity_uid);
+
+    return result;
+}
+
+// =============================================================================
+// Render Mesh Generation
+// =============================================================================
+
 Render::RenderMesh
 GeometryDocumentImpl::generateFaceMesh(const GeometryEntityPtr& entity,
                                        const Render::TessellationOptions& options) {

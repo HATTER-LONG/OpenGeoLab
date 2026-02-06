@@ -276,3 +276,90 @@
 - 失败：抛异常并走 `operationFailed`（error 为字符串描述）
 
 > 说明：ReaderService 会校验 `action == "load_model"`；其它 action 会返回失败（走 `operationFailed`）。
+
+---
+
+## 5. PickManager (QML Singleton)
+
+### 5.1 概述
+`PickManager` 是 QML 中用于几何实体拾取和选择的单例服务。它封装了 C++ 层的 `SelectManager`，提供 QML 友好的 API。
+
+### 5.2 属性
+
+| 属性名 | 类型 | 说明 |
+|--------|------|------|
+| `selectedType` | string | 当前拾取的实体类型（Vertex/Edge/Face/Solid/Part） |
+| `pickModeActive` | bool | 拾取模式是否激活 |
+| `selectedEntities` | array | 已选实体列表，格式：`[{type: "Face", uid: 123}, ...]` |
+| `contextKey` | string | 选择上下文键，用于隔离不同 UI 面板的选择 |
+| `expandPartSolidSelection` | bool | 是否将 Part/Solid 选择展开为所有下级 Face |
+
+### 5.3 方法
+
+#### 5.3.1 activatePickMode(entityType)
+激活拾取模式。
+- `entityType`: string - 要拾取的实体类型
+
+```qml
+PickManager.activatePickMode("Face")
+```
+
+#### 5.3.2 deactivatePickMode()
+关闭拾取模式。
+
+```qml
+PickManager.deactivatePickMode()
+```
+
+#### 5.3.3 addSelection(entityType, entityUid)
+添加实体到选择集。
+
+```qml
+PickManager.addSelection("Face", 123)
+```
+
+#### 5.3.4 removeSelection(entityType, entityUid)
+从选择集移除实体。
+
+```qml
+PickManager.removeSelection("Face", 123)
+```
+
+#### 5.3.5 clearSelection()
+清空所有选择。
+
+```qml
+PickManager.clearSelection()
+```
+
+#### 5.3.6 isSelected(entityType, entityUid)
+检查实体是否被选中。
+
+```qml
+let selected = PickManager.isSelected("Face", 123)
+```
+
+#### 5.3.7 selectionCount()
+获取已选实体数量。
+
+```qml
+let count = PickManager.selectionCount()
+```
+
+### 5.4 信号
+
+| 信号名 | 参数 | 说明 |
+|--------|------|------|
+| `selectedTypeChanged` | - | 选择类型变化 |
+| `pickModeActiveChanged` | - | 拾取模式状态变化 |
+| `selectedEntitiesChanged` | - | 选择列表变化 |
+| `contextKeyChanged` | - | 上下文键变化 |
+| `expandPartSolidSelectionChanged` | - | 展开设置变化 |
+| `pickModeChanged` | contextKey, enabled, entityType | 拾取模式变化（详细） |
+| `selectionChanged` | contextKey, entities | 选择变化（详细） |
+| `entityPicked` | contextKey, entityType, entityUid | 实体被拾取 |
+
+### 5.5 选择行为
+
+- **Vertex/Edge/Face**：多选模式，添加到现有选择
+- **Solid/Part**：单选模式，当 `expandPartSolidSelection` 为 true 时，会清空现有选择并添加所有下级 Face 实体

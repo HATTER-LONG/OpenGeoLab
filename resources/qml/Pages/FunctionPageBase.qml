@@ -33,6 +33,8 @@ Item {
 
     /// Whether the page is currently visible
     property bool pageVisible: false
+    /// Whether this page uses the global picking/selection service
+    property bool usesPicking: false
 
     /// Default content to be overridden by subclasses
     default property alias content: contentColumn.data

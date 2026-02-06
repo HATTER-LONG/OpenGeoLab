@@ -186,6 +186,15 @@ public:
     void invalidateRenderData() override;
 
     // =========================================================================
+    // Entity Query (GeometryDocument interface)
+    // =========================================================================
+
+    [[nodiscard]] EntityId findEntityId(EntityUID uid, EntityType type) const override;
+
+    [[nodiscard]] std::vector<std::pair<EntityType, EntityUID>>
+    getDescendantFaces(EntityUID entity_uid, EntityType entity_type) const override;
+
+    // =========================================================================
     // Change Notification (GeometryDocument interface)
     // =========================================================================
 

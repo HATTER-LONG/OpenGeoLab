@@ -4,6 +4,7 @@
  */
 
 #include "app/opengl_viewport.hpp"
+#include "app/pick_manager.hpp"
 #include "render/select_manager.hpp"
 #include "util/logger.hpp"
 
@@ -468,6 +469,11 @@ void applyPendingPickAction(Render::SelectManager& select_manager,
 
     if(pending_pick_action == GLViewport::PickAction::Add) {
         select_manager.addSelection(uid, type);
+
+        // Notify PickManager for QML signal emission
+        if(auto* pick_manager = PickManager::instance()) {
+            pick_manager->handleEntityPicked(type, uid);
+        }
         return;
     }
 

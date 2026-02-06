@@ -137,6 +137,29 @@ public:
     virtual void invalidateRenderData() = 0;
 
     // -------------------------------------------------------------------------
+    // Entity Query
+    // -------------------------------------------------------------------------
+
+    /**
+     * @brief Find entity by UID and type
+     * @param uid Entity unique identifier
+     * @param type Entity type
+     * @return Entity ID if found, INVALID_ENTITY_ID otherwise
+     */
+    [[nodiscard]] virtual EntityId findEntityId(EntityUID uid, EntityType type) const = 0;
+
+    /**
+     * @brief Get all descendant faces of an entity
+     * @param entity_uid Entity UID
+     * @param entity_type Entity type
+     * @return Vector of (type, uid) pairs for all descendant faces
+     *
+     * @note Used for Part/Solid selection expansion to highlight all contained faces.
+     */
+    [[nodiscard]] virtual std::vector<std::pair<EntityType, EntityUID>>
+    getDescendantFaces(EntityUID entity_uid, EntityType entity_type) const = 0;
+
+    // -------------------------------------------------------------------------
     // Change Notification
     // -------------------------------------------------------------------------
 
