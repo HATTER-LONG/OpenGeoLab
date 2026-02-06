@@ -206,8 +206,10 @@ qt_add_qml_module(
   resources/qml/Pages/ParamField.qml
   resources/qml/Pages/SmoothMeshPage.qml
   resources/qml/Pages/TrimPage.qml
+  resources/qml/Pages/GeoQueryPage.qml
   resources/qml/util/BaseButton.qml
   resources/qml/util/BaseComboBox.qml
+  resources/qml/util/Selector.qml
   resources/qml/util/SelectableButton.qml
   resources/qml/util/ChipButton.qml
   resources/qml/util/ViewportPickButton.qml

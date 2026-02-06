@@ -12,8 +12,8 @@ import "Pages" as Pages
 ApplicationWindow {
     id: root
     visible: true
-    width: 1920
-    height: 1080
+    width: 1280
+    height: 720
     title: qsTr("OpenGeoLab")
 
     // Expose key UI elements for floating pages positioning

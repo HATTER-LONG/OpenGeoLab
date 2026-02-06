@@ -21,10 +21,7 @@ SelectManager& SelectManager::instance() {
     return s_instance;
 }
 
-SelectManager::SelectManager() {
-    m_pickTypes = PickTypes::Vertex | PickTypes::Edge | PickTypes::Face;
-    LOG_TRACE("SelectManager created");
-}
+SelectManager::SelectManager() { LOG_TRACE("SelectManager created"); }
 
 SelectManager::~SelectManager() { LOG_TRACE("SelectManager destroyed"); }
 
@@ -36,7 +33,13 @@ void SelectManager::setPickEnabled(bool enabled) {
         }
         m_pickEnabled = enabled;
     }
-    m_pickSettingsChanged.emitSignal();
+    // Notify listeners about enabled state change.
+    m_pickEnabledChanged.emitSignal(m_pickEnabled);
+
+    // If picking is enabled, notify pick type changes as well so UI can update.
+    if(m_pickEnabled) {
+        m_pickSettingsChanged.emitSignal(m_pickTypes);
+    }
 }
 
 bool SelectManager::isPickEnabled() const {
@@ -54,8 +57,9 @@ void SelectManager::setPickTypes(PickTypes types) {
         }
         m_pickTypes = normalized;
     }
-
-    m_pickSettingsChanged.emitSignal();
+    if(m_pickEnabled) {
+        m_pickSettingsChanged.emitSignal(m_pickTypes);
+    }
 }
 
 SelectManager::PickTypes SelectManager::pickTypes() const {
@@ -98,7 +102,8 @@ bool SelectManager::addSelection(Geometry::EntityUID uid, Geometry::EntityType t
     }
 
     if(added) {
-        m_selectionChanged.emitSignal();
+        const PickResult pr{type, uid};
+        m_selectionChanged.emitSignal(pr, SelectionChangeAction::Added);
     }
 
     return added;
@@ -119,7 +124,8 @@ bool SelectManager::removeSelection(Geometry::EntityUID uid, Geometry::EntityTyp
     }
 
     if(removed) {
-        m_selectionChanged.emitSignal();
+        const PickResult pr{type, uid};
+        m_selectionChanged.emitSignal(pr, SelectionChangeAction::Removed);
     }
 
     return removed;
@@ -152,15 +158,22 @@ void SelectManager::clearSelections() {
     }
 
     if(changed) {
-        m_selectionChanged.emitSignal();
+        m_selectionChanged.emitSignal(PickResult{}, SelectionChangeAction::Cleared);
     }
 }
 
-Util::ScopedConnection SelectManager::subscribePickSettingsChanged(std::function<void()> callback) {
+Util::ScopedConnection
+SelectManager::subscribePickSettingsChanged(std::function<void(PickTypes)> callback) {
     return m_pickSettingsChanged.connect(std::move(callback));
 }
 
-Util::ScopedConnection SelectManager::subscribeSelectionChanged(std::function<void()> callback) {
+Util::ScopedConnection
+SelectManager::subscribePickEnabledChanged(std::function<void(bool)> callback) {
+    return m_pickEnabledChanged.connect(std::move(callback));
+}
+
+Util::ScopedConnection SelectManager::subscribeSelectionChanged(
+    std::function<void(PickResult, SelectionChangeAction)> callback) {
     return m_selectionChanged.connect(std::move(callback));
 }
 
@@ -187,10 +200,6 @@ SelectManager::PickTypes SelectManager::normalizePickTypes(PickTypes types) {
     // Only V/E/F mask.
     constexpr PickTypes vef_mask = PickTypes::Vertex | PickTypes::Edge | PickTypes::Face;
     const PickTypes vef = types & vef_mask;
-    if(vef == PickTypes::None) {
-        // Default to Face to avoid a "no-pick" state when callers pass None.
-        return PickTypes::Face;
-    }
     return vef;
 }
 

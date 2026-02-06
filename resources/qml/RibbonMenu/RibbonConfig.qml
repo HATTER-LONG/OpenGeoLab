@@ -71,6 +71,18 @@ QtObject {
                                 tooltip: qsTr("Offset Geometry")
                             }
                         ]
+                    },
+                    {
+                        title: qsTr("Inspect"),
+                        items: [
+                            {
+                                type: "button",
+                                id: "query",
+                                text: qsTr("Query"),
+                                iconSource: ribbonConfig.iconBasePath + "query.svg",
+                                tooltip: qsTr("Query Geometry")
+                            }
+                        ]
                     }
                 ]
             },
@@ -85,14 +97,14 @@ QtObject {
                                 type: "button",
                                 id: "generateMesh",
                                 text: qsTr("Generate"),
-                                iconSource: iconBasePath + "mesh.svg",
+                                iconSource: ribbonConfig.iconBasePath + "mesh.svg",
                                 tooltip: qsTr("Generate Mesh")
                             },
                             {
                                 type: "button",
                                 id: "smoothMesh",
                                 text: qsTr("Smooth"),
-                                iconSource: iconBasePath + "smooth_mesh.svg",
+                                iconSource: ribbonConfig.iconBasePath + "smooth_mesh.svg",
                                 tooltip: qsTr("Smooth Mesh")
                             }
                         ]
@@ -110,14 +122,14 @@ QtObject {
                                 type: "button",
                                 id: "aiSuggest",
                                 text: qsTr("Suggest"),
-                                iconSource: iconBasePath + "ai_suggestion.svg",
+                                iconSource: ribbonConfig.iconBasePath + "ai_suggestion.svg",
                                 tooltip: qsTr("AI Suggest")
                             },
                             {
                                 type: "button",
                                 id: "aiChat",
                                 text: qsTr("Chat"),
-                                iconSource: iconBasePath + "ai_chat.svg",
+                                iconSource: ribbonConfig.iconBasePath + "ai_chat.svg",
                                 tooltip: qsTr("AI Chat")
                             }
                         ]

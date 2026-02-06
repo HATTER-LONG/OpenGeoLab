@@ -67,6 +67,11 @@ public:
         };
     };
 
+    /**
+     * @brief Action describing how a selection changed
+     */
+    enum class SelectionChangeAction : uint8_t { Added = 0, Removed = 1, Cleared = 2 };
+
 public:
     /**
      * @brief Get singleton instance
@@ -132,12 +137,19 @@ public:
      * @brief Subscribe to changes in pick enable/types
      */
     [[nodiscard]] Util::ScopedConnection
-    subscribePickSettingsChanged(std::function<void()> callback);
+    subscribePickSettingsChanged(std::function<void(PickTypes)> callback);
+
+    /**
+     * @brief Subscribe to changes in pick enabled state
+     */
+    [[nodiscard]] Util::ScopedConnection
+    subscribePickEnabledChanged(std::function<void(bool)> callback);
 
     /**
      * @brief Subscribe to changes in selection results
      */
-    [[nodiscard]] Util::ScopedConnection subscribeSelectionChanged(std::function<void()> callback);
+    [[nodiscard]] Util::ScopedConnection
+    subscribeSelectionChanged(std::function<void(PickResult, SelectionChangeAction)> callback);
 
 private:
     [[nodiscard]] static PickTypes normalizePickTypes(PickTypes types);
@@ -146,13 +158,14 @@ private:
 private:
     mutable std::mutex m_mutex;
 
-    bool m_pickEnabled{true};
-    PickTypes m_pickTypes{PickTypes::Face};
+    bool m_pickEnabled{false};
+    PickTypes m_pickTypes{PickTypes::None};
 
     std::unordered_set<PickResult, PickResult::Hash> m_selections;
 
-    Util::Signal<> m_pickSettingsChanged;
-    Util::Signal<> m_selectionChanged;
+    Util::Signal<PickTypes> m_pickSettingsChanged;
+    Util::Signal<bool> m_pickEnabledChanged;
+    Util::Signal<PickResult, SelectionChangeAction> m_selectionChanged;
 };
 
 // -----------------------------------------------------------------------------

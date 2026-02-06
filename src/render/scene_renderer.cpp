@@ -111,7 +111,7 @@ void main() {
 const char* const PICK_EDGE_GEOMETRY_SHADER = R"(
 #version 330 core
 
-layout(line_strip) in;
+layout(lines) in;
 layout(triangle_strip, max_vertices = 4) out;
 
 uniform vec2 uViewport;   // framebuffer size in pixels

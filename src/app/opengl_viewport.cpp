@@ -62,12 +62,14 @@ GLViewport::GLViewport(QQuickItem* parent) : QQuickFramebufferObject(parent) {
     });
 
     auto& select_manager = Render::SelectManager::instance();
-    m_pickSettingsChangedConn = select_manager.subscribePickSettingsChanged([this]() {
-        QMetaObject::invokeMethod(this, &GLViewport::onSceneNeedsUpdate, Qt::QueuedConnection);
-    });
-    m_selectionChangedConn = select_manager.subscribeSelectionChanged([this]() {
-        QMetaObject::invokeMethod(this, &GLViewport::onSceneNeedsUpdate, Qt::QueuedConnection);
-    });
+    m_pickSettingsChangedConn =
+        select_manager.subscribePickSettingsChanged([this](Render::SelectManager::PickTypes) {
+            QMetaObject::invokeMethod(this, &GLViewport::onSceneNeedsUpdate, Qt::QueuedConnection);
+        });
+    m_selectionChangedConn = select_manager.subscribeSelectionChanged(
+        [this](Render::SelectManager::PickResult, Render::SelectManager::SelectionChangeAction) {
+            QMetaObject::invokeMethod(this, &GLViewport::onSceneNeedsUpdate, Qt::QueuedConnection);
+        });
 
     LOG_TRACE("GLViewport created");
 }

@@ -45,6 +45,10 @@ QtObject {
                 path: "Pages/AddTorusPage.qml",
                 floating: true
             },
+            "query": {
+                path: "Pages/GeoQueryPage.qml",
+                floating: true
+            },
             // Geometry - Modify
             "trim": {
                 path: "Pages/TrimPage.qml",
