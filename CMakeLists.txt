@@ -128,6 +128,8 @@ set(OpenCASCADE_LIBS
 find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui Qml Quick OpenGL)
 qt_standard_project_setup(REQUIRES 6.8)
 
+find_package(gmsh REQUIRED)
+
 # ==============================================================================
 # Source Files Collection
 # ==============================================================================
@@ -260,6 +262,7 @@ target_link_libraries(
           HighFive::HighFive
           nlohmann_json::nlohmann_json
           ${OpenCASCADE_LIBS}
+          gmsh::shared
 )
 
 # Allow runtime control down to trace level (do not compile-out trace/debug).

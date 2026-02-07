@@ -23,6 +23,21 @@ OpenGeoLab 是一个基于 Qt Quick(QML) + OpenGL 的几何/模型可视化与�
 - CMake >= 3.14
 - Qt 6.8（组件：Core/Gui/Qml/Quick/OpenGL）
 - OpenCASCADE（必须预装，CMake 通过 `find_package(OpenCASCADE REQUIRED)` 查找）
+- GMesh（用于网格剖分与处理，需预装）:
+```json
+{
+    "cmake.configureArgs": [
+        "-DENABLE_BUILD_DYNAMIC=ON",
+        "-DENABLE_OCC=ON",
+        "-DENABLE_FLTK=OFF",
+        "-DCMAKE_BUILD_TYPE=Debug",
+        "-DCMAKE_INSTALL_PREFIX=\"D:/WorkSpace/OpenSource/GMesh/gmsh_4_15_0-debug\"",
+        "-DENABLE_TESTS=OFF",
+        "-DENABLE_OPENMP=OFF"
+    ],
+    "search.useIgnoreFiles": false
+}
+```
 - HDF5（HighFive 需要系统预装 HDF5；若未用到可后续做成可选依赖）
 - Ninja（推荐）+ MSVC（Windows）
 
