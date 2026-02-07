@@ -19,6 +19,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(ENABLE_CONSOLE "Enable console window on Windows for debugging" ON)
 option(ENABLE_TEST "Enable building tests" OFF)
+option(ENABLE_HDF5 "Enable HDF5 support" OFF)
 # ==============================================================================
 # Qt Configuration
 # ==============================================================================
@@ -77,12 +78,14 @@ else()
 endif()
 
 # HighFive: Modern C++ interface for HDF5 Requires HDF5 to be pre-installed on the system
-CPMAddPackage(
-  NAME HighFive
-  GITHUB_REPOSITORY highfive-devs/highfive
-  VERSION 3.2.0
-  OPTIONS "HIGHFIVE_UNIT_TESTS OFF" "HIGHFIVE_EXAMPLES OFF" "HIGHFIVE_BUILD_DOCS OFF"
-)
+if(ENABLE_HDF5)
+  CPMAddPackage(
+    NAME HighFive
+    GITHUB_REPOSITORY highfive-devs/highfive
+    VERSION 3.2.0
+    OPTIONS "HIGHFIVE_UNIT_TESTS OFF" "HIGHFIVE_EXAMPLES OFF" "HIGHFIVE_BUILD_DOCS OFF"
+  )
+endif()
 
 CPMAddPackage("gh:nlohmann/json@3.12.0")
 
@@ -259,7 +262,7 @@ target_link_libraries(
           Qt6::OpenGL
           Kangaroo::Kangaroo
           fmt::fmt
-          HighFive::HighFive
+          $<$<BOOL:${ENABLE_HDF5}>:HighFive::HighFive>
           nlohmann_json::nlohmann_json
           ${OpenCASCADE_LIBS}
           gmsh::shared
