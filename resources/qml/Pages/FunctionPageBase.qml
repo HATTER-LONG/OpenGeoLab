@@ -31,6 +31,11 @@ Item {
     /// Unique action identifier
     property string actionId: ""
 
+    /// Label text for the primary action button
+    property string executeButtonText: qsTr("Execute")
+    /// Label text for the cancel button
+    property string cancelButtonText: qsTr("Cancel")
+
     /// Whether the page is currently visible
     property bool pageVisible: false
 
@@ -339,7 +344,7 @@ Item {
                     // Execute Button
                     Button {
                         id: executeButton
-                        text: qsTr("Execute")
+                        text: root.executeButtonText
                         implicitWidth: 90
                         implicitHeight: 32
 
@@ -369,7 +374,7 @@ Item {
                     // Cancel Button
                     Button {
                         id: cancelButton
-                        text: qsTr("Cancel")
+                        text: root.cancelButtonText
                         implicitWidth: 90
                         implicitHeight: 32
 

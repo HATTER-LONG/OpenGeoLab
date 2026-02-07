@@ -19,23 +19,76 @@ Item {
     readonly property int solid_type: 16
     readonly property int part_type: 32
 
+    readonly property int all_types: vertex_type | edge_type | wire_type | face_type | solid_type | part_type
+
+    /// Bitmask of entity types that are allowed to be picked in this selector.
+    /// Parent pages can override this to restrict available buttons and pick types.
+    property int allowedTypes: all_types
+
     property int selectedTypes: none_type
 
     property bool pickModeActive: false
 
     property var selectedEntities: []
 
+    /// Emitted whenever selectedEntities changes.
+    signal selectedEntitiesUpdated(var entities)
+
+    function currentSelectedEntities() {
+        return root.selectedEntities;
+    }
+
+    onSelectedEntitiesChanged: root.selectedEntitiesUpdated(root.selectedEntities)
+
     function isEntityTypeVisible(type) {
-        return true;
+        return (root.allowedTypes & type) !== 0;
+    }
+
+    readonly property int visibleTypeButtonCount: (root.isEntityTypeVisible(root.vertex_type) ? 1 : 0) + (root.isEntityTypeVisible(root.edge_type) ? 1 : 0) + (root.isEntityTypeVisible(root.face_type) ? 1 : 0) + (root.isEntityTypeVisible(root.wire_type) ? 1 : 0) + (root.isEntityTypeVisible(root.solid_type) ? 1 : 0) + (root.isEntityTypeVisible(root.part_type) ? 1 : 0)
+
+    function typeButtonWidth(barWidth, spacing) {
+        var count = root.visibleTypeButtonCount;
+        if (count <= 0) {
+            return 56;
+        }
+        var raw = Math.floor((barWidth - spacing * (count - 1)) / count);
+        return Math.max(56, raw);
+    }
+
+    onAllowedTypesChanged: {
+        // If current selection becomes invalid under new allowedTypes, clear it.
+        var filtered = root.selectedTypes & root.allowedTypes;
+        if (filtered === root.none_type) {
+            if (root.selectedTypes !== root.none_type) {
+                pickModeActive = false;
+                root.clearSelection();
+                SelectManagerService.activateSelectMode(root.none_type);
+                SelectManagerService.deactivateSelectMode();
+            }
+            root.selectedTypes = root.none_type;
+            return;
+        }
+
+        if (filtered !== root.selectedTypes) {
+            root.selectedTypes = filtered;
+            SelectManagerService.activateSelectMode(filtered);
+        }
     }
     onVisibleChanged: {
         if (!visible) {
+            console.log("Selector hidden, clearing selection and deactivating pick mode.");
+            root.selectedTypes = root.none_type;
+            pickModeActive = false;
+            selectedEntities = [];
             SelectManagerService.clearSelection();
             SelectManagerService.activateSelectMode(root.none_type);
             SelectManagerService.deactivateSelectMode();
         }
     }
     function onEntityTypeClicked(type) {
+        if (!root.isEntityTypeVisible(type)) {
+            return;
+        }
         var current = root.selectedTypes;
         if ((current & type) === 0) {
             if (type === root.part_type || type === root.solid_type || type === root.wire_type) {
@@ -67,6 +120,7 @@ Item {
 
     Connections {
         target: SelectManagerService
+        enabled: root.visible
         function onSelectModeChanged(types) {
             root.selectedTypes = types;
         }
@@ -103,69 +157,72 @@ Item {
             color: Theme.textSecondary
             visible: true
         }
-        RowLayout {
+        Item {
             width: parent.width
-            spacing: 4
-            visible: true
+            height: typeButtonRow.implicitHeight
 
-            EntityTypeButton {
-                Layout.fillWidth: true
-                Layout.preferredWidth: 56
-                visible: root.isEntityTypeVisible(root.vertex_type)
-                entityType: "Vertex"
-                iconSource: "qrc:/opengeolab/resources/icons/vertex.svg"
-                selected: ((root.selectedTypes & root.vertex_type) !== 0)
-                onClicked: root.onEntityTypeClicked(root.vertex_type)
-            }
+            // Center the button group; buttons stretch to fill the group width.
+            Row {
+                id: typeButtonRow
+                anchors.horizontalCenter: parent.horizontalCenter
+                spacing: 4
 
-            EntityTypeButton {
-                Layout.fillWidth: true
-                Layout.preferredWidth: 56
-                visible: root.isEntityTypeVisible(root.edge_type)
-                entityType: "Edge"
-                iconSource: "qrc:/opengeolab/resources/icons/edge.svg"
-                selected: ((root.selectedTypes & root.edge_type) !== 0)
-                onClicked: root.onEntityTypeClicked(root.edge_type)
-            }
+                readonly property int barWidth: Math.min(parent.width, root.visibleTypeButtonCount <= 0 ? parent.width : root.visibleTypeButtonCount * 84 + (root.visibleTypeButtonCount - 1) * spacing)
+                width: barWidth
 
-            EntityTypeButton {
-                Layout.fillWidth: true
-                Layout.preferredWidth: 56
-                visible: root.isEntityTypeVisible(root.face_type)
-                entityType: "Face"
-                iconSource: "qrc:/opengeolab/resources/icons/face.svg"
-                selected: ((root.selectedTypes & root.face_type) !== 0)
-                onClicked: root.onEntityTypeClicked(root.face_type)
-            }
+                EntityTypeButton {
+                    width: root.typeButtonWidth(typeButtonRow.width, typeButtonRow.spacing)
+                    visible: root.isEntityTypeVisible(root.vertex_type)
+                    entityType: "Vertex"
+                    iconSource: "qrc:/opengeolab/resources/icons/vertex.svg"
+                    selected: ((root.selectedTypes & root.vertex_type) !== 0)
+                    onClicked: root.onEntityTypeClicked(root.vertex_type)
+                }
 
-            EntityTypeButton {
-                Layout.fillWidth: true
-                Layout.preferredWidth: 56
-                visible: root.isEntityTypeVisible(root.wire_type)
-                entityType: "Wire"
-                iconSource: "qrc:/opengeolab/resources/icons/wire.svg"
-                selected: ((root.selectedTypes & root.wire_type) !== 0)
-                onClicked: root.onEntityTypeClicked(root.wire_type)
-            }
+                EntityTypeButton {
+                    width: root.typeButtonWidth(typeButtonRow.width, typeButtonRow.spacing)
+                    visible: root.isEntityTypeVisible(root.edge_type)
+                    entityType: "Edge"
+                    iconSource: "qrc:/opengeolab/resources/icons/edge.svg"
+                    selected: ((root.selectedTypes & root.edge_type) !== 0)
+                    onClicked: root.onEntityTypeClicked(root.edge_type)
+                }
 
-            EntityTypeButton {
-                Layout.fillWidth: true
-                Layout.preferredWidth: 56
-                visible: root.isEntityTypeVisible(root.solid_type)
-                entityType: "Solid"
-                iconSource: "qrc:/opengeolab/resources/icons/solid.svg"
-                selected: ((root.selectedTypes & root.solid_type) !== 0)
-                onClicked: root.onEntityTypeClicked(root.solid_type)
-            }
+                EntityTypeButton {
+                    width: root.typeButtonWidth(typeButtonRow.width, typeButtonRow.spacing)
+                    visible: root.isEntityTypeVisible(root.face_type)
+                    entityType: "Face"
+                    iconSource: "qrc:/opengeolab/resources/icons/face.svg"
+                    selected: ((root.selectedTypes & root.face_type) !== 0)
+                    onClicked: root.onEntityTypeClicked(root.face_type)
+                }
 
-            EntityTypeButton {
-                Layout.fillWidth: true
-                Layout.preferredWidth: 56
-                visible: root.isEntityTypeVisible(root.part_type)
-                entityType: "Part"
-                iconSource: "qrc:/opengeolab/resources/icons/box.svg"
-                selected: ((root.selectedTypes & root.part_type) !== 0)
-                onClicked: root.onEntityTypeClicked(root.part_type)
+                EntityTypeButton {
+                    width: root.typeButtonWidth(typeButtonRow.width, typeButtonRow.spacing)
+                    visible: root.isEntityTypeVisible(root.wire_type)
+                    entityType: "Wire"
+                    iconSource: "qrc:/opengeolab/resources/icons/wire.svg"
+                    selected: ((root.selectedTypes & root.wire_type) !== 0)
+                    onClicked: root.onEntityTypeClicked(root.wire_type)
+                }
+
+                EntityTypeButton {
+                    width: root.typeButtonWidth(typeButtonRow.width, typeButtonRow.spacing)
+                    visible: root.isEntityTypeVisible(root.solid_type)
+                    entityType: "Solid"
+                    iconSource: "qrc:/opengeolab/resources/icons/solid.svg"
+                    selected: ((root.selectedTypes & root.solid_type) !== 0)
+                    onClicked: root.onEntityTypeClicked(root.solid_type)
+                }
+
+                EntityTypeButton {
+                    width: root.typeButtonWidth(typeButtonRow.width, typeButtonRow.spacing)
+                    visible: root.isEntityTypeVisible(root.part_type)
+                    entityType: "Part"
+                    iconSource: "qrc:/opengeolab/resources/icons/box.svg"
+                    selected: ((root.selectedTypes & root.part_type) !== 0)
+                    onClicked: root.onEntityTypeClicked(root.part_type)
+                }
             }
         }
         Rectangle {

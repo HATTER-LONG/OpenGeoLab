@@ -60,6 +60,9 @@ cmake --build build
 
 完整协议清单见：`docs/json_protocols.md`
 
+近期新增：
+- Geo Query 页面通过 `GeometryService` 的 `query_entity_info` action，基于当前拾取到的实体 (type+uid) 查询实体详细信息并在页面下方列表展示。
+
 ## 后续开发任务（来自 plan.md，做了轻度工程化拆分）
 - 几何交互：选择（点/边/面/Part）、高亮、拾取、变换与编辑操作（trim/offset 等）
 - 网格：面网格剖分、网格质量指标、平滑/修复工具链

@@ -45,6 +45,9 @@ Signals:
 
 See: `docs/json_protocols.en.md`.
 
+Recent addition:
+- The Geo Query page calls `GeometryService` action `query_entity_info` to query detailed info for the currently selected entities (type+uid) and renders the results in a list.
+
 ## Next Steps (high-level)
 - Selection & picking (vertex/edge/face/part), highlight, and transform/edit operations (trim/offset, etc.)
 - Meshing: surface tessellation, quality metrics, smoothing/repair

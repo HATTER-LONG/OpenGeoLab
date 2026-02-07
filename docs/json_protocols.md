@@ -248,6 +248,59 @@
 ```
 
 
+### 3.4 query_entity_info
+- action：`"query_entity_info"`
+- 用途：根据 QML 拾取返回的 (uid,type) 列表，查询实体的详细信息（用于 Geo Query 页面）。
+
+请求：
+```json
+{
+  "action": "query_entity_info",
+  "entities": [
+    { "type": "Face", "uid": 123 },
+    { "type": "Edge", "uid": 45 }
+  ]
+}
+```
+
+响应：
+```json
+{
+  "success": true,
+  "total": 2,
+  "entities": [
+    {
+      "type": "Face",
+      "uid": 123,
+      "id": 1001,
+      "name": "",
+      "bounding_box": {
+        "min": [0.0, 0.0, 0.0],
+        "max": [10.0, 10.0, 10.0]
+      },
+      "related": {
+        "parts": [{"id": 1, "uid": 1, "type": "Part"}],
+        "solids": [{"id": 2, "uid": 1, "type": "Solid"}],
+        "wires": [],
+        "faces": [],
+        "edges": [],
+        "vertices": [],
+        "shells": []
+      }
+    }
+  ],
+  "not_found": [
+    { "type": "Edge", "uid": 45 }
+  ]
+}
+```
+
+失败响应示例：
+```json
+{ "success": false, "error": "Missing or invalid 'entities' array" }
+```
+
+
 ---
 
 ## 4. ReaderService
