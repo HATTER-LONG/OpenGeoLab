@@ -118,8 +118,11 @@ public:
     // Entity Relationship Queries
     // -------------------------------------------------------------------------
 
-    [[nodiscard]] std::vector<EntityId> findRelatedEntities(EntityId edge_entity_id,
-                                                            EntityType related_type) const;
+    [[nodiscard]] std::vector<EntityKey>
+    findRelatedEntities(EntityId entity_id, EntityType related_type) const override;
+
+    [[nodiscard]] std::vector<EntityKey> findRelatedEntities(
+        EntityUID entity_uid, EntityType entity_type, EntityType related_type) const override;
 
     // -------------------------------------------------------------------------
     // Relationship Edge Management

@@ -11,6 +11,7 @@
 #include "geometry/geometry_types.hpp"
 
 #include <cstdint>
+#include <unordered_set>
 #include <vector>
 
 namespace OpenGeoLab::Render {
@@ -107,14 +108,9 @@ struct RenderMesh {
         Geometry::INVALID_ENTITY_UID}; ///< Type-scoped UID (for picking)
     Geometry::EntityType m_entityType{Geometry::EntityType::None}; ///< Entity type
 
-    Geometry::EntityId m_owningPartId{
-        Geometry::INVALID_ENTITY_ID}; ///< Owning part entity ID (if applicable)
-
-    Geometry::EntityId m_owningSolidId{
-        Geometry::INVALID_ENTITY_ID}; ///< Owning solid entity ID (if applicable)
-
-    Geometry::EntityId m_owningWireId{
-        Geometry::INVALID_ENTITY_ID}; ///< Owning wire entity ID (if applicable)
+    Geometry::EntityKey m_owningPart{};    ///< Owning part entity (if applicable)
+    Geometry::EntityKey m_owningSolid{};   ///< Owning solid entity (if applicable)
+    Geometry::EntityKeySet m_owningWire{}; ///< Owning wire entity (if applicable)
 
     RenderPrimitiveType m_primitiveType{RenderPrimitiveType::Triangles}; ///< Primitive type
 

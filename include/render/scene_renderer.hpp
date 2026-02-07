@@ -167,6 +167,10 @@ private:
         Geometry::EntityType m_entityType{Geometry::EntityType::None};
         Geometry::EntityUID m_entityUid{Geometry::INVALID_ENTITY_UID};
 
+        Geometry::EntityUID m_owningPartUid{Geometry::INVALID_ENTITY_UID};
+        Geometry::EntityUID m_owningSolidUid{Geometry::INVALID_ENTITY_UID};
+        std::unordered_set<Geometry::EntityUID> m_owningWireUid{};
+
         QVector4D m_hoverColor{1.0f, 1.0f, 1.0f, 1.0f};
         QVector4D m_selectedColor{1.0f, 1.0f, 1.0f, 1.0f};
 

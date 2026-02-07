@@ -102,36 +102,31 @@ bool EntityRelationshipIndex::buildRelationships() {
 
     const auto entities = m_entityIndex.snapshotEntities();
 
-    // Build reverse for non-parts.
+    // Build caches for fast ancestor/descendant queries.
+    // - m_reverseEntityToRelatedTargets: walk upward (child -> parents)
+    // - m_fullDescendants: walk downward (parent -> children)
     for(const auto& entity : entities) {
         if(!entity) {
             continue;
         }
-        if(entity->entityType() == EntityType::Part) {
+        if(entity->entityType() == EntityType::None) {
             continue;
         }
 
-        RelatedTargets targets;
-        std::unordered_set<EntityKey, EntityKeyHash> visited;
         const EntityKey entity_key = entity->entityKey();
-        buildReverseRecursive(entity_key, targets, visited);
-        m_reverseEntityToRelatedTargets[entity_key] = std::move(targets);
-    }
 
-    // Build full descendants for parts.
-    for(const auto& entity : entities) {
-        if(!entity) {
-            continue;
+        {
+            RelatedTargets targets;
+            std::unordered_set<EntityKey, EntityKeyHash> visited;
+            buildReverseRecursive(entity_key, targets, visited);
+            m_reverseEntityToRelatedTargets[entity_key] = std::move(targets);
         }
-        if(entity->entityType() != EntityType::Part) {
-            continue;
+        {
+            RelatedTargets targets;
+            std::unordered_set<EntityKey, EntityKeyHash> visited;
+            buildDescendantsRecursive(entity_key, targets, visited);
+            m_fullDescendants[entity_key] = std::move(targets);
         }
-
-        RelatedTargets targets;
-        std::unordered_set<EntityKey, EntityKeyHash> visited;
-        const EntityKey entity_key = entity->entityKey();
-        buildDescendantsRecursive(entity_key, targets, visited);
-        m_fullDescendants[entity_key] = std::move(targets);
     }
 
     m_cacheValid = true;
@@ -263,39 +258,48 @@ template <class KeySet> std::vector<EntityId> toIds(const KeySet& keys) {
     }
     return ids;
 }
+
+template <class KeySet> std::vector<EntityKey> toKeys(const KeySet& keys) {
+    std::vector<EntityKey> out;
+    out.reserve(keys.size());
+    for(const auto& k : keys) {
+        out.push_back(k);
+    }
+    return out;
+}
 } // namespace
 
-std::vector<EntityId> EntityRelationshipIndex::selectByType(const RelatedTargets& targets,
-                                                            EntityType target_type) {
+std::vector<EntityKey> EntityRelationshipIndex::selectByType(const RelatedTargets& targets,
+                                                             EntityType target_type) {
     switch(target_type) {
     case EntityType::Vertex:
-        return toIds(targets.m_nodes);
+        return toKeys(targets.m_nodes);
     case EntityType::Edge:
-        return toIds(targets.m_edges);
+        return toKeys(targets.m_edges);
     case EntityType::Wire:
-        return toIds(targets.m_wires);
+        return toKeys(targets.m_wires);
     case EntityType::Face:
-        return toIds(targets.m_faces);
+        return toKeys(targets.m_faces);
     case EntityType::Shell:
-        return toIds(targets.m_shells);
+        return toKeys(targets.m_shells);
     case EntityType::Solid:
-        return toIds(targets.m_solids);
+        return toKeys(targets.m_solids);
     case EntityType::CompSolid:
-        return toIds(targets.m_compSolids);
+        return toKeys(targets.m_compSolids);
     case EntityType::Compound:
-        return toIds(targets.m_compounds);
+        return toKeys(targets.m_compounds);
     case EntityType::Part:
-        return toIds(targets.m_parts);
+        return toKeys(targets.m_parts);
     default:
         break;
     }
     return {};
 }
 
-std::vector<EntityId>
+std::vector<EntityKey>
 EntityRelationshipIndex::findDescendantsNoCache(const EntityKey& source,
                                                 EntityType target_type) const {
-    std::vector<EntityId> result;
+    std::vector<EntityKey> result;
 
     std::unordered_set<EntityKey, EntityKeyHash> visited;
     std::queue<EntityKey> to_visit;
@@ -321,7 +325,7 @@ EntityRelationshipIndex::findDescendantsNoCache(const EntityKey& source,
         visited.insert(current);
 
         if(current.m_type == target_type) {
-            result.push_back(current.m_id);
+            result.push_back(current);
         }
 
         enqueue_direct_children(current);
@@ -330,9 +334,9 @@ EntityRelationshipIndex::findDescendantsNoCache(const EntityKey& source,
     return result;
 }
 
-std::vector<EntityId> EntityRelationshipIndex::findAncestorsNoCache(const EntityKey& source,
-                                                                    EntityType target_type) const {
-    std::vector<EntityId> result;
+std::vector<EntityKey> EntityRelationshipIndex::findAncestorsNoCache(const EntityKey& source,
+                                                                     EntityType target_type) const {
+    std::vector<EntityKey> result;
 
     std::unordered_set<EntityKey, EntityKeyHash> visited;
     std::queue<EntityKey> to_visit;
@@ -353,7 +357,7 @@ std::vector<EntityId> EntityRelationshipIndex::findAncestorsNoCache(const Entity
         visited.insert(current);
 
         if(current.m_type == target_type) {
-            result.push_back(current.m_id);
+            result.push_back(current);
         }
 
         const auto up_it = m_directParents.find(current);
@@ -401,27 +405,46 @@ std::vector<EntityId> EntityRelationshipIndex::directParents(const GeometryEntit
     return toIds(it->second);
 }
 
-std::vector<EntityId> EntityRelationshipIndex::findRelatedEntities(EntityId source_id,
-                                                                   EntityType target_type) const {
+std::vector<EntityKey> EntityRelationshipIndex::findRelatedEntities(EntityId source_id,
+                                                                    EntityType target_type) const {
     const auto source = m_entityIndex.findById(source_id);
     if(!source) {
         return {};
     }
-
     return findRelatedEntities(*source, target_type);
 }
 
-std::vector<EntityId> EntityRelationshipIndex::findRelatedEntities(const GeometryEntity& source,
-                                                                   EntityType target_type) const {
+std::vector<EntityKey> EntityRelationshipIndex::findRelatedEntities(EntityUID source_uid,
+                                                                    EntityType source_type,
+                                                                    EntityType target_type) const {
+    const auto source = m_entityIndex.findByUIDAndType(source_uid, source_type);
+    if(!source) {
+        return {};
+    }
+    return findRelatedEntities(*source, target_type);
+}
+std::vector<EntityKey> EntityRelationshipIndex::findRelatedEntities(const GeometryEntity& source,
+                                                                    EntityType target_type) const {
     const EntityType source_type = source.entityType();
     if(source_type == EntityType::None) {
+        return {};
+    }
+    if(target_type == EntityType::None) {
         return {};
     }
 
     const EntityKey source_key = source.entityKey();
     std::shared_lock lock(m_indexMutex);
 
-    if(source_type == EntityType::Part) {
+    // Direction decision:
+    // - Part: always treated as a container; queries are descendant-oriented.
+    // - Other types: if target is "lower" in the topology chain, query descendants;
+    //               otherwise query ancestors.
+    const bool query_descendants =
+        (source_type == EntityType::Part) ||
+        (static_cast<uint8_t>(target_type) < static_cast<uint8_t>(source_type));
+
+    if(query_descendants) {
         if(m_cacheValid) {
             const auto it = m_fullDescendants.find(source_key);
             if(it == m_fullDescendants.end()) {

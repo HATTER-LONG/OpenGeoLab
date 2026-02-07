@@ -33,15 +33,16 @@ public:
      * @brief Bitmask of selectable entity categories
      *
      * - Vertex/Edge/Face can be combined.
-     * - Solid/Part are mutually exclusive and also exclusive with Vertex/Edge/Face.
+     * - Wire/Solid/Part are mutually exclusive and also exclusive with Vertex/Edge/Face.
      */
     enum class PickTypes : uint8_t {
         None = 0,
         Vertex = 1u << 0u,
         Edge = 1u << 1u,
-        Face = 1u << 2u,
-        Solid = 1u << 3u,
-        Part = 1u << 4u,
+        Wire = 1u << 2u,
+        Face = 1u << 3u,
+        Solid = 1u << 4u,
+        Part = 1u << 5u,
     };
 
     /**

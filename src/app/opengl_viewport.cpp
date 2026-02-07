@@ -418,8 +418,14 @@ readPickPixels(PickingContext& ctx, const PickRegion& region, std::vector<uint8_
 [[nodiscard]] PickHit findBestPickHit(const QSize& viewport_size,
                                       const PickRegion& region,
                                       const std::vector<uint8_t>& pixels,
-                                      Render::SelectManager& select_manager) {
+                                      Render::SelectManager& select_manager,
+                                      Render::SelectManager::PickTypes pick_types) {
     PickHit best;
+
+    const bool wants_part = pick_types == Render::SelectManager::PickTypes::Part;
+    const bool wants_solid = pick_types == Render::SelectManager::PickTypes::Solid;
+    const bool wants_wire = pick_types == Render::SelectManager::PickTypes::Wire;
+    const bool wants_owner_mapping = wants_part || wants_solid || wants_wire;
 
     for(int iy = 0; iy < region.m_readH; ++iy) {
         const int sample_gl_y = region.m_y0Gl + iy;
@@ -439,9 +445,25 @@ readPickPixels(PickingContext& ctx, const PickRegion& region, std::vector<uint8_
 
             const auto uid = decodeUid24(r, g, b);
             const auto type = static_cast<Geometry::EntityType>(a);
-            if(type == Geometry::EntityType::None || uid == Geometry::INVALID_ENTITY_UID ||
-               !select_manager.isTypePickable(type)) {
+            if(type == Geometry::EntityType::None || uid == Geometry::INVALID_ENTITY_UID) {
                 continue;
+            }
+
+            if(!wants_owner_mapping) {
+                if(!select_manager.isTypePickable(type)) {
+                    continue;
+                }
+            } else {
+                // Owner-mapping pick modes:
+                // - Part/Solid: pick via Face, then map to owning Part/Solid.
+                // - Wire: prefer picking Edge (thin features), fallback to Face->owning Wire.
+                if((wants_part || wants_solid) && type != Geometry::EntityType::Face) {
+                    continue;
+                }
+                if(wants_wire && (type != Geometry::EntityType::Edge) &&
+                   (type != Geometry::EntityType::Face)) {
+                    continue;
+                }
             }
 
             PickHit candidate;
@@ -494,17 +516,67 @@ void processPicking(PickingContext& ctx) {
         return;
     }
 
-    const PickHit best = findBestPickHit(ctx.m_viewportSize, region, pixels, ctx.m_selectManager);
-    const auto type = best.m_type;
-    const auto uid = best.m_uid;
+    const auto pick_types = ctx.m_selectManager.pickTypes();
+    const PickHit best =
+        findBestPickHit(ctx.m_viewportSize, region, pixels, ctx.m_selectManager, pick_types);
+
+    auto type = best.m_type;
+    auto uid = best.m_uid;
 
     // Map sub-entity -> owning Part/Solid when pick mode requests it.
-    const auto pick_types = ctx.m_selectManager.pickTypes();
     const bool wants_part = pick_types == Render::SelectManager::PickTypes::Part;
     const bool wants_solid = pick_types == Render::SelectManager::PickTypes::Solid;
+    const bool wants_wire = pick_types == Render::SelectManager::PickTypes::Wire;
 
-    if((wants_part || wants_solid) && (type != Geometry::EntityType::None) &&
+    const auto document = Render::RenderSceneController::instance().currentDocument();
+    if(document) {
+        if(wants_wire && (type == Geometry::EntityType::Edge) &&
+           (uid != Geometry::INVALID_ENTITY_UID)) {
+            const auto owning_wires = document->findRelatedEntities(uid, Geometry::EntityType::Edge,
+                                                                    Geometry::EntityType::Wire);
+            if(!owning_wires.empty() &&
+               owning_wires.front().m_uid != Geometry::INVALID_ENTITY_UID) {
+                type = Geometry::EntityType::Wire;
+                uid = owning_wires.front().m_uid;
+            } else {
+                type = Geometry::EntityType::None;
+                uid = Geometry::INVALID_ENTITY_UID;
+            }
+        }
+    }
+
+    if((wants_part || wants_solid || wants_wire) && (type == Geometry::EntityType::Face) &&
        (uid != Geometry::INVALID_ENTITY_UID)) {
+        if(document) {
+            if(wants_part) {
+                const auto owning_parts = document->findRelatedEntities(
+                    uid, Geometry::EntityType::Face, Geometry::EntityType::Part);
+                if(!owning_parts.empty() &&
+                   owning_parts.front().m_uid != Geometry::INVALID_ENTITY_UID) {
+                    type = Geometry::EntityType::Part;
+                    uid = owning_parts.front().m_uid;
+                }
+            } else if(wants_solid) {
+                const auto owning_solids = document->findRelatedEntities(
+                    uid, Geometry::EntityType::Face, Geometry::EntityType::Solid);
+                if(!owning_solids.empty() &&
+                   owning_solids.front().m_uid != Geometry::INVALID_ENTITY_UID) {
+                    type = Geometry::EntityType::Solid;
+                    uid = owning_solids.front().m_uid;
+                }
+            } else if(wants_wire) {
+                const auto owning_wires = document->findRelatedEntities(
+                    uid, Geometry::EntityType::Face, Geometry::EntityType::Wire);
+                if(!owning_wires.empty() &&
+                   owning_wires.front().m_uid != Geometry::INVALID_ENTITY_UID) {
+                    type = Geometry::EntityType::Wire;
+                    uid = owning_wires.front().m_uid;
+                } else {
+                    type = Geometry::EntityType::None;
+                    uid = Geometry::INVALID_ENTITY_UID;
+                }
+            }
+        }
     }
 
     if(type != ctx.m_lastHoverType || uid != ctx.m_lastHoverUid) {

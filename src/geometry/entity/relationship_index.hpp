@@ -32,10 +32,14 @@ public:
 
     [[nodiscard]] bool buildRelationships();
 
-    [[nodiscard]] std::vector<EntityId> findRelatedEntities(EntityId source_id,
-                                                            EntityType target_type) const;
-    [[nodiscard]] std::vector<EntityId> findRelatedEntities(const GeometryEntity& source,
-                                                            EntityType target_type) const;
+    [[nodiscard]] std::vector<EntityKey> findRelatedEntities(EntityId source_id,
+                                                             EntityType target_type) const;
+
+    [[nodiscard]] std::vector<EntityKey>
+    findRelatedEntities(EntityUID source_uid, EntityType source_type, EntityType target_type) const;
+
+    [[nodiscard]] std::vector<EntityKey> findRelatedEntities(const GeometryEntity& source,
+                                                             EntityType target_type) const;
 
     /// Direct adjacency (order unspecified).
     [[nodiscard]] std::vector<EntityId> directChildren(EntityId parent_id) const;
@@ -67,13 +71,13 @@ private:
                                    RelatedTargets& targets,
                                    std::unordered_set<EntityKey, EntityKeyHash>& visited);
 
-    [[nodiscard]] std::vector<EntityId> findDescendantsNoCache(const EntityKey& source,
-                                                               EntityType target_type) const;
-    [[nodiscard]] std::vector<EntityId> findAncestorsNoCache(const EntityKey& source,
-                                                             EntityType target_type) const;
+    [[nodiscard]] std::vector<EntityKey> findDescendantsNoCache(const EntityKey& source,
+                                                                EntityType target_type) const;
+    [[nodiscard]] std::vector<EntityKey> findAncestorsNoCache(const EntityKey& source,
+                                                              EntityType target_type) const;
 
-    [[nodiscard]] static std::vector<EntityId> selectByType(const RelatedTargets& targets,
-                                                            EntityType target_type);
+    [[nodiscard]] static std::vector<EntityKey> selectByType(const RelatedTargets& targets,
+                                                             EntityType target_type);
     mutable std::shared_mutex m_indexMutex;
 
     EntityIndex& m_entityIndex;

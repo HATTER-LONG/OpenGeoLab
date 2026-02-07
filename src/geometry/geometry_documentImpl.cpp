@@ -316,9 +316,15 @@ void GeometryDocumentImpl::invalidateRenderData() {
     std::lock_guard<std::mutex> lock(m_renderDataMutex);
     m_renderDataValid = false;
 }
-std::vector<EntityId> GeometryDocumentImpl::findRelatedEntities(EntityId entity_id,
-                                                                EntityType related_type) const {
+std::vector<EntityKey> GeometryDocumentImpl::findRelatedEntities(EntityId entity_id,
+                                                                 EntityType related_type) const {
     return m_relationshipIndex.findRelatedEntities(entity_id, related_type);
+}
+
+std::vector<EntityKey> GeometryDocumentImpl::findRelatedEntities(EntityUID entity_uid,
+                                                                 EntityType entity_type,
+                                                                 EntityType related_type) const {
+    return m_relationshipIndex.findRelatedEntities(entity_uid, entity_type, related_type);
 }
 Render::RenderMesh
 GeometryDocumentImpl::generateFaceMesh(const GeometryEntityPtr& entity,
@@ -342,16 +348,16 @@ GeometryDocumentImpl::generateFaceMesh(const GeometryEntityPtr& entity,
     if(parts.empty()) {
         return mesh;
     }
-    auto owning_part_id = parts.front();
+    mesh.m_owningPart = parts.front();
+    auto owning_part_id = mesh.m_owningPart.m_id;
     // Use entity ID for consistent color assignment
     face_color = PartColorPalette::getColorByEntityId(owning_part_id);
-    mesh.m_owningPartId = owning_part_id;
 
     if(!solids.empty()) {
-        mesh.m_owningSolidId = solids.front();
+        mesh.m_owningSolid = solids.front();
     }
     if(!wires.empty()) {
-        mesh.m_owningWireId = wires.front();
+        mesh.m_owningWire.insert(wires.begin(), wires.end());
     }
 
     // Mesh-level colors (base/hover/selected). Base is kept consistent with per-vertex colors.
@@ -442,6 +448,22 @@ GeometryDocumentImpl::generateEdgeMesh(const GeometryEntityPtr& entity,
     mesh.m_entityType = EntityType::Edge;
     mesh.m_entityUid = entity->entityUID();
     mesh.m_primitiveType = Render::RenderPrimitiveType::LineStrip;
+
+    // Owning info (for selection propagation & wire picking/highlighting)
+    {
+        const auto owning_parts = findRelatedEntities(entity->entityId(), EntityType::Part);
+        if(!owning_parts.empty()) {
+            mesh.m_owningPart = owning_parts.front();
+        }
+        const auto owning_solids = findRelatedEntities(entity->entityId(), EntityType::Solid);
+        if(!owning_solids.empty()) {
+            mesh.m_owningSolid = owning_solids.front();
+        }
+        const auto owning_wires = findRelatedEntities(entity->entityId(), EntityType::Wire);
+        if(!owning_wires.empty()) {
+            mesh.m_owningWire.insert(owning_wires.begin(), owning_wires.end());
+        }
+    }
 
     // Edge color: yellow for visibility
     constexpr float edge_color[4] = {1.0f, 0.8f, 0.2f, 1.0f};
@@ -534,6 +556,22 @@ Render::RenderMesh GeometryDocumentImpl::generateVertexMesh(const GeometryEntity
     const auto& shape = entity->shape();
     if(shape.IsNull()) {
         return mesh;
+    }
+
+    // Owning info (for selection propagation & wire picking/highlighting)
+    {
+        const auto owning_parts = findRelatedEntities(entity->entityId(), EntityType::Part);
+        if(!owning_parts.empty()) {
+            mesh.m_owningPart = owning_parts.front();
+        }
+        const auto owning_solids = findRelatedEntities(entity->entityId(), EntityType::Solid);
+        if(!owning_solids.empty()) {
+            mesh.m_owningSolid = owning_solids.front();
+        }
+        const auto owning_wires = findRelatedEntities(entity->entityId(), EntityType::Wire);
+        if(!owning_wires.empty()) {
+            mesh.m_owningWire.insert(owning_wires.begin(), owning_wires.end());
+        }
     }
 
     const TopoDS_Vertex& vertex = TopoDS::Vertex(shape);

@@ -285,6 +285,11 @@ void SceneRenderer::uploadMeshData(const DocumentRenderData& render_data) {
             buffers.m_primitiveType = mesh.m_primitiveType;
             buffers.m_entityType = mesh.m_entityType;
             buffers.m_entityUid = mesh.m_entityUid;
+            buffers.m_owningPartUid = mesh.m_owningPart.m_uid;
+            buffers.m_owningSolidUid = mesh.m_owningSolid.m_uid;
+            for(const Geometry::EntityKey& key : mesh.m_owningWire) {
+                buffers.m_owningWireUid.emplace(key.m_uid);
+            }
             buffers.m_hoverColor = QVector4D(mesh.m_hoverColor.m_r, mesh.m_hoverColor.m_g,
                                              mesh.m_hoverColor.m_b, mesh.m_hoverColor.m_a);
             buffers.m_selectedColor = QVector4D(mesh.m_selectedColor.m_r, mesh.m_selectedColor.m_g,
@@ -417,6 +422,16 @@ void SceneRenderer::renderMeshes(const QMatrix4x4& mvp,
         return (static_cast<uint32_t>(a) & 0xFFFFFFu) == (static_cast<uint32_t>(b) & 0xFFFFFFu);
     };
 
+    auto uid_matches_set_24 = [&](const std::unordered_set<Geometry::EntityUID>& uid_set,
+                                  Geometry::EntityUID uid) {
+        for(const Geometry::EntityUID& set_uid : uid_set) {
+            if(uid_matches_24(set_uid, uid)) {
+                return true;
+            }
+        }
+        return false;
+    };
+
     auto set_override_color = [&](bool enabled, const QVector4D& color) {
         m_meshShader->setUniformValue(m_useOverrideColorLoc, enabled ? 1 : 0);
         if(enabled) {
@@ -447,11 +462,22 @@ void SceneRenderer::renderMeshes(const QMatrix4x4& mvp,
     glEnable(GL_POLYGON_OFFSET_FILL);
     glPolygonOffset(1.0f, 1.0f);
     for(auto& buffers : m_faceMeshBuffers) {
-        const bool is_selected = Render::SelectManager::instance().containsSelection(
-            buffers.m_entityUid, buffers.m_entityType);
-        const bool is_hover = (m_hoverHighlightType != Geometry::EntityType::None) &&
-                              (buffers.m_entityType == m_hoverHighlightType) &&
-                              uid_matches_24(buffers.m_entityUid, m_hoverHighlightUid);
+        auto& select_manager = Render::SelectManager::instance();
+        const bool is_selected =
+            select_manager.containsSelection(buffers.m_entityUid, buffers.m_entityType) ||
+            select_manager.containsSelection(buffers.m_owningPartUid, Geometry::EntityType::Part) ||
+            select_manager.containsSelection(buffers.m_owningSolidUid,
+                                             Geometry::EntityType::Solid) ||
+            false;
+
+        bool is_hover = false;
+        if(m_hoverHighlightType == Geometry::EntityType::Face) {
+            is_hover = uid_matches_24(buffers.m_entityUid, m_hoverHighlightUid);
+        } else if(m_hoverHighlightType == Geometry::EntityType::Part) {
+            is_hover = uid_matches_24(buffers.m_owningPartUid, m_hoverHighlightUid);
+        } else if(m_hoverHighlightType == Geometry::EntityType::Solid) {
+            is_hover = uid_matches_24(buffers.m_owningSolidUid, m_hoverHighlightUid);
+        }
 
         if(is_selected) {
             set_override_color(true, buffers.m_selectedColor);
@@ -470,13 +496,31 @@ void SceneRenderer::renderMeshes(const QMatrix4x4& mvp,
     glDepthFunc(GL_LEQUAL);
     m_meshShader->setUniformValue(m_useLightingLoc, 0);
     for(auto& buffers : m_edgeMeshBuffers) {
-        const bool is_hover = (m_hoverHighlightType == Geometry::EntityType::Edge) &&
-                              (buffers.m_entityType == m_hoverHighlightType) &&
-                              uid_matches_24(buffers.m_entityUid, m_hoverHighlightUid);
+        auto& select_manager = Render::SelectManager::instance();
+        const bool is_hover = ((m_hoverHighlightType == Geometry::EntityType::Edge) &&
+                               (buffers.m_entityType == m_hoverHighlightType) &&
+                               uid_matches_24(buffers.m_entityUid, m_hoverHighlightUid)) ||
+                              ((m_hoverHighlightType == Geometry::EntityType::Wire) &&
+                               uid_matches_set_24(buffers.m_owningWireUid, m_hoverHighlightUid)) ||
+                              ((m_hoverHighlightType == Geometry::EntityType::Part) &&
+                               uid_matches_24(buffers.m_owningPartUid, m_hoverHighlightUid)) ||
+                              ((m_hoverHighlightType == Geometry::EntityType::Solid) &&
+                               uid_matches_24(buffers.m_owningSolidUid, m_hoverHighlightUid));
+
         float line_width = is_hover ? 4.0f : 2.0f;
         glLineWidth(line_width);
-        const bool is_selected = Render::SelectManager::instance().containsSelection(
-            buffers.m_entityUid, buffers.m_entityType);
+        bool is_selected =
+            select_manager.containsSelection(buffers.m_entityUid, buffers.m_entityType) ||
+            select_manager.containsSelection(buffers.m_owningPartUid, Geometry::EntityType::Part) ||
+            select_manager.containsSelection(buffers.m_owningSolidUid, Geometry::EntityType::Solid);
+        if(!is_selected) {
+            for(const Geometry::EntityUID& wire_uid : buffers.m_owningWireUid) {
+                if(select_manager.containsSelection(wire_uid, Geometry::EntityType::Wire)) {
+                    is_selected = true;
+                    break;
+                }
+            }
+        }
 
         if(is_selected) {
             set_override_color(true, buffers.m_selectedColor);
@@ -494,12 +538,29 @@ void SceneRenderer::renderMeshes(const QMatrix4x4& mvp,
     glDepthFunc(GL_LEQUAL);
     m_meshShader->setUniformValue(m_useLightingLoc, 0);
     for(auto& buffers : m_vertexMeshBuffers) {
-        const bool is_hover = (m_hoverHighlightType == Geometry::EntityType::Vertex) &&
-                              (buffers.m_entityType == m_hoverHighlightType) &&
-                              uid_matches_24(buffers.m_entityUid, m_hoverHighlightUid);
-        const bool is_selected = Render::SelectManager::instance().containsSelection(
-            buffers.m_entityUid, buffers.m_entityType);
+        const bool is_hover = ((m_hoverHighlightType == Geometry::EntityType::Vertex) &&
+                               (buffers.m_entityType == m_hoverHighlightType) &&
+                               uid_matches_24(buffers.m_entityUid, m_hoverHighlightUid)) ||
+                              ((m_hoverHighlightType == Geometry::EntityType::Part) &&
+                               uid_matches_24(buffers.m_owningPartUid, m_hoverHighlightUid)) ||
+                              ((m_hoverHighlightType == Geometry::EntityType::Wire) &&
+                               uid_matches_set_24(buffers.m_owningWireUid, m_hoverHighlightUid)) ||
+                              ((m_hoverHighlightType == Geometry::EntityType::Solid) &&
+                               uid_matches_24(buffers.m_owningSolidUid, m_hoverHighlightUid));
 
+        auto& select_manager = Render::SelectManager::instance();
+        bool is_selected =
+            select_manager.containsSelection(buffers.m_entityUid, buffers.m_entityType) ||
+            select_manager.containsSelection(buffers.m_owningPartUid, Geometry::EntityType::Part) ||
+            select_manager.containsSelection(buffers.m_owningSolidUid, Geometry::EntityType::Solid);
+        if(!is_selected) {
+            for(const Geometry::EntityUID& wire_uid : buffers.m_owningWireUid) {
+                if(select_manager.containsSelection(wire_uid, Geometry::EntityType::Wire)) {
+                    is_selected = true;
+                    break;
+                }
+            }
+        }
         float vertex_size = is_hover ? 9.0f : is_selected ? 7.0f : 6.0f;
         m_meshShader->setUniformValue(m_pointSizeLoc, vertex_size);
         if(is_selected) {

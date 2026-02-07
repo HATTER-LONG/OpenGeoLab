@@ -75,6 +75,8 @@ bool SelectManager::isTypePickable(Geometry::EntityType type) const {
         return hasAny(m_pickTypes, PickTypes::Vertex);
     case Geometry::EntityType::Edge:
         return hasAny(m_pickTypes, PickTypes::Edge);
+    case Geometry::EntityType::Wire:
+        return hasAny(m_pickTypes, PickTypes::Wire);
     case Geometry::EntityType::Face:
         return hasAny(m_pickTypes, PickTypes::Face);
     case Geometry::EntityType::Solid:
@@ -179,28 +181,27 @@ Util::ScopedConnection SelectManager::subscribeSelectionChanged(
 
 SelectManager::PickTypes SelectManager::normalizePickTypes(PickTypes types) {
     // Exclusivity rules:
-    // - If Solid or Part is set, they must be exclusive and clear all others.
-    // - If any of Vertex/Edge/Face are set, Solid/Part must be cleared.
+    // - Wire/Solid/Part are exclusive and clear all others.
+    // - Vertex/Edge/Face can be combined with each other.
+    // - Any of (Wire/Solid/Part) is exclusive with any of (Vertex/Edge/Face).
 
     const bool wants_solid = hasAny(types, PickTypes::Solid);
     const bool wants_part = hasAny(types, PickTypes::Part);
+    const bool wants_wire = hasAny(types, PickTypes::Wire);
 
-    if(wants_solid && !wants_part) {
+    if(wants_part) {
+        return PickTypes::Part;
+    }
+    if(wants_solid) {
         return PickTypes::Solid;
     }
-    if(wants_part && !wants_solid) {
-        return PickTypes::Part;
-    }
-
-    // Solid and Part both requested: prefer Part (explicit UI-level selection).
-    if(wants_part && wants_solid) {
-        return PickTypes::Part;
+    if(wants_wire) {
+        return PickTypes::Wire;
     }
 
     // Only V/E/F mask.
     constexpr PickTypes vef_mask = PickTypes::Vertex | PickTypes::Edge | PickTypes::Face;
-    const PickTypes vef = types & vef_mask;
-    return vef;
+    return types & vef_mask;
 }
 
 bool SelectManager::isValidSelection(Geometry::EntityUID uid, Geometry::EntityType type) {

@@ -14,9 +14,10 @@ Item {
     readonly property int none_type: 0
     readonly property int vertex_type: 1
     readonly property int edge_type: 2
-    readonly property int face_type: 4
-    readonly property int solid_type: 8
-    readonly property int part_type: 16
+    readonly property int wire_type: 4
+    readonly property int face_type: 8
+    readonly property int solid_type: 16
+    readonly property int part_type: 32
 
     property int selectedTypes: none_type
 
@@ -37,10 +38,10 @@ Item {
     function onEntityTypeClicked(type) {
         var current = root.selectedTypes;
         if ((current & type) === 0) {
-            if (type === root.part_type || type === root.solid_type) {
+            if (type === root.part_type || type === root.solid_type || type === root.wire_type) {
                 current = root.none_type;
             } else if (type === root.vertex_type || type === root.edge_type || type === root.face_type) {
-                current &= ~(root.solid_type | root.part_type);
+                current &= ~(root.wire_type | root.solid_type | root.part_type);
             }
             current |= type;
         } else {
@@ -135,6 +136,16 @@ Item {
                 iconSource: "qrc:/opengeolab/resources/icons/face.svg"
                 selected: ((root.selectedTypes & root.face_type) !== 0)
                 onClicked: root.onEntityTypeClicked(root.face_type)
+            }
+
+            EntityTypeButton {
+                Layout.fillWidth: true
+                Layout.preferredWidth: 56
+                visible: root.isEntityTypeVisible(root.wire_type)
+                entityType: "Wire"
+                iconSource: "qrc:/opengeolab/resources/icons/wire.svg"
+                selected: ((root.selectedTypes & root.wire_type) !== 0)
+                onClicked: root.onEntityTypeClicked(root.wire_type)
             }
 
             EntityTypeButton {

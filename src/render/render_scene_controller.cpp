@@ -93,6 +93,10 @@ bool RenderSceneController::hasGeometry() const { return m_hasGeometry; }
 
 const DocumentRenderData& RenderSceneController::renderData() const { return m_renderData; }
 
+Geometry::GeometryDocumentPtr RenderSceneController::currentDocument() const {
+    return m_currentDocument;
+}
+
 CameraState& RenderSceneController::camera() { return m_camera; }
 
 const CameraState& RenderSceneController::camera() const { return m_camera; }

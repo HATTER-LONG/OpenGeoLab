@@ -128,6 +128,13 @@ Rectangle {
             }
 
             EntityCountRow {
+                label: qsTr("Wires")
+                count: root.partData.entity_counts ? root.partData.entity_counts.wires : 0
+                iconSource: "qrc:/opengeolab/resources/icons/wire.svg"
+                visible: (root.partData.entity_counts ? root.partData.entity_counts.wires : 0) > 0
+            }
+
+            EntityCountRow {
                 label: qsTr("Vertices")
                 count: root.partData.entity_counts ? root.partData.entity_counts.vertices : 0
                 iconSource: "qrc:/opengeolab/resources/icons/vertex.svg"

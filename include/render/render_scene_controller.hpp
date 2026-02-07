@@ -100,6 +100,14 @@ public:
     [[nodiscard]] const DocumentRenderData& renderData() const;
 
     /**
+     * @brief Get the currently subscribed geometry document.
+     *
+     * This is primarily useful for pick/hover mapping (uid+type -> related entities)
+     * without scanning render meshes.
+     */
+    [[nodiscard]] Geometry::GeometryDocumentPtr currentDocument() const;
+
+    /**
      * @brief Get or set current camera state
      */
     [[nodiscard]] CameraState& camera();

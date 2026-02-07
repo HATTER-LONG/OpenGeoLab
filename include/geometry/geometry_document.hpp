@@ -146,6 +146,38 @@ public:
     virtual void invalidateRenderData() = 0;
 
     // -------------------------------------------------------------------------
+    // Relationship Queries
+    // -------------------------------------------------------------------------
+
+    /**
+     * @brief Find related entities by type.
+     *
+     * This is a high-level query backed by the document's relationship index.
+     * Typical use cases include mapping sub-entities (Face/Edge/Vertex) to their
+     * owning Part/Solid/Wire, or enumerating descendants of a Part.
+     *
+     * @param entity_id Source entity id
+     * @param related_type Related entity type to return
+     * @return Vector of related entity ids (order unspecified)
+     */
+    [[nodiscard]] virtual std::vector<EntityKey>
+    findRelatedEntities(EntityId entity_id, EntityType related_type) const = 0;
+
+    /**
+     * @brief Find related entities by type, starting from a (uid,type) handle.
+     *
+     * This is a convenience wrapper around the relationship index for external
+     * callers that only have the pick handle (uid+type).
+     *
+     * @param entity_uid Source entity uid
+     * @param entity_type Source entity type
+     * @param related_type Related entity type to return
+     * @return Vector of related entity keys (order unspecified)
+     */
+    [[nodiscard]] virtual std::vector<EntityKey> findRelatedEntities(
+        EntityUID entity_uid, EntityType entity_type, EntityType related_type) const = 0;
+
+    // -------------------------------------------------------------------------
     // Change Notification
     // -------------------------------------------------------------------------
 

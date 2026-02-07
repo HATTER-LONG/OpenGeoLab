@@ -16,6 +16,7 @@
 #include <functional>
 #include <limits>
 #include <string>
+#include <unordered_set>
 
 namespace OpenGeoLab::Geometry {
 
@@ -166,6 +167,10 @@ struct EntityKeyHash {
         return seed;
     }
 };
+
+using EntityKeySet = std::unordered_set<EntityKey, EntityKeyHash>;
+
+template <typename T> using EntityKeyMap = std::unordered_map<EntityKey, T, EntityKeyHash>;
 
 /**
  * @brief Generate a new globally unique EntityId

@@ -88,19 +88,19 @@ nlohmann::json GetPartListAction::execute(const nlohmann::json& /*params*/,
         nlohmann::json entity_ids;
         nlohmann::json face_ids = nlohmann::json::array();
         for(const auto& face : faces) {
-            face_ids.push_back(face);
+            face_ids.push_back(face.m_id);
         }
         entity_ids["face_ids"] = face_ids;
 
         nlohmann::json edge_ids = nlohmann::json::array();
         for(const auto& edge : edges) {
-            edge_ids.push_back(edge);
+            edge_ids.push_back(edge.m_id);
         }
         entity_ids["edge_ids"] = edge_ids;
 
         nlohmann::json vertex_ids = nlohmann::json::array();
         for(const auto& vertex : vertices) {
-            vertex_ids.push_back(vertex);
+            vertex_ids.push_back(vertex.m_id);
         }
         entity_ids["vertex_ids"] = vertex_ids;
 
