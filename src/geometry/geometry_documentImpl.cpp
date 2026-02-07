@@ -177,179 +177,6 @@ std::vector<GeometryEntityPtr> GeometryDocumentImpl::allEntities() const {
     return m_entityIndex.snapshotEntities();
 }
 
-std::vector<GeometryEntityPtr> GeometryDocumentImpl::findAncestors(EntityId entity_id,
-                                                                   EntityType ancestor_type) const {
-    std::vector<GeometryEntityPtr> result;
-    const auto entity = findById(entity_id);
-    if(!entity) {
-        return result;
-    }
-
-    // BFS traversal up the parent chain
-    std::unordered_set<EntityId> visited;
-    std::queue<EntityId> to_visit;
-
-    for(const auto parent_id : m_relationshipIndex.directParents(entity_id)) {
-        to_visit.push(parent_id);
-    }
-
-    while(!to_visit.empty()) {
-        EntityId current_id = to_visit.front();
-        to_visit.pop();
-
-        if(visited.count(current_id) > 0) {
-            continue;
-        }
-        visited.insert(current_id);
-
-        auto current = findById(current_id);
-        if(!current) {
-            continue;
-        }
-
-        if(current->entityType() == ancestor_type) {
-            result.push_back(current);
-        }
-
-        // Continue searching through parents
-        for(const auto parent_id : m_relationshipIndex.directParents(current_id)) {
-            if(visited.count(parent_id) == 0) {
-                to_visit.push(parent_id);
-            }
-        }
-    }
-
-    return result;
-}
-
-std::vector<GeometryEntityPtr>
-GeometryDocumentImpl::findDescendants(EntityId entity_id, EntityType descendant_type) const {
-    std::vector<GeometryEntityPtr> result;
-    const auto entity = findById(entity_id);
-    if(!entity) {
-        return result;
-    }
-
-    // BFS traversal down the child tree
-    std::unordered_set<EntityId> visited;
-    std::queue<EntityId> to_visit;
-
-    for(const auto child_id : m_relationshipIndex.directChildren(entity_id)) {
-        to_visit.push(child_id);
-    }
-
-    while(!to_visit.empty()) {
-        EntityId current_id = to_visit.front();
-        to_visit.pop();
-
-        if(visited.count(current_id) > 0) {
-            continue;
-        }
-        visited.insert(current_id);
-
-        auto current = findById(current_id);
-        if(!current) {
-            continue;
-        }
-
-        if(current->entityType() == descendant_type) {
-            result.push_back(current);
-        }
-
-        // Continue searching through children
-        for(const auto child_id : m_relationshipIndex.directChildren(current_id)) {
-            if(visited.count(child_id) == 0) {
-                to_visit.push(child_id);
-            }
-        }
-    }
-
-    return result;
-}
-
-GeometryEntityPtr GeometryDocumentImpl::findOwningPart(EntityId entity_id) const {
-    const auto entity = findById(entity_id);
-    if(!entity) {
-        return nullptr;
-    }
-
-    // If this is already a Part, return it
-    if(entity->entityType() == EntityType::Part) {
-        return entity;
-    }
-
-    // Traverse up the parent chain to find a Part
-    std::unordered_set<EntityId> visited;
-    std::queue<EntityId> to_visit;
-
-    for(const auto parent_id : m_relationshipIndex.directParents(entity_id)) {
-        to_visit.push(parent_id);
-    }
-
-    while(!to_visit.empty()) {
-        EntityId current_id = to_visit.front();
-        to_visit.pop();
-
-        if(visited.count(current_id) > 0) {
-            continue;
-        }
-        visited.insert(current_id);
-
-        auto current = findById(current_id);
-        if(!current) {
-            continue;
-        }
-
-        if(current->entityType() == EntityType::Part) {
-            return current;
-        }
-
-        for(const auto parent_id : m_relationshipIndex.directParents(current_id)) {
-            if(visited.count(parent_id) == 0) {
-                to_visit.push(parent_id);
-            }
-        }
-    }
-
-    return nullptr;
-}
-
-std::vector<GeometryEntityPtr>
-GeometryDocumentImpl::findRelatedEntities(EntityId edge_entity_id, EntityType related_type) const {
-    std::vector<GeometryEntityPtr> result;
-
-    const auto entity = findById(edge_entity_id);
-    if(!entity) {
-        return result;
-    }
-
-    // For edges, traverse up to find parent wires, then to faces
-    if(entity->entityType() == EntityType::Edge && related_type == EntityType::Face) {
-        std::unordered_set<EntityId> unique;
-
-        // Edge -> Wire -> Face
-        for(const auto wire_id : m_relationshipIndex.directParents(edge_entity_id)) {
-            const auto wire = findById(wire_id);
-            if(!wire || wire->entityType() != EntityType::Wire) {
-                continue;
-            }
-
-            for(const auto face_id : m_relationshipIndex.directParents(wire_id)) {
-                const auto face = findById(face_id);
-                if(face && face->entityType() == EntityType::Face &&
-                   unique.insert(face_id).second) {
-                    result.push_back(face);
-                }
-            }
-        }
-    } else {
-        // Generic approach: use findAncestors for other relationships
-        result = findAncestors(edge_entity_id, related_type);
-    }
-
-    return result;
-}
-
 bool GeometryDocumentImpl::addChildEdge(const GeometryEntity& parent, const GeometryEntity& child) {
     if(parent.entityId() == child.entityId()) {
         return false;
@@ -489,7 +316,10 @@ void GeometryDocumentImpl::invalidateRenderData() {
     std::lock_guard<std::mutex> lock(m_renderDataMutex);
     m_renderDataValid = false;
 }
-
+std::vector<EntityId> GeometryDocumentImpl::findRelatedEntities(EntityId entity_id,
+                                                                EntityType related_type) const {
+    return m_relationshipIndex.findRelatedEntities(entity_id, related_type);
+}
 Render::RenderMesh
 GeometryDocumentImpl::generateFaceMesh(const GeometryEntityPtr& entity,
                                        const Render::TessellationOptions& options) {
@@ -506,16 +336,22 @@ GeometryDocumentImpl::generateFaceMesh(const GeometryEntityPtr& entity,
 
     // Determine face color based on owning part
     PartColor face_color(0.7f, 0.7f, 0.7f, 1.0f); // Default gray
-    auto owning_part = findOwningPart(entity->entityId());
-    if(owning_part) {
-        // Use entity ID for consistent color assignment
-        face_color = PartColorPalette::getColorByEntityId(owning_part->entityId());
-        mesh.m_owningPartId = owning_part->entityId();
+    auto parts = findRelatedEntities(entity->entityId(), EntityType::Part);
+    auto solids = findRelatedEntities(entity->entityId(), EntityType::Solid);
+    auto wires = findRelatedEntities(entity->entityId(), EntityType::Wire);
+    if(parts.empty()) {
+        return mesh;
     }
+    auto owning_part_id = parts.front();
+    // Use entity ID for consistent color assignment
+    face_color = PartColorPalette::getColorByEntityId(owning_part_id);
+    mesh.m_owningPartId = owning_part_id;
 
-    auto owning_solids = findAncestors(entity->entityId(), EntityType::Solid);
-    if(!owning_solids.empty()) {
-        mesh.m_owningSolidId = owning_solids.front()->entityId();
+    if(!solids.empty()) {
+        mesh.m_owningSolidId = solids.front();
+    }
+    if(!wires.empty()) {
+        mesh.m_owningWireId = wires.front();
     }
 
     // Mesh-level colors (base/hover/selected). Base is kept consistent with per-vertex colors.

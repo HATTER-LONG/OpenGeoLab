@@ -59,12 +59,12 @@ nlohmann::json GetPartListAction::execute(const nlohmann::json& /*params*/,
         nlohmann::json entity_counts;
 
         // Find all descendants of this part
-        auto faces = document->findDescendants(part->entityId(), EntityType::Face);
-        auto edges = document->findDescendants(part->entityId(), EntityType::Edge);
-        auto vertices = document->findDescendants(part->entityId(), EntityType::Vertex);
-        auto solids = document->findDescendants(part->entityId(), EntityType::Solid);
-        auto shells = document->findDescendants(part->entityId(), EntityType::Shell);
-        auto wires = document->findDescendants(part->entityId(), EntityType::Wire);
+        auto faces = document->findRelatedEntities(part->entityId(), EntityType::Face);
+        auto edges = document->findRelatedEntities(part->entityId(), EntityType::Edge);
+        auto vertices = document->findRelatedEntities(part->entityId(), EntityType::Vertex);
+        auto solids = document->findRelatedEntities(part->entityId(), EntityType::Solid);
+        auto shells = document->findRelatedEntities(part->entityId(), EntityType::Shell);
+        auto wires = document->findRelatedEntities(part->entityId(), EntityType::Wire);
 
         size_t face_count = faces.size();
         size_t edge_count = edges.size();
@@ -88,19 +88,19 @@ nlohmann::json GetPartListAction::execute(const nlohmann::json& /*params*/,
         nlohmann::json entity_ids;
         nlohmann::json face_ids = nlohmann::json::array();
         for(const auto& face : faces) {
-            face_ids.push_back(face->entityId());
+            face_ids.push_back(face);
         }
         entity_ids["face_ids"] = face_ids;
 
         nlohmann::json edge_ids = nlohmann::json::array();
         for(const auto& edge : edges) {
-            edge_ids.push_back(edge->entityId());
+            edge_ids.push_back(edge);
         }
         entity_ids["edge_ids"] = edge_ids;
 
         nlohmann::json vertex_ids = nlohmann::json::array();
         for(const auto& vertex : vertices) {
-            vertex_ids.push_back(vertex->entityId());
+            vertex_ids.push_back(vertex);
         }
         entity_ids["vertex_ids"] = vertex_ids;
 

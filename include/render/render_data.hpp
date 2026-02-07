@@ -109,8 +109,12 @@ struct RenderMesh {
 
     Geometry::EntityId m_owningPartId{
         Geometry::INVALID_ENTITY_ID}; ///< Owning part entity ID (if applicable)
+
     Geometry::EntityId m_owningSolidId{
         Geometry::INVALID_ENTITY_ID}; ///< Owning solid entity ID (if applicable)
+
+    Geometry::EntityId m_owningWireId{
+        Geometry::INVALID_ENTITY_ID}; ///< Owning wire entity ID (if applicable)
 
     RenderPrimitiveType m_primitiveType{RenderPrimitiveType::Triangles}; ///< Primitive type
 

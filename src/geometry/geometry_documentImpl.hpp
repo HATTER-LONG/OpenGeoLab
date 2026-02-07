@@ -118,43 +118,8 @@ public:
     // Entity Relationship Queries
     // -------------------------------------------------------------------------
 
-    /**
-     * @brief Find ancestor entities of a specific type for a given entity.
-     * @param entity_id Source entity id.
-     * @param ancestor_type Type of ancestors to find.
-     * @return Vector of ancestor entities of the specified type.
-     * @note Traverses up the parent chain to find all ancestors of the given type.
-     */
-    [[nodiscard]] std::vector<GeometryEntityPtr> findAncestors(EntityId entity_id,
-                                                               EntityType ancestor_type) const;
-
-    /**
-     * @brief Find descendant entities of a specific type for a given entity.
-     * @param entity_id Source entity id.
-     * @param descendant_type Type of descendants to find.
-     * @return Vector of descendant entities of the specified type.
-     * @note Traverses down the child tree to find all descendants of the given type.
-     */
-    [[nodiscard]] std::vector<GeometryEntityPtr> findDescendants(EntityId entity_id,
-                                                                 EntityType descendant_type) const;
-
-    /**
-     * @brief Find the owning Part entity for a given entity.
-     * @param entity_id Source entity id.
-     * @return Part entity that owns this entity, or nullptr if not found.
-     * @note Traverses up the parent chain until a Part entity is found.
-     */
-    [[nodiscard]] GeometryEntityPtr findOwningPart(EntityId entity_id) const;
-
-    /**
-     * @brief Find related entities of a specific type for an edge entity.
-     * @param edge_entity_id Edge entity id.
-     * @param related_type Type of related entities (e.g., Face).
-     * @return Vector of related entities.
-     * @note For edges, this finds faces that share this edge. Useful for adjacency queries.
-     */
-    [[nodiscard]] std::vector<GeometryEntityPtr> findRelatedEntities(EntityId edge_entity_id,
-                                                                     EntityType related_type) const;
+    [[nodiscard]] std::vector<EntityId> findRelatedEntities(EntityId edge_entity_id,
+                                                            EntityType related_type) const;
 
     // -------------------------------------------------------------------------
     // Relationship Edge Management
