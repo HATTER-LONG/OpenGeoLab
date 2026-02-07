@@ -249,9 +249,11 @@ size_t EntityIndex::entityCountByType(EntityType entity_type) const {
 std::vector<GeometryEntityPtr> EntityIndex::entitiesByType(EntityType entity_type) const {
     std::vector<GeometryEntityPtr> result;
     result.reserve(entityCountByType(entity_type));
-    for(const auto& slot : m_slots) {
-        if(slot.m_entity && slot.m_entity->entityType() == entity_type) {
-            result.push_back(slot.m_entity);
+    auto maxid = getMaxIdByType(entity_type);
+    for(size_t id = 1; id <= maxid; ++id) {
+        auto entity = findByUIDAndType(static_cast<EntityUID>(id), entity_type);
+        if(entity) {
+            result.push_back(entity);
         }
     }
     return result;

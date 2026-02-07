@@ -109,6 +109,13 @@ constexpr EntityUID INVALID_ENTITY_UID = 0;
 [[nodiscard]] EntityUID generateEntityUID(EntityType type);
 
 /**
+ * @brief Get the maximum assigned EntityUID for a specific type
+ * @param type The entity type to query
+ * @return The maximum assigned EntityUID for the given type
+ */
+[[nodiscard]] uint32_t getMaxIdByType(EntityType type);
+
+/**
  * @brief Reset UID generator for a specific type (for testing purposes)
  * @param type The entity type to reset
  * @warning This function is intended for testing only

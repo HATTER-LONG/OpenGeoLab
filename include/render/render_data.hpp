@@ -107,6 +107,11 @@ struct RenderMesh {
         Geometry::INVALID_ENTITY_UID}; ///< Type-scoped UID (for picking)
     Geometry::EntityType m_entityType{Geometry::EntityType::None}; ///< Entity type
 
+    Geometry::EntityId m_owningPartId{
+        Geometry::INVALID_ENTITY_ID}; ///< Owning part entity ID (if applicable)
+    Geometry::EntityId m_owningSolidId{
+        Geometry::INVALID_ENTITY_ID}; ///< Owning solid entity ID (if applicable)
+
     RenderPrimitiveType m_primitiveType{RenderPrimitiveType::Triangles}; ///< Primitive type
 
     std::vector<RenderVertex> m_vertices; ///< Vertex data

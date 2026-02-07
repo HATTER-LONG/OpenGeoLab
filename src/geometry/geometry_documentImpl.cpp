@@ -560,6 +560,12 @@ GeometryDocumentImpl::generateFaceMesh(const GeometryEntityPtr& entity,
     if(owning_part) {
         // Use entity ID for consistent color assignment
         face_color = PartColorPalette::getColorByEntityId(owning_part->entityId());
+        mesh.m_owningPartId = owning_part->entityId();
+    }
+
+    auto owning_solids = findAncestors(entity->entityId(), EntityType::Solid);
+    if(!owning_solids.empty()) {
+        mesh.m_owningSolidId = owning_solids.front()->entityId();
     }
 
     // Mesh-level colors (base/hover/selected). Base is kept consistent with per-vertex colors.

@@ -498,6 +498,15 @@ void processPicking(PickingContext& ctx) {
     const auto type = best.m_type;
     const auto uid = best.m_uid;
 
+    // Map sub-entity -> owning Part/Solid when pick mode requests it.
+    const auto pick_types = ctx.m_selectManager.pickTypes();
+    const bool wants_part = pick_types == Render::SelectManager::PickTypes::Part;
+    const bool wants_solid = pick_types == Render::SelectManager::PickTypes::Solid;
+
+    if((wants_part || wants_solid) && (type != Geometry::EntityType::None) &&
+       (uid != Geometry::INVALID_ENTITY_UID)) {
+    }
+
     if(type != ctx.m_lastHoverType || uid != ctx.m_lastHoverUid) {
         ctx.m_lastHoverType = type;
         ctx.m_lastHoverUid = uid;
