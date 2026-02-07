@@ -23,6 +23,8 @@
 
 namespace OpenGeoLab::Render {
 
+class SelectManager;
+
 /**
  * @brief OpenGL scene renderer for geometry visualization
  *
@@ -101,10 +103,32 @@ public:
     void cleanup();
 
 private:
+    struct MeshBuffers;
+
     void setupShaders();
     void renderMeshes(const QMatrix4x4& mvp,
                       const QMatrix4x4& model_matrix,
                       const QVector3D& camera_pos);
+
+    [[nodiscard]] static GLenum toGlPrimitiveType(RenderPrimitiveType type);
+    [[nodiscard]] static bool uidMatches24(Geometry::EntityUID a, Geometry::EntityUID b);
+    [[nodiscard]] static bool
+    uidMatchesSet24(const std::unordered_set<Geometry::EntityUID>& uid_set,
+                    Geometry::EntityUID uid);
+
+    void setOverrideColor(bool enabled, const QVector4D& color);
+    void drawMesh(MeshBuffers& buffers, GLenum primitive);
+
+    [[nodiscard]] bool isMeshSelected(const MeshBuffers& buffers,
+                                      const SelectManager& select_manager) const;
+
+    [[nodiscard]] bool isFaceMeshHovered(const MeshBuffers& buffers) const;
+    [[nodiscard]] bool isEdgeMeshHovered(const MeshBuffers& buffers) const;
+    [[nodiscard]] bool isVertexMeshHovered(const MeshBuffers& buffers) const;
+
+    void renderFaceMeshes(const SelectManager& select_manager);
+    void renderEdgeMeshes(const SelectManager& select_manager);
+    void renderVertexMeshes(const SelectManager& select_manager);
 
     /**
      * @brief Upload a single mesh to GPU buffers

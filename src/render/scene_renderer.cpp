@@ -399,184 +399,200 @@ void SceneRenderer::renderMeshes(const QMatrix4x4& mvp,
     m_meshShader->setUniformValue(m_useOverrideColorLoc, 0);
     m_meshShader->setUniformValue(m_overrideColorLoc, QVector4D(1.0f, 1.0f, 0.0f, 1.0f));
 
-    auto get_primitive_type = [](RenderPrimitiveType type) -> GLenum {
-        switch(type) {
-        case RenderPrimitiveType::Points:
-            return GL_POINTS;
-        case RenderPrimitiveType::Lines:
-            return GL_LINES;
-        case RenderPrimitiveType::LineStrip:
-            return GL_LINE_STRIP;
-        case RenderPrimitiveType::Triangles:
-            return GL_TRIANGLES;
-        case RenderPrimitiveType::TriangleStrip:
-            return GL_TRIANGLE_STRIP;
-        case RenderPrimitiveType::TriangleFan:
-            return GL_TRIANGLE_FAN;
-        default:
-            return GL_TRIANGLES;
-        }
-    };
-
-    auto uid_matches_24 = [](Geometry::EntityUID a, Geometry::EntityUID b) {
-        return (static_cast<uint32_t>(a) & 0xFFFFFFu) == (static_cast<uint32_t>(b) & 0xFFFFFFu);
-    };
-
-    auto uid_matches_set_24 = [&](const std::unordered_set<Geometry::EntityUID>& uid_set,
-                                  Geometry::EntityUID uid) {
-        for(const Geometry::EntityUID& set_uid : uid_set) {
-            if(uid_matches_24(set_uid, uid)) {
-                return true;
-            }
-        }
-        return false;
-    };
-
-    auto set_override_color = [&](bool enabled, const QVector4D& color) {
-        m_meshShader->setUniformValue(m_useOverrideColorLoc, enabled ? 1 : 0);
-        if(enabled) {
-            m_meshShader->setUniformValue(m_overrideColorLoc, color);
-        }
-    };
-
-    auto draw_mesh = [&](MeshBuffers& buffers, GLenum primitive) {
-        buffers.m_vao->bind();
-        if(buffers.m_indexCount > 0) {
-            buffers.m_ebo->bind();
-            glDrawElements(primitive, buffers.m_indexCount, GL_UNSIGNED_INT, nullptr);
-        } else {
-            glDrawArrays(primitive, 0, buffers.m_vertexCount);
-        }
-        buffers.m_vao->release();
-    };
-
     // Enable shader-controlled point size
     glEnable(GL_PROGRAM_POINT_SIZE);
 
     // Set default point size for faces/edges
     m_meshShader->setUniformValue(m_pointSizeLoc, 1.0f);
 
-    // Render face meshes
+    const auto& select_manager = Render::SelectManager::instance();
+
+    renderFaceMeshes(select_manager);
+    renderEdgeMeshes(select_manager);
+    renderVertexMeshes(select_manager);
+
+    glDepthFunc(GL_LESS);
+
+    m_meshShader->release();
+}
+
+GLenum SceneRenderer::toGlPrimitiveType(RenderPrimitiveType type) {
+    switch(type) {
+    case RenderPrimitiveType::Points:
+        return GL_POINTS;
+    case RenderPrimitiveType::Lines:
+        return GL_LINES;
+    case RenderPrimitiveType::LineStrip:
+        return GL_LINE_STRIP;
+    case RenderPrimitiveType::Triangles:
+        return GL_TRIANGLES;
+    case RenderPrimitiveType::TriangleStrip:
+        return GL_TRIANGLE_STRIP;
+    case RenderPrimitiveType::TriangleFan:
+        return GL_TRIANGLE_FAN;
+    default:
+        return GL_TRIANGLES;
+    }
+}
+
+bool SceneRenderer::uidMatches24(Geometry::EntityUID a, Geometry::EntityUID b) {
+    return (static_cast<uint32_t>(a) & 0xFFFFFFu) == (static_cast<uint32_t>(b) & 0xFFFFFFu);
+}
+
+bool SceneRenderer::uidMatchesSet24(const std::unordered_set<Geometry::EntityUID>& uid_set,
+                                    Geometry::EntityUID uid) {
+    for(const Geometry::EntityUID& set_uid : uid_set) {
+        if(uidMatches24(set_uid, uid)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void SceneRenderer::setOverrideColor(bool enabled, const QVector4D& color) {
+    m_meshShader->setUniformValue(m_useOverrideColorLoc, enabled ? 1 : 0);
+    if(enabled) {
+        m_meshShader->setUniformValue(m_overrideColorLoc, color);
+    }
+}
+
+void SceneRenderer::drawMesh(MeshBuffers& buffers, GLenum primitive) {
+    buffers.m_vao->bind();
+    if(buffers.m_indexCount > 0) {
+        buffers.m_ebo->bind();
+        glDrawElements(primitive, buffers.m_indexCount, GL_UNSIGNED_INT, nullptr);
+    } else {
+        glDrawArrays(primitive, 0, buffers.m_vertexCount);
+    }
+    buffers.m_vao->release();
+}
+
+bool SceneRenderer::isMeshSelected(const MeshBuffers& buffers,
+                                   const SelectManager& select_manager) const {
+    bool is_selected =
+        select_manager.containsSelection(buffers.m_entityUid, buffers.m_entityType) ||
+        select_manager.containsSelection(buffers.m_owningPartUid, Geometry::EntityType::Part) ||
+        select_manager.containsSelection(buffers.m_owningSolidUid, Geometry::EntityType::Solid);
+
+    if(!is_selected) {
+        for(const Geometry::EntityUID& wire_uid : buffers.m_owningWireUid) {
+            if(select_manager.containsSelection(wire_uid, Geometry::EntityType::Wire)) {
+                is_selected = true;
+                break;
+            }
+        }
+    }
+    return is_selected;
+}
+
+bool SceneRenderer::isFaceMeshHovered(const MeshBuffers& buffers) const {
+    if(m_hoverHighlightType == Geometry::EntityType::Face) {
+        return uidMatches24(buffers.m_entityUid, m_hoverHighlightUid);
+    }
+    if(m_hoverHighlightType == Geometry::EntityType::Part) {
+        return uidMatches24(buffers.m_owningPartUid, m_hoverHighlightUid);
+    }
+    if(m_hoverHighlightType == Geometry::EntityType::Solid) {
+        return uidMatches24(buffers.m_owningSolidUid, m_hoverHighlightUid);
+    }
+    return false;
+}
+
+bool SceneRenderer::isEdgeMeshHovered(const MeshBuffers& buffers) const {
+    return ((m_hoverHighlightType == Geometry::EntityType::Edge) &&
+            (buffers.m_entityType == m_hoverHighlightType) &&
+            uidMatches24(buffers.m_entityUid, m_hoverHighlightUid)) ||
+           ((m_hoverHighlightType == Geometry::EntityType::Wire) &&
+            uidMatchesSet24(buffers.m_owningWireUid, m_hoverHighlightUid)) ||
+           ((m_hoverHighlightType == Geometry::EntityType::Part) &&
+            uidMatches24(buffers.m_owningPartUid, m_hoverHighlightUid)) ||
+           ((m_hoverHighlightType == Geometry::EntityType::Solid) &&
+            uidMatches24(buffers.m_owningSolidUid, m_hoverHighlightUid));
+}
+
+bool SceneRenderer::isVertexMeshHovered(const MeshBuffers& buffers) const {
+    return ((m_hoverHighlightType == Geometry::EntityType::Vertex) &&
+            (buffers.m_entityType == m_hoverHighlightType) &&
+            uidMatches24(buffers.m_entityUid, m_hoverHighlightUid)) ||
+           ((m_hoverHighlightType == Geometry::EntityType::Part) &&
+            uidMatches24(buffers.m_owningPartUid, m_hoverHighlightUid)) ||
+           ((m_hoverHighlightType == Geometry::EntityType::Wire) &&
+            uidMatchesSet24(buffers.m_owningWireUid, m_hoverHighlightUid)) ||
+           ((m_hoverHighlightType == Geometry::EntityType::Solid) &&
+            uidMatches24(buffers.m_owningSolidUid, m_hoverHighlightUid));
+}
+
+void SceneRenderer::renderFaceMeshes(const SelectManager& select_manager) {
     glDepthFunc(GL_LESS);
     m_meshShader->setUniformValue(m_useLightingLoc, 1);
     glEnable(GL_POLYGON_OFFSET_FILL);
     glPolygonOffset(1.0f, 1.0f);
     for(auto& buffers : m_faceMeshBuffers) {
-        auto& select_manager = Render::SelectManager::instance();
         const bool is_selected =
             select_manager.containsSelection(buffers.m_entityUid, buffers.m_entityType) ||
             select_manager.containsSelection(buffers.m_owningPartUid, Geometry::EntityType::Part) ||
-            select_manager.containsSelection(buffers.m_owningSolidUid,
-                                             Geometry::EntityType::Solid) ||
-            false;
+            select_manager.containsSelection(buffers.m_owningSolidUid, Geometry::EntityType::Solid);
 
-        bool is_hover = false;
-        if(m_hoverHighlightType == Geometry::EntityType::Face) {
-            is_hover = uid_matches_24(buffers.m_entityUid, m_hoverHighlightUid);
-        } else if(m_hoverHighlightType == Geometry::EntityType::Part) {
-            is_hover = uid_matches_24(buffers.m_owningPartUid, m_hoverHighlightUid);
-        } else if(m_hoverHighlightType == Geometry::EntityType::Solid) {
-            is_hover = uid_matches_24(buffers.m_owningSolidUid, m_hoverHighlightUid);
-        }
+        const bool is_hover = isFaceMeshHovered(buffers);
 
         if(is_selected) {
-            set_override_color(true, buffers.m_selectedColor);
+            setOverrideColor(true, buffers.m_selectedColor);
         } else if(is_hover) {
-            set_override_color(true, buffers.m_hoverColor);
+            setOverrideColor(true, buffers.m_hoverColor);
         } else {
-            set_override_color(false, QVector4D());
+            setOverrideColor(false, QVector4D());
         }
 
-        draw_mesh(buffers, get_primitive_type(buffers.m_primitiveType));
+        drawMesh(buffers, toGlPrimitiveType(buffers.m_primitiveType));
     }
     glDisable(GL_POLYGON_OFFSET_FILL);
+}
 
-    // Render edge meshes (with line width)
+void SceneRenderer::renderEdgeMeshes(const SelectManager& select_manager) {
     // Allow edges at the same depth to pass (and stay visible on faces).
     glDepthFunc(GL_LEQUAL);
     m_meshShader->setUniformValue(m_useLightingLoc, 0);
     for(auto& buffers : m_edgeMeshBuffers) {
-        auto& select_manager = Render::SelectManager::instance();
-        const bool is_hover = ((m_hoverHighlightType == Geometry::EntityType::Edge) &&
-                               (buffers.m_entityType == m_hoverHighlightType) &&
-                               uid_matches_24(buffers.m_entityUid, m_hoverHighlightUid)) ||
-                              ((m_hoverHighlightType == Geometry::EntityType::Wire) &&
-                               uid_matches_set_24(buffers.m_owningWireUid, m_hoverHighlightUid)) ||
-                              ((m_hoverHighlightType == Geometry::EntityType::Part) &&
-                               uid_matches_24(buffers.m_owningPartUid, m_hoverHighlightUid)) ||
-                              ((m_hoverHighlightType == Geometry::EntityType::Solid) &&
-                               uid_matches_24(buffers.m_owningSolidUid, m_hoverHighlightUid));
+        const bool is_hover = isEdgeMeshHovered(buffers);
 
-        float line_width = is_hover ? 4.0f : 2.0f;
+        const float line_width = is_hover ? 4.0f : 2.0f;
         glLineWidth(line_width);
-        bool is_selected =
-            select_manager.containsSelection(buffers.m_entityUid, buffers.m_entityType) ||
-            select_manager.containsSelection(buffers.m_owningPartUid, Geometry::EntityType::Part) ||
-            select_manager.containsSelection(buffers.m_owningSolidUid, Geometry::EntityType::Solid);
-        if(!is_selected) {
-            for(const Geometry::EntityUID& wire_uid : buffers.m_owningWireUid) {
-                if(select_manager.containsSelection(wire_uid, Geometry::EntityType::Wire)) {
-                    is_selected = true;
-                    break;
-                }
-            }
-        }
+
+        const bool is_selected = isMeshSelected(buffers, select_manager);
 
         if(is_selected) {
-            set_override_color(true, buffers.m_selectedColor);
+            setOverrideColor(true, buffers.m_selectedColor);
         } else if(is_hover) {
-            set_override_color(true, buffers.m_hoverColor);
+            setOverrideColor(true, buffers.m_hoverColor);
         } else {
-            set_override_color(false, QVector4D());
+            setOverrideColor(false, QVector4D());
         }
 
-        draw_mesh(buffers, get_primitive_type(buffers.m_primitiveType));
+        drawMesh(buffers, toGlPrimitiveType(buffers.m_primitiveType));
     }
+}
 
-    // Render vertex meshes (with larger point size)
+void SceneRenderer::renderVertexMeshes(const SelectManager& select_manager) {
     // Allow points at the same depth to pass (and stay visible on faces).
     glDepthFunc(GL_LEQUAL);
     m_meshShader->setUniformValue(m_useLightingLoc, 0);
     for(auto& buffers : m_vertexMeshBuffers) {
-        const bool is_hover = ((m_hoverHighlightType == Geometry::EntityType::Vertex) &&
-                               (buffers.m_entityType == m_hoverHighlightType) &&
-                               uid_matches_24(buffers.m_entityUid, m_hoverHighlightUid)) ||
-                              ((m_hoverHighlightType == Geometry::EntityType::Part) &&
-                               uid_matches_24(buffers.m_owningPartUid, m_hoverHighlightUid)) ||
-                              ((m_hoverHighlightType == Geometry::EntityType::Wire) &&
-                               uid_matches_set_24(buffers.m_owningWireUid, m_hoverHighlightUid)) ||
-                              ((m_hoverHighlightType == Geometry::EntityType::Solid) &&
-                               uid_matches_24(buffers.m_owningSolidUid, m_hoverHighlightUid));
+        const bool is_hover = isVertexMeshHovered(buffers);
+        const bool is_selected = isMeshSelected(buffers, select_manager);
 
-        auto& select_manager = Render::SelectManager::instance();
-        bool is_selected =
-            select_manager.containsSelection(buffers.m_entityUid, buffers.m_entityType) ||
-            select_manager.containsSelection(buffers.m_owningPartUid, Geometry::EntityType::Part) ||
-            select_manager.containsSelection(buffers.m_owningSolidUid, Geometry::EntityType::Solid);
-        if(!is_selected) {
-            for(const Geometry::EntityUID& wire_uid : buffers.m_owningWireUid) {
-                if(select_manager.containsSelection(wire_uid, Geometry::EntityType::Wire)) {
-                    is_selected = true;
-                    break;
-                }
-            }
-        }
-        float vertex_size = is_hover ? 9.0f : is_selected ? 7.0f : 6.0f;
+        const float vertex_size = is_hover ? 9.0f : is_selected ? 7.0f : 6.0f;
         m_meshShader->setUniformValue(m_pointSizeLoc, vertex_size);
+
         if(is_selected) {
-            set_override_color(true, buffers.m_selectedColor);
+            setOverrideColor(true, buffers.m_selectedColor);
         } else if(is_hover) {
-            set_override_color(true, buffers.m_hoverColor);
+            setOverrideColor(true, buffers.m_hoverColor);
         } else {
-            set_override_color(false, QVector4D());
+            setOverrideColor(false, QVector4D());
         }
 
-        draw_mesh(buffers, GL_POINTS);
+        drawMesh(buffers, GL_POINTS);
     }
-
-    glDepthFunc(GL_LESS);
-
-    m_meshShader->release();
 }
 
 namespace {
