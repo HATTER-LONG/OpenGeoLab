@@ -13,6 +13,7 @@ OpenGeoLab 是一个基于 Qt Quick(QML) + OpenGL 的几何/模型可视化与�
 - `src/`：模块实现
   - `src/app/`：应用入口、QML 单例后端（BackendService）、OpenGL 视口（GLViewport）
   - `src/geometry/`：几何文档/实体、OCC 形体构建与导出渲染数据
+    - 实体标识：内部使用 `EntityKey = (EntityId + EntityUID + EntityType)` 作为可比较/可哈希的实体句柄
   - `src/io/`：模型文件读取服务（STEP/BREP）
   - `src/render/`：渲染数据结构、SceneRenderer、RenderSceneController 等
 - `resources/qml/`：QML UI（主窗口、页面、工具条等）

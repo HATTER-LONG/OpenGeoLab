@@ -29,10 +29,6 @@ public:
     explicit EdgeEntity(const TopoDS_Edge& edge);
     ~EdgeEntity() override = default;
 
-    [[nodiscard]] EntityType entityType() const override { return EntityType::Edge; }
-
-    [[nodiscard]] const char* typeName() const override { return "Edge"; }
-
     [[nodiscard]] bool canAddChildType(EntityType child_type) const override {
         return child_type == EntityType::Vertex;
     }

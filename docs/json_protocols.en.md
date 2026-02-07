@@ -133,6 +133,8 @@ Example response:
 { "action": "get_part_list", "_meta": { "silent": true } }
 ```
 
+Note: `uid` is a numeric `EntityUID` (type-scoped id).
+
 ### 3.3 create
 Common fields:
 - `type`: `box|cylinder|sphere|cone`

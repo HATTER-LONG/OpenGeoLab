@@ -4,6 +4,7 @@
  */
 
 #include "face_entity.hpp"
+#include "../geometry_documentImpl.hpp"
 #include <BRepGProp.hxx>
 #include <BRepTools.hxx>
 #include <BRep_Tool.hxx>
@@ -67,7 +68,13 @@ WireEntityPtr FaceEntity::outerWire() const {
         return nullptr;
     }
 
-    for(const auto& child : children()) {
+    const auto doc = document();
+    if(!doc) {
+        return nullptr;
+    }
+
+    for(const auto child_id : doc->relationships().directChildren(*this)) {
+        const auto child = doc->findById(child_id);
         if(auto wire_entity = std::dynamic_pointer_cast<WireEntity>(child)) {
             if(wire_entity->wire().IsSame(outer_w)) {
                 return wire_entity;
@@ -80,7 +87,14 @@ WireEntityPtr FaceEntity::outerWire() const {
 
 std::vector<WireEntityPtr> FaceEntity::allWires() const {
     std::vector<WireEntityPtr> wires;
-    for(const auto& child : children()) {
+
+    const auto doc = document();
+    if(!doc) {
+        return wires;
+    }
+
+    for(const auto child_id : doc->relationships().directChildren(*this)) {
+        const auto child = doc->findById(child_id);
         if(auto wire_entity = std::dynamic_pointer_cast<WireEntity>(child)) {
             wires.push_back(wire_entity);
         }
@@ -98,8 +112,13 @@ size_t FaceEntity::holeCount() const {
 std::vector<FaceEntityPtr> FaceEntity::adjacentFaces() const {
     std::vector<FaceEntityPtr> result;
 
-    const auto parent_entities = parents();
-    if(parent_entities.empty()) {
+    const auto doc = document();
+    if(!doc) {
+        return result;
+    }
+
+    const auto parent_ids = doc->relationships().directParents(*this);
+    if(parent_ids.empty()) {
         return result;
     }
 
@@ -111,12 +130,14 @@ std::vector<FaceEntityPtr> FaceEntity::adjacentFaces() const {
     added.insert(entityId());
 
     // Check sibling faces across all parents.
-    for(const auto& parent_ptr : parent_entities) {
-        for(const auto& sibling : parent_ptr->children()) {
-            if(!sibling) {
+    for(const auto parent_id : parent_ids) {
+        for(const auto sibling_id : doc->relationships().directChildren(parent_id)) {
+            if(!added.insert(sibling_id).second) {
                 continue;
             }
-            if(!added.insert(sibling->entityId()).second) {
+
+            const auto sibling = doc->findById(sibling_id);
+            if(!sibling) {
                 continue;
             }
 

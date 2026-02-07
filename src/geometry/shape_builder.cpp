@@ -77,6 +77,9 @@ ShapeBuildResult ShapeBuilder::buildFromShape(const TopoDS_Shape& shape,
     // Build parent-child relationships
     buildRelationships(shape, shape_map, shape_entity_map, part);
 
+    // Build derived caches for fast relationship queries.
+    (void)m_document->relationships().buildRelationships();
+
     if(!progress_callback(1.0, "Shape build completed.")) {
         // Don't fail on final progress report
     }
@@ -122,7 +125,7 @@ void ShapeBuilder::buildRelationships(const TopoDS_Shape& root_shape,
     if(root_index > 0) {
         auto it = shape_entity_map.find(root_index);
         if(it != shape_entity_map.end()) {
-            (void)root_entity->addChild(it->second);
+            (void)m_document->addChildEdge(*root_entity, *it->second);
             // Now recursively build child relationships starting from root shape
             buildChildRelationships(root_shape, it->second, shape_map, shape_entity_map);
             return;
@@ -144,7 +147,7 @@ void ShapeBuilder::buildRelationships(const TopoDS_Shape& root_shape,
             continue;
         }
 
-        (void)root_entity->addChild(entity_it->second);
+        (void)m_document->addChildEdge(*root_entity, *entity_it->second);
         buildChildRelationships(child_shape, entity_it->second, shape_map, shape_entity_map);
     }
 }
@@ -169,7 +172,7 @@ void ShapeBuilder::buildChildRelationships(const TopoDS_Shape& parent_shape, // 
 
         // Add parent-child relationship
         // Note: This may add multiple parents to the same child (shared edges/vertices)
-        (void)parent_entity->addChild(entity_it->second);
+        (void)m_document->addChildEdge(*parent_entity, *entity_it->second);
 
         // Recursively process children
         buildChildRelationships(child_shape, entity_it->second, shape_map, shape_entity_map);

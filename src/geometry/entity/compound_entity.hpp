@@ -28,10 +28,6 @@ public:
     explicit CompoundEntity(const TopoDS_Compound& compound);
     ~CompoundEntity() override = default;
 
-    [[nodiscard]] EntityType entityType() const override { return EntityType::Compound; }
-
-    [[nodiscard]] const char* typeName() const override { return "Compound"; }
-
     [[nodiscard]] bool canAddChildType(EntityType child_type) const override {
         return child_type != EntityType::None && child_type != EntityType::Part;
     }

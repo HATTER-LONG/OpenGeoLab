@@ -27,10 +27,6 @@ public:
     explicit ShellEntity(const TopoDS_Shell& shell);
     ~ShellEntity() override = default;
 
-    [[nodiscard]] EntityType entityType() const override { return EntityType::Shell; }
-
-    [[nodiscard]] const char* typeName() const override { return "Shell"; }
-
     [[nodiscard]] bool canAddChildType(EntityType child_type) const override {
         return child_type == EntityType::Face;
     }

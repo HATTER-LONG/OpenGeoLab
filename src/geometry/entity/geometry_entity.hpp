@@ -13,11 +13,8 @@
 
 #include <kangaroo/util/noncopyable.hpp>
 
-#include <functional>
 #include <memory>
 #include <string>
-#include <unordered_set>
-#include <vector>
 
 class TopoDS_Shape;
 
@@ -32,7 +29,6 @@ using GeometryEntityWeakPtr = std::weak_ptr<GeometryEntity>;
 // =============================================================================
 // GeometryEntity
 // =============================================================================
-
 /**
  * @brief Base class for all geometry entities wrapping OCC shapes
  *
@@ -53,7 +49,7 @@ public:
      *
      * Ensures parent/child edges are detached in a best-effort manner.
      *
-     * @note Edges are normally detached eagerly by EntityIndex/GeometryDocument
+     * @note Edges are normally detached eagerly by GeometryDocument/EntityRelationshipIndex
      *       on entity removal. This destructor acts as a defensive fallback
      *       for cases where an entity outlives its document via external
      *       shared ownership.
@@ -67,13 +63,7 @@ public:
      * @brief Get the entity type
      * @return EntityType enumeration value
      */
-    [[nodiscard]] virtual EntityType entityType() const = 0;
-
-    /**
-     * @brief Get the type name as string
-     * @return Human-readable type name
-     */
-    [[nodiscard]] virtual const char* typeName() const = 0;
+    [[nodiscard]] EntityType entityType() const { return m_entityType; };
 
     // -------------------------------------------------------------------------
     // ID Accessors
@@ -90,6 +80,14 @@ public:
      * @return EntityUID unique within this entity type
      */
     [[nodiscard]] EntityUID entityUID() const { return m_entityUID; }
+
+    /**
+     * @brief Get an EntityKey handle for this entity
+     * @return EntityKey consisting of (EntityId, EntityUID, EntityType)
+     */
+    [[nodiscard]] EntityKey entityKey() const {
+        return EntityKey(entityId(), entityUID(), entityType());
+    }
 
     // -------------------------------------------------------------------------
     // Shape Accessors
@@ -148,88 +146,6 @@ public:
      */
     [[nodiscard]] virtual bool canAddParentType(EntityType parent_type) const = 0;
 
-    /**
-     * @brief Get one parent entity (if any)
-     *
-     * Note: This entity may have multiple parents. This accessor returns an arbitrary
-     * valid parent (if exists) and auto-prunes expired references.
-     */
-    /// Return any valid parent (if exists). Use when multiple parents are acceptable.
-    [[nodiscard]] GeometryEntityWeakPtr anyParent() const;
-
-    /// Return a valid parent only if it is unique; otherwise empty.
-    [[nodiscard]] GeometryEntityWeakPtr singleParent() const;
-
-    /// Get all parent entities (auto-prunes expired references).
-    [[nodiscard]] std::vector<GeometryEntityPtr> parents() const;
-
-    /// Get child entities (auto-prunes expired references).
-    [[nodiscard]] std::vector<GeometryEntityPtr> children() const;
-
-    /// O(1) membership check (does not resolve).
-    [[nodiscard]] bool hasParentId(EntityId parent_id) const;
-
-    /// O(1) membership check (does not resolve).
-    [[nodiscard]] bool hasChildId(EntityId child_id) const;
-
-    /// True if has no valid parents (auto-prunes expired references).
-    [[nodiscard]] bool isRoot() const;
-
-    /// True if has at least one valid child (auto-prunes expired references).
-    [[nodiscard]] bool hasChildren() const;
-
-    /// Count valid parents (auto-prunes expired references).
-    [[nodiscard]] size_t parentCount() const;
-
-    /// Count valid children (auto-prunes expired references).
-    [[nodiscard]] size_t childCount() const;
-
-    /**
-     * @brief Add a child edge (this -> child), automatically syncing both sides.
-     *
-     * Fails on:
-     * - self-parent/self-child
-     * - relationship type constraints
-     * - missing EntityIndex / missing entities
-     */
-    [[nodiscard]] bool addChild(EntityId child_id);
-
-    /**
-     * @brief Remove a child edge (this -> child), automatically syncing both sides.
-     */
-    [[nodiscard]] bool removeChild(EntityId child_id);
-
-    /// Convenience overload (does not store the pointer; stores only EntityId).
-    [[nodiscard]] bool addChild(const GeometryEntityPtr& child);
-
-    /// Convenience overload (does not store the pointer; stores only EntityId).
-    [[nodiscard]] bool removeChild(const GeometryEntityPtr& child);
-
-    /**
-     * @brief Add a parent edge (parent -> this), automatically syncing both sides.
-     */
-    [[nodiscard]] bool addParent(EntityId parent_id);
-
-    /**
-     * @brief Remove a parent edge (parent -> this), automatically syncing both sides.
-     */
-    [[nodiscard]] bool removeParent(EntityId parent_id);
-
-    /// Visit valid children; auto-filters invalid and self-cleans.
-    void visitChildren(const std::function<void(const GeometryEntityPtr&)>& visitor) const;
-
-    /// Visit valid parents; auto-filters invalid and self-cleans.
-    void visitParents(const std::function<void(const GeometryEntityPtr&)>& visitor) const;
-
-    /**
-     * @brief Remove expired parent/child ids.
-     *
-     * @warning This performs lookups against the owning GeometryDocument and may
-     *          be expensive if called frequently on large graphs.
-     * @note With correct lifetime management (edges detached on entity removal),
-     *       relations should remain consistent and this should rarely be needed.
-     */
-    void pruneExpiredRelations() const;
     // -------------------------------------------------------------------------
     // Name/Label
     // -------------------------------------------------------------------------
@@ -268,6 +184,7 @@ protected:
 protected:
     EntityId m_entityId{INVALID_ENTITY_ID};    ///< Global unique ID
     EntityUID m_entityUID{INVALID_ENTITY_UID}; ///< Type-scoped unique ID
+    EntityType m_entityType{EntityType::None}; ///< Cached entity type
 
     mutable BoundingBox3D m_boundingBox;    ///< Cached bounding box
     mutable bool m_boundingBoxValid{false}; ///< Bounding box validity
@@ -283,18 +200,10 @@ protected:
         return m_document.lock();
     }
 
-    // Relationship internals (do not sync both sides)
-    [[nodiscard]] bool addChildNoSync(EntityId child_id);
-    [[nodiscard]] bool removeChildNoSync(EntityId child_id);
-    [[nodiscard]] bool addParentNoSync(EntityId parent_id);
-    [[nodiscard]] bool removeParentNoSync(EntityId parent_id);
-
-    // Called by EntityIndex before the entity is removed, to eagerly detach edges.
+    // Called to detach edges from the document relationship index.
     void detachAllRelations();
 
     std::weak_ptr<GeometryDocumentImpl> m_document;
-    mutable std::unordered_set<EntityId> m_parentIds;
-    mutable std::unordered_set<EntityId> m_childIds;
 
     std::string m_name; ///< Display name
 };

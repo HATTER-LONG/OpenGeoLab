@@ -30,9 +30,6 @@ public:
     explicit PartEntity(const TopoDS_Shape& shape);
     ~PartEntity() override = default;
 
-    [[nodiscard]] EntityType entityType() const override { return EntityType::Part; }
-    [[nodiscard]] const char* typeName() const override { return "Part"; }
-
     [[nodiscard]] bool canAddChildType(EntityType child_type) const override {
         const EntityType root_type = detectEntityType(m_shape);
         return root_type != EntityType::None && root_type != EntityType::Part &&

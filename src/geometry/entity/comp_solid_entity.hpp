@@ -27,10 +27,6 @@ public:
     explicit CompSolidEntity(const TopoDS_CompSolid& compsolid);
     ~CompSolidEntity() override = default;
 
-    [[nodiscard]] EntityType entityType() const override { return EntityType::CompSolid; }
-
-    [[nodiscard]] const char* typeName() const override { return "CompSolid"; }
-
     [[nodiscard]] bool canAddChildType(EntityType child_type) const override {
         return child_type == EntityType::Solid;
     }

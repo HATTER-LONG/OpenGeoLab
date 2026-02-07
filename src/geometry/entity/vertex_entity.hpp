@@ -27,10 +27,6 @@ public:
     explicit VertexEntity(const TopoDS_Vertex& vertex);
     ~VertexEntity() override = default;
 
-    [[nodiscard]] EntityType entityType() const override { return EntityType::Vertex; }
-
-    [[nodiscard]] const char* typeName() const override { return "Vertex"; }
-
     [[nodiscard]] bool canAddChildType(EntityType /*child_type*/) const override { return false; }
 
     [[nodiscard]] bool canAddParentType(EntityType parent_type) const override {

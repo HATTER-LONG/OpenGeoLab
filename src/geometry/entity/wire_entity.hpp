@@ -28,10 +28,6 @@ public:
     explicit WireEntity(const TopoDS_Wire& wire);
     ~WireEntity() override = default;
 
-    [[nodiscard]] EntityType entityType() const override { return EntityType::Wire; }
-
-    [[nodiscard]] const char* typeName() const override { return "Wire"; }
-
     [[nodiscard]] bool canAddChildType(EntityType child_type) const override {
         return child_type == EntityType::Edge;
     }

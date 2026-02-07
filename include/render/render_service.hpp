@@ -1,7 +1,9 @@
 /**
  * @file render_service.hpp
- * @brief Render service for viewport/camera related requests
+ * @brief Render module service entry for QML requests
  *
+ * RenderService implements the App::IService interface and dispatches
+ * render-related actions (viewport control, selection control, etc.).
  */
 
 #pragma once
@@ -10,6 +12,9 @@
 
 namespace OpenGeoLab::Render {
 
+/**
+ * @brief Render service that processes JSON requests from the QML layer
+ */
 class RenderService : public App::IService {
 public:
     RenderService() = default;
@@ -21,6 +26,9 @@ public:
                    App::IProgressReporterPtr progress_reporter) override;
 };
 
+/**
+ * @brief Singleton factory for RenderService
+ */
 class RenderServiceFactory : public App::IServiceSingletonFactory {
 public:
     RenderServiceFactory() = default;
@@ -29,6 +37,9 @@ public:
     tObjectSharedPtr instance() const override;
 };
 
+/**
+ * @brief Register render-related services to the application service registry
+ */
 void registerServices();
 
 } // namespace OpenGeoLab::Render

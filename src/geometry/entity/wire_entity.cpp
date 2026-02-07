@@ -4,6 +4,7 @@
  */
 
 #include "wire_entity.hpp"
+#include "../geometry_documentImpl.hpp"
 #include <BRepGProp.hxx>
 #include <GProp_GProps.hxx>
 #include <ShapeAnalysis_Wire.hxx>
@@ -26,7 +27,14 @@ double WireEntity::length() const {
 
 std::vector<EdgeEntityPtr> WireEntity::orderedEdges() const {
     std::vector<EdgeEntityPtr> edges;
-    for(const auto& child : children()) {
+
+    const auto doc = document();
+    if(!doc) {
+        return edges;
+    }
+
+    for(const auto child_id : doc->relationships().directChildren(*this)) {
+        const auto child = doc->findById(child_id);
         if(auto edge_entity = std::dynamic_pointer_cast<EdgeEntity>(child)) {
             edges.push_back(edge_entity);
         }

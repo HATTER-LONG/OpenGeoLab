@@ -28,10 +28,6 @@ public:
     explicit SolidEntity(const TopoDS_Solid& solid);
     ~SolidEntity() override = default;
 
-    [[nodiscard]] EntityType entityType() const override { return EntityType::Solid; }
-
-    [[nodiscard]] const char* typeName() const override { return "Solid"; }
-
     [[nodiscard]] bool canAddChildType(EntityType child_type) const override {
         return child_type == EntityType::Shell;
     }

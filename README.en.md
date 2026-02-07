@@ -11,6 +11,7 @@ OpenGeoLab is a Qt Quick (QML) + OpenGL prototype for CAD-like geometry visualiz
 - `src/`: implementation
   - `src/app/`: application entry, QML singletons (BackendService), OpenGL viewport (GLViewport)
   - `src/geometry/`: geometry document/entities, OCC build and render-data extraction
+    - Entity identity: internally uses `EntityKey = (EntityId + EntityUID + EntityType)` as a comparable/hashable handle
   - `src/io/`: model import services (STEP/BREP)
   - `src/render/`: render data types, SceneRenderer, RenderSceneController
 - `resources/qml/`: QML UI

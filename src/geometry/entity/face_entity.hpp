@@ -29,10 +29,6 @@ public:
     explicit FaceEntity(const TopoDS_Face& face);
     ~FaceEntity() override = default;
 
-    [[nodiscard]] EntityType entityType() const override { return EntityType::Face; }
-
-    [[nodiscard]] const char* typeName() const override { return "Face"; }
-
     [[nodiscard]] bool canAddChildType(EntityType child_type) const override {
         return child_type == EntityType::Wire;
     }

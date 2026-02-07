@@ -76,6 +76,15 @@ struct LoadResult {
     }
 };
 
+/**
+ * @brief Abstract geometry document interface
+ *
+ * A geometry document is the authoritative container of geometry entities.
+ * Implementations are responsible for:
+ * - Loading/appending OCC shapes and creating entity hierarchies
+ * - Producing render data snapshots for visualization
+ * - Emitting change notifications for UI/render synchronization
+ */
 class GeometryDocument : public Kangaroo::Util::NonCopyMoveable {
 public:
     GeometryDocument() = default;

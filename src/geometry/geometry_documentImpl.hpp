@@ -11,6 +11,7 @@
 
 #include "entity/entity_index.hpp"
 #include "entity/geometry_entity.hpp"
+#include "entity/relationship_index.hpp"
 #include "geometry/geometry_document.hpp"
 
 #include <memory>
@@ -30,7 +31,7 @@ using GeometryDocumentImplPtr = std::shared_ptr<GeometryDocumentImpl>;
 class GeometryDocumentImpl : public GeometryDocument,
                              public std::enable_shared_from_this<GeometryDocumentImpl> {
 public:
-    GeometryDocumentImpl() = default;
+    GeometryDocumentImpl();
     virtual ~GeometryDocumentImpl() = default;
 
     // =========================================================================
@@ -161,20 +162,12 @@ public:
 
     /**
      * @brief Add a directed parent->child edge.
-     * @param parent_id Parent entity id.
-     * @param child_id Child entity id.
+     * @param parent Parent entity.
+     * @param child Child entity.
      * @return true if the edge is added; false if ids are invalid, entities are missing,
      *         or the edge would create a cycle.
      */
-    [[nodiscard]] bool addChildEdge(EntityId parent_id, EntityId child_id);
-
-    /**
-     * @brief Remove a directed parent->child edge.
-     * @param parent_id Parent entity id.
-     * @param child_id Child entity id.
-     * @return true if the edge existed and was removed; false otherwise.
-     */
-    [[nodiscard]] bool removeChildEdge(EntityId parent_id, EntityId child_id);
+    [[nodiscard]] bool addChildEdge(const GeometryEntity& parent, const GeometryEntity& child);
 
     // =========================================================================
     // Render Data Access (GeometryDocument interface)
@@ -191,6 +184,15 @@ public:
 
     [[nodiscard]] Util::ScopedConnection
     subscribeToChanges(std::function<void(const GeometryChangeEvent&)> callback) override;
+
+    // -------------------------------------------------------------------------
+    // Relationship Access
+    // -------------------------------------------------------------------------
+
+    [[nodiscard]] EntityRelationshipIndex& relationships() { return m_relationshipIndex; }
+    [[nodiscard]] const EntityRelationshipIndex& relationships() const {
+        return m_relationshipIndex;
+    }
 
 private:
     /**
@@ -233,6 +235,8 @@ private:
 
 private:
     EntityIndex m_entityIndex;
+
+    EntityRelationshipIndex m_relationshipIndex;
 
     /// Signal for geometry change notifications
     Util::Signal<const GeometryChangeEvent&> m_changeSignal;

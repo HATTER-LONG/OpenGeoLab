@@ -183,7 +183,7 @@
   "parts": [
     {
       "id": 1,
-      "uid": "...",
+      "uid": 1,
       "name": "box",
       "color": "#RRGGBBAA",
       "color_rgba": [0.1, 0.2, 0.3, 1.0],

@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <functional>
 #include <limits>
 #include <string>
 
@@ -94,6 +95,77 @@ constexpr EntityId INVALID_ENTITY_ID = 0;
 
 /// Invalid/null EntityUID constant
 constexpr EntityUID INVALID_ENTITY_UID = 0;
+
+// =============================================================================
+// EntityKey
+// =============================================================================
+
+/**
+ * @brief Comparable, hashable handle for a geometry entity
+ *
+ * EntityKey packages the entity identity into a single value object:
+ * - EntityId: globally unique id
+ * - EntityUID: type-scoped id
+ * - EntityType: entity kind
+ *
+ * It is intended for indexing and relationship graphs where a compact,
+ * semantically clear key is preferable to passing multiple scalars.
+ */
+struct EntityKey {
+    EntityId m_id{INVALID_ENTITY_ID};
+    EntityUID m_uid{INVALID_ENTITY_UID};
+    EntityType m_type{EntityType::None};
+
+    EntityKey() = default;
+    EntityKey(EntityId id, EntityUID uid, EntityType type) : m_id(id), m_uid(uid), m_type(type) {}
+
+    /**
+     * @brief Check whether this key represents a valid entity
+     * @return true if all fields are valid and type is not None
+     */
+    [[nodiscard]] bool isValid() const noexcept {
+        return m_id != INVALID_ENTITY_ID && m_uid != INVALID_ENTITY_UID &&
+               m_type != EntityType::None;
+    }
+
+    [[nodiscard]] bool operator==(const EntityKey& other) const noexcept {
+        return m_id == other.m_id && m_uid == other.m_uid && m_type == other.m_type;
+    }
+    [[nodiscard]] bool operator!=(const EntityKey& other) const noexcept {
+        return !(*this == other);
+    }
+
+    /**
+     * @brief Strict weak ordering, useful for ordered containers/logging
+     */
+    bool operator<(const EntityKey& other) const noexcept {
+        if(m_id != other.m_id) {
+            return m_id < other.m_id;
+        }
+        if(m_type != other.m_type) {
+            return static_cast<uint8_t>(m_type) < static_cast<uint8_t>(other.m_type);
+        }
+        return m_uid < other.m_uid;
+    }
+};
+
+/**
+ * @brief Hash functor for EntityKey
+ */
+struct EntityKeyHash {
+    static void hashCombine(size_t& seed, size_t value) {
+        seed ^= value + 0x9e3779b97f4a7c15ULL + (seed << 6) + (seed >> 2);
+    }
+
+    size_t operator()(const EntityKey& key) const noexcept {
+        size_t seed = 0;
+        hashCombine(seed, std::hash<EntityId>{}(key.m_id));
+        hashCombine(seed, std::hash<EntityUID>{}(key.m_uid));
+        using Underlying = std::underlying_type_t<EntityType>;
+        hashCombine(seed, std::hash<Underlying>{}(static_cast<Underlying>(key.m_type)));
+        return seed;
+    }
+};
 
 /**
  * @brief Generate a new globally unique EntityId
