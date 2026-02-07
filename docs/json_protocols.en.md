@@ -133,6 +133,8 @@ Example response:
 { "action": "get_part_list", "_meta": { "silent": true } }
 ```
 
+Note: entity counts and id lists are computed via the relationship index for fast topology queries.
+
 ### 3.3 create
 Common fields:
 - `type`: `box|cylinder|sphere|cone`

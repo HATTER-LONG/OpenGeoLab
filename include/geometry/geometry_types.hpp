@@ -15,6 +15,7 @@
 #include <cstdint>
 #include <limits>
 #include <string>
+#include <vector>
 
 namespace OpenGeoLab::Geometry {
 
@@ -133,6 +134,21 @@ void resetAllEntityUIDGenerators();
  * @warning This function is intended for testing only
  */
 void resetEntityIdGenerator();
+
+// =============================================================================
+// Relationship Index Helpers
+// =============================================================================
+
+/**
+ * @brief Grouped entity ids belonging to a Part
+ */
+struct PartMembers {
+    std::vector<EntityId> m_nodes;  ///< Vertex entities
+    std::vector<EntityId> m_edges;  ///< Edge entities
+    std::vector<EntityId> m_wires;  ///< Wire entities
+    std::vector<EntityId> m_faces;  ///< Face entities
+    std::vector<EntityId> m_solids; ///< Solid entities
+};
 
 // =============================================================================
 // Geometric Tolerance

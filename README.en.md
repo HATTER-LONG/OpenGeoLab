@@ -4,6 +4,7 @@ OpenGeoLab is a Qt Quick (QML) + OpenGL prototype for CAD-like geometry visualiz
 - Import BREP / STEP (STP) model files
 - Manage topology and geometry via OpenCASCADE (OCC)
 - Render with OpenGL and provide basic viewport controls (orbit/pan/zoom, view presets, fit)
+- A relationship index accelerates topology queries (node/edge/wire/face/solid/part)
 - Planned: interactive editing (e.g., trim/offset), meshing, and AI-assisted mesh quality diagnostics & repair
 
 ## Repository Layout

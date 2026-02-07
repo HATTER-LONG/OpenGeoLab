@@ -6,6 +6,7 @@ OpenGeoLab 是一个基于 Qt Quick(QML) + OpenGL 的几何/模型可视化与�
 - 读取 BREP / STEP(STP) 等模型文件
 - 基于 OpenCASCADE(OCC) 管理几何拓扑（点/边/面/Part）
 - OpenGL 渲染显示，并提供基础视口交互（旋转/平移/缩放、视图预设、Fit）
+- 内部关系索引用于快速查找拓扑关联（Node/Edge/Wire/Face/Solid/Part）
 - 后续将支持鼠标编辑（如 trim/offset）、网格剖分、以及 AI 辅助网格质量诊断与修复
 
 ## 目录结构（约定）

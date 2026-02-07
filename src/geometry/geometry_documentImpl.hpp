@@ -11,6 +11,7 @@
 
 #include "entity/entity_index.hpp"
 #include "entity/geometry_entity.hpp"
+#include "entity/relationship_index.hpp"
 #include "geometry/geometry_document.hpp"
 
 #include <memory>
@@ -79,9 +80,9 @@ public:
      * @brief Clear all entities from this document.
      * @note Fast-path: assumes the document holds the only strong references to entities.
      *       If entities may be owned elsewhere (external shared_ptr), use a safe clear
-     *       that detaches document refs and clears local relation sets to avoid stale IDs.
+     *       that detaches document refs and relationship edges to avoid stale IDs.
      * @warning This fast clear relies on exclusive ownership. If violated, leftover
-     *          entities will keep stale parent/child sets and a dangling document pointer.
+     *          entities will keep stale edges and a dangling document pointer.
      */
     void clear();
 
@@ -155,6 +156,85 @@ public:
     [[nodiscard]] std::vector<GeometryEntityPtr> findRelatedEntities(EntityId edge_entity_id,
                                                                      EntityType related_type) const;
 
+    /**
+     * @brief Find related entity ids by node id.
+     * @param node_id Vertex entity id.
+     * @param target_type Target entity type.
+     * @return Related entity ids of the target type.
+     */
+    [[nodiscard]] std::vector<EntityId>
+    findRelateTargetIDByNode(EntityId node_id, EntityType target_type) const override;
+
+    /**
+     * @brief Find related entity ids by edge id.
+     * @param edge_id Edge entity id.
+     * @param target_type Target entity type.
+     * @return Related entity ids of the target type.
+     */
+    [[nodiscard]] std::vector<EntityId>
+    findRelateTargetIDByEdge(EntityId edge_id, EntityType target_type) const override;
+
+    /**
+     * @brief Find related entity ids by wire id.
+     * @param wire_id Wire entity id.
+     * @param target_type Target entity type.
+     * @return Related entity ids of the target type.
+     */
+    [[nodiscard]] std::vector<EntityId>
+    findRelateTargetIDByWire(EntityId wire_id, EntityType target_type) const override;
+
+    /**
+     * @brief Find related entity ids by face id.
+     * @param face_id Face entity id.
+     * @param target_type Target entity type.
+     * @return Related entity ids of the target type.
+     */
+    [[nodiscard]] std::vector<EntityId>
+    findRelateTargetIDByFace(EntityId face_id, EntityType target_type) const override;
+
+    /**
+     * @brief Get members grouped by type for a part.
+     * @param part_id Part entity id.
+     * @return Grouped part members.
+     */
+    [[nodiscard]] PartMembers getMembersOfPart(EntityId part_id) const override;
+
+    /**
+     * @brief Find related entity UIDs by node id.
+     * @param node_id Vertex entity id.
+     * @param target_type Target entity type.
+     * @return Related entity UIDs of the target type.
+     */
+    [[nodiscard]] std::vector<EntityUID>
+    findRelateTargetUidByNode(EntityId node_id, EntityType target_type) const override;
+
+    /**
+     * @brief Find related entity UIDs by edge id.
+     * @param edge_id Edge entity id.
+     * @param target_type Target entity type.
+     * @return Related entity UIDs of the target type.
+     */
+    [[nodiscard]] std::vector<EntityUID>
+    findRelateTargetUidByEdge(EntityId edge_id, EntityType target_type) const override;
+
+    /**
+     * @brief Find related entity UIDs by wire id.
+     * @param wire_id Wire entity id.
+     * @param target_type Target entity type.
+     * @return Related entity UIDs of the target type.
+     */
+    [[nodiscard]] std::vector<EntityUID>
+    findRelateTargetUidByWire(EntityId wire_id, EntityType target_type) const override;
+
+    /**
+     * @brief Find related entity UIDs by face id.
+     * @param face_id Face entity id.
+     * @param target_type Target entity type.
+     * @return Related entity UIDs of the target type.
+     */
+    [[nodiscard]] std::vector<EntityUID>
+    findRelateTargetUidByFace(EntityId face_id, EntityType target_type) const override;
+
     // -------------------------------------------------------------------------
     // Relationship Edge Management
     // -------------------------------------------------------------------------
@@ -191,6 +271,8 @@ public:
 
     [[nodiscard]] Util::ScopedConnection
     subscribeToChanges(std::function<void(const GeometryChangeEvent&)> callback) override;
+
+    friend class GeometryEntity;
 
 private:
     /**
@@ -231,8 +313,17 @@ private:
      */
     void emitChangeEvent(const GeometryChangeEvent& event);
 
+    [[nodiscard]] std::vector<EntityId> parentIds(EntityId entity_id) const;
+    [[nodiscard]] std::vector<EntityId> childIds(EntityId entity_id) const;
+    [[nodiscard]] bool hasParentEdge(EntityId child_id, EntityId parent_id) const;
+    [[nodiscard]] bool hasChildEdge(EntityId parent_id, EntityId child_id) const;
+    [[nodiscard]] size_t parentEdgeCount(EntityId entity_id) const;
+    [[nodiscard]] size_t childEdgeCount(EntityId entity_id) const;
+    void detachEntityRelations(EntityId entity_id);
+
 private:
     EntityIndex m_entityIndex;
+    RelationshipIndex m_relationshipIndex;
 
     /// Signal for geometry change notifications
     Util::Signal<const GeometryChangeEvent&> m_changeSignal;

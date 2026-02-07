@@ -13,7 +13,6 @@
 #include <TopoDS_Compound.hxx>
 #include <TopoDS_Iterator.hxx>
 
-#include <unordered_set>
 #include <vector>
 
 namespace OpenGeoLab::Geometry {
@@ -88,19 +87,15 @@ void GeometryEntity::invalidateBoundingBox() { m_boundingBoxValid = false; }
 
 GeometryEntityWeakPtr GeometryEntity::anyParent() const {
     const auto doc = document();
-    if(m_parentIds.empty() || !doc) {
+    if(!doc) {
         return GeometryEntityWeakPtr{};
     }
 
     // Return any valid parent.
-    for(auto it = m_parentIds.begin(); it != m_parentIds.end();) {
-        const EntityId parent_id = *it;
+    for(const EntityId parent_id : doc->parentIds(entityId())) {
         if(auto p = doc->findById(parent_id)) {
             return GeometryEntityWeakPtr{p};
         }
-
-        // Best-effort local cleanup for stale ids.
-        it = m_parentIds.erase(it);
     }
     return GeometryEntityWeakPtr{};
 }
@@ -111,18 +106,18 @@ GeometryEntityWeakPtr GeometryEntity::singleParent() const {
         return GeometryEntityWeakPtr{};
     }
 
-    if(m_parentIds.size() != 1) {
+    if(doc->parentEdgeCount(entityId()) != 1) {
         return GeometryEntityWeakPtr{};
     }
 
-    const EntityId parent_id = *m_parentIds.begin();
-    const auto p = doc->findById(parent_id);
-    if(!p) {
-        // stale; best-effort local cleanup
-        (void)m_parentIds.erase(parent_id);
+    const auto parents = doc->parentIds(entityId());
+    if(parents.empty()) {
         return GeometryEntityWeakPtr{};
     }
-    return GeometryEntityWeakPtr{p};
+
+    const EntityId parent_id = parents.front();
+    const auto p = doc->findById(parent_id);
+    return p ? GeometryEntityWeakPtr{p} : GeometryEntityWeakPtr{};
 }
 
 std::vector<GeometryEntityPtr> GeometryEntity::parents() const {
@@ -138,22 +133,42 @@ std::vector<GeometryEntityPtr> GeometryEntity::children() const {
 }
 
 bool GeometryEntity::hasParentId(EntityId parent_id) const {
-    return m_parentIds.find(parent_id) != m_parentIds.end();
+    const auto doc = document();
+    if(!doc) {
+        return false;
+    }
+    return doc->hasParentEdge(entityId(), parent_id);
 }
 
 bool GeometryEntity::hasChildId(EntityId child_id) const {
-    return m_childIds.find(child_id) != m_childIds.end();
+    const auto doc = document();
+    if(!doc) {
+        return false;
+    }
+    return doc->hasChildEdge(entityId(), child_id);
 }
 
-bool GeometryEntity::isRoot() const { return m_parentIds.empty(); }
+bool GeometryEntity::isRoot() const { return parentCount() == 0; }
 
-bool GeometryEntity::hasChildren() const { return !m_childIds.empty(); }
+bool GeometryEntity::hasChildren() const { return childCount() > 0; }
 
 bool GeometryEntity::hasShape() const { return !shape().IsNull(); }
 
-size_t GeometryEntity::parentCount() const { return m_parentIds.size(); }
+size_t GeometryEntity::parentCount() const {
+    const auto doc = document();
+    if(!doc) {
+        return 0;
+    }
+    return doc->parentEdgeCount(entityId());
+}
 
-size_t GeometryEntity::childCount() const { return m_childIds.size(); }
+size_t GeometryEntity::childCount() const {
+    const auto doc = document();
+    if(!doc) {
+        return 0;
+    }
+    return doc->childEdgeCount(entityId());
+}
 
 bool GeometryEntity::addChild(const GeometryEntityPtr& child) {
     if(!child) {
@@ -201,8 +216,7 @@ bool GeometryEntity::removeChild(EntityId child_id) {
 
     const auto doc = document();
     if(!doc) {
-        // best-effort local cleanup
-        return removeChildNoSync(child_id);
+        return false;
     }
     return doc->removeChildEdge(entityId(), child_id);
 }
@@ -219,15 +233,11 @@ void GeometryEntity::visitChildren(
         return;
     }
 
-    for(auto it = m_childIds.begin(); it != m_childIds.end();) {
-        const EntityId child_id = *it;
+    for(const EntityId child_id : doc->childIds(entityId())) {
         const auto child_entity = doc->findById(child_id);
-        if(!child_entity) {
-            it = m_childIds.erase(it);
-            continue;
+        if(child_entity) {
+            visitor(child_entity);
         }
-        ++it;
-        visitor(child_entity);
     }
 }
 
@@ -242,15 +252,11 @@ void GeometryEntity::visitParents(
         return;
     }
 
-    for(auto it = m_parentIds.begin(); it != m_parentIds.end();) {
-        const EntityId parent_id = *it;
+    for(const EntityId parent_id : doc->parentIds(entityId())) {
         const auto parent_entity = doc->findById(parent_id);
-        if(!parent_entity) {
-            it = m_parentIds.erase(it);
-            continue;
+        if(parent_entity) {
+            visitor(parent_entity);
         }
-        ++it;
-        visitor(parent_entity);
     }
 }
 
@@ -259,61 +265,26 @@ void GeometryEntity::pruneExpiredRelations() const {
     if(!doc) {
         return;
     }
-
-    for(auto it = m_parentIds.begin(); it != m_parentIds.end();) {
-        if(!doc->findById(*it)) {
-            it = m_parentIds.erase(it);
-        } else {
-            ++it;
+    for(const EntityId parent_id : doc->parentIds(entityId())) {
+        if(!doc->findById(parent_id)) {
+            (void)doc->removeChildEdge(parent_id, entityId());
         }
     }
 
-    for(auto it = m_childIds.begin(); it != m_childIds.end();) {
-        if(!doc->findById(*it)) {
-            it = m_childIds.erase(it);
-        } else {
-            ++it;
+    for(const EntityId child_id : doc->childIds(entityId())) {
+        if(!doc->findById(child_id)) {
+            (void)doc->removeChildEdge(entityId(), child_id);
         }
     }
-}
-
-bool GeometryEntity::addChildNoSync(EntityId child_id) {
-    return m_childIds.insert(child_id).second;
-}
-
-bool GeometryEntity::removeChildNoSync(EntityId child_id) { return m_childIds.erase(child_id) > 0; }
-
-bool GeometryEntity::addParentNoSync(EntityId parent_id) {
-    return m_parentIds.insert(parent_id).second;
-}
-
-bool GeometryEntity::removeParentNoSync(EntityId parent_id) {
-    return m_parentIds.erase(parent_id) > 0;
 }
 
 void GeometryEntity::detachAllRelations() {
     const auto doc = document();
     if(!doc) {
-        m_parentIds.clear();
-        m_childIds.clear();
         return;
     }
 
-    // Detach from parents
-    for(const EntityId parent_id : m_parentIds) {
-        if(const auto parent_entity = doc->findById(parent_id)) {
-            (void)parent_entity->removeChildNoSync(entityId());
-        }
-    }
-    m_parentIds.clear();
-
-    // Detach children
-    for(const EntityId child_id : m_childIds) {
-        if(const auto child_entity = doc->findById(child_id)) {
-            (void)child_entity->removeParentNoSync(entityId());
-        }
-    }
-    m_childIds.clear();
+    doc->detachEntityRelations(entityId());
 }
 
 } // namespace OpenGeoLab::Geometry

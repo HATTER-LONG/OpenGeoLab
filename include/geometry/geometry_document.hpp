@@ -150,6 +150,89 @@ public:
      */
     [[nodiscard]] virtual Util::ScopedConnection
     subscribeToChanges(std::function<void(const GeometryChangeEvent&)> callback) = 0;
+
+    // -------------------------------------------------------------------------
+    // Relationship Queries
+    // -------------------------------------------------------------------------
+
+    /**
+     * @brief Find related entity ids by node id.
+     * @param node_id Vertex entity id.
+     * @param target_type Target entity type.
+     * @return Related entity ids of the target type.
+     */
+    [[nodiscard]] virtual std::vector<EntityId>
+    findRelateTargetIDByNode(EntityId node_id, EntityType target_type) const = 0;
+
+    /**
+     * @brief Find related entity ids by edge id.
+     * @param edge_id Edge entity id.
+     * @param target_type Target entity type.
+     * @return Related entity ids of the target type.
+     */
+    [[nodiscard]] virtual std::vector<EntityId>
+    findRelateTargetIDByEdge(EntityId edge_id, EntityType target_type) const = 0;
+
+    /**
+     * @brief Find related entity ids by wire id.
+     * @param wire_id Wire entity id.
+     * @param target_type Target entity type.
+     * @return Related entity ids of the target type.
+     */
+    [[nodiscard]] virtual std::vector<EntityId>
+    findRelateTargetIDByWire(EntityId wire_id, EntityType target_type) const = 0;
+
+    /**
+     * @brief Find related entity ids by face id.
+     * @param face_id Face entity id.
+     * @param target_type Target entity type.
+     * @return Related entity ids of the target type.
+     */
+    [[nodiscard]] virtual std::vector<EntityId>
+    findRelateTargetIDByFace(EntityId face_id, EntityType target_type) const = 0;
+
+    /**
+     * @brief Get members grouped by type for a part.
+     * @param part_id Part entity id.
+     * @return Grouped part members.
+     */
+    [[nodiscard]] virtual PartMembers getMembersOfPart(EntityId part_id) const = 0;
+
+    /**
+     * @brief Find related entity UIDs by node id.
+     * @param node_id Vertex entity id.
+     * @param target_type Target entity type.
+     * @return Related entity UIDs of the target type.
+     */
+    [[nodiscard]] virtual std::vector<EntityUID>
+    findRelateTargetUidByNode(EntityId node_id, EntityType target_type) const = 0;
+
+    /**
+     * @brief Find related entity UIDs by edge id.
+     * @param edge_id Edge entity id.
+     * @param target_type Target entity type.
+     * @return Related entity UIDs of the target type.
+     */
+    [[nodiscard]] virtual std::vector<EntityUID>
+    findRelateTargetUidByEdge(EntityId edge_id, EntityType target_type) const = 0;
+
+    /**
+     * @brief Find related entity UIDs by wire id.
+     * @param wire_id Wire entity id.
+     * @param target_type Target entity type.
+     * @return Related entity UIDs of the target type.
+     */
+    [[nodiscard]] virtual std::vector<EntityUID>
+    findRelateTargetUidByWire(EntityId wire_id, EntityType target_type) const = 0;
+
+    /**
+     * @brief Find related entity UIDs by face id.
+     * @param face_id Face entity id.
+     * @param target_type Target entity type.
+     * @return Related entity UIDs of the target type.
+     */
+    [[nodiscard]] virtual std::vector<EntityUID>
+    findRelateTargetUidByFace(EntityId face_id, EntityType target_type) const = 0;
 };
 
 } // namespace OpenGeoLab::Geometry

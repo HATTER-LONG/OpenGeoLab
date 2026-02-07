@@ -58,20 +58,14 @@ nlohmann::json GetPartListAction::execute(const nlohmann::json& /*params*/,
         // Count entities by type within this part
         nlohmann::json entity_counts;
 
-        // Find all descendants of this part
-        auto faces = document->findDescendants(part->entityId(), EntityType::Face);
-        auto edges = document->findDescendants(part->entityId(), EntityType::Edge);
-        auto vertices = document->findDescendants(part->entityId(), EntityType::Vertex);
-        auto solids = document->findDescendants(part->entityId(), EntityType::Solid);
-        auto shells = document->findDescendants(part->entityId(), EntityType::Shell);
-        auto wires = document->findDescendants(part->entityId(), EntityType::Wire);
+        PartMembers members = document->getMembersOfPart(part->entityId());
 
-        size_t face_count = faces.size();
-        size_t edge_count = edges.size();
-        size_t vertex_count = vertices.size();
-        size_t solid_count = solids.size();
-        size_t shell_count = shells.size();
-        size_t wire_count = wires.size();
+        size_t face_count = members.m_faces.size();
+        size_t edge_count = members.m_edges.size();
+        size_t vertex_count = members.m_nodes.size();
+        size_t solid_count = members.m_solids.size();
+        size_t wire_count = members.m_wires.size();
+        size_t shell_count = document->findDescendants(part->entityId(), EntityType::Shell).size();
 
         entity_counts["faces"] = face_count;
         entity_counts["edges"] = edge_count;
@@ -87,20 +81,20 @@ nlohmann::json GetPartListAction::execute(const nlohmann::json& /*params*/,
         // Collect entity IDs for each type
         nlohmann::json entity_ids;
         nlohmann::json face_ids = nlohmann::json::array();
-        for(const auto& face : faces) {
-            face_ids.push_back(face->entityId());
+        for(const auto& face_id : members.m_faces) {
+            face_ids.push_back(face_id);
         }
         entity_ids["face_ids"] = face_ids;
 
         nlohmann::json edge_ids = nlohmann::json::array();
-        for(const auto& edge : edges) {
-            edge_ids.push_back(edge->entityId());
+        for(const auto& edge_id : members.m_edges) {
+            edge_ids.push_back(edge_id);
         }
         entity_ids["edge_ids"] = edge_ids;
 
         nlohmann::json vertex_ids = nlohmann::json::array();
-        for(const auto& vertex : vertices) {
-            vertex_ids.push_back(vertex->entityId());
+        for(const auto& vertex_id : members.m_nodes) {
+            vertex_ids.push_back(vertex_id);
         }
         entity_ids["vertex_ids"] = vertex_ids;
 

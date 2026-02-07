@@ -81,6 +81,20 @@ void computeSmoothVertexNormals(Render::RenderMesh& mesh) {
         mesh.m_vertices[i].m_normal[2] = static_cast<float>(accum[i].m_z * inv_len);
     }
 }
+
+std::vector<EntityUID> mapIdsToUids(const GeometryDocumentImpl& document,
+                                    const std::vector<EntityId>& ids,
+                                    EntityType target_type) {
+    std::vector<EntityUID> result;
+    result.reserve(ids.size());
+    for(const EntityId id : ids) {
+        const auto entity = document.findById(id);
+        if(entity && entity->entityType() == target_type) {
+            result.push_back(entity->entityUID());
+        }
+    }
+    return result;
+}
 } // namespace
 
 bool GeometryDocumentImpl::addEntity(const GeometryEntityPtr& entity) {
@@ -88,6 +102,7 @@ bool GeometryDocumentImpl::addEntity(const GeometryEntityPtr& entity) {
         LOG_WARN("GeometryDocument: Failed to add entity id={}", entity ? entity->entityId() : 0);
         return false;
     }
+    m_relationshipIndex.addEntity(entity->entityId(), entity->entityType());
     entity->setDocument(shared_from_this());
     LOG_TRACE("GeometryDocument: Added entity id={}, type={}", entity->entityId(),
               static_cast<int>(entity->entityType()));
@@ -101,6 +116,7 @@ bool GeometryDocumentImpl::removeEntity(EntityId entity_id) {
         return false;
     }
 
+    m_relationshipIndex.removeEntity(entity_id);
     if(!m_entityIndex.removeEntity(entity_id)) {
         LOG_WARN("GeometryDocument: Failed to remove entity id={}", entity_id);
         return false;
@@ -143,6 +159,7 @@ void GeometryDocumentImpl::removeEntityRecursive(EntityId entity_id, // NOLINT
 void GeometryDocumentImpl::clear() {
     const size_t count = m_entityIndex.entityCount();
     m_entityIndex.clear();
+    m_relationshipIndex.clear();
     LOG_INFO("GeometryDocument: Cleared document, removed {} entities", count);
     emitChangeEvent(GeometryChangeEvent(GeometryChangeType::EntityRemoved, INVALID_ENTITY_ID));
 }
@@ -188,10 +205,8 @@ std::vector<GeometryEntityPtr> GeometryDocumentImpl::findAncestors(EntityId enti
     std::unordered_set<EntityId> visited;
     std::queue<EntityId> to_visit;
 
-    for(const auto& parent : entity->parents()) {
-        if(parent) {
-            to_visit.push(parent->entityId());
-        }
+    for(const EntityId parent_id : parentIds(entity_id)) {
+        to_visit.push(parent_id);
     }
 
     while(!to_visit.empty()) {
@@ -213,9 +228,9 @@ std::vector<GeometryEntityPtr> GeometryDocumentImpl::findAncestors(EntityId enti
         }
 
         // Continue searching through parents
-        for(const auto& parent : current->parents()) {
-            if(parent && visited.count(parent->entityId()) == 0) {
-                to_visit.push(parent->entityId());
+        for(const EntityId parent_id : parentIds(current_id)) {
+            if(visited.count(parent_id) == 0) {
+                to_visit.push(parent_id);
             }
         }
     }
@@ -235,10 +250,8 @@ GeometryDocumentImpl::findDescendants(EntityId entity_id, EntityType descendant_
     std::unordered_set<EntityId> visited;
     std::queue<EntityId> to_visit;
 
-    for(const auto& child : entity->children()) {
-        if(child) {
-            to_visit.push(child->entityId());
-        }
+    for(const EntityId child_id : childIds(entity_id)) {
+        to_visit.push(child_id);
     }
 
     while(!to_visit.empty()) {
@@ -260,9 +273,9 @@ GeometryDocumentImpl::findDescendants(EntityId entity_id, EntityType descendant_
         }
 
         // Continue searching through children
-        for(const auto& child : current->children()) {
-            if(child && visited.count(child->entityId()) == 0) {
-                to_visit.push(child->entityId());
+        for(const EntityId child_id : childIds(current_id)) {
+            if(visited.count(child_id) == 0) {
+                to_visit.push(child_id);
             }
         }
     }
@@ -281,82 +294,91 @@ GeometryEntityPtr GeometryDocumentImpl::findOwningPart(EntityId entity_id) const
         return entity;
     }
 
-    // Traverse up the parent chain to find a Part
-    std::unordered_set<EntityId> visited;
-    std::queue<EntityId> to_visit;
-
-    for(const auto& parent : entity->parents()) {
-        if(parent) {
-            to_visit.push(parent->entityId());
-        }
+    const auto part_ids = m_relationshipIndex.findRelated(entity_id, EntityType::Part);
+    if(part_ids.empty()) {
+        return nullptr;
     }
 
-    while(!to_visit.empty()) {
-        EntityId current_id = to_visit.front();
-        to_visit.pop();
-
-        if(visited.count(current_id) > 0) {
-            continue;
-        }
-        visited.insert(current_id);
-
-        auto current = findById(current_id);
-        if(!current) {
-            continue;
-        }
-
-        if(current->entityType() == EntityType::Part) {
-            return current;
-        }
-
-        for(const auto& parent : current->parents()) {
-            if(parent && visited.count(parent->entityId()) == 0) {
-                to_visit.push(parent->entityId());
-            }
-        }
-    }
-
-    return nullptr;
+    return findById(part_ids.front());
 }
 
 std::vector<GeometryEntityPtr>
 GeometryDocumentImpl::findRelatedEntities(EntityId edge_entity_id, EntityType related_type) const {
     std::vector<GeometryEntityPtr> result;
 
-    const auto entity = findById(edge_entity_id);
-    if(!entity) {
-        return result;
-    }
-
-    // For edges, traverse up to find parent wires, then to faces
-    if(entity->entityType() == EntityType::Edge && related_type == EntityType::Face) {
-        // Edge -> Wire -> Face
-        for(const auto& wire : entity->parents()) {
-            if(!wire || wire->entityType() != EntityType::Wire) {
-                continue;
-            }
-            for(const auto& face : wire->parents()) {
-                if(face && face->entityType() == EntityType::Face) {
-                    // Check for duplicates
-                    bool found = false;
-                    for(const auto& existing : result) {
-                        if(existing->entityId() == face->entityId()) {
-                            found = true;
-                            break;
-                        }
-                    }
-                    if(!found) {
-                        result.push_back(face);
-                    }
-                }
-            }
+    const auto related_ids = m_relationshipIndex.findRelated(edge_entity_id, related_type);
+    for(const EntityId related_id : related_ids) {
+        if(auto entity = findById(related_id)) {
+            result.push_back(entity);
         }
-    } else {
-        // Generic approach: use findAncestors for other relationships
-        result = findAncestors(edge_entity_id, related_type);
     }
 
     return result;
+}
+
+std::vector<EntityId> GeometryDocumentImpl::findRelateTargetIDByNode(EntityId node_id,
+                                                                     EntityType target_type) const {
+    const auto node = findById(node_id);
+    if(!node || node->entityType() != EntityType::Vertex) {
+        return {};
+    }
+    return m_relationshipIndex.findRelated(node_id, target_type);
+}
+
+std::vector<EntityId> GeometryDocumentImpl::findRelateTargetIDByEdge(EntityId edge_id,
+                                                                     EntityType target_type) const {
+    const auto edge = findById(edge_id);
+    if(!edge || edge->entityType() != EntityType::Edge) {
+        return {};
+    }
+    return m_relationshipIndex.findRelated(edge_id, target_type);
+}
+
+std::vector<EntityId> GeometryDocumentImpl::findRelateTargetIDByWire(EntityId wire_id,
+                                                                     EntityType target_type) const {
+    const auto wire = findById(wire_id);
+    if(!wire || wire->entityType() != EntityType::Wire) {
+        return {};
+    }
+    return m_relationshipIndex.findRelated(wire_id, target_type);
+}
+
+std::vector<EntityId> GeometryDocumentImpl::findRelateTargetIDByFace(EntityId face_id,
+                                                                     EntityType target_type) const {
+    const auto face = findById(face_id);
+    if(!face || face->entityType() != EntityType::Face) {
+        return {};
+    }
+    return m_relationshipIndex.findRelated(face_id, target_type);
+}
+
+PartMembers GeometryDocumentImpl::getMembersOfPart(EntityId part_id) const {
+    const auto part = findById(part_id);
+    if(!part || part->entityType() != EntityType::Part) {
+        return {};
+    }
+
+    return m_relationshipIndex.getPartMembers(part_id);
+}
+
+std::vector<EntityUID>
+GeometryDocumentImpl::findRelateTargetUidByNode(EntityId node_id, EntityType target_type) const {
+    return mapIdsToUids(*this, findRelateTargetIDByNode(node_id, target_type), target_type);
+}
+
+std::vector<EntityUID>
+GeometryDocumentImpl::findRelateTargetUidByEdge(EntityId edge_id, EntityType target_type) const {
+    return mapIdsToUids(*this, findRelateTargetIDByEdge(edge_id, target_type), target_type);
+}
+
+std::vector<EntityUID>
+GeometryDocumentImpl::findRelateTargetUidByWire(EntityId wire_id, EntityType target_type) const {
+    return mapIdsToUids(*this, findRelateTargetIDByWire(wire_id, target_type), target_type);
+}
+
+std::vector<EntityUID>
+GeometryDocumentImpl::findRelateTargetUidByFace(EntityId face_id, EntityType target_type) const {
+    return mapIdsToUids(*this, findRelateTargetIDByFace(face_id, target_type), target_type);
 }
 
 bool GeometryDocumentImpl::addChildEdge(EntityId parent_id, EntityId child_id) {
@@ -379,13 +401,7 @@ bool GeometryDocumentImpl::addChildEdge(EntityId parent_id, EntityId child_id) {
         return false;
     }
 
-    const bool inserted = parent->addChildNoSync(child_id);
-    if(!inserted) {
-        return false;
-    }
-
-    (void)child->addParentNoSync(parent_id);
-    return true;
+    return m_relationshipIndex.addEdge(parent_id, child_id);
 }
 
 bool GeometryDocumentImpl::removeChildEdge(EntityId parent_id, EntityId child_id) {
@@ -396,22 +412,35 @@ bool GeometryDocumentImpl::removeChildEdge(EntityId parent_id, EntityId child_id
         return false;
     }
 
-    const auto parent = findById(parent_id);
-    if(!parent) {
-        return false;
-    }
+    return m_relationshipIndex.removeEdge(parent_id, child_id);
+}
 
-    const bool erased = parent->removeChildNoSync(child_id);
-    if(!erased) {
-        return false;
-    }
+std::vector<EntityId> GeometryDocumentImpl::parentIds(EntityId entity_id) const {
+    return m_relationshipIndex.parentIds(entity_id);
+}
 
-    // Best-effort: if child already expired, local removal is enough.
-    if(const auto child = findById(child_id)) {
-        (void)child->removeParentNoSync(parent_id);
-    }
+std::vector<EntityId> GeometryDocumentImpl::childIds(EntityId entity_id) const {
+    return m_relationshipIndex.childIds(entity_id);
+}
 
-    return true;
+bool GeometryDocumentImpl::hasParentEdge(EntityId child_id, EntityId parent_id) const {
+    return m_relationshipIndex.hasParent(child_id, parent_id);
+}
+
+bool GeometryDocumentImpl::hasChildEdge(EntityId parent_id, EntityId child_id) const {
+    return m_relationshipIndex.hasChild(parent_id, child_id);
+}
+
+size_t GeometryDocumentImpl::parentEdgeCount(EntityId entity_id) const {
+    return m_relationshipIndex.parentCount(entity_id);
+}
+
+size_t GeometryDocumentImpl::childEdgeCount(EntityId entity_id) const {
+    return m_relationshipIndex.childCount(entity_id);
+}
+
+void GeometryDocumentImpl::detachEntityRelations(EntityId entity_id) {
+    m_relationshipIndex.detachAllRelations(entity_id);
 }
 
 LoadResult GeometryDocumentImpl::loadFromShape(const TopoDS_Shape& shape,

@@ -184,9 +184,6 @@ bool EntityIndex::removeEntity(EntityId entity_id) {
 
     const GeometryEntityPtr entity = slot.m_entity;
 
-    // Eagerly detach relationship edges before unindexing.
-    entity->detachAllRelations();
-
     // Remove all index entries (best-effort; OK if already missing)
     m_byId.erase(it);
     m_byTypeAndUID.erase(makeTypeUidKey(*entity));
@@ -249,11 +246,9 @@ size_t EntityIndex::entityCountByType(EntityType entity_type) const {
 std::vector<GeometryEntityPtr> EntityIndex::entitiesByType(EntityType entity_type) const {
     std::vector<GeometryEntityPtr> result;
     result.reserve(entityCountByType(entity_type));
-    auto maxid = getMaxIdByType(entity_type);
-    for(size_t id = 1; id <= maxid; ++id) {
-        auto entity = findByUIDAndType(static_cast<EntityUID>(id), entity_type);
-        if(entity) {
-            result.push_back(entity);
+    for(const auto& slot : m_slots) {
+        if(slot.m_entity && slot.m_entity->entityType() == entity_type) {
+            result.push_back(slot.m_entity);
         }
     }
     return result;

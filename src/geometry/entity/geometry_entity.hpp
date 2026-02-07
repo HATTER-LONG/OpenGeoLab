@@ -16,7 +16,6 @@
 #include <functional>
 #include <memory>
 #include <string>
-#include <unordered_set>
 #include <vector>
 
 class TopoDS_Shape;
@@ -53,7 +52,7 @@ public:
      *
      * Ensures parent/child edges are detached in a best-effort manner.
      *
-     * @note Edges are normally detached eagerly by EntityIndex/GeometryDocument
+     * @note Edges are normally detached eagerly by GeometryDocument/RelationshipIndex
      *       on entity removal. This destructor acts as a defensive fallback
      *       for cases where an entity outlives its document via external
      *       shared ownership.
@@ -152,7 +151,7 @@ public:
      * @brief Get one parent entity (if any)
      *
      * Note: This entity may have multiple parents. This accessor returns an arbitrary
-     * valid parent (if exists) and auto-prunes expired references.
+     * valid parent (if exists).
      */
     /// Return any valid parent (if exists). Use when multiple parents are acceptable.
     [[nodiscard]] GeometryEntityWeakPtr anyParent() const;
@@ -160,10 +159,10 @@ public:
     /// Return a valid parent only if it is unique; otherwise empty.
     [[nodiscard]] GeometryEntityWeakPtr singleParent() const;
 
-    /// Get all parent entities (auto-prunes expired references).
+    /// Get all parent entities.
     [[nodiscard]] std::vector<GeometryEntityPtr> parents() const;
 
-    /// Get child entities (auto-prunes expired references).
+    /// Get child entities.
     [[nodiscard]] std::vector<GeometryEntityPtr> children() const;
 
     /// O(1) membership check (does not resolve).
@@ -172,16 +171,16 @@ public:
     /// O(1) membership check (does not resolve).
     [[nodiscard]] bool hasChildId(EntityId child_id) const;
 
-    /// True if has no valid parents (auto-prunes expired references).
+    /// True if has no parents.
     [[nodiscard]] bool isRoot() const;
 
-    /// True if has at least one valid child (auto-prunes expired references).
+    /// True if has at least one child.
     [[nodiscard]] bool hasChildren() const;
 
-    /// Count valid parents (auto-prunes expired references).
+    /// Count parents.
     [[nodiscard]] size_t parentCount() const;
 
-    /// Count valid children (auto-prunes expired references).
+    /// Count children.
     [[nodiscard]] size_t childCount() const;
 
     /**
@@ -215,10 +214,10 @@ public:
      */
     [[nodiscard]] bool removeParent(EntityId parent_id);
 
-    /// Visit valid children; auto-filters invalid and self-cleans.
+    /// Visit valid children; filters invalid references.
     void visitChildren(const std::function<void(const GeometryEntityPtr&)>& visitor) const;
 
-    /// Visit valid parents; auto-filters invalid and self-cleans.
+    /// Visit valid parents; filters invalid references.
     void visitParents(const std::function<void(const GeometryEntityPtr&)>& visitor) const;
 
     /**
@@ -283,18 +282,10 @@ protected:
         return m_document.lock();
     }
 
-    // Relationship internals (do not sync both sides)
-    [[nodiscard]] bool addChildNoSync(EntityId child_id);
-    [[nodiscard]] bool removeChildNoSync(EntityId child_id);
-    [[nodiscard]] bool addParentNoSync(EntityId parent_id);
-    [[nodiscard]] bool removeParentNoSync(EntityId parent_id);
-
-    // Called by EntityIndex before the entity is removed, to eagerly detach edges.
+    // Called to detach edges from the document relationship index.
     void detachAllRelations();
 
     std::weak_ptr<GeometryDocumentImpl> m_document;
-    mutable std::unordered_set<EntityId> m_parentIds;
-    mutable std::unordered_set<EntityId> m_childIds;
 
     std::string m_name; ///< Display name
 };
