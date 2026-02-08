@@ -14,6 +14,10 @@ OpenGeoLab 是一个基于 Qt Quick(QML) + OpenGL 的几何/模型可视化与�
   - `src/app/`：应用入口、QML 单例后端（BackendService）、OpenGL 视口（GLViewport）
   - `src/geometry/`：几何文档/实体、OCC 形体构建与导出渲染数据
     - 实体标识：内部使用 `EntityKey = (EntityId + EntityUID + EntityType)` 作为可比较/可哈希的实体句柄
+  - `src/mesh/`：网格剖分与数据管理
+    - `MeshDocument`：存储网格节点（MeshNode）与网格单元（MeshElement），映射 geometry ↔ mesh 实体关系
+    - `GenerateMeshAction`：通过 Gmsh `importShapesNativePointer` 直接导入 OCC 形体并执行 2D 网格剖分
+    - 实体标识：`MeshElementKey = (MeshElementId + MeshElementUID + MeshEntityType)`
   - `src/io/`：模型文件读取服务（STEP/BREP）
   - `src/render/`：渲染数据结构、SceneRenderer、RenderSceneController 等
 - `resources/qml/`：QML UI（主窗口、页面、工具条等）
@@ -23,7 +27,7 @@ OpenGeoLab 是一个基于 Qt Quick(QML) + OpenGL 的几何/模型可视化与�
 - CMake >= 3.14
 - Qt 6.8（组件：Core/Gui/Qml/Quick/OpenGL）
 - OpenCASCADE（必须预装，CMake 通过 `find_package(OpenCASCADE REQUIRED)` 查找）
-- GMesh（用于网格剖分与处理，需预装）:
+- GMesh（用于网格剖分与处理，需预装，编译时需启用 `ENABLE_OCC`）:
 ```json
 {
     "cmake.configureArgs": [
@@ -77,10 +81,17 @@ cmake --build build
 
 近期新增：
 - Geo Query 页面通过 `GeometryService` 的 `query_entity_info` action，基于当前拾取到的实体 (type+uid) 查询实体详细信息并在页面下方列表展示。
+- `MeshService` 模块的 `generate_mesh` action，支持将选中的几何面/Part/Solid 通过 Gmsh 进行网格剖分，结果存入 MeshDocument 并合并渲染。
+- 拾取模式新增 `MeshNode` 和 `MeshElement` 类型，可在 Selector 工具条中切换。
 
 ## 后续开发任务（来自 plan.md，做了轻度工程化拆分）
 - 几何交互：选择（点/边/面/Part）、高亮、拾取、变换与编辑操作（trim/offset 等）
-- 网格：面网格剖分、网格质量指标、平滑/修复工具链
+- 网格：~~面网格剖分~~（已完成）、网格质量指标、平滑/修复工具链
+- 网格已完成功能：
+  - 基于 Gmsh 的面网格剖分（generate_mesh action），支持 importShapesNativePointer 直接导入 OCC 形体
+  - MeshDocument 数据管理：双 ID（MeshElementId + MeshElementUID）、geometry ↔ mesh 实体映射
+  - 网格渲染（面/边/节点）与几何渲染合并显示
+  - 拾取支持 MeshNode、MeshElement 类型，可在 Selector QML 组件中切换
 - 渲染：更一致的光照（可能引入 PBR/IBL）、选择高亮/描边、可视化辅助（法线/网格）
 - IO：导入进度与错误回传更完整；导出 STEP/BREP/网格格式
 - AI：网格质量诊断与修复建议、交互式问答与操作编排

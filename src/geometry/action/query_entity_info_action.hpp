@@ -1,4 +1,4 @@
-/*
+/**
  * @file query_entity_info_action.hpp
  * @brief Geometry action for querying detailed information of selected entities
  *

@@ -83,6 +83,10 @@ bool SelectManager::isTypePickable(Geometry::EntityType type) const {
         return hasAny(m_pickTypes, PickTypes::Solid);
     case Geometry::EntityType::Part:
         return hasAny(m_pickTypes, PickTypes::Part);
+    case Geometry::EntityType::MeshNode:
+        return hasAny(m_pickTypes, PickTypes::MeshNode);
+    case Geometry::EntityType::MeshElement:
+        return hasAny(m_pickTypes, PickTypes::MeshElement);
     default:
         return false;
     }
@@ -183,7 +187,8 @@ SelectManager::PickTypes SelectManager::normalizePickTypes(PickTypes types) {
     // Exclusivity rules:
     // - Wire/Solid/Part are exclusive and clear all others.
     // - Vertex/Edge/Face can be combined with each other.
-    // - Any of (Wire/Solid/Part) is exclusive with any of (Vertex/Edge/Face).
+    // - MeshNode/MeshElement can be combined with each other and with V/E/F.
+    // - Any of (Wire/Solid/Part) is exclusive with any of (Vertex/Edge/Face/MeshNode/MeshElement).
 
     const bool wants_solid = hasAny(types, PickTypes::Solid);
     const bool wants_part = hasAny(types, PickTypes::Part);
@@ -199,9 +204,10 @@ SelectManager::PickTypes SelectManager::normalizePickTypes(PickTypes types) {
         return PickTypes::Wire;
     }
 
-    // Only V/E/F mask.
-    constexpr PickTypes vef_mask = PickTypes::Vertex | PickTypes::Edge | PickTypes::Face;
-    return types & vef_mask;
+    // V/E/F + MeshNode/MeshElement are combinable.
+    constexpr PickTypes combinable_mask = PickTypes::Vertex | PickTypes::Edge | PickTypes::Face |
+                                          PickTypes::MeshNode | PickTypes::MeshElement;
+    return types & combinable_mask;
 }
 
 bool SelectManager::isValidSelection(Geometry::EntityUID uid, Geometry::EntityType type) {

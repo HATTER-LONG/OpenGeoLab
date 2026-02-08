@@ -19,7 +19,7 @@ std::atomic<EntityId> g_next_entity_id{1};
 
 /// Per-type atomic counters for EntityUID generation
 /// Index corresponds to EntityType enum value
-std::array<std::atomic<EntityUID>, 10> g_next_entity_uids = {
+std::array<std::atomic<EntityUID>, 12> g_next_entity_uids = {
     std::atomic<EntityUID>{1}, // None
     std::atomic<EntityUID>{1}, // Vertex
     std::atomic<EntityUID>{1}, // Edge
@@ -30,6 +30,8 @@ std::array<std::atomic<EntityUID>, 10> g_next_entity_uids = {
     std::atomic<EntityUID>{1}, // CompSolid
     std::atomic<EntityUID>{1}, // Compound
     std::atomic<EntityUID>{1}, // Part
+    std::atomic<EntityUID>{1}, // MeshNode
+    std::atomic<EntityUID>{1}, // MeshElement
 };
 
 } // namespace
@@ -40,6 +42,7 @@ EntityType entityTypeFromString(std::string_view value) {
         {"Face", EntityType::Face},         {"Shell", EntityType::Shell},
         {"Solid", EntityType::Solid},       {"CompSolid", EntityType::CompSolid},
         {"Compound", EntityType::Compound}, {"Part", EntityType::Part},
+        {"MeshNode", EntityType::MeshNode}, {"MeshElement", EntityType::MeshElement},
     };
     auto it = type_map.find(value);
     if(it != type_map.end()) {
@@ -70,6 +73,10 @@ std::string entityTypeToString(EntityType type) {
         return "Compound";
     case EntityType::Part:
         return "Part";
+    case EntityType::MeshNode:
+        return "MeshNode";
+    case EntityType::MeshElement:
+        return "MeshElement";
     default:
         break;
     }

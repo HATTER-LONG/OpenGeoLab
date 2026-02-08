@@ -1,3 +1,11 @@
+/**
+ * @file select_manager_service.cpp
+ * @brief Implementation of SelectManagerService QML bridge
+ *
+ * Bridges the render-layer SelectManager singleton to the QML UI thread
+ * via Qt::QueuedConnection signals.
+ */
+
 #include "app/select_manager_service.hpp"
 #include "render/select_manager.hpp"
 #include "util/logger.hpp"

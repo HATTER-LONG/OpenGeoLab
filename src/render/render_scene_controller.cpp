@@ -6,6 +6,7 @@
 #include "render/render_scene_controller.hpp"
 
 #include "geometry/geometry_document_manager.hpp"
+#include "mesh/mesh_document_manager.hpp"
 #include "util/logger.hpp"
 
 #include <QCoreApplication>
@@ -280,6 +281,31 @@ void RenderSceneController::updateRenderData() {
         }
 
         m_renderData = document->getRenderData(TessellationOptions::defaultOptions());
+
+        // Merge mesh render data if available
+        try {
+            auto mesh_mgr = MeshDocumentMgrInstance;
+            if(mesh_mgr) {
+                auto mesh_doc = mesh_mgr->currentDocument();
+                if(mesh_doc && !mesh_doc->isEmpty()) {
+                    auto mesh_data = mesh_doc->getMeshRenderData();
+                    for(auto& fm : mesh_data.m_faceMeshes) {
+                        m_renderData.m_faceMeshes.push_back(std::move(fm));
+                    }
+                    for(auto& em : mesh_data.m_edgeMeshes) {
+                        m_renderData.m_edgeMeshes.push_back(std::move(em));
+                    }
+                    for(auto& vm : mesh_data.m_vertexMeshes) {
+                        m_renderData.m_vertexMeshes.push_back(std::move(vm));
+                    }
+                    m_renderData.updateBoundingBox();
+                    LOG_DEBUG("RenderSceneController: Merged mesh render data");
+                }
+            }
+        } catch(const std::exception& e) {
+            LOG_WARN("RenderSceneController: Mesh document not available: {}", e.what());
+        }
+
         m_renderData.markModified();
         m_hasGeometry = !m_renderData.isEmpty();
 

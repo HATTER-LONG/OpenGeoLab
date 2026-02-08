@@ -18,8 +18,10 @@ Item {
     readonly property int face_type: 8
     readonly property int solid_type: 16
     readonly property int part_type: 32
+    readonly property int mesh_node_type: 64
+    readonly property int mesh_element_type: 128
 
-    readonly property int all_types: vertex_type | edge_type | wire_type | face_type | solid_type | part_type
+    readonly property int all_types: vertex_type | edge_type | wire_type | face_type | solid_type | part_type | mesh_node_type | mesh_element_type
 
     /// Bitmask of entity types that are allowed to be picked in this selector.
     /// Parent pages can override this to restrict available buttons and pick types.
@@ -44,7 +46,7 @@ Item {
         return (root.allowedTypes & type) !== 0;
     }
 
-    readonly property int visibleTypeButtonCount: (root.isEntityTypeVisible(root.vertex_type) ? 1 : 0) + (root.isEntityTypeVisible(root.edge_type) ? 1 : 0) + (root.isEntityTypeVisible(root.face_type) ? 1 : 0) + (root.isEntityTypeVisible(root.wire_type) ? 1 : 0) + (root.isEntityTypeVisible(root.solid_type) ? 1 : 0) + (root.isEntityTypeVisible(root.part_type) ? 1 : 0)
+    readonly property int visibleTypeButtonCount: (root.isEntityTypeVisible(root.vertex_type) ? 1 : 0) + (root.isEntityTypeVisible(root.edge_type) ? 1 : 0) + (root.isEntityTypeVisible(root.face_type) ? 1 : 0) + (root.isEntityTypeVisible(root.wire_type) ? 1 : 0) + (root.isEntityTypeVisible(root.solid_type) ? 1 : 0) + (root.isEntityTypeVisible(root.part_type) ? 1 : 0) + (root.isEntityTypeVisible(root.mesh_node_type) ? 1 : 0) + (root.isEntityTypeVisible(root.mesh_element_type) ? 1 : 0)
 
     function typeButtonWidth(barWidth, spacing) {
         var count = root.visibleTypeButtonCount;
@@ -93,7 +95,7 @@ Item {
         if ((current & type) === 0) {
             if (type === root.part_type || type === root.solid_type || type === root.wire_type) {
                 current = root.none_type;
-            } else if (type === root.vertex_type || type === root.edge_type || type === root.face_type) {
+            } else if (type === root.vertex_type || type === root.edge_type || type === root.face_type || type === root.mesh_node_type || type === root.mesh_element_type) {
                 current &= ~(root.wire_type | root.solid_type | root.part_type);
             }
             current |= type;
@@ -222,6 +224,24 @@ Item {
                     iconSource: "qrc:/opengeolab/resources/icons/box.svg"
                     selected: ((root.selectedTypes & root.part_type) !== 0)
                     onClicked: root.onEntityTypeClicked(root.part_type)
+                }
+
+                EntityTypeButton {
+                    width: root.typeButtonWidth(typeButtonRow.width, typeButtonRow.spacing)
+                    visible: root.isEntityTypeVisible(root.mesh_node_type)
+                    entityType: "MeshNode"
+                    iconSource: "qrc:/opengeolab/resources/icons/mesh_node.svg"
+                    selected: ((root.selectedTypes & root.mesh_node_type) !== 0)
+                    onClicked: root.onEntityTypeClicked(root.mesh_node_type)
+                }
+
+                EntityTypeButton {
+                    width: root.typeButtonWidth(typeButtonRow.width, typeButtonRow.spacing)
+                    visible: root.isEntityTypeVisible(root.mesh_element_type)
+                    entityType: "MeshElem"
+                    iconSource: "qrc:/opengeolab/resources/icons/mesh_element.svg"
+                    selected: ((root.selectedTypes & root.mesh_element_type) !== 0)
+                    onClicked: root.onEntityTypeClicked(root.mesh_element_type)
                 }
             }
         }

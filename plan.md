@@ -3,16 +3,24 @@
 
 # 软件架构
 - include 头文件包括对外接口，不同 src 下的目录为不同模块，只能通过 include 暴露的接口进行调用
+- 你是一个 C++ 专家，写出的代码符合现代标准，并且是模块化的，不要堆砌再一个函数内
 
 # 计划任务
-1. 参考现在工程已有的 Geometry service 或者 render service 创建一个 Mesh service 模块在 Mesh 目录中：
-    - 添加一个 Action，支持通过传入的 geometry entities 通过 GMsh 进行网格剖分，返回剖分后的 mesh entities 列表
-    - 支持传入的 entity type 包括 面、part
-    - mesh service 需要支持通过 geometry entity 对象进行网格剖分
-    - 创建一个 mesh 对象数据管理类，支持存储 mesh entity 对象，并且支持通过 element id 等获取对应的 mesh entity 对象
-    - 支持渲染显示 mesh element 对象
-2. 重构 GenerateMeshPage 页面，支持选择 geometry entity face\solid\part 进行网格剖分，并且可以设置网格剖分参数，例如全局网格尺寸等，剖分结果在下方列表显示 mesh entity id 以及 mesh 详细信息。
-3. geometry service 需要将 geometry entity 类型暴露出来，并且 document 应当支持通过 entity id 以及 uid + type 获取对应的 geometry entity 对象，便于 gmsh 获取 occ shape 进行网格剖分。
+
+1. 完善 generate_mesh_action 功能，实现通过 gmsh 对传入的 geometry entity 进行网格剖分：
+    - 当传入多个 shape 时，将shape 合并成一个 component 再进行剖分
+    - 使用 gmsh::model::occ::importShapesNativePointer 接口直接导入 occ shape 指针，避免中间文件读写
+
+2. 实现一个 mesh 数据管理类，参考 geometry types 来个 element id，element uid + type（node、element）：
+    - 支持存储 mesh 数据，分配好 node、element，映射 geometry entity 与 mesh entity 之间的关系，支持通过 mesh node、mesh element、geometry entity 见相互查找
+    - 例如支持通过 mesh element id 获取对应的 mesh element 对象
+    - 参考 geometry document 实现实现 render 数据导出接口，支持渲染显示 mesh element，要显示出 mesh node、edge、face 等不同类型
+
+3. render 拾取相关梳理：
+    - 当一个面被网格剖分后，要支持能拾取 element、element node 类型也要能拾取 geometry face 类型，考虑如何处理深度，因为一般 网格 element 会覆盖 geometry face 的拾取
+    - select manager service 需要支持 mesh element、mesh node 类型的拾取
+    - selector qml 组件需要支持 mesh element、mesh node 类型的拾取，注意生成对应的 icon
+
 4. 检查工程中所有的 qml cpp hpp 代码，完善或补充注释信息，当前注释不符合要求的也要进行修改。所有注释信息参考  doxygen_comment_style.md 文件中的要求进行编写。
 5. 注意更新 README.md 以及 docs/json_protocols.md 文件中的内容，确保与代码实现保持一致，以中文版本为准更新英文版本。
 6. 保证最终代码可以编译通过，并正确执行。

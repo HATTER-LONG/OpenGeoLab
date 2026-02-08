@@ -6,7 +6,7 @@ This document describes the current JSON-based protocols between QML and C++ (vi
 
 ### 1.1 QML Entry Point
 - API: `BackendService.request(moduleName, jsonString)`
-- `moduleName`: service identifier (`RenderService` / `GeometryService` / `ReaderService`)
+- `moduleName`: service identifier (`RenderService` / `GeometryService` / `ReaderService` / `MeshService`)
 - `jsonString`: JSON string (recommended to always pass an object)
 
 ### 1.2 `action`
@@ -78,12 +78,22 @@ This document describes the current JSON-based protocols between QML and C++ (vi
 #### Set pick types
 Notes:
 - `vertex/edge/face` can be combined.
-- `solid/part` are exclusive (and also exclusive with `vertex/edge/face`).
+- `mesh_node/mesh_element` can be combined (and can also be combined with `vertex/edge/face`).
+- `solid/part` are exclusive (and also exclusive with `vertex/edge/face/mesh_node/mesh_element`).
 
 ```json
 {
   "action": "SelectControl",
   "select_ctrl": { "types": ["vertex", "edge", "face"] },
+  "_meta": { "silent": true }
+}
+```
+
+Mesh picking example:
+```json
+{
+  "action": "SelectControl",
+  "select_ctrl": { "types": ["mesh_node", "mesh_element"] },
   "_meta": { "silent": true }
 }
 ```
@@ -236,3 +246,55 @@ Failure:
 - thrown as an exception and reported via `operationFailed`.
 
 Note: ReaderService validates `action == "load_model"`; other actions are rejected.
+
+---
+
+## 5. MeshService
+
+### 5.1 generate_mesh
+- action: `"generate_mesh"`
+- purpose: mesh selected geometry faces/Part/Solid using Gmsh for 2D surface tessellation, storing results in MeshDocument and merging into the render pipeline.
+- fields:
+  - `entities`: array, each with `type` (string) and `uid` (unsigned). Supports Face / Part / Solid (Part/Solid are automatically expanded to contained Faces).
+  - `elementSize` (optional, default 1.0): target mesh element size
+
+Request:
+```json
+{
+  "action": "generate_mesh",
+  "entities": [
+    { "type": "Face", "uid": 101 },
+    { "type": "Part", "uid": 1 }
+  ],
+  "elementSize": 2.0
+}
+```
+
+Success response:
+```json
+{
+  "success": true,
+  "node_count": 1024,
+  "element_count": 2000,
+  "mesh_entities": [
+    {
+      "type": "Face",
+      "uid": 101,
+      "id": 501,
+      "element_count": 350,
+      "node_count": 200
+    }
+  ]
+}
+```
+
+Failure response:
+```json
+{ "success": false, "error": "No valid face entities found for meshing" }
+```
+
+> Notes:
+> - When `Part` or `Solid` types are provided, the action automatically expands to all related Face entities.
+> - Multiple faces are combined into a single `TopoDS_Compound` and meshed as one batch in Gmsh.
+> - Mesh results (nodes / triangles / quads) are stored in MeshDocument. Each node and element is assigned a globally unique `MeshElementId` and a type-scoped `MeshElementUID`.
+> - The render pipeline automatically merges MeshDocument render data with geometry render data for display.

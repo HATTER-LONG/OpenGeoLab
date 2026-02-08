@@ -12,6 +12,10 @@ OpenGeoLab is a Qt Quick (QML) + OpenGL prototype for CAD-like geometry visualiz
   - `src/app/`: application entry, QML singletons (BackendService), OpenGL viewport (GLViewport)
   - `src/geometry/`: geometry document/entities, OCC build and render-data extraction
     - Entity identity: internally uses `EntityKey = (EntityId + EntityUID + EntityType)` as a comparable/hashable handle
+  - `src/mesh/`: mesh generation and data management
+    - `MeshDocument`: stores mesh nodes (MeshNode) and elements (MeshElement) with geometry ↔ mesh entity mapping
+    - `GenerateMeshAction`: imports OCC shapes into Gmsh via `importShapesNativePointer` for 2D surface meshing
+    - Entity identity: `MeshElementKey = (MeshElementId + MeshElementUID + MeshEntityType)`
   - `src/io/`: model import services (STEP/BREP)
   - `src/render/`: render data types, SceneRenderer, RenderSceneController
 - `resources/qml/`: QML UI
@@ -21,6 +25,7 @@ OpenGeoLab is a Qt Quick (QML) + OpenGL prototype for CAD-like geometry visualiz
 - CMake >= 3.14
 - Qt 6.8 (Core/Gui/Qml/Quick/OpenGL)
 - OpenCASCADE (pre-installed; discovered by CMake via `find_package(OpenCASCADE REQUIRED)`)
+- Gmsh (pre-installed; must be built with `ENABLE_OCC=ON`)
 - HDF5 (HighFive expects system HDF5)
 - Ninja + MSVC (recommended on Windows)
 
@@ -45,12 +50,15 @@ Signals:
 
 See: `docs/json_protocols.en.md`.
 
-Recent addition:
+Recent additions:
 - The Geo Query page calls `GeometryService` action `query_entity_info` to query detailed info for the currently selected entities (type+uid) and renders the results in a list.
+- `MeshService` module with `generate_mesh` action — meshes selected geometry faces/Part/Solid using Gmsh, stores results in MeshDocument, and merges into the render pipeline.
+- Picking mode supports `MeshNode` and `MeshElement` types, togglable from the Selector toolbar.
 
 ## Next Steps (high-level)
 - Selection & picking (vertex/edge/face/part), highlight, and transform/edit operations (trim/offset, etc.)
-- Meshing: surface tessellation, quality metrics, smoothing/repair
+- Meshing: ~~surface tessellation~~ (done) — quality metrics, smoothing/repair
+  - Completed: Gmsh-based surface meshing, MeshDocument data management, mesh rendering (face/edge/node), MeshNode/MeshElement picking
 - Rendering: consistent lighting (potential PBR/IBL), selection outline, debugging overlays
 - IO: richer import/export metadata and error reporting
 - AI: mesh diagnosis and guided repair workflows

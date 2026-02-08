@@ -1,3 +1,11 @@
+/**
+ * @file relationship_index.cpp
+ * @brief Implementation of EntityRelationshipIndex graph traversal and caching
+ *
+ * Uses a directed adjacency graph with BFS/DFS traversal for ancestor/descendant
+ * queries. A shared_mutex guards concurrent read/write access to the index.
+ */
+
 #include "relationship_index.hpp"
 
 #include "entity_index.hpp"

@@ -6,7 +6,7 @@
 
 ### 1.1 调用入口（QML）
 - API：`BackendService.request(moduleName, jsonString)`
-- `moduleName`：服务名（当前已注册：`RenderService` / `GeometryService` / `ReaderService`）
+- `moduleName`：服务名（当前已注册：`RenderService` / `GeometryService` / `ReaderService` / `MeshService`）
 - `jsonString`：JSON 字符串（建议始终传对象）
 
 ### 1.2 action 约定
@@ -64,13 +64,23 @@
 #### 2.2.2 设置拾取类型
 说明：
 - `vertex/edge/face` 可组合。
-- `solid/part` 为互斥模式（且与 `vertex/edge/face` 互斥）。
+- `mesh_node/mesh_element` 可组合（也可与 `vertex/edge/face` 组合）。
+- `solid/part` 为互斥模式（且与 `vertex/edge/face/mesh_node/mesh_element` 互斥）。
 
 请求（字符串数组）：
 ```json
 {
   "action": "SelectControl",
   "select_ctrl": { "types": ["vertex", "edge", "face"] },
+  "_meta": { "silent": true }
+}
+```
+
+mesh 拾取示例：
+```json
+{
+  "action": "SelectControl",
+  "select_ctrl": { "types": ["mesh_node", "mesh_element"] },
   "_meta": { "silent": true }
 }
 ```
@@ -329,3 +339,55 @@
 - 失败：抛异常并走 `operationFailed`（error 为字符串描述）
 
 > 说明：ReaderService 会校验 `action == "load_model"`；其它 action 会返回失败（走 `operationFailed`）。
+
+---
+
+## 5. MeshService
+
+### 5.1 generate_mesh
+- action：`"generate_mesh"`
+- 用途：对选中的几何面/Part/Solid 通过 Gmsh 执行 2D 网格剖分，结果存入 MeshDocument 并合并到渲染管线。
+- 字段：
+  - `entities`：数组，每项包含 `type` (string) 和 `uid` (unsigned)，支持 Face / Part / Solid（Part/Solid 会自动展开到所属 Face）
+  - `elementSize`（可选，默认 1.0）：网格单元尺寸
+
+请求：
+```json
+{
+  "action": "generate_mesh",
+  "entities": [
+    { "type": "Face", "uid": 101 },
+    { "type": "Part", "uid": 1 }
+  ],
+  "elementSize": 2.0
+}
+```
+
+成功响应：
+```json
+{
+  "success": true,
+  "node_count": 1024,
+  "element_count": 2000,
+  "mesh_entities": [
+    {
+      "type": "Face",
+      "uid": 101,
+      "id": 501,
+      "element_count": 350,
+      "node_count": 200
+    }
+  ]
+}
+```
+
+失败响应示例：
+```json
+{ "success": false, "error": "No valid face entities found for meshing" }
+```
+
+> 说明：
+> - 传入 `Part` 或 `Solid` 类型时，action 会自动展开获取所有关联的 Face 实体。
+> - 多个面在 Gmsh 中合并为一个 TopoDS_Compound 后统一剖分。
+> - 剖分结果（节点/三角形/四边形）存入 MeshDocument，节点和单元均分配全局唯一 `MeshElementId` 和类型域内唯一 `MeshElementUID`。
+> - 渲染管线自动将 MeshDocument 的 render data 合并到几何渲染数据中显示。

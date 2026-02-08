@@ -43,6 +43,8 @@ public:
         Face = 1u << 3u,
         Solid = 1u << 4u,
         Part = 1u << 5u,
+        MeshNode = 1u << 6u,
+        MeshElement = 1u << 7u,
     };
 
     /**

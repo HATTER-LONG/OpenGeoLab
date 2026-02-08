@@ -1,3 +1,11 @@
+/**
+ * @file trackball_controller.cpp
+ * @brief Implementation of TrackballController for viewport camera manipulation
+ *
+ * Contains quaternion-based rotation, zoom, and pan logic for
+ * interactive 3D navigation via mouse input.
+ */
+
 #include "render/trackball_controller.hpp"
 
 #include <QtMath>
