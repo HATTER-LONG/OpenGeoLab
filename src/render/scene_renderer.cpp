@@ -362,7 +362,7 @@ void SceneRenderer::render(const QVector3D& camera_pos,
     }
 
     // Clear background
-    glClearColor(0.15f, 0.15f, 0.17f, 1.0f);
+    glClearColor(0.18f, 0.18f, 0.22f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glEnable(GL_DEPTH_TEST);
