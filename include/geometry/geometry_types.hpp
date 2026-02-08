@@ -172,6 +172,52 @@ using EntityKeySet = std::unordered_set<EntityKey, EntityKeyHash>;
 
 template <typename T> using EntityKeyMap = std::unordered_map<EntityKey, T, EntityKeyHash>;
 
+struct EntityRef {
+    EntityUID m_uid{INVALID_ENTITY_UID};
+    EntityType m_type{EntityType::None};
+
+    constexpr EntityRef() = default;
+    constexpr EntityRef(EntityUID u, EntityType t) noexcept : m_uid(u), m_type(t) {}
+
+    [[nodiscard]] constexpr bool isValid() const noexcept {
+        return m_uid != INVALID_ENTITY_UID && m_type != EntityType::None;
+    }
+
+    [[nodiscard]] constexpr bool operator==(const EntityRef& other) const noexcept {
+        return m_uid == other.m_uid && m_type == other.m_type;
+    }
+    [[nodiscard]] constexpr bool operator!=(const EntityRef& other) const noexcept {
+        return !(*this == other);
+    };
+
+    /**
+     * @brief Strict weak ordering (for set / sort / debug)
+     */
+    [[nodiscard]] constexpr bool operator<(const EntityRef& other) const noexcept {
+        if(m_type != other.m_type) {
+            using U = std::underlying_type_t<EntityType>;
+            return static_cast<U>(m_type) < static_cast<U>(other.m_type);
+        }
+        return m_uid < other.m_uid;
+    }
+};
+struct EntityRefHash {
+    [[nodiscard]] size_t operator()(const EntityRef& ref) const noexcept {
+        size_t seed = 0;
+        auto hash_combine = [](size_t& s, size_t v) {
+            s ^= v + 0x9e3779b97f4a7c15ULL + (s << 6) + (s >> 2);
+        };
+
+        hash_combine(seed, std::hash<EntityUID>{}(ref.m_uid));
+        using U = std::underlying_type_t<EntityType>;
+        hash_combine(seed, std::hash<U>{}(static_cast<U>(ref.m_type)));
+        return seed;
+    }
+};
+
+using EntityRefSet = std::unordered_set<EntityRef, EntityRefHash>;
+template <typename T> using EntityRefMap = std::unordered_map<EntityRef, T, EntityRefHash>;
+
 /**
  * @brief Generate a new globally unique EntityId
  * @return A new unique EntityId (thread-safe)

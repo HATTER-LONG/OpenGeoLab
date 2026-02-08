@@ -220,8 +220,7 @@ void RenderSceneController::handleDocumentGeometryChanged(
 
 void RenderSceneController::subscribeToCurrentDocument() {
     try {
-        auto manager =
-            g_ComponentFactory.getInstanceObject<Geometry::IGeoDocumentManagerSingletonFactory>();
+        auto manager = GeoDocumentMgrInstance;
         if(!manager) {
             LOG_WARN("RenderSceneController: Document manager not available");
             return;
@@ -263,8 +262,7 @@ void RenderSceneController::subscribeToDocument(const Geometry::GeometryDocument
 
 void RenderSceneController::updateRenderData() {
     try {
-        auto manager =
-            g_ComponentFactory.getInstanceObject<Geometry::IGeoDocumentManagerSingletonFactory>();
+        auto manager = GeoDocumentMgrInstance;
         if(!manager) {
             LOG_WARN("RenderSceneController: Document manager not available during update");
             m_renderData.clear();

@@ -6,6 +6,7 @@
 #include "service.hpp"
 #include "geometry/geometry_service.hpp"
 #include "io/reader_service.hpp"
+#include "mesh/mesh_service.hpp"
 #include "render/render_service.hpp"
 #include <kangaroo/util/component_factory.hpp>
 
@@ -19,6 +20,7 @@ namespace OpenGeoLab::App {
 void registerServices() {
     IO::registerServices();
     Geometry::registerServices();
+    Mesh::registerServices();
     Render::registerServices();
 }
 

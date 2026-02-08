@@ -58,3 +58,6 @@ public:
 };
 
 } // namespace OpenGeoLab::Geometry
+
+#define GeoDocumentMgrInstance                                                                     \
+    g_ComponentFactory.getInstanceObject<Geometry::IGeoDocumentManagerSingletonFactory>()
