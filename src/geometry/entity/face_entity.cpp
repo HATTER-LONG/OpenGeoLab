@@ -24,19 +24,19 @@ void FaceEntity::parameterBounds(double& u_min, double& u_max, double& v_min, do
     BRepTools::UVBounds(m_face, u_min, u_max, v_min, v_max);
 }
 
-Point3D FaceEntity::pointAt(double u, double v) const {
+Util::Pt3d FaceEntity::pointAt(double u, double v) const {
     Handle(Geom_Surface) surf = surface();
     if(surf.IsNull()) {
-        return Point3D();
+        return Util::Pt3d();
     }
     gp_Pnt p = surf->Value(u, v);
-    return Point3D(p.X(), p.Y(), p.Z());
+    return Util::Pt3d(p.X(), p.Y(), p.Z());
 }
 
-Vector3D FaceEntity::normalAt(double u, double v) const {
+Util::Vec3d FaceEntity::normalAt(double u, double v) const {
     Handle(Geom_Surface) surf = surface();
     if(surf.IsNull()) {
-        return Vector3D();
+        return Util::Vec3d();
     }
 
     gp_Pnt p;
@@ -50,10 +50,10 @@ Vector3D FaceEntity::normalAt(double u, double v) const {
         if(m_face.Orientation() == TopAbs_REVERSED) {
             normal.Reverse();
         }
-        return Vector3D(normal.X(), normal.Y(), normal.Z());
+        return Util::Vec3d(normal.X(), normal.Y(), normal.Z());
     }
 
-    return Vector3D();
+    return Util::Vec3d();
 }
 double FaceEntity::area() const {
     GProp_GProps props;

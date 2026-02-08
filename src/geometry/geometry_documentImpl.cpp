@@ -8,6 +8,7 @@
 #include "geometry/part_color.hpp"
 #include "shape_builder.hpp"
 #include "util/logger.hpp"
+#include "util/point_vector3d.hpp"
 #include "util/progress_callback.hpp"
 
 #include <BRepMesh_IncrementalMesh.hxx>
@@ -45,7 +46,7 @@ void computeSmoothVertexNormals(Render::RenderMesh& mesh) {
         return;
     }
 
-    std::vector<Vector3D> accum(mesh.m_vertices.size());
+    std::vector<Util::Vec3d> accum(mesh.m_vertices.size());
     for(size_t i = 0; i + 2 < mesh.m_indices.size(); i += 3) {
         const uint32_t i0 = mesh.m_indices[i + 0];
         const uint32_t i1 = mesh.m_indices[i + 1];
@@ -59,11 +60,11 @@ void computeSmoothVertexNormals(Render::RenderMesh& mesh) {
         const auto& v1 = mesh.m_vertices[i1];
         const auto& v2 = mesh.m_vertices[i2];
 
-        const Vector3D p0{v0.m_position[0], v0.m_position[1], v0.m_position[2]};
-        const Vector3D p1{v1.m_position[0], v1.m_position[1], v1.m_position[2]};
-        const Vector3D p2{v2.m_position[0], v2.m_position[1], v2.m_position[2]};
+        const Util::Vec3d p0{v0.m_position[0], v0.m_position[1], v0.m_position[2]};
+        const Util::Vec3d p1{v1.m_position[0], v1.m_position[1], v1.m_position[2]};
+        const Util::Vec3d p2{v2.m_position[0], v2.m_position[1], v2.m_position[2]};
 
-        const Vector3D n = (p1 - p0).cross(p2 - p0);
+        const Util::Vec3d n = (p1 - p0).cross(p2 - p0);
         accum[i0] += n;
         accum[i1] += n;
         accum[i2] += n;
@@ -75,9 +76,9 @@ void computeSmoothVertexNormals(Render::RenderMesh& mesh) {
             continue;
         }
         const double inv_len = 1.0 / std::sqrt(lsq);
-        mesh.m_vertices[i].m_normal[0] = static_cast<float>(accum[i].m_x * inv_len);
-        mesh.m_vertices[i].m_normal[1] = static_cast<float>(accum[i].m_y * inv_len);
-        mesh.m_vertices[i].m_normal[2] = static_cast<float>(accum[i].m_z * inv_len);
+        mesh.m_vertices[i].m_normal[0] = static_cast<float>(accum[i].x * inv_len);
+        mesh.m_vertices[i].m_normal[1] = static_cast<float>(accum[i].y * inv_len);
+        mesh.m_vertices[i].m_normal[2] = static_cast<float>(accum[i].z * inv_len);
     }
 }
 } // namespace
@@ -417,7 +418,7 @@ GeometryDocumentImpl::generateFaceMesh(const GeometryEntityImplPtr& entity,
         }
 
         mesh.m_vertices.push_back(vertex);
-        mesh.m_boundingBox.expand(Point3D(pnt.X(), pnt.Y(), pnt.Z()));
+        mesh.m_boundingBox.expand(Util::Pt3d(pnt.X(), pnt.Y(), pnt.Z()));
     }
 
     // Extract triangles
@@ -507,7 +508,7 @@ GeometryDocumentImpl::generateEdgeMesh(const GeometryEntityImplPtr& entity,
                                                             static_cast<float>(pnt.Y()),
                                                             static_cast<float>(pnt.Z()));
                 vertex.setColor(edge_color[0], edge_color[1], edge_color[2], edge_color[3]);
-                mesh.m_boundingBox.expand(Point3D(pnt.X(), pnt.Y(), pnt.Z()));
+                mesh.m_boundingBox.expand(Util::Pt3d(pnt.X(), pnt.Y(), pnt.Z()));
             }
 
             return mesh;
@@ -543,7 +544,7 @@ GeometryDocumentImpl::generateEdgeMesh(const GeometryEntityImplPtr& entity,
         auto& vertex = mesh.m_vertices.emplace_back(
             static_cast<float>(pnt.X()), static_cast<float>(pnt.Y()), static_cast<float>(pnt.Z()));
         vertex.setColor(edge_color[0], edge_color[1], edge_color[2], edge_color[3]);
-        mesh.m_boundingBox.expand(Point3D(pnt.X(), pnt.Y(), pnt.Z()));
+        mesh.m_boundingBox.expand(Util::Pt3d(pnt.X(), pnt.Y(), pnt.Z()));
     }
 
     return mesh;
@@ -589,7 +590,7 @@ Render::RenderMesh GeometryDocumentImpl::generateVertexMesh(const GeometryEntity
         static_cast<float>(pnt.X()), static_cast<float>(pnt.Y()), static_cast<float>(pnt.Z()));
     render_vertex.setColor(vertex_color[0], vertex_color[1], vertex_color[2], vertex_color[3]);
 
-    mesh.m_boundingBox.expand(Point3D(pnt.X(), pnt.Y(), pnt.Z()));
+    mesh.m_boundingBox.expand(Util::Pt3d(pnt.X(), pnt.Y(), pnt.Z()));
 
     return mesh;
 }

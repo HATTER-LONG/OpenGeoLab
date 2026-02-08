@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include "util/point_vector3d.hpp"
 #include "wire_entity.hpp"
 #include <Geom_Surface.hxx>
 #include <TopoDS_Face.hxx>
@@ -67,9 +68,9 @@ public:
      * @brief Evaluate point on face at UV parameters
      * @param u U parameter
      * @param v V parameter
-     * @return Point3D at (u,v)
+     * @return pt3d at (u,v)
      */
-    [[nodiscard]] Point3D pointAt(double u, double v) const;
+    [[nodiscard]] Util::Pt3d pointAt(double u, double v) const;
 
     /**
      * @brief Get surface normal at UV parameters
@@ -77,7 +78,7 @@ public:
      * @param v V parameter
      * @return Unit normal vector
      */
-    [[nodiscard]] Vector3D normalAt(double u, double v) const;
+    [[nodiscard]] Util::Vec3d normalAt(double u, double v) const;
 
     /**
      * @brief Get face area

@@ -9,6 +9,7 @@
 #pragma once
 
 #include "geometry_entityImpl.hpp"
+#include "util/point_vector3d.hpp"
 #include <TopoDS_Solid.hxx>
 
 namespace OpenGeoLab::Geometry {
@@ -64,7 +65,7 @@ public:
      * @brief Get center of mass
      * @return Center point
      */
-    [[nodiscard]] Point3D centerOfMass() const;
+    [[nodiscard]] Util::Pt3d centerOfMass() const;
 
     // -------------------------------------------------------------------------
     // Topology Queries

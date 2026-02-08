@@ -4,6 +4,7 @@
  */
 
 #include "edge_entity.hpp"
+#include "util/point_vector3d.hpp"
 #include <BRepGProp.hxx>
 #include <BRep_Tool.hxx>
 #include <GProp_GProps.hxx>
@@ -22,18 +23,18 @@ Handle(Geom_Curve) EdgeEntity::curve() const {
 void EdgeEntity::parameterRange(double& first, double& last) const {
     BRep_Tool::Curve(m_edge, first, last);
 }
-Point3D EdgeEntity::pointAt(double u) const {
+Util::Pt3d EdgeEntity::pointAt(double u) const {
     Handle(Geom_Curve) crv = curve();
     if(crv.IsNull()) {
-        return Point3D();
+        return Util::Pt3d();
     }
     gp_Pnt p = crv->Value(u);
-    return Point3D(p.X(), p.Y(), p.Z());
+    return Util::Pt3d(p.X(), p.Y(), p.Z());
 }
-Vector3D EdgeEntity::tangentAt(double u) const {
+Util::Vec3d EdgeEntity::tangentAt(double u) const {
     Handle(Geom_Curve) crv = curve();
     if(crv.IsNull()) {
-        return Vector3D();
+        return Util::Vec3d();
     }
 
     gp_Pnt p;
@@ -42,10 +43,10 @@ Vector3D EdgeEntity::tangentAt(double u) const {
 
     if(tangent.Magnitude() > 1e-10) {
         tangent.Normalize();
-        return Vector3D(tangent.X(), tangent.Y(), tangent.Z());
+        return Util::Vec3d(tangent.X(), tangent.Y(), tangent.Z());
     }
 
-    return Vector3D();
+    return Util::Vec3d();
 }
 double EdgeEntity::length() const {
     GProp_GProps props;
@@ -61,19 +62,19 @@ bool EdgeEntity::isClosed() const {
 
 bool EdgeEntity::isDegenerated() const { return BRep_Tool::Degenerated(m_edge); }
 
-Point3D EdgeEntity::startPoint() const {
+Util::Pt3d EdgeEntity::startPoint() const {
     double first, last;
     parameterRange(first, last);
     return pointAt(first);
 }
 
-Point3D EdgeEntity::endPoint() const {
+Util::Pt3d EdgeEntity::endPoint() const {
     double first, last;
     parameterRange(first, last);
     return pointAt(last);
 }
 
-Point3D EdgeEntity::midPoint() const {
+Util::Pt3d EdgeEntity::midPoint() const {
     double first, last;
     parameterRange(first, last);
     return pointAt((first + last) / 2.0);

@@ -9,6 +9,7 @@
 #pragma once
 
 #include "geometry_entityImpl.hpp"
+#include "util/point_vector3d.hpp"
 #include <Geom_Curve.hxx>
 #include <TopoDS_Edge.hxx>
 
@@ -64,15 +65,15 @@ public:
     /**
      * @brief Evaluate point on edge at parameter
      * @param u Parameter value
-     * @return Point3D at parameter
+     * @return pt3d at parameter
      */
-    [[nodiscard]] Point3D pointAt(double u) const;
+    [[nodiscard]] Util::Pt3d pointAt(double u) const;
     /**
      * @brief Get tangent vector at parameter
      * @param u Parameter value
      * @return Tangent direction (normalized)
      */
-    [[nodiscard]] Vector3D tangentAt(double u) const;
+    [[nodiscard]] Util::Vec3d tangentAt(double u) const;
 
     /**
      * @brief Get edge length
@@ -93,19 +94,19 @@ public:
      * @brief Get start point of edge
      * @return Start point coordinates
      */
-    [[nodiscard]] Point3D startPoint() const;
+    [[nodiscard]] Util::Pt3d startPoint() const;
 
     /**
      * @brief Get end point of edge
      * @return End point coordinates
      */
-    [[nodiscard]] Point3D endPoint() const;
+    [[nodiscard]] Util::Pt3d endPoint() const;
 
     /**
      * @brief Get mid point of edge
      * @return Mid point coordinates
      */
-    [[nodiscard]] Point3D midPoint() const;
+    [[nodiscard]] Util::Pt3d midPoint() const;
 
 private:
     TopoDS_Edge m_edge;

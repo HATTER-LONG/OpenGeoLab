@@ -1,3 +1,11 @@
+/**
+ * @file geometry_entity.hpp
+ * @brief Abstract interface for geometry entities in the entity hierarchy
+ *
+ * Defines the public GeometryEntity interface used across module boundaries.
+ * Concrete implementations reside in src/geometry/entity/.
+ */
+
 #pragma once
 
 #include "geometry/geometry_types.hpp"
@@ -9,6 +17,14 @@ namespace OpenGeoLab::Geometry {
 class GeometryEntity;
 
 using GeometryEntityPtr = std::shared_ptr<GeometryEntity>;
+
+/**
+ * @brief Abstract interface for all geometry entities
+ *
+ * Provides read-only access to entity identity (ID, UID, type, key)
+ * and the underlying OCC shape. Concrete subclasses (PartEntity, FaceEntity, etc.)
+ * add shape-specific accessors.
+ */
 class GeometryEntity : public Kangaroo::Util::NonCopyMoveable {
 public:
     virtual ~GeometryEntity() = default;

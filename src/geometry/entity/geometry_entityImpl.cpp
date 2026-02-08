@@ -4,8 +4,8 @@
  */
 
 #include "geometry_entityImpl.hpp"
-
 #include "../geometry_documentImpl.hpp"
+#include "util/point_vector3d.hpp"
 
 #include <BRepBndLib.hxx>
 #include <Bnd_Box.hxx>
@@ -78,7 +78,7 @@ void GeometryEntityImpl::computeBoundingBox() const {
     double xmin, ymin, zmin, xmax, ymax, zmax;
     occ_box.Get(xmin, ymin, zmin, xmax, ymax, zmax);
 
-    m_boundingBox = BoundingBox3D(Point3D(xmin, ymin, zmin), Point3D(xmax, ymax, zmax));
+    m_boundingBox = BoundingBox3D(Util::Pt3d(xmin, ymin, zmin), Util::Pt3d(xmax, ymax, zmax));
     m_boundingBoxValid = true;
 }
 

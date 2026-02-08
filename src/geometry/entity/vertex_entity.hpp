@@ -9,6 +9,7 @@
 #pragma once
 
 #include "geometry_entityImpl.hpp"
+#include "util/point_vector3d.hpp"
 #include <TopoDS_Vertex.hxx>
 
 namespace OpenGeoLab::Geometry {
@@ -48,9 +49,9 @@ public:
 
     /**
      * @brief Get the 3D point location
-     * @return Point3D coordinates
+     * @return pt3d coordinates
      */
-    [[nodiscard]] Point3D point() const;
+    [[nodiscard]] Util::Pt3d point() const;
 
     /**
      * @brief Get the OCC gp_Pnt

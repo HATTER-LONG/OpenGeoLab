@@ -4,6 +4,7 @@
  */
 
 #include "solid_entity.hpp"
+#include "util/point_vector3d.hpp"
 #include <BRepGProp.hxx>
 #include <GProp_GProps.hxx>
 #include <TopExp.hxx>
@@ -25,11 +26,11 @@ double SolidEntity::surfaceArea() const {
     return props.Mass();
 }
 
-Point3D SolidEntity::centerOfMass() const {
+Util::Pt3d SolidEntity::centerOfMass() const {
     GProp_GProps props;
     BRepGProp::VolumeProperties(m_solid, props);
     gp_Pnt center = props.CentreOfMass();
-    return Point3D(center.X(), center.Y(), center.Z());
+    return Util::Pt3d(center.X(), center.Y(), center.Z());
 }
 
 size_t SolidEntity::faceCount() const {

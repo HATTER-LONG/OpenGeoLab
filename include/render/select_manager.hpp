@@ -30,12 +30,9 @@ namespace OpenGeoLab::Render {
 class SelectManager : private Kangaroo::Util::NonCopyMoveable {
 public:
     /**
-     * @brief Bitmask of selectable entity categories
-     *
-     * - Vertex/Edge/Face can be combined.
-     * - Wire/Solid/Part are mutually exclusive and also exclusive with Vertex/Edge/Face.
+     * @brief Pick type bitmask for filtering selectable entity types
      */
-    enum class PickTypes : uint8_t {
+    enum class PickTypes : uint32_t {
         None = 0,
         Vertex = 1u << 0u,
         Edge = 1u << 1u,
@@ -43,6 +40,8 @@ public:
         Face = 1u << 3u,
         Solid = 1u << 4u,
         Part = 1u << 5u,
+        MeshNode = 1u << 6u,
+        MeshElement = 1u << 7u,
     };
 
     /**
