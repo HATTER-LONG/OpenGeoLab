@@ -23,7 +23,7 @@ using WireEntityPtr = std::shared_ptr<WireEntity>;
  * can serve as the boundary of a face. Wires can be open (path) or
  * closed (loop).
  */
-class WireEntity : public GeometryEntity {
+class WireEntity : public GeometryEntityImpl {
 public:
     explicit WireEntity(const TopoDS_Wire& wire);
     ~WireEntity() override = default;
@@ -38,6 +38,7 @@ public:
 
     [[nodiscard]] const TopoDS_Shape& shape() const override { return m_wire; }
 
+    [[nodiscard]] bool hasShape() const override { return !m_wire.IsNull(); }
     /**
      * @brief Get the typed OCC wire
      * @return Const reference to TopoDS_Wire

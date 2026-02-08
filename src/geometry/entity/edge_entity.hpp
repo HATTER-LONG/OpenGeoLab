@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "geometry_entity.hpp"
+#include "geometry_entityImpl.hpp"
 #include <Geom_Curve.hxx>
 #include <TopoDS_Edge.hxx>
 
@@ -24,7 +24,7 @@ using EdgeEntityPtr = std::shared_ptr<EdgeEntity>;
  * by vertices at its endpoints. Edges form the boundaries of faces and
  * can be combined into wires.
  */
-class EdgeEntity : public GeometryEntity {
+class EdgeEntity : public GeometryEntityImpl {
 public:
     explicit EdgeEntity(const TopoDS_Edge& edge);
     ~EdgeEntity() override = default;
@@ -39,6 +39,7 @@ public:
 
     [[nodiscard]] const TopoDS_Shape& shape() const override { return m_edge; }
 
+    [[nodiscard]] bool hasShape() const override { return !m_edge.IsNull(); }
     /**
      * @brief Get the typed OCC edge
      * @return Const reference to TopoDS_Edge

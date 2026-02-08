@@ -11,7 +11,7 @@
 
 namespace OpenGeoLab::Geometry {
 ShellEntity::ShellEntity(const TopoDS_Shell& shell)
-    : GeometryEntity(EntityType::Shell), m_shell(shell) {}
+    : GeometryEntityImpl(EntityType::Shell), m_shell(shell) {}
 
 bool ShellEntity::isClosed() const { return m_shell.Closed(); }
 

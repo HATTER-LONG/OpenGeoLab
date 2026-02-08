@@ -119,7 +119,7 @@ void ShapeBuilder::buildEntitiesFromShapeMap(const TopTools_IndexedMapOfShape& s
 void ShapeBuilder::buildRelationships(const TopoDS_Shape& root_shape,
                                       const TopTools_IndexedMapOfShape& shape_map,
                                       const ShapeEntityMap& shape_entity_map,
-                                      const GeometryEntityPtr& root_entity) {
+                                      const GeometryEntityImplPtr& root_entity) {
     // Find the root shape's index and connect it to part
     const int root_index = shape_map.FindIndex(root_shape);
     if(root_index > 0) {
@@ -153,7 +153,7 @@ void ShapeBuilder::buildRelationships(const TopoDS_Shape& root_shape,
 }
 
 void ShapeBuilder::buildChildRelationships(const TopoDS_Shape& parent_shape, // NOLINT
-                                           const GeometryEntityPtr& parent_entity,
+                                           const GeometryEntityImplPtr& parent_entity,
                                            const TopTools_IndexedMapOfShape& shape_map,
                                            const ShapeEntityMap& shape_entity_map) {
     // Iterate through direct children of this shape
@@ -215,7 +215,7 @@ void ShapeBuilder::updateEntityCounts(const TopoDS_Shape& shape, ShapeBuildResul
     }
 }
 
-GeometryEntityPtr ShapeBuilder::createEntityForShape(const TopoDS_Shape& shape) {
+GeometryEntityImplPtr ShapeBuilder::createEntityForShape(const TopoDS_Shape& shape) {
     if(shape.IsNull()) {
         LOG_ERROR("Cannot create entity for null shape");
         return nullptr;

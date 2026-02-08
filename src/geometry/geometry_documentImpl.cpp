@@ -4,7 +4,7 @@
  */
 
 #include "geometry_documentImpl.hpp"
-#include "entity/geometry_entity.hpp"
+#include "entity/geometry_entityImpl.hpp"
 #include "geometry/part_color.hpp"
 #include "shape_builder.hpp"
 #include "util/logger.hpp"
@@ -24,9 +24,6 @@
 #include <gp_Dir.hxx>
 #include <gp_Pnt.hxx>
 #include <gp_Trsf.hxx>
-
-#include <queue>
-#include <unordered_set>
 
 namespace OpenGeoLab::Geometry {
 
@@ -85,7 +82,7 @@ void computeSmoothVertexNormals(Render::RenderMesh& mesh) {
 }
 } // namespace
 
-bool GeometryDocumentImpl::addEntity(const GeometryEntityPtr& entity) {
+bool GeometryDocumentImpl::addEntity(const GeometryEntityImplPtr& entity) {
     if(!m_entityIndex.addEntity(entity)) {
         LOG_WARN("GeometryDocument: Failed to add entity id={}", entity ? entity->entityId() : 0);
         return false;
@@ -157,6 +154,15 @@ GeometryEntityPtr GeometryDocumentImpl::findByUIDAndType(EntityUID entity_uid,
     return m_entityIndex.findByUIDAndType(entity_uid, entity_type);
 }
 
+GeometryEntityImplPtr GeometryDocumentImpl::findImplById(EntityId entity_id) const {
+    return m_entityIndex.findById(entity_id);
+}
+
+GeometryEntityImplPtr GeometryDocumentImpl::findImplByUIDAndType(EntityUID entity_uid,
+                                                                 EntityType entity_type) const {
+    return m_entityIndex.findByUIDAndType(entity_uid, entity_type);
+}
+
 GeometryEntityPtr GeometryDocumentImpl::findByShape(const TopoDS_Shape& shape) const {
     return m_entityIndex.findByShape(shape);
 }
@@ -169,15 +175,17 @@ GeometryEntityPtr GeometryDocumentImpl::findByShape(const TopoDS_Shape& shape) c
     return m_entityIndex.entityCountByType(entity_type);
 }
 
-std::vector<GeometryEntityPtr> GeometryDocumentImpl::entitiesByType(EntityType entity_type) const {
+std::vector<GeometryEntityImplPtr>
+GeometryDocumentImpl::entitiesByType(EntityType entity_type) const {
     return m_entityIndex.entitiesByType(entity_type);
 }
 
-std::vector<GeometryEntityPtr> GeometryDocumentImpl::allEntities() const {
+std::vector<GeometryEntityImplPtr> GeometryDocumentImpl::allEntities() const {
     return m_entityIndex.snapshotEntities();
 }
 
-bool GeometryDocumentImpl::addChildEdge(const GeometryEntity& parent, const GeometryEntity& child) {
+bool GeometryDocumentImpl::addChildEdge(const GeometryEntityImpl& parent,
+                                        const GeometryEntityImpl& child) {
     if(parent.entityId() == child.entityId()) {
         return false;
     }
@@ -327,7 +335,7 @@ std::vector<EntityKey> GeometryDocumentImpl::findRelatedEntities(EntityUID entit
     return m_relationshipIndex.findRelatedEntities(entity_uid, entity_type, related_type);
 }
 Render::RenderMesh
-GeometryDocumentImpl::generateFaceMesh(const GeometryEntityPtr& entity,
+GeometryDocumentImpl::generateFaceMesh(const GeometryEntityImplPtr& entity,
                                        const Render::TessellationOptions& options) {
     Render::RenderMesh mesh;
     mesh.m_entityId = entity->entityId();
@@ -441,7 +449,7 @@ GeometryDocumentImpl::generateFaceMesh(const GeometryEntityPtr& entity,
 }
 
 Render::RenderMesh
-GeometryDocumentImpl::generateEdgeMesh(const GeometryEntityPtr& entity,
+GeometryDocumentImpl::generateEdgeMesh(const GeometryEntityImplPtr& entity,
                                        const Render::TessellationOptions& options) {
     Render::RenderMesh mesh;
     mesh.m_entityId = entity->entityId();
@@ -541,7 +549,7 @@ GeometryDocumentImpl::generateEdgeMesh(const GeometryEntityPtr& entity,
     return mesh;
 }
 
-Render::RenderMesh GeometryDocumentImpl::generateVertexMesh(const GeometryEntityPtr& entity) {
+Render::RenderMesh GeometryDocumentImpl::generateVertexMesh(const GeometryEntityImplPtr& entity) {
     Render::RenderMesh mesh;
     mesh.m_entityId = entity->entityId();
     mesh.m_entityUid = entity->entityUID();

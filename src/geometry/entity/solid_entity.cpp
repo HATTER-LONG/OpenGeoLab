@@ -12,7 +12,7 @@
 
 namespace OpenGeoLab::Geometry {
 SolidEntity::SolidEntity(const TopoDS_Solid& solid)
-    : GeometryEntity(EntityType::Solid), m_solid(solid) {}
+    : GeometryEntityImpl(EntityType::Solid), m_solid(solid) {}
 
 double SolidEntity::volume() const {
     GProp_GProps props;

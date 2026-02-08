@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "geometry_entity.hpp"
+#include "geometry_entityImpl.hpp"
 #include <TopoDS_Shell.hxx>
 
 namespace OpenGeoLab::Geometry {
@@ -22,7 +22,7 @@ using ShellEntityPtr = std::shared_ptr<ShellEntity>;
  * ShellEntity represents a connected set of faces that together form
  * a surface boundary. A closed shell can bound a solid volume.
  */
-class ShellEntity : public GeometryEntity {
+class ShellEntity : public GeometryEntityImpl {
 public:
     explicit ShellEntity(const TopoDS_Shell& shell);
     ~ShellEntity() override = default;
@@ -36,7 +36,7 @@ public:
     }
 
     [[nodiscard]] const TopoDS_Shape& shape() const override { return m_shell; }
-
+    [[nodiscard]] bool hasShape() const override { return !m_shell.IsNull(); }
     /**
      * @brief Get the typed OCC shell
      * @return Const reference to TopoDS_Shell

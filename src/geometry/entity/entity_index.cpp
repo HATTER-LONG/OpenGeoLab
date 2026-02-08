@@ -11,12 +11,12 @@
 
 namespace OpenGeoLab::Geometry {
 namespace {
-[[nodiscard]] std::pair<EntityType, EntityUID> makeTypeUidKey(const GeometryEntity& entity) {
+[[nodiscard]] std::pair<EntityType, EntityUID> makeTypeUidKey(const GeometryEntityImpl& entity) {
     return {entity.entityType(), entity.entityUID()};
 }
 } // namespace
 
-GeometryEntityPtr EntityIndex::findById(EntityId entity_id) const {
+GeometryEntityImplPtr EntityIndex::findById(EntityId entity_id) const {
     const auto it = m_byId.find(entity_id);
     if(it == m_byId.end()) {
         return nullptr;
@@ -38,8 +38,8 @@ GeometryEntityPtr EntityIndex::findById(EntityId entity_id) const {
     return slot.m_entity;
 }
 
-GeometryEntityPtr EntityIndex::findByUIDAndType(EntityUID entity_uid,
-                                                EntityType entity_type) const {
+GeometryEntityImplPtr EntityIndex::findByUIDAndType(EntityUID entity_uid,
+                                                    EntityType entity_type) const {
     const auto key = std::make_pair(entity_type, entity_uid);
     const auto it = m_byTypeAndUID.find(key);
     if(it == m_byTypeAndUID.end()) {
@@ -61,7 +61,7 @@ GeometryEntityPtr EntityIndex::findByUIDAndType(EntityUID entity_uid,
     return slot.m_entity;
 }
 
-GeometryEntityPtr EntityIndex::findByShape(const TopoDS_Shape& shape) const {
+GeometryEntityImplPtr EntityIndex::findByShape(const TopoDS_Shape& shape) const {
     if(shape.IsNull()) {
         return nullptr;
     }
@@ -86,7 +86,7 @@ GeometryEntityPtr EntityIndex::findByShape(const TopoDS_Shape& shape) const {
     return slot.m_entity;
 }
 
-bool EntityIndex::addEntity(const GeometryEntityPtr& entity) {
+bool EntityIndex::addEntity(const GeometryEntityImplPtr& entity) {
     if(!entity) {
         return false;
     }
@@ -135,7 +135,7 @@ bool EntityIndex::addEntity(const GeometryEntityPtr& entity) {
     return true;
 }
 
-bool EntityIndex::removeEntity(const GeometryEntityPtr& entity) {
+bool EntityIndex::removeEntity(const GeometryEntityImplPtr& entity) {
     if(!entity) {
         return false;
     }
@@ -182,7 +182,7 @@ bool EntityIndex::removeEntity(EntityId entity_id) {
         return false;
     }
 
-    const GeometryEntityPtr entity = slot.m_entity;
+    const GeometryEntityImplPtr entity = slot.m_entity;
 
     // Eagerly detach relationship edges before unindexing.
     entity->detachAllRelations();
@@ -225,8 +225,8 @@ void EntityIndex::clear() {
     m_aliveCount = 0;
 }
 
-std::vector<GeometryEntityPtr> EntityIndex::snapshotEntities() const {
-    std::vector<GeometryEntityPtr> result;
+std::vector<GeometryEntityImplPtr> EntityIndex::snapshotEntities() const {
+    std::vector<GeometryEntityImplPtr> result;
     result.reserve(m_aliveCount);
     for(const auto& slot : m_slots) {
         if(slot.m_entity) {
@@ -246,8 +246,8 @@ size_t EntityIndex::entityCountByType(EntityType entity_type) const {
     return it->second;
 }
 
-std::vector<GeometryEntityPtr> EntityIndex::entitiesByType(EntityType entity_type) const {
-    std::vector<GeometryEntityPtr> result;
+std::vector<GeometryEntityImplPtr> EntityIndex::entitiesByType(EntityType entity_type) const {
+    std::vector<GeometryEntityImplPtr> result;
     result.reserve(entityCountByType(entity_type));
     auto maxid = getMaxIdByType(entity_type);
     for(size_t id = 1; id <= maxid; ++id) {

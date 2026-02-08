@@ -7,7 +7,7 @@
 #include <BRep_Tool.hxx>
 namespace OpenGeoLab::Geometry {
 VertexEntity::VertexEntity(const TopoDS_Vertex& vertex)
-    : GeometryEntity(EntityType::Vertex), m_vertex(vertex) {}
+    : GeometryEntityImpl(EntityType::Vertex), m_vertex(vertex) {}
 
 Point3D VertexEntity::point() const {
     gp_Pnt occ_point = BRep_Tool::Pnt(m_vertex);

@@ -24,7 +24,7 @@ using FaceEntityPtr = std::shared_ptr<FaceEntity>;
  * wires. The outer wire defines the face boundary, while inner wires
  * define holes.
  */
-class FaceEntity : public GeometryEntity {
+class FaceEntity : public GeometryEntityImpl {
 public:
     explicit FaceEntity(const TopoDS_Face& face);
     ~FaceEntity() override = default;
@@ -39,6 +39,7 @@ public:
 
     [[nodiscard]] const TopoDS_Shape& shape() const override { return m_face; }
 
+    [[nodiscard]] bool hasShape() const override { return !m_face.IsNull(); }
     /**
      * @brief Get the typed OCC face
      * @return Const reference to TopoDS_Face

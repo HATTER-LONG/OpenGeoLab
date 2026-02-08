@@ -21,8 +21,8 @@ void EntityRelationshipIndex::clear() {
     invalidateCache();
 }
 
-bool EntityRelationshipIndex::addRelationshipInfo(const GeometryEntity& parent,
-                                                  const GeometryEntity& child) {
+bool EntityRelationshipIndex::addRelationshipInfo(const GeometryEntityImpl& parent,
+                                                  const GeometryEntityImpl& child) {
     const EntityKey parent_key = parent.entityKey();
     const EntityKey child_key = child.entityKey();
     if(!parent_key.isValid() || !child_key.isValid()) {
@@ -49,7 +49,7 @@ bool EntityRelationshipIndex::addChildNoCache(const EntityKey& parent, const Ent
     return inserted;
 }
 
-void EntityRelationshipIndex::detachEntity(const GeometryEntity& entity) {
+void EntityRelationshipIndex::detachEntity(const GeometryEntityImpl& entity) {
     const EntityKey entity_key = entity.entityKey();
     if(!entity_key.isValid()) {
         return;
@@ -387,7 +387,8 @@ std::vector<EntityId> EntityRelationshipIndex::directParents(EntityId child_id) 
     return directParents(*child);
 }
 
-std::vector<EntityId> EntityRelationshipIndex::directChildren(const GeometryEntity& parent) const {
+std::vector<EntityId>
+EntityRelationshipIndex::directChildren(const GeometryEntityImpl& parent) const {
     std::shared_lock lock(m_indexMutex);
     const auto it = m_directChildren.find(parent.entityKey());
     if(it == m_directChildren.end()) {
@@ -396,7 +397,8 @@ std::vector<EntityId> EntityRelationshipIndex::directChildren(const GeometryEnti
     return toIds(it->second);
 }
 
-std::vector<EntityId> EntityRelationshipIndex::directParents(const GeometryEntity& child) const {
+std::vector<EntityId>
+EntityRelationshipIndex::directParents(const GeometryEntityImpl& child) const {
     std::shared_lock lock(m_indexMutex);
     const auto it = m_directParents.find(child.entityKey());
     if(it == m_directParents.end()) {
@@ -423,8 +425,9 @@ std::vector<EntityKey> EntityRelationshipIndex::findRelatedEntities(EntityUID so
     }
     return findRelatedEntities(*source, target_type);
 }
-std::vector<EntityKey> EntityRelationshipIndex::findRelatedEntities(const GeometryEntity& source,
-                                                                    EntityType target_type) const {
+std::vector<EntityKey>
+EntityRelationshipIndex::findRelatedEntities(const GeometryEntityImpl& source,
+                                             EntityType target_type) const {
     const EntityType source_type = source.entityType();
     if(source_type == EntityType::None) {
         return {};

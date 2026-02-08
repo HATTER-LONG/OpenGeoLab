@@ -10,7 +10,7 @@
 #pragma once
 
 #include "entity/entity_index.hpp"
-#include "entity/geometry_entity.hpp"
+#include "entity/geometry_entityImpl.hpp"
 #include "entity/relationship_index.hpp"
 #include "geometry/geometry_document.hpp"
 
@@ -56,7 +56,7 @@ public:
      * @return true if added; false if null or duplicates exist.
      * @note On success, the entity receives a weak back-reference to this document.
      */
-    [[nodiscard]] bool addEntity(const GeometryEntityPtr& entity);
+    [[nodiscard]] bool addEntity(const GeometryEntityImplPtr& entity);
 
     /**
      * @brief Remove an entity from the document by id.
@@ -90,12 +90,17 @@ public:
     // Entity Lookup
     // -------------------------------------------------------------------------
 
-    [[nodiscard]] GeometryEntityPtr findById(EntityId entity_id) const;
+    [[nodiscard]] virtual GeometryEntityPtr findById(EntityId entity_id) const override;
 
-    [[nodiscard]] GeometryEntityPtr findByUIDAndType(EntityUID entity_uid,
-                                                     EntityType entity_type) const;
+    [[nodiscard]] virtual GeometryEntityPtr findByUIDAndType(EntityUID entity_uid,
+                                                             EntityType entity_type) const override;
 
-    [[nodiscard]] GeometryEntityPtr findByShape(const TopoDS_Shape& shape) const;
+    [[nodiscard]] GeometryEntityImplPtr findImplById(EntityId entity_id) const;
+
+    [[nodiscard]] GeometryEntityImplPtr findImplByUIDAndType(EntityUID entity_uid,
+                                                             EntityType entity_type) const;
+
+    [[nodiscard]] GeometryEntityPtr findByShape(const TopoDS_Shape& shape) const override;
 
     [[nodiscard]] size_t entityCount() const;
 
@@ -106,13 +111,13 @@ public:
      * @param entity_type Type to filter by.
      * @return Vector of entities matching the type.
      */
-    [[nodiscard]] std::vector<GeometryEntityPtr> entitiesByType(EntityType entity_type) const;
+    [[nodiscard]] std::vector<GeometryEntityImplPtr> entitiesByType(EntityType entity_type) const;
 
     /**
      * @brief Get a snapshot of all entities in the document.
      * @return Vector of all entities.
      */
-    [[nodiscard]] std::vector<GeometryEntityPtr> allEntities() const;
+    [[nodiscard]] std::vector<GeometryEntityImplPtr> allEntities() const;
 
     // -------------------------------------------------------------------------
     // Entity Relationship Queries
@@ -135,7 +140,8 @@ public:
      * @return true if the edge is added; false if ids are invalid, entities are missing,
      *         or the edge would create a cycle.
      */
-    [[nodiscard]] bool addChildEdge(const GeometryEntity& parent, const GeometryEntity& child);
+    [[nodiscard]] bool addChildEdge(const GeometryEntityImpl& parent,
+                                    const GeometryEntityImpl& child);
 
     // =========================================================================
     // Render Data Access (GeometryDocument interface)
@@ -176,7 +182,7 @@ private:
      * @param options Tessellation options
      * @return Render mesh for the face
      */
-    [[nodiscard]] Render::RenderMesh generateFaceMesh(const GeometryEntityPtr& entity,
+    [[nodiscard]] Render::RenderMesh generateFaceMesh(const GeometryEntityImplPtr& entity,
                                                       const Render::TessellationOptions& options);
 
     /**
@@ -185,7 +191,7 @@ private:
      * @param options Tessellation options
      * @return Render mesh for the edge
      */
-    [[nodiscard]] Render::RenderMesh generateEdgeMesh(const GeometryEntityPtr& entity,
+    [[nodiscard]] Render::RenderMesh generateEdgeMesh(const GeometryEntityImplPtr& entity,
                                                       const Render::TessellationOptions& options);
 
     /**
@@ -193,7 +199,7 @@ private:
      * @param entity Vertex entity
      * @return Render mesh for the vertex
      */
-    [[nodiscard]] Render::RenderMesh generateVertexMesh(const GeometryEntityPtr& entity);
+    [[nodiscard]] Render::RenderMesh generateVertexMesh(const GeometryEntityImplPtr& entity);
 
     /**
      * @brief Emit a change notification to all subscribers

@@ -68,8 +68,9 @@ QtObject {
     // Surface
     readonly property color surface: isDark ? bluegraySur : white
 
-    readonly property color surfaceAlt: isDark ? bluegray : gray100
+    readonly property color surfaceAlt: isDark ? bluegrayMid : gray200
 
+    readonly property color surfaceHighLight: isDark ? bluegray : blueLight
     // Border
     readonly property color border: isDark ? gray700 : gray400
 

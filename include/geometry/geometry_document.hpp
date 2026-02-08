@@ -7,7 +7,9 @@
  */
 
 #pragma once
+#include "geometry/geometry_entity.hpp"
 #include "geometry/geometry_types.hpp"
+
 #include "render/render_data.hpp"
 #include "util/progress_callback.hpp"
 #include "util/signal.hpp"
@@ -144,6 +146,33 @@ public:
      * getRenderData() call. Automatically called when geometry changes.
      */
     virtual void invalidateRenderData() = 0;
+
+    // -------------------------------------------------------------------------
+    // Entity Lookup
+    // -------------------------------------------------------------------------
+
+    /**
+     * @brief Find an entity by global id
+     * @param entity_id Global entity id
+     * @return Geometry entity pointer, or nullptr if not found
+     */
+    [[nodiscard]] virtual GeometryEntityPtr findById(EntityId entity_id) const = 0;
+
+    /**
+     * @brief Find an entity by (uid,type) handle
+     * @param entity_uid Type-scoped uid
+     * @param entity_type Entity type
+     * @return Geometry entity pointer, or nullptr if not found
+     */
+    [[nodiscard]] virtual GeometryEntityPtr findByUIDAndType(EntityUID entity_uid,
+                                                             EntityType entity_type) const = 0;
+
+    /**
+     * @brief Find an entity by its underlying shape
+     * @param shape OCC shape to look for
+     * @return Geometry entity pointer, or nullptr if not found
+     */
+    [[nodiscard]] virtual GeometryEntityPtr findByShape(const TopoDS_Shape& shape) const = 0;
 
     // -------------------------------------------------------------------------
     // Relationship Queries

@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include "geometry_entity.hpp"
+#include "geometry_entityImpl.hpp"
 #include <TopTools_ShapeMapHasher.hxx>
 #include <type_traits>
 #include <unordered_map>
@@ -35,25 +35,25 @@ public:
     explicit EntityIndex() = default;
     ~EntityIndex() = default;
 
-    [[nodiscard]] bool addEntity(const GeometryEntityPtr& entity);
+    [[nodiscard]] bool addEntity(const GeometryEntityImplPtr& entity);
     [[nodiscard]] bool removeEntity(EntityId entity_id);
-    [[nodiscard]] bool removeEntity(const GeometryEntityPtr& entity);
+    [[nodiscard]] bool removeEntity(const GeometryEntityImplPtr& entity);
     [[nodiscard]] bool removeEntity(EntityUID entity_uid, EntityType entity_type);
     void clear();
 
-    [[nodiscard]] GeometryEntityPtr findById(EntityId entity_id) const;
-    [[nodiscard]] GeometryEntityPtr findByUIDAndType(EntityUID entity_uid,
-                                                     EntityType entity_type) const;
-    [[nodiscard]] GeometryEntityPtr findByShape(const TopoDS_Shape& shape) const;
+    [[nodiscard]] GeometryEntityImplPtr findById(EntityId entity_id) const;
+    [[nodiscard]] GeometryEntityImplPtr findByUIDAndType(EntityUID entity_uid,
+                                                         EntityType entity_type) const;
+    [[nodiscard]] GeometryEntityImplPtr findByShape(const TopoDS_Shape& shape) const;
 
     [[nodiscard]] size_t entityCount() const;
     [[nodiscard]] size_t entityCountByType(EntityType entity_type) const;
 
     /// Snapshot of currently alive entities (order unspecified).
-    [[nodiscard]] std::vector<GeometryEntityPtr> snapshotEntities() const;
+    [[nodiscard]] std::vector<GeometryEntityImplPtr> snapshotEntities() const;
 
     /// Get all entities of a specific type.
-    [[nodiscard]] std::vector<GeometryEntityPtr> entitiesByType(EntityType entity_type) const;
+    [[nodiscard]] std::vector<GeometryEntityImplPtr> entitiesByType(EntityType entity_type) const;
 
 private:
     struct EntityTypeHash {
@@ -82,7 +82,7 @@ private:
     };
 
     struct Slot {
-        GeometryEntityPtr m_entity;
+        GeometryEntityImplPtr m_entity;
         uint32_t m_generation{1};
     };
 

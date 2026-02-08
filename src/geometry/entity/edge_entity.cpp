@@ -12,7 +12,8 @@
 #include <TopoDS_Vertex.hxx>
 
 namespace OpenGeoLab::Geometry {
-EdgeEntity::EdgeEntity(const TopoDS_Edge& edge) : GeometryEntity(EntityType::Edge), m_edge(edge) {}
+EdgeEntity::EdgeEntity(const TopoDS_Edge& edge)
+    : GeometryEntityImpl(EntityType::Edge), m_edge(edge) {}
 
 Handle(Geom_Curve) EdgeEntity::curve() const {
     double first, last;

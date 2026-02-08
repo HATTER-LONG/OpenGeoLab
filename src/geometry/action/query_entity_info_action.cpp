@@ -105,7 +105,7 @@ nlohmann::json QueryEntityInfoAction::execute(const nlohmann::json& params,
             return response;
         }
 
-        const auto entity = document->findByUIDAndType(uid, type);
+        const auto entity = document->findImplByUIDAndType(uid, type);
         if(!entity) {
             not_found.push_back(nlohmann::json{{"type", type_str}, {"uid", h["uid"]}});
             ++processed;

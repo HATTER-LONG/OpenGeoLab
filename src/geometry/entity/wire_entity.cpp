@@ -11,7 +11,8 @@
 #include <TopExp_Explorer.hxx>
 
 namespace OpenGeoLab::Geometry {
-WireEntity::WireEntity(const TopoDS_Wire& wire) : GeometryEntity(EntityType::Wire), m_wire(wire) {}
+WireEntity::WireEntity(const TopoDS_Wire& wire)
+    : GeometryEntityImpl(EntityType::Wire), m_wire(wire) {}
 
 bool WireEntity::isClosed() const {
     ShapeAnalysis_Wire analyzer;

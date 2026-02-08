@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "geometry_entity.hpp"
+#include "geometry_entityImpl.hpp"
 #include <TopoDS_Vertex.hxx>
 
 namespace OpenGeoLab::Geometry {
@@ -22,7 +22,7 @@ using VertexEntityPtr = std::shared_ptr<VertexEntity>;
  * VertexEntity is the simplest topological entity, representing a
  * single point in 3D space. Vertices are typically endpoints of edges.
  */
-class VertexEntity : public GeometryEntity {
+class VertexEntity : public GeometryEntityImpl {
 public:
     explicit VertexEntity(const TopoDS_Vertex& vertex);
     ~VertexEntity() override = default;
@@ -34,6 +34,8 @@ public:
     }
 
     [[nodiscard]] const TopoDS_Shape& shape() const override { return m_vertex; }
+
+    [[nodiscard]] bool hasShape() const override { return !m_vertex.IsNull(); }
     /**
      * @brief Get the typed OCC vertex
      * @return Const reference to TopoDS_Vertex

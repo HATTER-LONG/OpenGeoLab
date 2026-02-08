@@ -15,7 +15,8 @@
 #include <unordered_set>
 
 namespace OpenGeoLab::Geometry {
-FaceEntity::FaceEntity(const TopoDS_Face& face) : GeometryEntity(EntityType::Face), m_face(face) {}
+FaceEntity::FaceEntity(const TopoDS_Face& face)
+    : GeometryEntityImpl(EntityType::Face), m_face(face) {}
 
 Handle(Geom_Surface) FaceEntity::surface() const { return BRep_Tool::Surface(m_face); }
 

@@ -93,11 +93,11 @@ Rectangle {
         id: toggleButton
         anchors.top: parent.top
         anchors.right: parent.right
-        anchors.margins: 4
-        width: 24
-        height: 24
-        radius: 4
-        color: toggleArea.containsMouse ? Theme.hovered : "transparent"
+        // anchors.margins: 4
+        width: 32
+        height: 32
+        // radius: 4
+        color: toggleArea.containsMouse ? Theme.hovered : Theme.surfaceHighLight
 
         ThemedIcon {
             anchors.centerIn: parent
@@ -124,7 +124,7 @@ Rectangle {
         anchors.left: parent.left
         anchors.right: toggleButton.left
         height: 32
-        color: "transparent"
+        color: Theme.surfaceHighLight
         visible: sidebar.expanded
 
         RowLayout {
@@ -141,41 +141,41 @@ Rectangle {
                 Layout.fillWidth: true
             }
 
-            // Refresh button
-            Rectangle {
-                width: 20
-                height: 20
-                radius: 4
-                color: refreshArea.containsMouse ? Theme.hovered : "transparent"
+            // // Refresh button
+            // Rectangle {
+            //     width: 24
+            //     height: 24
+            //     radius: 4
+            //     color: refreshArea.containsMouse ? Theme.hovered : "transparent"
 
-                ThemedIcon {
-                    anchors.centerIn: parent
-                    source: "qrc:/opengeolab/resources/icons/refresh.svg"
-                    size: 14
-                    rotation: sidebar.isLoading ? refreshAnimation.angle : 0
-                }
+            //     ThemedIcon {
+            //         anchors.centerIn: parent
+            //         source: "qrc:/opengeolab/resources/icons/refresh.svg"
+            //         size: 14
+            //         rotation: sidebar.isLoading ? refreshAnimation.angle : 0
+            //     }
 
-                NumberAnimation on rotation {
-                    id: refreshAnimation
-                    property real angle: 0
-                    running: sidebar.isLoading
-                    from: 0
-                    to: 360
-                    duration: 1000
-                    loops: Animation.Infinite
-                }
+            //     NumberAnimation on rotation {
+            //         id: refreshAnimation
+            //         property real angle: 0
+            //         running: sidebar.isLoading
+            //         from: 0
+            //         to: 360
+            //         duration: 1000
+            //         loops: Animation.Infinite
+            //     }
 
-                MouseArea {
-                    id: refreshArea
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    onClicked: sidebar.refreshPartList()
-                }
+            //     MouseArea {
+            //         id: refreshArea
+            //         anchors.fill: parent
+            //         hoverEnabled: true
+            //         onClicked: sidebar.refreshPartList()
+            //     }
 
-                ToolTip.visible: refreshArea.containsMouse
-                ToolTip.text: qsTr("Refresh part list")
-                ToolTip.delay: 500
-            }
+            //     ToolTip.visible: refreshArea.containsMouse
+            //     ToolTip.text: qsTr("Refresh part list")
+            //     ToolTip.delay: 500
+            // }
         }
     }
 

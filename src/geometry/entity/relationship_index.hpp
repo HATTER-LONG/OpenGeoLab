@@ -6,7 +6,7 @@
 #pragma once
 
 #include "geometry/geometry_types.hpp"
-#include "geometry_entity.hpp"
+#include "geometry_entityImpl.hpp"
 #include <kangaroo/util/noncopyable.hpp>
 #include <shared_mutex>
 #include <unordered_map>
@@ -24,11 +24,11 @@ public:
 
     void clear();
 
-    [[nodiscard]] bool addRelationshipInfo(const GeometryEntity& parent,
-                                           const GeometryEntity& child);
+    [[nodiscard]] bool addRelationshipInfo(const GeometryEntityImpl& parent,
+                                           const GeometryEntityImpl& child);
 
     /// Remove all edges incident to entity_id (best-effort, safe if missing).
-    void detachEntity(const GeometryEntity& entity);
+    void detachEntity(const GeometryEntityImpl& entity);
 
     [[nodiscard]] bool buildRelationships();
 
@@ -38,14 +38,14 @@ public:
     [[nodiscard]] std::vector<EntityKey>
     findRelatedEntities(EntityUID source_uid, EntityType source_type, EntityType target_type) const;
 
-    [[nodiscard]] std::vector<EntityKey> findRelatedEntities(const GeometryEntity& source,
+    [[nodiscard]] std::vector<EntityKey> findRelatedEntities(const GeometryEntityImpl& source,
                                                              EntityType target_type) const;
 
     /// Direct adjacency (order unspecified).
     [[nodiscard]] std::vector<EntityId> directChildren(EntityId parent_id) const;
     [[nodiscard]] std::vector<EntityId> directParents(EntityId child_id) const;
-    [[nodiscard]] std::vector<EntityId> directChildren(const GeometryEntity& parent) const;
-    [[nodiscard]] std::vector<EntityId> directParents(const GeometryEntity& child) const;
+    [[nodiscard]] std::vector<EntityId> directChildren(const GeometryEntityImpl& parent) const;
+    [[nodiscard]] std::vector<EntityId> directParents(const GeometryEntityImpl& child) const;
 
 private:
     struct RelatedTargets {
