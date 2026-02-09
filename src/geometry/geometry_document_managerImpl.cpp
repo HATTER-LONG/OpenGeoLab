@@ -34,8 +34,6 @@ GeometryDocumentImplPtr GeometryDocumentManagerImpl::newDocumentImplType() {
         m_currentDocument = std::make_shared<GeometryDocumentImpl>();
     } else {
         m_currentDocument->clear();
-        resetEntityIdGenerator();
-        resetAllEntityUIDGenerators();
     }
     return m_currentDocument;
 }

@@ -142,6 +142,8 @@ void GeometryDocumentImpl::clear() {
     const size_t count = m_entityIndex.entityCount();
     m_relationshipIndex.clear();
     m_entityIndex.clear();
+    resetEntityIdGenerator();
+    resetAllEntityUIDGenerators();
     LOG_INFO("GeometryDocument: Cleared document, removed {} entities", count);
     emitChangeEvent(GeometryChangeEvent(GeometryChangeType::EntityRemoved, INVALID_ENTITY_ID));
 }

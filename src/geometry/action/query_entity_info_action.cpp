@@ -27,8 +27,8 @@ namespace {
 }
 
 [[nodiscard]] nlohmann::json bboxToJson(const BoundingBox3D& bbox) {
-    return nlohmann::json{{"min", {bbox.m_min.m_x, bbox.m_min.m_y, bbox.m_min.m_z}},
-                          {"max", {bbox.m_max.m_x, bbox.m_max.m_y, bbox.m_max.m_z}}};
+    return nlohmann::json{{"min", {bbox.m_min.x, bbox.m_min.y, bbox.m_min.z}},
+                          {"max", {bbox.m_max.x, bbox.m_max.y, bbox.m_max.z}}};
 }
 
 [[nodiscard]] bool validateEntityHandle(const nlohmann::json& j, std::string& error) {

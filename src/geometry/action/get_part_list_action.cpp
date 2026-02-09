@@ -109,8 +109,8 @@ nlohmann::json GetPartListAction::execute(const nlohmann::json& /*params*/,
         // Bounding box
         auto bbox = part->boundingBox();
         if(bbox.isValid()) {
-            part_info["bounding_box"] = {{"min", {bbox.m_min.m_x, bbox.m_min.m_y, bbox.m_min.m_z}},
-                                         {"max", {bbox.m_max.m_x, bbox.m_max.m_y, bbox.m_max.m_z}}};
+            part_info["bounding_box"] = {{"min", {bbox.m_min.x, bbox.m_min.y, bbox.m_min.z}},
+                                         {"max", {bbox.m_max.x, bbox.m_max.y, bbox.m_max.z}}};
         }
 
         parts_array.push_back(part_info);

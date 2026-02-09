@@ -63,8 +63,8 @@ void CameraState::fitToBoundingBox(const Geometry::BoundingBox3D& bbox) {
     }
 
     const auto center = bbox.center();
-    m_target = QVector3D(static_cast<float>(center.m_x), static_cast<float>(center.m_y),
-                         static_cast<float>(center.m_z));
+    m_target = QVector3D(static_cast<float>(center.x), static_cast<float>(center.y),
+                         static_cast<float>(center.z));
 
     const double diagonal = bbox.diagonal();
     const float distance = static_cast<float>(diagonal * 1.5);
