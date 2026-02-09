@@ -10,6 +10,7 @@
 #include "util/logger.hpp"
 
 #include <BRepTools.hxx>
+#include <BRep_Builder.hxx>
 #include <QDir>
 #include <QStandardPaths>
 #include <QString>
@@ -62,11 +63,38 @@ nlohmann::json GenerateMeshAction::execute(const nlohmann::json& params,
         ERROR_AND_RETURN("Invalid 'elementSize' parameter: must be positive number");
     }
 
-    auto doc = GeoDocumentMgrInstance->currentDocument();
-
     if(entities.empty()) {
         ERROR_AND_RETURN("No valid entities provided for meshing");
     }
+
+    auto shape = createShapeFromFaceEntities(entities);
+
+    if(!progress_callback(0.2, "Starting mesh generation...")) {
+        ERROR_AND_RETURN("Operation cancelled");
+    }
+    // Initialize gmsh and import the compound shape
+    gmsh::initialize();
+    gmsh::option::setNumber("General.Terminal", 0);
+    gmsh::model::add("mesh_model");
+
+    try {
+        importShapeToGmshAndMesh(shape, element_size);
+    } catch(const std::exception& e) {
+        gmsh::finalize();
+        LOG_ERROR("GenerateMeshAction: Gmsh error: {}", e.what());
+        ERROR_AND_RETURN(std::string("Gmsh import failed: ") + e.what());
+    }
+
+    response["success"] = true;
+
+    return response;
+}
+
+TopoDS_Shape
+GenerateMeshAction::createShapeFromFaceEntities(const Geometry::EntityRefSet& entities) {
+
+    auto doc = GeoDocumentMgrInstance->currentDocument();
+
     std::vector<Geometry::GeometryEntityPtr> face_entity_ptrs;
     for(const auto& entity_ref : entities) {
         if(entity_ref.m_type == Geometry::EntityType::Part ||
@@ -95,29 +123,48 @@ nlohmann::json GenerateMeshAction::execute(const nlohmann::json& params,
         }
     }
 
-    LOG_INFO("GenerateMeshAction: Generating mesh for {} entities with element size {}",
-             face_entity_ptrs.size(), element_size);
+    LOG_INFO("GenerateMeshAction: Generating mesh for {} entities", face_entity_ptrs.size());
 
-    if(!progress_callback(0.2, "Starting mesh generation...")) {
-        ERROR_AND_RETURN("Operation cancelled");
-    }
-    gmsh::initialize();
-    gmsh::option::setNumber("General.Terminal", 1);
-    gmsh::model::add("mesh_model");
-    int face_count = 0;
+    // Build a compound shape from all face shapes for gmsh import
+    BRep_Builder builder;
+    TopoDS_Compound compound;
+    builder.MakeCompound(compound);
     for(const auto& face_entity : face_entity_ptrs) {
         auto shape = face_entity->shape();
-        if(shape.IsNull()) {
-            LOG_WARN("GenerateMeshAction: Face entity has null shape, uid={}",
-                     face_entity->entityUID());
-            continue;
+        if(!shape.IsNull()) {
+            builder.Add(compound, shape);
         }
-        face_count++;
     }
+    return compound;
+}
 
-    response["success"] = true;
+void GenerateMeshAction::importShapeToGmshAndMesh(const TopoDS_Shape& shape, double element_size) {
+    gmsh::initialize();
+    gmsh::option::setNumber("General.Terminal", 0);
+    gmsh::model::add("mesh_model");
 
-    return response;
+    std::vector<std::pair<int, int>> out_dim_tags;
+    gmsh::model::occ::importShapesNativePointer(static_cast<const void*>(&shape), out_dim_tags);
+    gmsh::model::occ::synchronize();
+
+    LOG_DEBUG("GenerateMeshAction: Imported {} dim-tags into gmsh", out_dim_tags.size());
+
+    // Set global mesh element size
+    gmsh::option::setNumber("Mesh.MeshSizeMin", element_size);
+    gmsh::option::setNumber("Mesh.MeshSizeMax", element_size * 2);
+    gmsh::option::setNumber("Mesh.Algorithm", 6); // Frontal-Delaunay
+
+    // Generate 2D mesh
+    gmsh::model::mesh::generate(2);
+
+    // Get all nodes
+    std::vector<std::size_t> node_tags;
+    std::vector<double> node_coords;
+    std::vector<double> node_parametric_coords;
+    gmsh::model::mesh::getNodes(node_tags, node_coords, node_parametric_coords);
+
+    for(size_t i = 0; i < node_tags.size(); ++i) {
+    }
 }
 
 } // namespace OpenGeoLab::Mesh

@@ -5,7 +5,9 @@
 
 #pragma once
 
+#include "geometry/geometry_types.hpp"
 #include "mesh/mesh_action.hpp"
+#include <TopoDS_Shape.hxx>
 
 namespace OpenGeoLab::Mesh {
 
@@ -26,6 +28,11 @@ public:
 
     [[nodiscard]] nlohmann::json execute(const nlohmann::json& params,
                                          Util::ProgressCallback progress_callback) override;
+
+private:
+    TopoDS_Shape createShapeFromFaceEntities(const Geometry::EntityRefSet& face_entities);
+
+    void importShapeToGmshAndMesh(const TopoDS_Shape& shape, double element_size);
 };
 
 class GenerateMeshActionFactory : public MeshActionFactory {
