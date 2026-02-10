@@ -1,6 +1,5 @@
 #pragma once
 
-#include "mesh/mesh_node.hpp"
 #include "mesh/mesh_types.hpp"
 
 #include <array>
@@ -24,7 +23,7 @@ public:
 
     uint8_t nodeCount() const noexcept { return nodeCountFromType(m_type); }
 
-    const MeshNodeId* nodeIds() const noexcept { return m_nodeIds.data(); }
+    std::vector<MeshNodeId> nodeIds() const noexcept;
 
     MeshNodeId nodeId(uint8_t i) const noexcept { return m_nodeIds[i]; }
 

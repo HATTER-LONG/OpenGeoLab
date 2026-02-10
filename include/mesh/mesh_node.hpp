@@ -1,3 +1,5 @@
+#pragma once
+
 #include "mesh/mesh_types.hpp"
 #include "util/point_vector3d.hpp"
 #include <kangaroo/util/noncopyable.hpp>
