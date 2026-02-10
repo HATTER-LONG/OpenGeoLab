@@ -14,6 +14,7 @@
 #include "util/progress_callback.hpp"
 #include "util/signal.hpp"
 
+#include <kangaroo/util/component_factory.hpp>
 #include <kangaroo/util/noncopyable.hpp>
 #include <memory>
 #include <string>
@@ -89,7 +90,6 @@ struct LoadResult {
  */
 class GeometryDocument : public Kangaroo::Util::NonCopyMoveable {
 public:
-    GeometryDocument() = default;
     virtual ~GeometryDocument() = default;
 
     // -------------------------------------------------------------------------
@@ -220,6 +220,26 @@ public:
      */
     [[nodiscard]] virtual Util::ScopedConnection
     subscribeToChanges(std::function<void(const GeometryChangeEvent&)> callback) = 0;
+
+protected:
+    GeometryDocument() = default;
 };
 
+/**
+ * @brief Singleton factory interface for GeometryDocument
+ */
+class GeometryDocumentSingletonFactory
+    : public Kangaroo::Util::FactoryTraits<GeometryDocumentSingletonFactory, GeometryDocument> {
+public:
+    GeometryDocumentSingletonFactory() = default;
+    virtual ~GeometryDocumentSingletonFactory() = default;
+
+    /**
+     * @brief Get the singleton instance of the document
+     * @return Shared pointer to the document instance
+     */
+    virtual tObjectSharedPtr instance() const = 0;
+};
 } // namespace OpenGeoLab::Geometry
+#define GeoDocumentInstance                                                                        \
+    g_ComponentFactory.getInstanceObject<Geometry::GeometryDocumentSingletonFactory>()

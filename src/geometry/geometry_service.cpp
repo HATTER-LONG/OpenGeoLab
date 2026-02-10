@@ -8,7 +8,7 @@
 #include "action/get_part_list_action.hpp"
 #include "action/newmodel_action.hpp"
 #include "action/query_entity_info_action.hpp"
-#include "geometry_document_managerImpl.hpp"
+#include "geometry_documentImpl.hpp"
 #include "util/logger.hpp"
 #include "util/progress_bridge.hpp"
 
@@ -54,6 +54,6 @@ void registerServices() {
         GetPartListAction::actionName());
     g_ComponentFactory.registFactoryWithID<QueryEntityInfoActionFactory>(
         QueryEntityInfoAction::actionName());
-    g_ComponentFactory.registInstanceFactory<GeometryDocumentManagerImplSingletonFactory>();
+    g_ComponentFactory.registInstanceFactory<GeometryDocumentImplSingletonFactory>();
 }
 } // namespace OpenGeoLab::Geometry

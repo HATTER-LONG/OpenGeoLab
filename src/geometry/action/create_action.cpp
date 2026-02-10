@@ -4,8 +4,9 @@
  */
 
 #include "create_action.hpp"
-#include "../geometry_document_managerImpl.hpp"
+#include "../geometry_documentImpl.hpp"
 #include "util/logger.hpp"
+
 
 #include <BRepPrimAPI_MakeBox.hxx>
 #include <BRepPrimAPI_MakeCone.hxx>
@@ -295,7 +296,7 @@ namespace {
 
     // Add to current document using appendShape
     // (document internally handles change notification)
-    auto document = GeometryDocumentManagerImpl::instance()->currentDocument();
+    auto document = GeometryDocumentImpl::instance();
     if(!document) {
         if(progress_callback) {
             progress_callback(1.0, "Error: No active document.");

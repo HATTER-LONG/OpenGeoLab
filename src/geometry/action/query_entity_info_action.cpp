@@ -5,7 +5,7 @@
 
 #include "query_entity_info_action.hpp"
 
-#include "../geometry_document_managerImpl.hpp"
+#include "../geometry_documentImpl.hpp"
 #include "geometry/geometry_types.hpp"
 #include "util/logger.hpp"
 
@@ -58,7 +58,7 @@ nlohmann::json QueryEntityInfoAction::execute(const nlohmann::json& params,
         return response;
     }
 
-    auto document = GeometryDocumentManagerImpl::instance()->currentDocumentImplType();
+    auto document = GeometryDocumentImpl::instance();
     if(!document) {
         response["success"] = false;
         response["error"] = "No active document";

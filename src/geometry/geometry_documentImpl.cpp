@@ -28,6 +28,16 @@
 
 namespace OpenGeoLab::Geometry {
 
+std::shared_ptr<GeometryDocumentImpl> GeometryDocumentImpl::instance() {
+    static auto instance = std::make_shared<GeometryDocumentImpl>();
+    return instance;
+}
+
+GeometryDocumentImplSingletonFactory::tObjectSharedPtr
+GeometryDocumentImplSingletonFactory::instance() const {
+    return GeometryDocumentImpl::instance();
+}
+
 GeometryDocumentImpl::GeometryDocumentImpl() : m_relationshipIndex(m_entityIndex) {}
 
 namespace {

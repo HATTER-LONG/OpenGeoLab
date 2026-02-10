@@ -5,7 +5,7 @@
 
 #include "generate_mesh_action.hpp"
 
-#include "geometry/geometry_document_manager.hpp"
+#include "geometry/geometry_document.hpp"
 #include "geometry/geometry_entity.hpp"
 #include "util/logger.hpp"
 
@@ -93,8 +93,7 @@ nlohmann::json GenerateMeshAction::execute(const nlohmann::json& params,
 TopoDS_Shape
 GenerateMeshAction::createShapeFromFaceEntities(const Geometry::EntityRefSet& entities) {
 
-    auto doc = GeoDocumentMgrInstance->currentDocument();
-
+    auto doc = GeoDocumentInstance;
     std::vector<Geometry::GeometryEntityPtr> face_entity_ptrs;
     for(const auto& entity_ref : entities) {
         if(entity_ref.m_type == Geometry::EntityType::Part ||

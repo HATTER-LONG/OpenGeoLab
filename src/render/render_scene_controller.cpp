@@ -5,7 +5,7 @@
 
 #include "render/render_scene_controller.hpp"
 
-#include "geometry/geometry_document_manager.hpp"
+#include "geometry/geometry_document.hpp"
 #include "util/logger.hpp"
 
 #include <QCoreApplication>
@@ -220,13 +220,13 @@ void RenderSceneController::handleDocumentGeometryChanged(
 
 void RenderSceneController::subscribeToCurrentDocument() {
     try {
-        auto manager = GeoDocumentMgrInstance;
-        if(!manager) {
-            LOG_WARN("RenderSceneController: Document manager not available");
+        auto document = GeoDocumentInstance;
+        if(!document) {
+            LOG_WARN("RenderSceneController: Document not available");
             return;
         }
 
-        subscribeToDocument(manager->currentDocument());
+        subscribeToDocument(document);
     } catch(const std::exception& e) {
         LOG_ERROR("RenderSceneController: Exception subscribing to document: {}", e.what());
     }
@@ -262,15 +262,14 @@ void RenderSceneController::subscribeToDocument(const Geometry::GeometryDocument
 
 void RenderSceneController::updateRenderData() {
     try {
-        auto manager = GeoDocumentMgrInstance;
-        if(!manager) {
-            LOG_WARN("RenderSceneController: Document manager not available during update");
+        auto document = GeoDocumentInstance;
+        if(!document) {
+            LOG_WARN("RenderSceneController: Document not available during update");
             m_renderData.clear();
             m_hasGeometry = false;
             return;
         }
 
-        auto document = manager->currentDocument();
         subscribeToDocument(document);
         if(!document) {
             LOG_WARN("RenderSceneController: No current document available during update");

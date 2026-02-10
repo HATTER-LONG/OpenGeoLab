@@ -4,7 +4,7 @@
  */
 
 #include "get_part_list_action.hpp"
-#include "../geometry_document_managerImpl.hpp"
+#include "../geometry_documentImpl.hpp"
 #include "geometry/part_color.hpp"
 #include "util/logger.hpp"
 
@@ -20,7 +20,7 @@ nlohmann::json GetPartListAction::execute(const nlohmann::json& /*params*/,
         return response;
     }
 
-    auto document = GeometryDocumentManagerImpl::instance()->currentDocumentImplType();
+    auto document = GeometryDocumentImpl::instance();
     if(!document) {
         LOG_ERROR("GetPartListAction: No active document");
         response["success"] = false;

@@ -31,6 +31,11 @@ using GeometryDocumentImplPtr = std::shared_ptr<GeometryDocumentImpl>;
 class GeometryDocumentImpl : public GeometryDocument,
                              public std::enable_shared_from_this<GeometryDocumentImpl> {
 public:
+    /**
+     * @brief Get the singleton instance of the document
+     * @return Shared pointer to the document instance
+     */
+    static std::shared_ptr<GeometryDocumentImpl> instance();
     GeometryDocumentImpl();
     virtual ~GeometryDocumentImpl() = default;
 
@@ -220,5 +225,14 @@ private:
     mutable bool m_renderDataValid{false};
     mutable std::mutex m_renderDataMutex;
 };
+/**
+ * @brief Singleton factory for GeometryDocumentImpl
+ */
+class GeometryDocumentImplSingletonFactory : public GeometryDocumentSingletonFactory {
+public:
+    GeometryDocumentImplSingletonFactory() = default;
+    ~GeometryDocumentImplSingletonFactory() override = default;
 
+    tObjectSharedPtr instance() const override;
+};
 } // namespace OpenGeoLab::Geometry

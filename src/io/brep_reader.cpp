@@ -4,7 +4,7 @@
  */
 
 #include "brep_reader.hpp"
-#include "geometry/geometry_document_manager.hpp"
+#include "geometry/geometry_document.hpp"
 #include "util/logger.hpp"
 #include "util/occ_progress.hpp"
 
@@ -68,7 +68,7 @@ ReadResult BrepReader::readFile(const std::string& file_path,
         }
 
         // Load shape into current document
-        auto document = GeoDocumentMgrInstance->currentDocument();
+        auto document = GeoDocumentInstance;
         if(!document) {
             LOG_ERROR("No active geometry document");
             return ReadResult::failure("No active geometry document");
