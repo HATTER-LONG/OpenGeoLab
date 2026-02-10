@@ -107,6 +107,15 @@ public:
 
     [[nodiscard]] GeometryEntityPtr findByShape(const TopoDS_Shape& shape) const override;
 
+    [[nodiscard]] GeometryEntityPtr findByKey(const EntityKey& key) const override;
+    [[nodiscard]] GeometryEntityPtr findByRef(const EntityRef& ref) const override;
+
+    [[nodiscard]] EntityRef resolveId(EntityId entity_id) const override;
+
+    [[nodiscard]] EntityKey resolveIdToKey(EntityId entity_id) const override;
+
+    [[nodiscard]] EntityKey resolveRefToKey(const EntityRef& ref) const override;
+
     [[nodiscard]] size_t entityCount() const;
 
     [[nodiscard]] size_t entityCountByType(EntityType entity_type) const;
@@ -130,6 +139,9 @@ public:
 
     [[nodiscard]] std::vector<EntityKey>
     findRelatedEntities(EntityId entity_id, EntityType related_type) const override;
+
+    [[nodiscard]] std::vector<EntityKey>
+    findRelatedEntities(const EntityRef& source, EntityType related_type) const override;
 
     [[nodiscard]] std::vector<EntityKey> findRelatedEntities(
         EntityUID entity_uid, EntityType entity_type, EntityType related_type) const override;

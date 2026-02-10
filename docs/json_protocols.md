@@ -6,7 +6,7 @@
 
 ### 1.1 调用入口（QML）
 - API：`BackendService.request(moduleName, jsonString)`
-- `moduleName`：服务名（当前已注册：`RenderService` / `GeometryService` / `ReaderService`）
+- `moduleName`：服务名（当前已注册：`RenderService` / `GeometryService` / `ReaderService` / `MeshService`）
 - `jsonString`：JSON 字符串（建议始终传对象）
 
 ### 1.2 action 约定
@@ -65,12 +65,22 @@
 说明：
 - `vertex/edge/face` 可组合。
 - `solid/part` 为互斥模式（且与 `vertex/edge/face` 互斥）。
+- `mesh_node/mesh_element` 可组合，用于拾取网格节点/单元。
 
 请求（字符串数组）：
 ```json
 {
   "action": "SelectControl",
   "select_ctrl": { "types": ["vertex", "edge", "face"] },
+  "_meta": { "silent": true }
+}
+```
+
+网格拾取示例：
+```json
+{
+  "action": "SelectControl",
+  "select_ctrl": { "types": ["mesh_node", "mesh_element"] },
   "_meta": { "silent": true }
 }
 ```
@@ -329,3 +339,56 @@
 - 失败：抛异常并走 `operationFailed`（error 为字符串描述）
 
 > 说明：ReaderService 会校验 `action == "load_model"`；其它 action 会返回失败（走 `operationFailed`）。
+
+---
+
+## 5. MeshService
+
+### 5.1 generate_mesh
+- action：`"generate_mesh"`
+- 用途：根据所选几何面实体，通过 Gmsh 生成 2D 网格（节点+单元），存储到 MeshDocument 中。生成完成后自动触发场景刷新。
+
+请求：
+```json
+{
+  "action": "generate_mesh",
+  "entities": [
+    { "uid": 5, "type": "Face" }
+  ],
+  "elementSize": 1.0,
+  "meshDimension": 2,
+  "elementType": "triangle"
+}
+```
+
+字段说明：
+- `entities`（必须）：要剖分的实体列表，每项含 `uid`（EntityUID）和 `type`（实体类型字符串，如 `"Face"`）
+- `elementSize`（可选）：全局网格尺寸，默认 `1.0`，必须为正数
+- `meshDimension`（可选）：网格维度，`2` 为表面网格，`3` 为体网格，默认 `2`
+- `elementType`（可选）：单元类型，`"triangle"` / `"quad"` / `"auto"`，默认 `"triangle"`
+  - `"triangle"`：使用 Frontal-Delaunay 算法（Gmsh Algorithm 6）
+  - `"quad"`：使用 Packing of Parallelograms 算法（Gmsh Algorithm 8）+ RecombineAll
+  - `"auto"`：自动选择（当前默认 Frontal-Delaunay）
+
+响应（成功）：
+```json
+{
+  "success": true,
+  "nodeCount": 256,
+  "elementCount": 480
+}
+```
+
+响应（失败）示例：
+```json
+{ "success": false, "error": "Missing or invalid 'entities' array" }
+```
+
+可能的失败原因：
+- 参数不是 JSON 对象
+- 缺少或非法的 `entities` 数组
+- 实体类型无效（`EntityType::None`）
+- 未提供有效实体
+- `elementSize` 为非正数
+- Gmsh 导入/剖分失败
+- 操作被取消

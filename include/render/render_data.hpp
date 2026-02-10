@@ -159,6 +159,9 @@ struct DocumentRenderData {
     std::vector<RenderMesh> m_edgeMeshes;   ///< Edge/curve meshes
     std::vector<RenderMesh> m_vertexMeshes; ///< Vertex/point meshes
 
+    std::vector<RenderMesh> m_meshElementMeshes; ///< FEM mesh element wireframe meshes
+    std::vector<RenderMesh> m_meshNodeMeshes;    ///< FEM mesh node point meshes
+
     Geometry::BoundingBox3D m_boundingBox; ///< Combined bounding box
 
     uint64_t m_version{0}; ///< Data version for change detection
@@ -168,7 +171,8 @@ struct DocumentRenderData {
      * @return true if no meshes are present
      */
     [[nodiscard]] bool isEmpty() const {
-        return m_faceMeshes.empty() && m_edgeMeshes.empty() && m_vertexMeshes.empty();
+        return m_faceMeshes.empty() && m_edgeMeshes.empty() && m_vertexMeshes.empty() &&
+               m_meshElementMeshes.empty() && m_meshNodeMeshes.empty();
     }
 
     /**
@@ -176,7 +180,8 @@ struct DocumentRenderData {
      * @return Sum of all mesh counts
      */
     [[nodiscard]] size_t meshCount() const {
-        return m_faceMeshes.size() + m_edgeMeshes.size() + m_vertexMeshes.size();
+        return m_faceMeshes.size() + m_edgeMeshes.size() + m_vertexMeshes.size() +
+               m_meshElementMeshes.size() + m_meshNodeMeshes.size();
     }
 
     /**
@@ -186,6 +191,8 @@ struct DocumentRenderData {
         m_faceMeshes.clear();
         m_edgeMeshes.clear();
         m_vertexMeshes.clear();
+        m_meshElementMeshes.clear();
+        m_meshNodeMeshes.clear();
         m_boundingBox = Geometry::BoundingBox3D();
         ++m_version;
     }
@@ -207,6 +214,12 @@ struct DocumentRenderData {
             m_boundingBox.expand(mesh.m_boundingBox);
         }
         for(const auto& mesh : m_vertexMeshes) {
+            m_boundingBox.expand(mesh.m_boundingBox);
+        }
+        for(const auto& mesh : m_meshElementMeshes) {
+            m_boundingBox.expand(mesh.m_boundingBox);
+        }
+        for(const auto& mesh : m_meshNodeMeshes) {
             m_boundingBox.expand(mesh.m_boundingBox);
         }
     }

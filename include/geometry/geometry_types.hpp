@@ -28,16 +28,18 @@ namespace OpenGeoLab::Geometry {
  * Used for type identification and selection mode filtering.
  */
 enum class EntityType : uint8_t {
-    None = 0,      ///< No entity type / invalid
-    Vertex = 1,    ///< Point/vertex entity
-    Edge = 2,      ///< Edge/curve entity
-    Wire = 3,      ///< Wire entity (collection of connected edges)
-    Face = 4,      ///< Face/surface entity
-    Shell = 5,     ///< Shell entity (collection of connected faces)
-    Solid = 6,     ///< Solid body entity
-    CompSolid = 7, ///< Composite solid entity
-    Compound = 8,  ///< Compound entity (collection of shapes)
-    Part = 9       ///< UI-level part (independent component)
+    None = 0,        ///< No entity type / invalid
+    Vertex = 1,      ///< Point/vertex entity
+    Edge = 2,        ///< Edge/curve entity
+    Wire = 3,        ///< Wire entity (collection of connected edges)
+    Face = 4,        ///< Face/surface entity
+    Shell = 5,       ///< Shell entity (collection of connected faces)
+    Solid = 6,       ///< Solid body entity
+    CompSolid = 7,   ///< Composite solid entity
+    Compound = 8,    ///< Compound entity (collection of shapes)
+    Part = 9,        ///< UI-level part (independent component)
+    MeshNode = 10,   ///< Mesh node (point in FEM mesh)
+    MeshElement = 11 ///< Mesh element (triangle, quad, etc.)
 };
 /**
  * @brief Convert string to EntityType

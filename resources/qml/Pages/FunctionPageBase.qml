@@ -129,6 +129,11 @@ Item {
         if (MainPages.currentOpenPage === root.actionId) {
             MainPages.currentOpenPage = "";
         }
+        // Return focus to the GL viewport so camera controls work
+        const mw = MainPages.mainWindow;
+        if (mw && mw.glViewport) {
+            mw.glViewport.forceActiveFocus();
+        }
     }
 
     /**

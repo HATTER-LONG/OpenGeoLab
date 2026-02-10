@@ -1,221 +1,99 @@
 /**
  * @file scene_renderer.hpp
- * @brief OpenGL scene renderer for geometry visualization
+ * @brief OpenGL scene renderer facade
  *
- * Provides a self-contained OpenGL rendering component that handles
- * shader management, mesh data upload, and scene rendering. This component
- * is independent of the QML layer and can be used by any OpenGL context.
+ * SceneRenderer is now a thin facade over RendererCore + registered RenderPasses.
+ * It maintains the original public API for backward compatibility with
+ * GLViewportRenderer in opengl_viewport.cpp.
  */
 
 #pragma once
 
+#include "render/passes/geometry_pass.hpp"
+#include "render/passes/highlight_pass.hpp"
+#include "render/passes/mesh_pass.hpp"
+#include "render/passes/picking_pass.hpp"
 #include "render/render_data.hpp"
+#include "render/renderer_core.hpp"
 
 #include <QMatrix4x4>
-#include <QOpenGLBuffer>
-#include <QOpenGLFunctions>
-#include <QOpenGLShaderProgram>
-#include <QOpenGLVertexArrayObject>
 #include <QSize>
 #include <QVector3D>
 #include <memory>
-#include <vector>
 
 namespace OpenGeoLab::Render {
 
 class SelectManager;
 
 /**
- * @brief OpenGL scene renderer for geometry visualization
+ * @brief Facade for the modular rendering pipeline
  *
- * SceneRenderer is a self-contained component that handles:
- * - Shader compilation and management
- * - Mesh data upload to GPU
- * - Scene rendering with proper lighting
- *
- * @note Must be used within a valid OpenGL context.
- * @note Thread safety: Not thread-safe, all calls must be from the render thread.
+ * Delegates to RendererCore for GL resource management and pass scheduling.
+ * Keeps the original API surface so existing code can migrate incrementally.
  */
-class SceneRenderer : protected QOpenGLFunctions {
+class SceneRenderer {
 public:
     SceneRenderer();
     ~SceneRenderer();
 
-    // Non-copyable, non-movable (OpenGL resources cannot be moved)
     SceneRenderer(const SceneRenderer&) = delete;
     SceneRenderer& operator=(const SceneRenderer&) = delete;
     SceneRenderer(SceneRenderer&&) = delete;
     SceneRenderer& operator=(SceneRenderer&&) = delete;
 
-    /**
-     * @brief Initialize OpenGL resources
-     * @note Must be called from the OpenGL context thread after context is current
-     */
     void initialize();
+    [[nodiscard]] bool isInitialized() const;
 
-    /**
-     * @brief Check if renderer is initialized
-     * @return true if initialize() has been called successfully
-     */
-    [[nodiscard]] bool isInitialized() const { return m_initialized; }
-
-    /**
-     * @brief Update viewport size for aspect ratio calculations
-     * @param size New viewport size in pixels
-     */
     void setViewportSize(const QSize& size);
-
-    /**
-     * @brief Upload mesh data to GPU
-     * @param render_data Document render data containing meshes to upload
-     * @note Call this when render data changes
-     */
     void uploadMeshData(const DocumentRenderData& render_data);
 
     /**
-     * @brief Render a picking pass encoding (uid+type) into the framebuffer color.
-     *
-     * Caller should bind the desired framebuffer before calling, and use glReadPixels
-     * to read back the pixel under the cursor.
+     * @brief Render the picking pass and populate the internal pick FBO.
      */
     void renderPicking(const QMatrix4x4& view_matrix, const QMatrix4x4& projection_matrix);
 
     /**
-     * @brief Highlight a specific entity (matched by type + uid).
-     * @note Pass EntityType::None or INVALID_ENTITY_UID to clear highlight.
+     * @brief Set the entity to be highlighted on hover.
      */
     void setHighlightedEntity(Geometry::EntityUID uid, Geometry::EntityType type);
 
+    /// @overload EntityRef-based convenience.
+    void setHighlightedEntity(const Geometry::EntityRef& ref) {
+        setHighlightedEntity(ref.m_uid, ref.m_type);
+    }
+
     /**
-     * @brief Render the complete scene
-     * @param camera_pos Camera position for lighting
-     * @param view_matrix View transformation matrix
-     * @param projection_matrix Projection matrix
+     * @brief Render the complete scene (delegates to RendererCore passes).
      */
     void render(const QVector3D& camera_pos,
                 const QMatrix4x4& view_matrix,
                 const QMatrix4x4& projection_matrix);
 
-    /**
-     * @brief Cleanup GPU resources
-     * @note Call before destroying OpenGL context
-     */
     void cleanup();
 
-private:
-    struct MeshBuffers;
+    // -------------------------------------------------------------------------
+    // Access to individual passes (for advanced use)
+    // -------------------------------------------------------------------------
 
-    void setupShaders();
-    void renderMeshes(const QMatrix4x4& mvp,
-                      const QMatrix4x4& model_matrix,
-                      const QVector3D& camera_pos);
+    [[nodiscard]] RendererCore& core() { return m_core; }
+    [[nodiscard]] const RendererCore& core() const { return m_core; }
 
-    [[nodiscard]] static GLenum toGlPrimitiveType(RenderPrimitiveType type);
-    [[nodiscard]] static bool uidMatches24(Geometry::EntityUID a, Geometry::EntityUID b);
-    [[nodiscard]] static bool
-    uidMatchesSet24(const std::unordered_set<Geometry::EntityUID>& uid_set,
-                    Geometry::EntityUID uid);
-
-    void setOverrideColor(bool enabled, const QVector4D& color);
-    void drawMesh(MeshBuffers& buffers, GLenum primitive);
-
-    [[nodiscard]] bool isMeshSelected(const MeshBuffers& buffers,
-                                      const SelectManager& select_manager) const;
-
-    [[nodiscard]] bool isFaceMeshHovered(const MeshBuffers& buffers) const;
-    [[nodiscard]] bool isEdgeMeshHovered(const MeshBuffers& buffers) const;
-    [[nodiscard]] bool isVertexMeshHovered(const MeshBuffers& buffers) const;
-
-    void renderFaceMeshes(const SelectManager& select_manager);
-    void renderEdgeMeshes(const SelectManager& select_manager);
-    void renderVertexMeshes(const SelectManager& select_manager);
-
-    /**
-     * @brief Upload a single mesh to GPU buffers
-     * @param mesh Mesh data to upload
-     * @param vao VAO to bind
-     * @param vbo VBO to use
-     * @param ebo EBO to use (optional)
-     */
-    void uploadMesh(const RenderMesh& mesh,
-                    QOpenGLVertexArrayObject& vao,
-                    QOpenGLBuffer& vbo,
-                    QOpenGLBuffer& ebo);
-
-    /**
-     * @brief Clear mesh buffers and release GPU resources
-     */
-    void clearMeshBuffers();
+    [[nodiscard]] GeometryPass* geometryPass() const { return m_geometryPass; }
+    [[nodiscard]] MeshPass* meshPass() const { return m_meshPass; }
+    [[nodiscard]] PickingPass* pickingPass() const { return m_pickingPass.get(); }
+    [[nodiscard]] HighlightPass* highlightPass() const { return m_highlightPass; }
 
 private:
-    bool m_initialized{false};
-    QSize m_viewportSize{800, 600};
+    RendererCore m_core;
 
-    // Shaders
-    std::unique_ptr<QOpenGLShaderProgram> m_meshShader;
-    std::unique_ptr<QOpenGLShaderProgram> m_pickShader;
-    std::unique_ptr<QOpenGLShaderProgram> m_pickEdgeShader;
+    // Non-owning pointers to registered passes (RendererCore owns them)
+    GeometryPass* m_geometryPass{nullptr};
+    MeshPass* m_meshPass{nullptr};
+    HighlightPass* m_highlightPass{nullptr};
 
-    // Mesh shader uniform locations
-    int m_mvpMatrixLoc{-1};
-    int m_modelMatrixLoc{-1};
-    int m_normalMatrixLoc{-1};
-    int m_lightPosLoc{-1};
-    int m_viewPosLoc{-1};
-    int m_pointSizeLoc{-1};
-    int m_useLightingLoc{-1};
-
-    int m_useOverrideColorLoc{-1};
-    int m_overrideColorLoc{-1};
-
-    int m_pickMvpMatrixLoc{-1};
-    int m_pickColorLoc{-1};
-    int m_pickPointSizeLoc{-1};
-
-    int m_pickEdgeMvpMatrixLoc{-1};
-    int m_pickEdgeColorLoc{-1};
-    int m_pickEdgeViewportLoc{-1};
-    int m_pickEdgeThicknessLoc{-1};
-
-    /**
-     * @brief Internal structure for mesh GPU buffers
-     */
-    struct MeshBuffers {
-        std::unique_ptr<QOpenGLVertexArrayObject> m_vao;
-        std::unique_ptr<QOpenGLBuffer> m_vbo;
-        std::unique_ptr<QOpenGLBuffer> m_ebo;
-        int m_vertexCount{0};
-        int m_indexCount{0};
-        RenderPrimitiveType m_primitiveType{RenderPrimitiveType::Triangles};
-
-        Geometry::EntityType m_entityType{Geometry::EntityType::None};
-        Geometry::EntityUID m_entityUid{Geometry::INVALID_ENTITY_UID};
-
-        Geometry::EntityUID m_owningPartUid{Geometry::INVALID_ENTITY_UID};
-        Geometry::EntityUID m_owningSolidUid{Geometry::INVALID_ENTITY_UID};
-        std::unordered_set<Geometry::EntityUID> m_owningWireUid{};
-
-        QVector4D m_hoverColor{1.0f, 1.0f, 1.0f, 1.0f};
-        QVector4D m_selectedColor{1.0f, 1.0f, 1.0f, 1.0f};
-
-        MeshBuffers();
-        ~MeshBuffers();
-
-        MeshBuffers(MeshBuffers&&) noexcept = default;
-        MeshBuffers& operator=(MeshBuffers&&) noexcept = default;
-
-        MeshBuffers(const MeshBuffers&) = delete;
-        MeshBuffers& operator=(const MeshBuffers&) = delete;
-
-        void destroy();
-    };
-
-    std::vector<MeshBuffers> m_faceMeshBuffers;
-    std::vector<MeshBuffers> m_edgeMeshBuffers;
-    std::vector<MeshBuffers> m_vertexMeshBuffers;
-
-    Geometry::EntityType m_hoverHighlightType{Geometry::EntityType::None};
-    Geometry::EntityUID m_hoverHighlightUid{Geometry::INVALID_ENTITY_UID};
+    // PickingPass is owned directly by SceneRenderer (not RendererCore)
+    // because it is executed on-demand, not as part of the main pass list.
+    std::unique_ptr<PickingPass> m_pickingPass;
 };
 
 } // namespace OpenGeoLab::Render

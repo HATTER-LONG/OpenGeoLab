@@ -155,6 +155,10 @@ public:
      * @brief Find an entity by global id
      * @param entity_id Global entity id
      * @return Geometry entity pointer, or nullptr if not found
+     *
+     * @note Returns a shared_ptr which incurs atomic ref-count overhead.
+     *       Prefer resolveId() or resolveIdToKey() for lightweight lookups
+     *       when only identity information is needed.
      */
     [[nodiscard]] virtual GeometryEntityPtr findById(EntityId entity_id) const = 0;
 
@@ -163,6 +167,10 @@ public:
      * @param entity_uid Type-scoped uid
      * @param entity_type Entity type
      * @return Geometry entity pointer, or nullptr if not found
+     *
+     * @note Returns a shared_ptr which incurs atomic ref-count overhead.
+     *       Prefer resolveRefToKey() for lightweight lookups when only
+     *       identity information is needed.
      */
     [[nodiscard]] virtual GeometryEntityPtr findByUIDAndType(EntityUID entity_uid,
                                                              EntityType entity_type) const = 0;
@@ -171,8 +179,59 @@ public:
      * @brief Find an entity by its underlying shape
      * @param shape OCC shape to look for
      * @return Geometry entity pointer, or nullptr if not found
+     *
+     * @note Returns a shared_ptr which incurs atomic ref-count overhead.
      */
     [[nodiscard]] virtual GeometryEntityPtr findByShape(const TopoDS_Shape& shape) const = 0;
+
+    /**
+     * @brief Find an entity by EntityKey (id + uid + type).
+     * @param key Entity key to look up.
+     * @return Geometry entity pointer, or nullptr if not found.
+     *
+     * @note Returns a shared_ptr which incurs atomic ref-count overhead.
+     *       When only identity information is needed and you already have the key,
+     *       there is no need to call this method.
+     */
+    [[nodiscard]] virtual GeometryEntityPtr findByKey(const EntityKey& key) const = 0;
+
+    /**
+     * @brief Find an entity by EntityRef (uid + type).
+     * @param ref Entity reference to look up.
+     * @return Geometry entity pointer, or nullptr if not found.
+     *
+     * @note Returns a shared_ptr which incurs atomic ref-count overhead.
+     *       Prefer resolveRefToKey() when only identity information is needed.
+     */
+    [[nodiscard]] virtual GeometryEntityPtr findByRef(const EntityRef& ref) const = 0;
+
+    /**
+     * @brief Resolve a global EntityId to an EntityRef (uid + type).
+     * @param entity_id Global entity id to resolve.
+     * @return EntityRef with uid+type, or invalid EntityRef if not found.
+     *
+     * @note This is a lightweight O(1) lookup that avoids shared_ptr overhead.
+     *       Use this when you only need to identify the entity, not access its data.
+     */
+    [[nodiscard]] virtual EntityRef resolveId(EntityId entity_id) const = 0;
+
+    /**
+     * @brief Resolve a global EntityId to a full EntityKey (id + uid + type).
+     * @param entity_id Global entity id to resolve.
+     * @return EntityKey with (id, uid, type), or invalid EntityKey if not found.
+     *
+     * @note Lightweight O(1) lookup. Avoids atomic ref-count overhead of findById().
+     */
+    [[nodiscard]] virtual EntityKey resolveIdToKey(EntityId entity_id) const = 0;
+
+    /**
+     * @brief Resolve an EntityRef to a full EntityKey including the global id.
+     * @param ref Entity reference with uid+type.
+     * @return EntityKey with (id, uid, type), or invalid EntityKey if not found.
+     *
+     * @note O(1) lookup via direct array access. Avoids shared_ptr ref-count overhead.
+     */
+    [[nodiscard]] virtual EntityKey resolveRefToKey(const EntityRef& ref) const = 0;
 
     // -------------------------------------------------------------------------
     // Relationship Queries
@@ -193,10 +252,19 @@ public:
     findRelatedEntities(EntityId entity_id, EntityType related_type) const = 0;
 
     /**
+     * @brief Find related entities by type, starting from an EntityRef.
+     *
+     * @param source Source entity reference (uid + type).
+     * @param related_type Related entity type to return.
+     * @return Vector of related entity keys (order unspecified).
+     */
+    [[nodiscard]] virtual std::vector<EntityKey>
+    findRelatedEntities(const EntityRef& source, EntityType related_type) const = 0;
+
+    /**
      * @brief Find related entities by type, starting from a (uid,type) handle.
      *
-     * This is a convenience wrapper around the relationship index for external
-     * callers that only have the pick handle (uid+type).
+     * Convenience overload that constructs an EntityRef internally.
      *
      * @param entity_uid Source entity uid
      * @param entity_type Source entity type

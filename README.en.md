@@ -12,8 +12,17 @@ OpenGeoLab is a Qt Quick (QML) + OpenGL prototype for CAD-like geometry visualiz
   - `src/app/`: application entry, QML singletons (BackendService), OpenGL viewport (GLViewport)
   - `src/geometry/`: geometry document/entities, OCC build and render-data extraction
     - Entity identity: internally uses `EntityKey = (EntityId + EntityUID + EntityType)` as a comparable/hashable handle
+    - `EntityRef = (EntityUID + EntityType)` as a lightweight reference for contexts not needing EntityId
   - `src/io/`: model import services (STEP/BREP)
-  - `src/render/`: render data types, SceneRenderer, RenderSceneController
+  - `src/mesh/`: mesh module
+    - MeshDocument stores node and element data
+    - GenerateMeshAction performs meshing via Gmsh
+    - Supports MeshNode/MeshElement entity picking and highlighting
+  - `src/render/`: render module
+    - Multi-pass architecture: GeometryPass (geometry scene), MeshPass (FEM mesh wireframe/nodes), PickingPass (picking), HighlightPass (stencil outline)
+    - RenderBatch manages GPU buffers (face/edge/vertex/meshElement/meshNode)
+    - RenderSceneController bridges geometry and mesh documents to the render pipeline, manages per-part visibility
+    - See `docs/render_architecture.md` for detailed render architecture documentation
 - `resources/qml/`: QML UI
 - `test/`: tests (disabled by default)
 
@@ -21,6 +30,7 @@ OpenGeoLab is a Qt Quick (QML) + OpenGL prototype for CAD-like geometry visualiz
 - CMake >= 3.14
 - Qt 6.8 (Core/Gui/Qml/Quick/OpenGL)
 - OpenCASCADE (pre-installed; discovered by CMake via `find_package(OpenCASCADE REQUIRED)`)
+- Gmsh (for meshing; pre-installed)
 - HDF5 (HighFive expects system HDF5)
 - Ninja + MSVC (recommended on Windows)
 
@@ -45,8 +55,17 @@ Signals:
 
 See: `docs/json_protocols.en.md`.
 
-Recent addition:
-- The Geo Query page calls `GeometryService` action `query_entity_info` to query detailed info for the currently selected entities (type+uid) and renders the results in a list.
+Recent additions:
+- EntityIndex refactored to per-type slot arrays with O(1) uid lookup and fast id-to-(uid,type) mapping
+- Mesh module: MeshDocument stores/queries mesh nodes and elements; GenerateMeshAction generates meshes from geometry faces via Gmsh
+  - Supports triangle/quad/auto element type selection
+  - Supports 2D surface mesh and 3D volume mesh generation
+- Render pipeline supports mesh data (wireframe/nodes) visualization, picking, and highlighting
+  - MeshPass renders FEM mesh elements and nodes independently from geometry
+  - Face selection outline fix: scales from entity centroid, not world origin
+- SelectManager supports `mesh_node`/`mesh_element` pick types
+- Sidebar per-part geometry/mesh visibility toggles (via ViewportService and RenderSceneController)
+- QML floating pages automatically restore OpenGL viewport focus on close
 
 ## Next Steps (high-level)
 - Selection & picking (vertex/edge/face/part), highlight, and transform/edit operations (trim/offset, etc.)

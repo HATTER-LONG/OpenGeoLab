@@ -17,6 +17,8 @@
 #include <QMatrix4x4>
 #include <QVector3D>
 #include <functional>
+#include <mutex>
+#include <unordered_map>
 
 namespace OpenGeoLab::Render {
 
@@ -165,6 +167,38 @@ public:
     void setRightView(bool notify = true);
 
     // ---------------------------------------------------------------------
+    // Per-part visibility control
+    // ---------------------------------------------------------------------
+
+    /**
+     * @brief Set geometry visibility for a specific part.
+     * @param part_uid Part entity UID
+     * @param visible true to show, false to hide
+     */
+    void setPartGeometryVisible(Geometry::EntityUID part_uid, bool visible);
+
+    /**
+     * @brief Set mesh visibility for a specific part.
+     * @param part_uid Part entity UID
+     * @param visible true to show, false to hide
+     */
+    void setPartMeshVisible(Geometry::EntityUID part_uid, bool visible);
+
+    /**
+     * @brief Check if geometry is visible for a given part.
+     * @param part_uid Part entity UID
+     * @return true if visible (default is true for unregistered parts)
+     */
+    [[nodiscard]] bool isPartGeometryVisible(Geometry::EntityUID part_uid) const;
+
+    /**
+     * @brief Check if mesh is visible for a given part.
+     * @param part_uid Part entity UID
+     * @return true if visible (default is true for unregistered parts)
+     */
+    [[nodiscard]] bool isPartMeshVisible(Geometry::EntityUID part_uid) const;
+
+    // ---------------------------------------------------------------------
     // Signals (Util::Signal based)
     // ---------------------------------------------------------------------
 
@@ -206,6 +240,14 @@ private:
     Util::Signal<> m_geometryChanged;
     Util::Signal<> m_cameraChanged;
     Util::Signal<> m_sceneNeedsUpdate;
+
+    /// Per-part visibility state: {partUID -> {geoVisible, meshVisible}}
+    struct PartVisibility {
+        bool m_geometryVisible{true};
+        bool m_meshVisible{true};
+    };
+    mutable std::mutex m_visibilityMutex;
+    std::unordered_map<Geometry::EntityUID, PartVisibility> m_partVisibility;
 };
 
 } // namespace OpenGeoLab::Render

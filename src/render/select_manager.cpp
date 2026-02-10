@@ -12,7 +12,7 @@ namespace OpenGeoLab::Render {
 namespace {
 [[nodiscard]] constexpr inline bool hasAny(SelectManager::PickTypes value,
                                            SelectManager::PickTypes mask) {
-    return static_cast<uint8_t>(value & mask) != 0u;
+    return static_cast<uint32_t>(value & mask) != 0u;
 }
 } // namespace
 
@@ -83,6 +83,10 @@ bool SelectManager::isTypePickable(Geometry::EntityType type) const {
         return hasAny(m_pickTypes, PickTypes::Solid);
     case Geometry::EntityType::Part:
         return hasAny(m_pickTypes, PickTypes::Part);
+    case Geometry::EntityType::MeshNode:
+        return hasAny(m_pickTypes, PickTypes::MeshNode);
+    case Geometry::EntityType::MeshElement:
+        return hasAny(m_pickTypes, PickTypes::MeshElement);
     default:
         return false;
     }
@@ -183,7 +187,23 @@ SelectManager::PickTypes SelectManager::normalizePickTypes(PickTypes types) {
     // Exclusivity rules:
     // - Wire/Solid/Part are exclusive and clear all others.
     // - Vertex/Edge/Face can be combined with each other.
-    // - Any of (Wire/Solid/Part) is exclusive with any of (Vertex/Edge/Face).
+    // - MeshNode/MeshElement are exclusive from all geometry types.
+    // - MeshNode and MeshElement can be combined with each other.
+
+    const bool wants_mesh_node = hasAny(types, PickTypes::MeshNode);
+    const bool wants_mesh_elem = hasAny(types, PickTypes::MeshElement);
+
+    // Mesh types take priority and exclude all geometry types.
+    if(wants_mesh_node || wants_mesh_elem) {
+        PickTypes result = PickTypes::None;
+        if(wants_mesh_node) {
+            result = result | PickTypes::MeshNode;
+        }
+        if(wants_mesh_elem) {
+            result = result | PickTypes::MeshElement;
+        }
+        return result;
+    }
 
     const bool wants_solid = hasAny(types, PickTypes::Solid);
     const bool wants_part = hasAny(types, PickTypes::Part);

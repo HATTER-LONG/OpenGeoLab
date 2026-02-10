@@ -180,6 +180,26 @@ GeometryEntityPtr GeometryDocumentImpl::findByShape(const TopoDS_Shape& shape) c
     return m_entityIndex.findByShape(shape);
 }
 
+GeometryEntityPtr GeometryDocumentImpl::findByKey(const EntityKey& key) const {
+    return m_entityIndex.findByKey(key);
+}
+
+GeometryEntityPtr GeometryDocumentImpl::findByRef(const EntityRef& ref) const {
+    return m_entityIndex.findByRef(ref);
+}
+
+EntityRef GeometryDocumentImpl::resolveId(EntityId entity_id) const {
+    return m_entityIndex.resolveId(entity_id);
+}
+
+EntityKey GeometryDocumentImpl::resolveIdToKey(EntityId entity_id) const {
+    return m_entityIndex.resolveIdToKey(entity_id);
+}
+
+EntityKey GeometryDocumentImpl::resolveRefToKey(const EntityRef& ref) const {
+    return m_entityIndex.resolveRefToKey(ref);
+}
+
 [[nodiscard]] size_t GeometryDocumentImpl::entityCount() const {
     return m_entityIndex.entityCount();
 }
@@ -340,6 +360,12 @@ void GeometryDocumentImpl::invalidateRenderData() {
 std::vector<EntityKey> GeometryDocumentImpl::findRelatedEntities(EntityId entity_id,
                                                                  EntityType related_type) const {
     return m_relationshipIndex.findRelatedEntities(entity_id, related_type);
+}
+
+std::vector<EntityKey>
+GeometryDocumentImpl::findRelatedEntities(const EntityRef& source,
+                                          EntityType related_type) const {
+    return m_relationshipIndex.findRelatedEntities(source.m_uid, source.m_type, related_type);
 }
 
 std::vector<EntityKey> GeometryDocumentImpl::findRelatedEntities(EntityUID entity_uid,

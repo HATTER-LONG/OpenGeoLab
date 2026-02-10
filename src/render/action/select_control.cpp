@@ -29,6 +29,12 @@ namespace {
     if(s == "part") {
         return SelectManager::PickTypes::Part;
     }
+    if(s == "mesh_node") {
+        return SelectManager::PickTypes::MeshNode;
+    }
+    if(s == "mesh_element") {
+        return SelectManager::PickTypes::MeshElement;
+    }
     throw std::invalid_argument("Unsupported pick type string");
 }
 
@@ -89,7 +95,7 @@ nlohmann::json SelectControl::execute(const nlohmann::json& params,
         }
         const auto type = entityTypeFromJson(a["type"]);
         const auto uid = static_cast<Geometry::EntityUID>(a["uid"].get<uint64_t>());
-        select_manager.addSelection(uid, type);
+        select_manager.addSelection(Geometry::EntityRef{uid, type});
     }
 
     if(ctrl.contains("remove") && ctrl["remove"].is_object()) {
@@ -99,7 +105,7 @@ nlohmann::json SelectControl::execute(const nlohmann::json& params,
         }
         const auto type = entityTypeFromJson(r["type"]);
         const auto uid = static_cast<Geometry::EntityUID>(r["uid"].get<uint64_t>());
-        select_manager.removeSelection(uid, type);
+        select_manager.removeSelection(Geometry::EntityRef{uid, type});
     }
 
     nlohmann::json response{{"status", "success"},

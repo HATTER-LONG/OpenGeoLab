@@ -6,6 +6,7 @@
 #include "render/render_scene_controller.hpp"
 
 #include "geometry/geometry_document.hpp"
+#include "mesh/mesh_document.hpp"
 #include "util/logger.hpp"
 
 #include <QCoreApplication>
@@ -279,6 +280,24 @@ void RenderSceneController::updateRenderData() {
         }
 
         m_renderData = document->getRenderData(TessellationOptions::defaultOptions());
+
+        // Merge mesh document render data (FEM mesh elements + nodes)
+        try {
+            auto mesh_doc = MeshDocumentInstance;
+            if(mesh_doc && mesh_doc->nodeCount() > 0) {
+                auto mesh_data = mesh_doc->getRenderData();
+                for(auto& m : mesh_data.m_meshElementMeshes) {
+                    m_renderData.m_meshElementMeshes.push_back(std::move(m));
+                }
+                for(auto& m : mesh_data.m_meshNodeMeshes) {
+                    m_renderData.m_meshNodeMeshes.push_back(std::move(m));
+                }
+            }
+        } catch(const std::exception& e) {
+            LOG_WARN("RenderSceneController: Failed to get mesh render data: {}", e.what());
+        }
+
+        m_renderData.updateBoundingBox();
         m_renderData.markModified();
         m_hasGeometry = !m_renderData.isEmpty();
 
@@ -290,6 +309,38 @@ void RenderSceneController::updateRenderData() {
         m_renderData.clear();
         m_hasGeometry = false;
     }
+}
+
+// =============================================================================
+// Per-part visibility
+// =============================================================================
+
+void RenderSceneController::setPartGeometryVisible(Geometry::EntityUID part_uid, bool visible) {
+    {
+        std::lock_guard lock(m_visibilityMutex);
+        m_partVisibility[part_uid].m_geometryVisible = visible;
+    }
+    m_sceneNeedsUpdate.emitSignal();
+}
+
+void RenderSceneController::setPartMeshVisible(Geometry::EntityUID part_uid, bool visible) {
+    {
+        std::lock_guard lock(m_visibilityMutex);
+        m_partVisibility[part_uid].m_meshVisible = visible;
+    }
+    m_sceneNeedsUpdate.emitSignal();
+}
+
+bool RenderSceneController::isPartGeometryVisible(Geometry::EntityUID part_uid) const {
+    std::lock_guard lock(m_visibilityMutex);
+    auto it = m_partVisibility.find(part_uid);
+    return it == m_partVisibility.end() || it->second.m_geometryVisible;
+}
+
+bool RenderSceneController::isPartMeshVisible(Geometry::EntityUID part_uid) const {
+    std::lock_guard lock(m_visibilityMutex);
+    auto it = m_partVisibility.find(part_uid);
+    return it == m_partVisibility.end() || it->second.m_meshVisible;
 }
 
 } // namespace OpenGeoLab::Render

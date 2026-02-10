@@ -131,6 +131,16 @@ set(OpenCASCADE_LIBS
 find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui Qml Quick OpenGL)
 qt_standard_project_setup(REQUIRES 6.8)
 
+# OpenGL: require >= 4.3 for integer textures, SSBOs, and compute shaders
+find_package(OpenGL REQUIRED)
+if(DEFINED OpenGL_GL_PREFERENCE)
+  set(OpenGL_GL_PREFERENCE GLVND)
+endif()
+# The actual version check is performed at runtime (see RendererCore::checkGLCapabilities) because
+# the OpenGL CMake module does not expose the driver version reliably. We add a compile definition
+# so code can reference the minimum requirement.
+add_compile_definitions(OGL_REQUIRED_MINIMUM_MAJOR=4 OGL_REQUIRED_MINIMUM_MINOR=3)
+
 find_package(gmsh REQUIRED)
 
 # ==============================================================================
@@ -276,8 +286,10 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE SPDLOG_ACTIVE_LEVEL=SPDLOG_LE
 # ==============================================================================
 
 target_include_directories(
-  ${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include"
-                          "${CMAKE_CURRENT_SOURCE_DIR}/include/app" # For Qt moc generated code
+  ${PROJECT_NAME}
+  PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include"
+          "${CMAKE_CURRENT_SOURCE_DIR}/include/app" # For Qt moc generated code
+          "${CMAKE_CURRENT_SOURCE_DIR}/src" # For internal headers
 )
 
 # ==============================================================================

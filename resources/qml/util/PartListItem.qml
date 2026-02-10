@@ -2,8 +2,8 @@
  * @file PartListItem.qml
  * @brief Individual part item component for the document sidebar
  *
- * Displays a single part with its color indicator, name, and entity counts.
- * Supports expanding to show detailed entity information.
+ * Displays a single part with its color indicator, name, entity counts,
+ * and per-part geometry/mesh visibility toggles.
  */
 import QtQuick
 import QtQuick.Controls
@@ -21,6 +21,12 @@ Rectangle {
 
     /// Whether the item is expanded to show details
     property bool isExpanded: false
+
+    /// Geometry visibility flag for this part
+    property bool geometryVisible: true
+
+    /// Mesh visibility flag for this part
+    property bool meshVisible: true
 
     height: isExpanded ? expandedHeight : collapsedHeight
     radius: 4
@@ -71,6 +77,76 @@ Rectangle {
                 color: Theme.textPrimary
                 elide: Text.ElideRight
                 Layout.fillWidth: true
+            }
+
+            // Geometry visibility toggle
+            Rectangle {
+                width: 22
+                height: 22
+                radius: 3
+                color: geoToggleArea.containsMouse ? Theme.hovered : "transparent"
+                border.width: 1
+                border.color: root.geometryVisible ? Theme.accent : Theme.border
+                opacity: root.geometryVisible ? 1.0 : 0.4
+
+                ToolTip.visible: geoToggleArea.containsMouse
+                ToolTip.text: root.geometryVisible ? qsTr("Hide geometry") : qsTr("Show geometry")
+                ToolTip.delay: 500
+
+                Label {
+                    anchors.centerIn: parent
+                    text: "G"
+                    font.pixelSize: 10
+                    font.bold: true
+                    color: root.geometryVisible ? Theme.accent : Theme.textDisabled
+                }
+
+                MouseArea {
+                    id: geoToggleArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    onClicked: function (mouse) {
+                        mouse.accepted = true;
+                        root.geometryVisible = !root.geometryVisible;
+                        const uid = root.partData.uid || 0;
+                        ViewportService.setPartGeometryVisible(uid, root.geometryVisible);
+                    }
+                }
+            }
+
+            // Mesh visibility toggle
+            Rectangle {
+                width: 22
+                height: 22
+                radius: 3
+                color: meshToggleArea.containsMouse ? Theme.hovered : "transparent"
+                border.width: 1
+                border.color: root.meshVisible ? Theme.accent : Theme.border
+                opacity: root.meshVisible ? 1.0 : 0.4
+
+                ToolTip.visible: meshToggleArea.containsMouse
+                ToolTip.text: root.meshVisible ? qsTr("Hide mesh") : qsTr("Show mesh")
+                ToolTip.delay: 500
+
+                Label {
+                    anchors.centerIn: parent
+                    text: "M"
+                    font.pixelSize: 10
+                    font.bold: true
+                    color: root.meshVisible ? Theme.accent : Theme.textDisabled
+                }
+
+                MouseArea {
+                    id: meshToggleArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    onClicked: function (mouse) {
+                        mouse.accepted = true;
+                        root.meshVisible = !root.meshVisible;
+                        const uid = root.partData.uid || 0;
+                        ViewportService.setPartMeshVisible(uid, root.meshVisible);
+                    }
+                }
             }
 
             // Entity count badge

@@ -6,7 +6,7 @@ This document describes the current JSON-based protocols between QML and C++ (vi
 
 ### 1.1 QML Entry Point
 - API: `BackendService.request(moduleName, jsonString)`
-- `moduleName`: service identifier (`RenderService` / `GeometryService` / `ReaderService`)
+- `moduleName`: service identifier (`RenderService` / `GeometryService` / `ReaderService` / `MeshService`)
 - `jsonString`: JSON string (recommended to always pass an object)
 
 ### 1.2 `action`
@@ -79,11 +79,21 @@ This document describes the current JSON-based protocols between QML and C++ (vi
 Notes:
 - `vertex/edge/face` can be combined.
 - `solid/part` are exclusive (and also exclusive with `vertex/edge/face`).
+- `mesh_node/mesh_element` can be combined for picking mesh nodes/elements.
 
 ```json
 {
   "action": "SelectControl",
   "select_ctrl": { "types": ["vertex", "edge", "face"] },
+  "_meta": { "silent": true }
+}
+```
+
+Mesh picking example:
+```json
+{
+  "action": "SelectControl",
+  "select_ctrl": { "types": ["mesh_node", "mesh_element"] },
   "_meta": { "silent": true }
 }
 ```
@@ -236,3 +246,56 @@ Failure:
 - thrown as an exception and reported via `operationFailed`.
 
 Note: ReaderService validates `action == "load_model"`; other actions are rejected.
+
+---
+
+## 5. MeshService
+
+### 5.1 generate_mesh
+- action: `"generate_mesh"`
+- purpose: generate a 2D mesh (nodes + elements) from selected geometry face entities via Gmsh and store the result in MeshDocument. Automatically triggers a scene refresh on completion.
+
+Request:
+```json
+{
+  "action": "generate_mesh",
+  "entities": [
+    { "uid": 5, "type": "Face" }
+  ],
+  "elementSize": 1.0,
+  "meshDimension": 2,
+  "elementType": "triangle"
+}
+```
+
+Fields:
+- `entities` (required): array of entity objects, each with `uid` (EntityUID) and `type` (entity type string, e.g. `"Face"`)
+- `elementSize` (optional): global mesh size, defaults to `1.0`, must be positive
+- `meshDimension` (optional): mesh dimension, `2` for surface mesh, `3` for volume mesh, defaults to `2`
+- `elementType` (optional): element type, `"triangle"` / `"quad"` / `"auto"`, defaults to `"triangle"`
+  - `"triangle"`: Frontal-Delaunay algorithm (Gmsh Algorithm 6)
+  - `"quad"`: Packing of Parallelograms algorithm (Gmsh Algorithm 8) + RecombineAll
+  - `"auto"`: automatic (currently defaults to Frontal-Delaunay)
+
+Success response:
+```json
+{
+  "success": true,
+  "nodeCount": 256,
+  "elementCount": 480
+}
+```
+
+Failure response example:
+```json
+{ "success": false, "error": "Missing or invalid 'entities' array" }
+```
+
+Possible failure reasons:
+- Parameters are not a JSON object
+- Missing or invalid `entities` array
+- Invalid entity type (`EntityType::None`)
+- No valid entities provided for meshing
+- `elementSize` is non-positive
+- Gmsh import/meshing failed
+- Operation was cancelled

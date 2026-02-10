@@ -50,6 +50,22 @@ public:
     struct PickResult {
         Geometry::EntityType m_type{Geometry::EntityType::None};
         Geometry::EntityUID m_uid{Geometry::INVALID_ENTITY_UID};
+
+        PickResult() = default;
+        PickResult(Geometry::EntityType type, Geometry::EntityUID uid) : m_type(type), m_uid(uid) {}
+
+        /// Construct from EntityRef for seamless interop.
+        PickResult(const Geometry::EntityRef& ref)
+            : m_type(ref.m_type), m_uid(ref.m_uid) {} // NOLINT
+
+        /// Convert to EntityRef (lightweight, no allocation).
+        [[nodiscard]] operator Geometry::EntityRef() const noexcept { // NOLINT
+            return {m_uid, m_type};
+        }
+
+        /// Convert to EntityRef explicitly.
+        [[nodiscard]] Geometry::EntityRef toRef() const noexcept { return {m_uid, m_type}; }
+
         bool operator==(const PickResult& other) const noexcept {
             return m_type == other.m_type && m_uid == other.m_uid;
         }
@@ -111,17 +127,29 @@ public:
      * @return true if added (was not present)
      */
     bool addSelection(Geometry::EntityUID uid, Geometry::EntityType type);
+    /// @overload EntityRef-based convenience.
+    bool addSelection(const Geometry::EntityRef& ref) {
+        return addSelection(ref.m_uid, ref.m_type);
+    }
 
     /**
      * @brief Remove a pick result from the selection set
      * @return true if removed (was present)
      */
     bool removeSelection(Geometry::EntityUID uid, Geometry::EntityType type);
+    /// @overload EntityRef-based convenience.
+    bool removeSelection(const Geometry::EntityRef& ref) {
+        return removeSelection(ref.m_uid, ref.m_type);
+    }
 
     /**
      * @brief Check if a pick result exists in the current selection set
      */
     [[nodiscard]] bool containsSelection(Geometry::EntityUID uid, Geometry::EntityType type) const;
+    /// @overload EntityRef-based convenience.
+    [[nodiscard]] bool containsSelection(const Geometry::EntityRef& ref) const {
+        return containsSelection(ref.m_uid, ref.m_type);
+    }
 
     /**
      * @brief Get current selection results (copy)
@@ -174,12 +202,14 @@ private:
 
 [[nodiscard]] constexpr inline SelectManager::PickTypes operator|(SelectManager::PickTypes a,
                                                                   SelectManager::PickTypes b) {
-    return static_cast<SelectManager::PickTypes>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
+    return static_cast<SelectManager::PickTypes>(static_cast<uint32_t>(a) |
+                                                 static_cast<uint32_t>(b));
 }
 
 [[nodiscard]] constexpr inline SelectManager::PickTypes operator&(SelectManager::PickTypes a,
                                                                   SelectManager::PickTypes b) {
-    return static_cast<SelectManager::PickTypes>(static_cast<uint8_t>(a) & static_cast<uint8_t>(b));
+    return static_cast<SelectManager::PickTypes>(static_cast<uint32_t>(a) &
+                                                 static_cast<uint32_t>(b));
 }
 
 constexpr inline SelectManager::PickTypes& operator|=(SelectManager::PickTypes& a,

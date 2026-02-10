@@ -14,8 +14,17 @@ OpenGeoLab 是一个基于 Qt Quick(QML) + OpenGL 的几何/模型可视化与�
   - `src/app/`：应用入口、QML 单例后端（BackendService）、OpenGL 视口（GLViewport）
   - `src/geometry/`：几何文档/实体、OCC 形体构建与导出渲染数据
     - 实体标识：内部使用 `EntityKey = (EntityId + EntityUID + EntityType)` 作为可比较/可哈希的实体句柄
+    - `EntityRef = (EntityUID + EntityType)` 作为轻量级引用，适用于不需要 EntityId 的场景
   - `src/io/`：模型文件读取服务（STEP/BREP）
-  - `src/render/`：渲染数据结构、SceneRenderer、RenderSceneController 等
+  - `src/mesh/`：网格模块
+    - 网格文档（MeshDocument）存储节点和单元数据
+    - 网格动作（GenerateMeshAction）通过 Gmsh 进行网格剖分
+    - 支持 MeshNode/MeshElement 实体类型的拾取与高亮
+  - `src/render/`：渲染模块
+    - 多遍渲染架构：GeometryPass（几何场景）、MeshPass（网格线框/节点）、PickingPass（拾取）、HighlightPass（高亮描边）
+    - RenderBatch 管理 GPU 缓冲区（面/边/顶点/网格单元/网格节点）
+    - RenderSceneController 桥接几何文档与网格文档的渲染数据，并管理 per-part 显隐状态
+    - 渲染架构详细文档见 `docs/render_architecture.md`
 - `resources/qml/`：QML UI（主窗口、页面、工具条等）
 - `test/`：单元测试（默认关闭，见 CMake 选项）
 
@@ -76,7 +85,16 @@ cmake --build build
 完整协议清单见：`docs/json_protocols.md`
 
 近期新增：
-- Geo Query 页面通过 `GeometryService` 的 `query_entity_info` action，基于当前拾取到的实体 (type+uid) 查询实体详细信息并在页面下方列表展示。
+- EntityIndex 重构为按 type 分槽数组，提供 O(1) uid 查找和 id↔(uid,type) 快速映射
+- 网格模块：MeshDocument 存储/查询网格节点与单元，GenerateMeshAction 通过 Gmsh 从几何面生成网格
+  - 支持三角形/四边形/自动单元类型选择
+  - 支持 2D 表面网格和 3D 体网格生成
+- 渲染管线支持网格数据（线框/节点）的可视化、拾取与高亮
+  - MeshPass 独立渲染 FEM 网格单元和节点，与几何渲染解耦
+  - 面选中轮廓修复：从实体质心缩放，而非世界原点
+- SelectManager 支持 `mesh_node`/`mesh_element` 拾取类型
+- 侧边栏 per-part 几何/网格显隐开关（通过 ViewportService 和 RenderSceneController 管理）
+- QML 页面关闭后自动恢复 OpenGL 视口焦点
 
 ## 后续开发任务（来自 plan.md，做了轻度工程化拆分）
 - 几何交互：选择（点/边/面/Part）、高亮、拾取、变换与编辑操作（trim/offset 等）

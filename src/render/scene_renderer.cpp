@@ -1,197 +1,24 @@
 /**
  * @file scene_renderer.cpp
- * @brief Implementation of SceneRenderer for OpenGL geometry visualization
+ * @brief SceneRenderer facade implementation
+ *
+ * Delegates to RendererCore + registered passes:
+ * - GeometryPass for main scene rendering (faces, edges, vertices)
+ * - MeshPass for FEM mesh element and node rendering
+ * - PickingPass for entity picking
+ * - HighlightPass for selection/hover highlighting
  */
 
 #include "render/scene_renderer.hpp"
+#include "render/highlight/outline_highlight.hpp"
 #include "render/select_manager.hpp"
 #include "util/logger.hpp"
 
 #include <QOpenGLFramebufferObject>
-#include <QVector4D>
 
 namespace OpenGeoLab::Render {
 
-// =============================================================================
-// Shader Sources
-// =============================================================================
-namespace {
-
-const char* const MESH_VERTEX_SHADER = R"(
-#version 330 core
-layout(location = 0) in vec3 aPosition;
-layout(location = 1) in vec3 aNormal;
-layout(location = 2) in vec4 aColor;
-
-uniform mat4 uMVPMatrix;
-uniform mat4 uModelMatrix;
-uniform mat3 uNormalMatrix;
-uniform float uPointSize;
-
-out vec3 vWorldPos;
-out vec3 vNormal;
-out vec4 vColor;
-
-void main() {
-    vec4 worldPos = uModelMatrix * vec4(aPosition, 1.0);
-    vWorldPos = worldPos.xyz;
-    // Keep as-is; normalize safely in fragment shader (some meshes may have zero normals).
-    vNormal = uNormalMatrix * aNormal;
-    vColor = aColor;
-    gl_Position = uMVPMatrix * vec4(aPosition, 1.0);
-    gl_PointSize = uPointSize;
-}
-)";
-
-const char* const MESH_FRAGMENT_SHADER = R"(
-#version 330 core
-in vec3 vWorldPos;
-in vec3 vNormal;
-in vec4 vColor;
-
-uniform vec3 uLightPos;
-uniform vec3 uViewPos;
-uniform int uUseLighting;
-uniform int uUseOverrideColor;
-uniform vec4 uOverrideColor;
-
-out vec4 fragColor;
-
-void main() {
-    vec4 baseColor = (uUseOverrideColor != 0) ? uOverrideColor : vColor;
-
-    // For edges/vertices we want stable “CAD-like” colors.
-    // Also avoids undefined behavior when normals are zero.
-    if(uUseLighting == 0) {
-        fragColor = baseColor;
-        return;
-    }
-
-    // Ambient
-    float ambientStrength = 0.3;
-    vec3 ambient = ambientStrength * vec3(1.0);
-
-    // Diffuse
-    vec3 norm = vNormal;
-    float nlen = length(norm);
-    if(nlen < 1e-6) {
-        norm = vec3(0.0, 0.0, 1.0);
-    } else {
-        norm = norm / nlen;
-    }
-    vec3 lightDir = normalize(uLightPos - vWorldPos);
-    float diff = max(dot(norm, lightDir), 0.0);
-    vec3 diffuse = diff * vec3(1.0);
-
-    // Specular
-    float specularStrength = 0.3;
-    vec3 viewDir = normalize(uViewPos - vWorldPos);
-    vec3 reflectDir = reflect(-lightDir, norm);
-    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
-    vec3 specular = specularStrength * spec * vec3(1.0);
-
-    vec3 result = (ambient + diffuse + specular) * baseColor.rgb;
-    fragColor = vec4(result, baseColor.a);
-}
-)";
-
-const char* const PICK_VERTEX_SHADER = R"(
-#version 330 core
-layout(location = 0) in vec3 aPosition;
-
-uniform mat4 uMVPMatrix;
-uniform float uPointSize;
-
-void main() {
-    gl_Position = uMVPMatrix * vec4(aPosition, 1.0);
-    gl_PointSize = uPointSize;
-}
-)";
-
-const char* const PICK_EDGE_GEOMETRY_SHADER = R"(
-#version 330 core
-
-layout(lines) in;
-layout(triangle_strip, max_vertices = 4) out;
-
-uniform vec2 uViewport;   // framebuffer size in pixels
-uniform float uThickness; // line thickness in pixels
-
-void main() {
-    vec4 p0 = gl_in[0].gl_Position;
-    vec4 p1 = gl_in[1].gl_Position;
-
-    // Avoid division by zero / degenerate segments.
-    if(p0.w == 0.0 || p1.w == 0.0) {
-        return;
-    }
-
-    vec2 n0 = p0.xy / p0.w;
-    vec2 n1 = p1.xy / p1.w;
-    vec2 d = (n1 - n0) * uViewport;
-    float len = length(d);
-    if(len < 1e-6) {
-        return;
-    }
-
-    vec2 dir = d / len;
-    vec2 n = vec2(-dir.y, dir.x);
-    vec2 offset_ndc = (n * (uThickness * 0.5)) / uViewport;
-
-    vec2 off0 = offset_ndc * p0.w;
-    vec2 off1 = offset_ndc * p1.w;
-
-    gl_Position = p0 + vec4(off0, 0.0, 0.0);
-    EmitVertex();
-    gl_Position = p0 - vec4(off0, 0.0, 0.0);
-    EmitVertex();
-    gl_Position = p1 + vec4(off1, 0.0, 0.0);
-    EmitVertex();
-    gl_Position = p1 - vec4(off1, 0.0, 0.0);
-    EmitVertex();
-    EndPrimitive();
-}
-)";
-
-const char* const PICK_FRAGMENT_SHADER = R"(
-#version 330 core
-uniform vec4 uPickColor;
-out vec4 fragColor;
-void main() {
-    fragColor = uPickColor;
-}
-)";
-
-} // namespace
-
-// =============================================================================
-// MeshBuffers Implementation
-// =============================================================================
-
-SceneRenderer::MeshBuffers::MeshBuffers()
-    : m_vao(std::make_unique<QOpenGLVertexArrayObject>()),
-      m_vbo(std::make_unique<QOpenGLBuffer>(QOpenGLBuffer::VertexBuffer)),
-      m_ebo(std::make_unique<QOpenGLBuffer>(QOpenGLBuffer::IndexBuffer)) {}
-
-SceneRenderer::MeshBuffers::~MeshBuffers() { destroy(); }
-
-void SceneRenderer::MeshBuffers::destroy() {
-    if(m_vao && m_vao->isCreated()) {
-        m_vao->destroy();
-    }
-    if(m_vbo && m_vbo->isCreated()) {
-        m_vbo->destroy();
-    }
-    if(m_ebo && m_ebo->isCreated()) {
-        m_ebo->destroy();
-    }
-}
-
-// =============================================================================
-// SceneRenderer Implementation
-// =============================================================================
-
-SceneRenderer::SceneRenderer() { LOG_TRACE("SceneRenderer created"); }
+SceneRenderer::SceneRenderer() { LOG_TRACE("SceneRenderer created (facade)"); }
 
 SceneRenderer::~SceneRenderer() {
     cleanup();
@@ -199,521 +26,98 @@ SceneRenderer::~SceneRenderer() {
 }
 
 void SceneRenderer::initialize() {
-    if(m_initialized) {
+    if(m_core.isInitialized()) {
         return;
     }
 
-    initializeOpenGLFunctions();
-    setupShaders();
+    // Register passes in order: geometry -> mesh -> highlight
+    auto geometry_pass = std::make_unique<GeometryPass>();
+    m_geometryPass = geometry_pass.get();
+    m_core.registerPass(std::move(geometry_pass));
 
-    m_initialized = true;
-    LOG_DEBUG("SceneRenderer: OpenGL initialized");
+    auto mesh_pass = std::make_unique<MeshPass>();
+    m_meshPass = mesh_pass.get();
+    m_core.registerPass(std::move(mesh_pass));
+
+    auto highlight_pass = std::make_unique<HighlightPass>();
+    highlight_pass->setStrategy(std::make_unique<OutlineHighlight>());
+    m_highlightPass = highlight_pass.get();
+    m_core.registerPass(std::move(highlight_pass));
+
+    m_core.initialize();
+
+    // PickingPass is owned directly by SceneRenderer and called on-demand.
+    m_pickingPass = std::make_unique<PickingPass>();
+    QOpenGLFunctions gl_funcs;
+    gl_funcs.initializeOpenGLFunctions();
+    m_pickingPass->initialize(gl_funcs);
+
+    LOG_DEBUG("SceneRenderer: Initialized with RendererCore pipeline");
 }
 
-void SceneRenderer::setViewportSize(const QSize& size) { m_viewportSize = size; }
+bool SceneRenderer::isInitialized() const { return m_core.isInitialized(); }
 
-void SceneRenderer::setupShaders() {
-    // Mesh shader
-    m_meshShader = std::make_unique<QOpenGLShaderProgram>();
-    m_meshShader->addShaderFromSourceCode(QOpenGLShader::Vertex, MESH_VERTEX_SHADER);
-    m_meshShader->addShaderFromSourceCode(QOpenGLShader::Fragment, MESH_FRAGMENT_SHADER);
-    if(!m_meshShader->link()) {
-        LOG_ERROR("SceneRenderer: Failed to link mesh shader: {}",
-                  m_meshShader->log().toStdString());
+void SceneRenderer::setViewportSize(const QSize& size) {
+    m_core.setViewportSize(size);
+    if(m_pickingPass && m_core.isInitialized()) {
+        QOpenGLFunctions gl_funcs;
+        gl_funcs.initializeOpenGLFunctions();
+        m_pickingPass->resize(gl_funcs, size);
     }
-
-    m_mvpMatrixLoc = m_meshShader->uniformLocation("uMVPMatrix");
-    m_modelMatrixLoc = m_meshShader->uniformLocation("uModelMatrix");
-    m_normalMatrixLoc = m_meshShader->uniformLocation("uNormalMatrix");
-    m_lightPosLoc = m_meshShader->uniformLocation("uLightPos");
-    m_viewPosLoc = m_meshShader->uniformLocation("uViewPos");
-    m_pointSizeLoc = m_meshShader->uniformLocation("uPointSize");
-    m_useLightingLoc = m_meshShader->uniformLocation("uUseLighting");
-
-    m_useOverrideColorLoc = m_meshShader->uniformLocation("uUseOverrideColor");
-    m_overrideColorLoc = m_meshShader->uniformLocation("uOverrideColor");
-
-    // Picking shader
-    m_pickShader = std::make_unique<QOpenGLShaderProgram>();
-    m_pickShader->addShaderFromSourceCode(QOpenGLShader::Vertex, PICK_VERTEX_SHADER);
-    m_pickShader->addShaderFromSourceCode(QOpenGLShader::Fragment, PICK_FRAGMENT_SHADER);
-    if(!m_pickShader->link()) {
-        LOG_ERROR("SceneRenderer: Failed to link pick shader: {}",
-                  m_pickShader->log().toStdString());
-    }
-
-    m_pickMvpMatrixLoc = m_pickShader->uniformLocation("uMVPMatrix");
-    m_pickColorLoc = m_pickShader->uniformLocation("uPickColor");
-    m_pickPointSizeLoc = m_pickShader->uniformLocation("uPointSize");
-
-    // Picking-edge shader (thick lines via geometry shader)
-    m_pickEdgeShader = std::make_unique<QOpenGLShaderProgram>();
-    m_pickEdgeShader->addShaderFromSourceCode(QOpenGLShader::Vertex, PICK_VERTEX_SHADER);
-    m_pickEdgeShader->addShaderFromSourceCode(QOpenGLShader::Geometry, PICK_EDGE_GEOMETRY_SHADER);
-    m_pickEdgeShader->addShaderFromSourceCode(QOpenGLShader::Fragment, PICK_FRAGMENT_SHADER);
-    if(!m_pickEdgeShader->link()) {
-        LOG_ERROR("SceneRenderer: Failed to link pick edge shader: {}",
-                  m_pickEdgeShader->log().toStdString());
-    }
-
-    m_pickEdgeMvpMatrixLoc = m_pickEdgeShader->uniformLocation("uMVPMatrix");
-    m_pickEdgeColorLoc = m_pickEdgeShader->uniformLocation("uPickColor");
-    m_pickEdgeViewportLoc = m_pickEdgeShader->uniformLocation("uViewport");
-    m_pickEdgeThicknessLoc = m_pickEdgeShader->uniformLocation("uThickness");
-
-    LOG_DEBUG("SceneRenderer: Shaders compiled and linked");
 }
 
 void SceneRenderer::uploadMeshData(const DocumentRenderData& render_data) {
-    clearMeshBuffers();
-
-    auto upload_meshes = [this](const std::vector<RenderMesh>& meshes,
-                                std::vector<MeshBuffers>& out_buffers, bool need_index) {
-        for(const auto& mesh : meshes) {
-            if(!mesh.isValid()) {
-                continue;
-            }
-            MeshBuffers buffers;
-            buffers.m_vao->create();
-            buffers.m_vbo->create();
-            if(need_index && mesh.isIndexed()) {
-                buffers.m_ebo->create();
-            }
-            uploadMesh(mesh, *buffers.m_vao, *buffers.m_vbo, *buffers.m_ebo);
-            buffers.m_vertexCount = static_cast<int>(mesh.vertexCount());
-            buffers.m_indexCount = need_index ? static_cast<int>(mesh.indexCount()) : 0;
-            buffers.m_primitiveType = mesh.m_primitiveType;
-            buffers.m_entityType = mesh.m_entityType;
-            buffers.m_entityUid = mesh.m_entityUid;
-            buffers.m_owningPartUid = mesh.m_owningPart.m_uid;
-            buffers.m_owningSolidUid = mesh.m_owningSolid.m_uid;
-            for(const Geometry::EntityKey& key : mesh.m_owningWire) {
-                buffers.m_owningWireUid.emplace(key.m_uid);
-            }
-            buffers.m_hoverColor = QVector4D(mesh.m_hoverColor.m_r, mesh.m_hoverColor.m_g,
-                                             mesh.m_hoverColor.m_b, mesh.m_hoverColor.m_a);
-            buffers.m_selectedColor = QVector4D(mesh.m_selectedColor.m_r, mesh.m_selectedColor.m_g,
-                                                mesh.m_selectedColor.m_b, mesh.m_selectedColor.m_a);
-            out_buffers.push_back(std::move(buffers));
-        }
-    };
-
-    upload_meshes(render_data.m_faceMeshes, m_faceMeshBuffers, true);
-    upload_meshes(render_data.m_edgeMeshes, m_edgeMeshBuffers, true);
-    upload_meshes(render_data.m_vertexMeshes, m_vertexMeshBuffers, false);
-
-    LOG_DEBUG("SceneRenderer: Uploaded {} face meshes, {} edge meshes, {} vertex meshes",
-              m_faceMeshBuffers.size(), m_edgeMeshBuffers.size(), m_vertexMeshBuffers.size());
+    m_core.uploadMeshData(render_data);
 }
 
-void SceneRenderer::uploadMesh(const RenderMesh& mesh,
-                               QOpenGLVertexArrayObject& vao,
-                               QOpenGLBuffer& vbo,
-                               QOpenGLBuffer& ebo) {
-    vao.bind();
-    vbo.bind();
-
-    // Upload vertex data
-    vbo.allocate(mesh.m_vertices.data(),
-                 static_cast<int>(mesh.m_vertices.size() * sizeof(RenderVertex)));
-
-    // Setup vertex attributes
-    // Position (location 0)
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(RenderVertex),
-                          reinterpret_cast<void*>(offsetof(RenderVertex, m_position)));
-
-    // Normal (location 1)
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(RenderVertex),
-                          reinterpret_cast<void*>(offsetof(RenderVertex, m_normal)));
-
-    // Color (location 2)
-    glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(RenderVertex),
-                          reinterpret_cast<void*>(offsetof(RenderVertex, m_color)));
-
-    // Upload index data if present
-    if(mesh.isIndexed() && ebo.isCreated()) {
-        ebo.bind();
-        ebo.allocate(mesh.m_indices.data(),
-                     static_cast<int>(mesh.m_indices.size() * sizeof(uint32_t)));
+void SceneRenderer::renderPicking(const QMatrix4x4& view_matrix,
+                                  const QMatrix4x4& projection_matrix) {
+    if(!m_core.isInitialized() || !m_pickingPass) {
+        return;
     }
 
-    vao.release();
-    vbo.release();
-    if(ebo.isCreated()) {
-        ebo.release();
-    }
+    QOpenGLFunctions gl_funcs;
+    gl_funcs.initializeOpenGLFunctions();
+
+    RenderPassContext ctx;
+    ctx.m_core = &m_core;
+    ctx.m_viewportSize = m_core.viewportSize();
+    ctx.m_aspectRatio =
+        ctx.m_viewportSize.width() / static_cast<float>(ctx.m_viewportSize.height());
+    ctx.m_matrices.m_view = view_matrix;
+    ctx.m_matrices.m_projection = projection_matrix;
+    ctx.m_matrices.m_mvp = projection_matrix * view_matrix;
+    ctx.m_cameraPos = QVector3D(0, 0, 0); // Not needed for picking
+
+    m_pickingPass->execute(gl_funcs, ctx);
 }
 
-void SceneRenderer::clearMeshBuffers() {
-    m_faceMeshBuffers.clear();
-    m_edgeMeshBuffers.clear();
-    m_vertexMeshBuffers.clear();
+void SceneRenderer::setHighlightedEntity(Geometry::EntityUID uid, Geometry::EntityType type) {
+    if(m_geometryPass) {
+        m_geometryPass->setHighlightedEntity(uid, type);
+    }
+    if(m_meshPass) {
+        m_meshPass->setHighlightedEntity(uid, type);
+    }
 }
 
 void SceneRenderer::render(const QVector3D& camera_pos,
                            const QMatrix4x4& view_matrix,
                            const QMatrix4x4& projection_matrix) {
-    if(!m_initialized) {
-        LOG_WARN("SceneRenderer: render() called before initialize()");
-        return;
-    }
-
-    // Clear background
-    glClearColor(0.18f, 0.18f, 0.22f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    // Calculate matrices
-    const QMatrix4x4 model; // Identity
-    const QMatrix4x4 mvp = projection_matrix * view_matrix * model;
-
-    // Render meshes
-    renderMeshes(mvp, model, camera_pos);
-
-    glDisable(GL_BLEND);
-    glDisable(GL_DEPTH_TEST);
-}
-
-void SceneRenderer::renderMeshes(const QMatrix4x4& mvp,
-                                 const QMatrix4x4& model_matrix,
-                                 const QVector3D& camera_pos) {
-    if(!m_meshShader || !m_meshShader->isLinked()) {
-        return;
-    }
-
-    const QMatrix3x3 normal_matrix = model_matrix.normalMatrix();
-
-    m_meshShader->bind();
-    m_meshShader->setUniformValue(m_mvpMatrixLoc, mvp);
-    m_meshShader->setUniformValue(m_modelMatrixLoc, model_matrix);
-    m_meshShader->setUniformValue(m_normalMatrixLoc, normal_matrix);
-    m_meshShader->setUniformValue(m_lightPosLoc, camera_pos);
-    m_meshShader->setUniformValue(m_viewPosLoc, camera_pos);
-    m_meshShader->setUniformValue(m_useLightingLoc, 1);
-    m_meshShader->setUniformValue(m_useOverrideColorLoc, 0);
-    m_meshShader->setUniformValue(m_overrideColorLoc, QVector4D(1.0f, 1.0f, 0.0f, 1.0f));
-
-    // Enable shader-controlled point size
-    glEnable(GL_PROGRAM_POINT_SIZE);
-
-    // Set default point size for faces/edges
-    m_meshShader->setUniformValue(m_pointSizeLoc, 1.0f);
-
-    const auto& select_manager = Render::SelectManager::instance();
-
-    renderFaceMeshes(select_manager);
-    renderEdgeMeshes(select_manager);
-    renderVertexMeshes(select_manager);
-
-    glDepthFunc(GL_LESS);
-
-    m_meshShader->release();
-}
-
-GLenum SceneRenderer::toGlPrimitiveType(RenderPrimitiveType type) {
-    switch(type) {
-    case RenderPrimitiveType::Points:
-        return GL_POINTS;
-    case RenderPrimitiveType::Lines:
-        return GL_LINES;
-    case RenderPrimitiveType::LineStrip:
-        return GL_LINE_STRIP;
-    case RenderPrimitiveType::Triangles:
-        return GL_TRIANGLES;
-    case RenderPrimitiveType::TriangleStrip:
-        return GL_TRIANGLE_STRIP;
-    case RenderPrimitiveType::TriangleFan:
-        return GL_TRIANGLE_FAN;
-    default:
-        return GL_TRIANGLES;
-    }
-}
-
-bool SceneRenderer::uidMatches24(Geometry::EntityUID a, Geometry::EntityUID b) {
-    return (static_cast<uint32_t>(a) & 0xFFFFFFu) == (static_cast<uint32_t>(b) & 0xFFFFFFu);
-}
-
-bool SceneRenderer::uidMatchesSet24(const std::unordered_set<Geometry::EntityUID>& uid_set,
-                                    Geometry::EntityUID uid) {
-    for(const Geometry::EntityUID& set_uid : uid_set) {
-        if(uidMatches24(set_uid, uid)) {
-            return true;
-        }
-    }
-    return false;
-}
-
-void SceneRenderer::setOverrideColor(bool enabled, const QVector4D& color) {
-    m_meshShader->setUniformValue(m_useOverrideColorLoc, enabled ? 1 : 0);
-    if(enabled) {
-        m_meshShader->setUniformValue(m_overrideColorLoc, color);
-    }
-}
-
-void SceneRenderer::drawMesh(MeshBuffers& buffers, GLenum primitive) {
-    buffers.m_vao->bind();
-    if(buffers.m_indexCount > 0) {
-        buffers.m_ebo->bind();
-        glDrawElements(primitive, buffers.m_indexCount, GL_UNSIGNED_INT, nullptr);
-    } else {
-        glDrawArrays(primitive, 0, buffers.m_vertexCount);
-    }
-    buffers.m_vao->release();
-}
-
-bool SceneRenderer::isMeshSelected(const MeshBuffers& buffers,
-                                   const SelectManager& select_manager) const {
-    bool is_selected =
-        select_manager.containsSelection(buffers.m_entityUid, buffers.m_entityType) ||
-        select_manager.containsSelection(buffers.m_owningPartUid, Geometry::EntityType::Part) ||
-        select_manager.containsSelection(buffers.m_owningSolidUid, Geometry::EntityType::Solid);
-
-    if(!is_selected) {
-        for(const Geometry::EntityUID& wire_uid : buffers.m_owningWireUid) {
-            if(select_manager.containsSelection(wire_uid, Geometry::EntityType::Wire)) {
-                is_selected = true;
-                break;
-            }
-        }
-    }
-    return is_selected;
-}
-
-bool SceneRenderer::isFaceMeshHovered(const MeshBuffers& buffers) const {
-    if(m_hoverHighlightType == Geometry::EntityType::Face) {
-        return uidMatches24(buffers.m_entityUid, m_hoverHighlightUid);
-    }
-    if(m_hoverHighlightType == Geometry::EntityType::Part) {
-        return uidMatches24(buffers.m_owningPartUid, m_hoverHighlightUid);
-    }
-    if(m_hoverHighlightType == Geometry::EntityType::Solid) {
-        return uidMatches24(buffers.m_owningSolidUid, m_hoverHighlightUid);
-    }
-    return false;
-}
-
-bool SceneRenderer::isEdgeMeshHovered(const MeshBuffers& buffers) const {
-    return ((m_hoverHighlightType == Geometry::EntityType::Edge) &&
-            (buffers.m_entityType == m_hoverHighlightType) &&
-            uidMatches24(buffers.m_entityUid, m_hoverHighlightUid)) ||
-           ((m_hoverHighlightType == Geometry::EntityType::Wire) &&
-            uidMatchesSet24(buffers.m_owningWireUid, m_hoverHighlightUid)) ||
-           ((m_hoverHighlightType == Geometry::EntityType::Part) &&
-            uidMatches24(buffers.m_owningPartUid, m_hoverHighlightUid)) ||
-           ((m_hoverHighlightType == Geometry::EntityType::Solid) &&
-            uidMatches24(buffers.m_owningSolidUid, m_hoverHighlightUid));
-}
-
-bool SceneRenderer::isVertexMeshHovered(const MeshBuffers& buffers) const {
-    return ((m_hoverHighlightType == Geometry::EntityType::Vertex) &&
-            (buffers.m_entityType == m_hoverHighlightType) &&
-            uidMatches24(buffers.m_entityUid, m_hoverHighlightUid)) ||
-           ((m_hoverHighlightType == Geometry::EntityType::Part) &&
-            uidMatches24(buffers.m_owningPartUid, m_hoverHighlightUid)) ||
-           ((m_hoverHighlightType == Geometry::EntityType::Wire) &&
-            uidMatchesSet24(buffers.m_owningWireUid, m_hoverHighlightUid)) ||
-           ((m_hoverHighlightType == Geometry::EntityType::Solid) &&
-            uidMatches24(buffers.m_owningSolidUid, m_hoverHighlightUid));
-}
-
-void SceneRenderer::renderFaceMeshes(const SelectManager& select_manager) {
-    glDepthFunc(GL_LESS);
-    m_meshShader->setUniformValue(m_useLightingLoc, 1);
-    glEnable(GL_POLYGON_OFFSET_FILL);
-    glPolygonOffset(1.0f, 1.0f);
-    for(auto& buffers : m_faceMeshBuffers) {
-        const bool is_selected =
-            select_manager.containsSelection(buffers.m_entityUid, buffers.m_entityType) ||
-            select_manager.containsSelection(buffers.m_owningPartUid, Geometry::EntityType::Part) ||
-            select_manager.containsSelection(buffers.m_owningSolidUid, Geometry::EntityType::Solid);
-
-        const bool is_hover = isFaceMeshHovered(buffers);
-
-        if(is_selected) {
-            setOverrideColor(true, buffers.m_selectedColor);
-        } else if(is_hover) {
-            setOverrideColor(true, buffers.m_hoverColor);
-        } else {
-            setOverrideColor(false, QVector4D());
-        }
-
-        drawMesh(buffers, toGlPrimitiveType(buffers.m_primitiveType));
-    }
-    glDisable(GL_POLYGON_OFFSET_FILL);
-}
-
-void SceneRenderer::renderEdgeMeshes(const SelectManager& select_manager) {
-    // Allow edges at the same depth to pass (and stay visible on faces).
-    glDepthFunc(GL_LEQUAL);
-    m_meshShader->setUniformValue(m_useLightingLoc, 0);
-    for(auto& buffers : m_edgeMeshBuffers) {
-        const bool is_hover = isEdgeMeshHovered(buffers);
-
-        const float line_width = is_hover ? 4.0f : 2.0f;
-        glLineWidth(line_width);
-
-        const bool is_selected = isMeshSelected(buffers, select_manager);
-
-        if(is_selected) {
-            setOverrideColor(true, buffers.m_selectedColor);
-        } else if(is_hover) {
-            setOverrideColor(true, buffers.m_hoverColor);
-        } else {
-            setOverrideColor(false, QVector4D());
-        }
-
-        drawMesh(buffers, toGlPrimitiveType(buffers.m_primitiveType));
-    }
-}
-
-void SceneRenderer::renderVertexMeshes(const SelectManager& select_manager) {
-    // Allow points at the same depth to pass (and stay visible on faces).
-    glDepthFunc(GL_LEQUAL);
-    m_meshShader->setUniformValue(m_useLightingLoc, 0);
-    for(auto& buffers : m_vertexMeshBuffers) {
-        const bool is_hover = isVertexMeshHovered(buffers);
-        const bool is_selected = isMeshSelected(buffers, select_manager);
-
-        const float vertex_size = is_hover ? 9.0f : is_selected ? 7.0f : 6.0f;
-        m_meshShader->setUniformValue(m_pointSizeLoc, vertex_size);
-
-        if(is_selected) {
-            setOverrideColor(true, buffers.m_selectedColor);
-        } else if(is_hover) {
-            setOverrideColor(true, buffers.m_hoverColor);
-        } else {
-            setOverrideColor(false, QVector4D());
-        }
-
-        drawMesh(buffers, GL_POINTS);
-    }
-}
-
-namespace {
-[[nodiscard]] QVector4D encodePickColor(OpenGeoLab::Geometry::EntityType type,
-                                        OpenGeoLab::Geometry::EntityUID uid) {
-    const uint32_t uid24 = static_cast<uint32_t>(uid & 0xFFFFFFu);
-    const uint8_t r = static_cast<uint8_t>((uid24 >> 0) & 0xFFu);
-    const uint8_t g = static_cast<uint8_t>((uid24 >> 8) & 0xFFu);
-    const uint8_t b = static_cast<uint8_t>((uid24 >> 16) & 0xFFu);
-    const uint8_t a = static_cast<uint8_t>(type);
-    return QVector4D(r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f);
-}
-} // namespace
-
-void SceneRenderer::renderPicking(const QMatrix4x4& view_matrix,
-                                  const QMatrix4x4& projection_matrix) {
-    if(!m_initialized || !m_pickShader || !m_pickShader->isLinked() || !m_pickEdgeShader ||
-       !m_pickEdgeShader->isLinked()) {
-        return;
-    }
-
-    auto draw_pick_mesh = [&](MeshBuffers& buffers, GLenum primitive) {
-        buffers.m_vao->bind();
-        if(buffers.m_indexCount > 0) {
-            buffers.m_ebo->bind();
-            glDrawElements(primitive, buffers.m_indexCount, GL_UNSIGNED_INT, nullptr);
-        } else {
-            glDrawArrays(primitive, 0, buffers.m_vertexCount);
-        }
-        buffers.m_vao->release();
-    };
-
-    glViewport(0, 0, m_viewportSize.width(), m_viewportSize.height());
-    glDisable(GL_BLEND);
-    glDisable(GL_MULTISAMPLE);
-    glEnable(GL_DEPTH_TEST);
-    glDepthMask(GL_TRUE);
-    glEnable(GL_PROGRAM_POINT_SIZE);
-    glDepthFunc(GL_LESS);
-
-    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    const QMatrix4x4 model; // Identity
-    const QMatrix4x4 mvp = projection_matrix * view_matrix * model;
-
-    // Faces + vertices (regular pick shader)
-    m_pickShader->bind();
-    m_pickShader->setUniformValue(m_pickMvpMatrixLoc, mvp);
-
-    // Faces
-    m_pickShader->setUniformValue(m_pickPointSizeLoc, 1.0f);
-    glEnable(GL_POLYGON_OFFSET_FILL);
-    glPolygonOffset(1.0f, 1.0f);
-    for(auto& buffers : m_faceMeshBuffers) {
-        m_pickShader->setUniformValue(m_pickColorLoc,
-                                      encodePickColor(buffers.m_entityType, buffers.m_entityUid));
-        draw_pick_mesh(buffers, GL_TRIANGLES);
-    }
-    glDisable(GL_POLYGON_OFFSET_FILL);
-
-    // Allow edge/vertex at the same depth to win over faces
-    glDepthFunc(GL_LEQUAL);
-
-    // Edges
-    m_pickShader->release();
-
-    m_pickEdgeShader->bind();
-    m_pickEdgeShader->setUniformValue(m_pickEdgeMvpMatrixLoc, mvp);
-    m_pickEdgeShader->setUniformValue(m_pickEdgeViewportLoc,
-                                      QVector2D(static_cast<float>(m_viewportSize.width()),
-                                                static_cast<float>(m_viewportSize.height())));
-    m_pickEdgeShader->setUniformValue(m_pickEdgeThicknessLoc, 10.0f);
-    // uPointSize exists in the shared vertex shader; keep it valid.
-    m_pickEdgeShader->setUniformValue(m_pickPointSizeLoc, 1.0f);
-
-    for(auto& buffers : m_edgeMeshBuffers) {
-        m_pickEdgeShader->setUniformValue(
-            m_pickEdgeColorLoc, encodePickColor(buffers.m_entityType, buffers.m_entityUid));
-        buffers.m_vao->bind();
-        glDrawArrays(GL_LINE_STRIP, 0, buffers.m_vertexCount);
-        buffers.m_vao->release();
-    }
-
-    m_pickEdgeShader->release();
-
-    // Vertices (regular pick shader)
-    m_pickShader->bind();
-    m_pickShader->setUniformValue(m_pickMvpMatrixLoc, mvp);
-
-    // Vertices
-    m_pickShader->setUniformValue(m_pickPointSizeLoc, 16.0f);
-    for(auto& buffers : m_vertexMeshBuffers) {
-        m_pickShader->setUniformValue(m_pickColorLoc,
-                                      encodePickColor(buffers.m_entityType, buffers.m_entityUid));
-        draw_pick_mesh(buffers, GL_POINTS);
-    }
-
-    m_pickShader->release();
-
-    glDepthFunc(GL_LESS);
-}
-
-void SceneRenderer::setHighlightedEntity(Geometry::EntityUID uid, Geometry::EntityType type) {
-    if(type == Geometry::EntityType::None || uid == Geometry::INVALID_ENTITY_UID) {
-        m_hoverHighlightType = Geometry::EntityType::None;
-        m_hoverHighlightUid = Geometry::INVALID_ENTITY_UID;
-        return;
-    }
-    m_hoverHighlightType = type;
-    m_hoverHighlightUid = static_cast<Geometry::EntityUID>(uid & 0xFFFFFFu);
+    m_core.render(camera_pos, view_matrix, projection_matrix);
 }
 
 void SceneRenderer::cleanup() {
-    clearMeshBuffers();
-
-    m_meshShader.reset();
-    m_pickShader.reset();
-    m_pickEdgeShader.reset();
-    m_initialized = false;
-
+    if(m_pickingPass) {
+        QOpenGLFunctions gl_funcs;
+        gl_funcs.initializeOpenGLFunctions();
+        m_pickingPass->cleanup(gl_funcs);
+        m_pickingPass.reset();
+    }
+    m_core.cleanup();
+    m_geometryPass = nullptr;
+    m_meshPass = nullptr;
+    m_highlightPass = nullptr;
     LOG_DEBUG("SceneRenderer: Cleanup complete");
 }
 

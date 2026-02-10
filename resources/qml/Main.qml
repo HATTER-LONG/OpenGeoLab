@@ -18,6 +18,8 @@ ApplicationWindow {
 
     // Expose key UI elements for floating pages positioning
     property alias documentSideBar: documentSideBar
+    /// Expose the OpenGL viewport for focus management
+    property alias glViewport: glViewport
 
     palette: Theme.palette
 

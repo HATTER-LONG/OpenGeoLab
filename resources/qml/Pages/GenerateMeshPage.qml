@@ -2,7 +2,8 @@
  * @file GenerateMeshPage.qml
  * @brief Function page for mesh generation
  *
- * Allows user to configure mesh generation parameters.
+ * Allows user to configure mesh generation parameters including
+ * element type (triangle/quad), mesh dimension (2D/3D), and element size.
  */
 pragma ComponentBehavior: Bound
 import QtQuick
@@ -29,6 +30,10 @@ FunctionPageBase {
     property var targetEntities: []
     /// Global mesh element size
     property real elementSize: 1.0
+    /// Mesh dimension: 2 = surface, 3 = volume
+    property int meshDimension: 2
+    /// Element type: "triangle", "quad", "auto"
+    property string elementType: "triangle"
 
     /// Result list from backend
     property var meshEntities: []
@@ -37,7 +42,9 @@ FunctionPageBase {
         return {
             "action": "generate_mesh",
             "entities": targetEntities,
-            "elementSize": elementSize
+            "elementSize": elementSize,
+            "meshDimension": meshDimension,
+            "elementType": elementType
         };
     }
 
@@ -85,6 +92,77 @@ FunctionPageBase {
                     font.pixelSize: 11
                     color: root.targetEntities.length > 0 ? Theme.textPrimary : Theme.textDisabled
                     Layout.fillWidth: true
+                }
+            }
+        }
+
+        // Mesh dimension selector
+        Column {
+            width: parent.width
+            spacing: 4
+
+            Label {
+                text: qsTr("Mesh Dimension")
+                font.pixelSize: 11
+                font.bold: true
+                color: Theme.textSecondary
+            }
+
+            RowLayout {
+                width: parent.width
+                spacing: 6
+
+                BaseButton {
+                    Layout.fillWidth: true
+                    text: qsTr("2D Surface")
+                    highlighted: root.meshDimension === 2
+                    onClicked: root.meshDimension = 2
+                }
+
+                BaseButton {
+                    Layout.fillWidth: true
+                    text: qsTr("3D Volume")
+                    highlighted: root.meshDimension === 3
+                    onClicked: root.meshDimension = 3
+                }
+            }
+        }
+
+        // Element type selector
+        Column {
+            width: parent.width
+            spacing: 4
+
+            Label {
+                text: qsTr("Element Type")
+                font.pixelSize: 11
+                font.bold: true
+                color: Theme.textSecondary
+            }
+
+            RowLayout {
+                width: parent.width
+                spacing: 6
+
+                BaseButton {
+                    Layout.fillWidth: true
+                    text: qsTr("Triangle")
+                    highlighted: root.elementType === "triangle"
+                    onClicked: root.elementType = "triangle"
+                }
+
+                BaseButton {
+                    Layout.fillWidth: true
+                    text: qsTr("Quad")
+                    highlighted: root.elementType === "quad"
+                    onClicked: root.elementType = "quad"
+                }
+
+                BaseButton {
+                    Layout.fillWidth: true
+                    text: qsTr("Auto")
+                    highlighted: root.elementType === "auto"
+                    onClicked: root.elementType = "auto"
                 }
             }
         }

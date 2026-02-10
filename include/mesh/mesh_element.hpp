@@ -7,11 +7,16 @@
 
 namespace OpenGeoLab::Mesh {
 
-class MeshElement : public Kangaroo::Util::NonCopyMoveable {
+class MeshElement {
 public:
     explicit MeshElement(MeshElementType type);
 
     ~MeshElement() = default;
+
+    MeshElement(MeshElement&&) noexcept = default;
+    MeshElement& operator=(MeshElement&&) noexcept = default;
+    MeshElement(const MeshElement&) = delete;
+    MeshElement& operator=(const MeshElement&) = delete;
 
     MeshElementId elementId() const { return m_id; }
     MeshElementUID elementUID() const { return m_uid; }

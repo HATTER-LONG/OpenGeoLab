@@ -6,11 +6,15 @@
 #include "mesh/mesh_service.hpp"
 
 #include "mesh/mesh_action.hpp"
+#include "mesh_documentImpl.hpp"
+#include "render/render_scene_controller.hpp"
 #include "util/logger.hpp"
 #include "util/progress_bridge.hpp"
 
 #include "action/generate_mesh_action.hpp"
 
+#include <QCoreApplication>
+#include <QMetaObject>
 #include <kangaroo/util/component_factory.hpp>
 
 namespace OpenGeoLab::Mesh {
@@ -40,6 +44,14 @@ nlohmann::json MeshService::processRequest(const std::string& module_name,
     }
 
     LOG_TRACE("MeshService: Action '{}' completed successfully", action_name);
+
+    // Trigger scene refresh on the main thread so the new mesh data gets rendered
+    if(auto* app = QCoreApplication::instance()) {
+        QMetaObject::invokeMethod(
+            app, []() { Render::RenderSceneController::instance().refreshScene(true); },
+            Qt::QueuedConnection);
+    }
+
     return result;
 }
 
@@ -51,6 +63,7 @@ MeshServiceFactory::tObjectSharedPtr MeshServiceFactory::instance() const {
 void registerServices() {
     LOG_DEBUG("MeshService: Registering mesh services and actions");
     g_ComponentFactory.registInstanceFactoryWithID<MeshServiceFactory>("MeshService");
+    g_ComponentFactory.registInstanceFactory<MeshDocumentImplSingletonFactory>();
     g_ComponentFactory.registFactoryWithID<GenerateMeshActionFactory>(
         GenerateMeshAction::actionName());
 }

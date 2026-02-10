@@ -67,8 +67,8 @@ void SelectManagerService::clearSelection() { Render::SelectManager::instance().
 void SelectManagerService::selectEntity(uint32_t entity_uid, const QString& entity_type) {
     try {
         const Geometry::EntityType t = Geometry::entityTypeFromString(entity_type.toStdString());
-        Render::SelectManager::instance().addSelection(static_cast<Geometry::EntityUID>(entity_uid),
-                                                       t);
+        const Geometry::EntityRef ref{static_cast<Geometry::EntityUID>(entity_uid), t};
+        Render::SelectManager::instance().addSelection(ref);
     } catch(...) {
         LOG_ERROR("SelectManagerService::selectEntity: Invalid entity '{}:{}'",
                   entity_type.toStdString(), entity_uid);
@@ -79,8 +79,8 @@ void SelectManagerService::selectEntity(uint32_t entity_uid, const QString& enti
 void SelectManagerService::removeEntity(uint32_t entity_uid, const QString& entity_type) {
     try {
         const Geometry::EntityType t = Geometry::entityTypeFromString(entity_type.toStdString());
-        Render::SelectManager::instance().removeSelection(
-            static_cast<Geometry::EntityUID>(entity_uid), t);
+        const Geometry::EntityRef ref{static_cast<Geometry::EntityUID>(entity_uid), t};
+        Render::SelectManager::instance().removeSelection(ref);
     } catch(...) {
         LOG_ERROR("SelectManagerService::removeEntity: Invalid entity '{}:{}'",
                   entity_type.toStdString(), entity_uid);
@@ -91,8 +91,8 @@ void SelectManagerService::removeEntity(uint32_t entity_uid, const QString& enti
 bool SelectManagerService::isEntitySelected(uint32_t entity_uid, const QString& entity_type) const {
     try {
         const Geometry::EntityType t = Geometry::entityTypeFromString(entity_type.toStdString());
-        return Render::SelectManager::instance().containsSelection(
-            static_cast<Geometry::EntityUID>(entity_uid), t);
+        const Geometry::EntityRef ref{static_cast<Geometry::EntityUID>(entity_uid), t};
+        return Render::SelectManager::instance().containsSelection(ref);
     } catch(...) {
         LOG_ERROR("SelectManagerService::isEntitySelected: Invalid entity '{}:{}'",
                   entity_type.toStdString(), entity_uid);

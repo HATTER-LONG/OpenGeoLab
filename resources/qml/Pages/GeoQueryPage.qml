@@ -1,3 +1,7 @@
+/**
+ * @file GeoQueryPage.qml
+ * @brief Geometry query page for inspecting entity properties
+ */
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls

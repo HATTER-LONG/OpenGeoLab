@@ -4,6 +4,7 @@
  */
 
 #include "app/opengl_viewport.hpp"
+#include "render/passes/picking_pass.hpp"
 #include "render/select_manager.hpp"
 #include "util/logger.hpp"
 
@@ -247,11 +248,6 @@ QOpenGLFramebufferObject* GLViewportRenderer::createFramebufferObject(const QSiz
     format.setSamples(4); // Enable MSAA
     m_viewportSize = size;
     m_sceneRenderer->setViewportSize(size);
-    // Picking FBO (no MSAA, easier to read back)
-    QOpenGLFramebufferObjectFormat pick_format;
-    pick_format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    pick_format.setSamples(0);
-    m_pickFbo = std::make_unique<QOpenGLFramebufferObject>(size, pick_format);
 
     return new QOpenGLFramebufferObject(size, format);
 }
@@ -355,7 +351,6 @@ struct PickRegion {
 
 struct PickingContext {
     Render::SceneRenderer& m_sceneRenderer;
-    QOpenGLFramebufferObject& m_pickFbo;
     const Render::DocumentRenderData& m_renderData;
     const QSize& m_viewportSize;
     const QSizeF& m_itemSize;
@@ -400,18 +395,36 @@ readPickPixels(PickingContext& ctx, const PickRegion& region, std::vector<uint8_
         return false;
     }
 
+    // Use PickingPass to render to its internal FBO
+    OpenGeoLab::Render::RenderPassContext pass_ctx;
+    pass_ctx.m_core = &ctx.m_sceneRenderer.core();
+    pass_ctx.m_viewportSize = ctx.m_viewportSize;
+    pass_ctx.m_aspectRatio =
+        ctx.m_viewportSize.width() / static_cast<float>(ctx.m_viewportSize.height());
+    pass_ctx.m_matrices.m_view = ctx.m_view;
+    pass_ctx.m_matrices.m_projection = ctx.m_projection;
+    pass_ctx.m_matrices.m_mvp = ctx.m_projection * ctx.m_view;
+    pass_ctx.m_cameraPos = QVector3D(0, 0, 0);
+
+    auto* picking_pass = ctx.m_sceneRenderer.pickingPass();
+    if(!picking_pass) {
+        return false;
+    }
+
+    picking_pass->execute(*f, pass_ctx);
+
+    // Read from the pick FBO
     GLint prev_fbo = 0;
     f->glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prev_fbo);
 
-    ctx.m_pickFbo.bind();
-    ctx.m_sceneRenderer.renderPicking(ctx.m_view, ctx.m_projection);
+    picking_pass->bindFbo(*f);
 
     out_pixels.assign(static_cast<size_t>(region.m_readW * region.m_readH * 4), 0);
     f->glReadPixels(region.m_x0, region.m_y0Gl, region.m_readW, region.m_readH, GL_RGBA,
                     GL_UNSIGNED_BYTE, out_pixels.data());
 
-    ctx.m_pickFbo.release();
-    f->glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(prev_fbo));
+    picking_pass->unbindFbo(*f);
+
     return true;
 }
 
@@ -483,21 +496,19 @@ readPickPixels(PickingContext& ctx, const PickRegion& region, std::vector<uint8_
 
 void applyPendingPickAction(Render::SelectManager& select_manager,
                             GLViewport::PickAction pending_pick_action,
-                            Geometry::EntityUID uid,
-                            Geometry::EntityType type) {
-    if(pending_pick_action == GLViewport::PickAction::None || type == Geometry::EntityType::None ||
-       uid == Geometry::INVALID_ENTITY_UID) {
+                            const Geometry::EntityRef& ref) {
+    if(pending_pick_action == GLViewport::PickAction::None || !ref.isValid()) {
         return;
     }
 
     if(pending_pick_action == GLViewport::PickAction::Add) {
-        select_manager.addSelection(uid, type);
+        select_manager.addSelection(ref);
         return;
     }
 
     if(pending_pick_action == GLViewport::PickAction::Remove) {
-        if(select_manager.containsSelection(uid, type)) {
-            select_manager.removeSelection(uid, type);
+        if(select_manager.containsSelection(ref)) {
+            select_manager.removeSelection(ref);
         }
     }
 }
@@ -520,8 +531,7 @@ void processPicking(PickingContext& ctx) {
     const PickHit best =
         findBestPickHit(ctx.m_viewportSize, region, pixels, ctx.m_selectManager, pick_types);
 
-    auto type = best.m_type;
-    auto uid = best.m_uid;
+    Geometry::EntityRef ref{best.m_uid, best.m_type};
 
     // Map sub-entity -> owning Part/Solid when pick mode requests it.
     const bool wants_part = pick_types == Render::SelectManager::PickTypes::Part;
@@ -530,62 +540,58 @@ void processPicking(PickingContext& ctx) {
 
     const auto document = Render::RenderSceneController::instance().currentDocument();
     if(document) {
-        if(wants_wire && (type == Geometry::EntityType::Edge) &&
-           (uid != Geometry::INVALID_ENTITY_UID)) {
-            const auto owning_wires = document->findRelatedEntities(uid, Geometry::EntityType::Edge,
-                                                                    Geometry::EntityType::Wire);
+        if(wants_wire && (ref.m_type == Geometry::EntityType::Edge) && ref.isValid()) {
+            const auto owning_wires =
+                document->findRelatedEntities(ref, Geometry::EntityType::Wire);
             if(!owning_wires.empty() &&
                owning_wires.front().m_uid != Geometry::INVALID_ENTITY_UID) {
-                type = Geometry::EntityType::Wire;
-                uid = owning_wires.front().m_uid;
+                ref = Geometry::EntityRef{owning_wires.front().m_uid, Geometry::EntityType::Wire};
             } else {
-                type = Geometry::EntityType::None;
-                uid = Geometry::INVALID_ENTITY_UID;
+                ref = Geometry::EntityRef{};
             }
         }
     }
 
-    if((wants_part || wants_solid || wants_wire) && (type == Geometry::EntityType::Face) &&
-       (uid != Geometry::INVALID_ENTITY_UID)) {
+    if((wants_part || wants_solid || wants_wire) &&
+       (ref.m_type == Geometry::EntityType::Face) && ref.isValid()) {
         if(document) {
             if(wants_part) {
-                const auto owning_parts = document->findRelatedEntities(
-                    uid, Geometry::EntityType::Face, Geometry::EntityType::Part);
+                const auto owning_parts =
+                    document->findRelatedEntities(ref, Geometry::EntityType::Part);
                 if(!owning_parts.empty() &&
                    owning_parts.front().m_uid != Geometry::INVALID_ENTITY_UID) {
-                    type = Geometry::EntityType::Part;
-                    uid = owning_parts.front().m_uid;
+                    ref = Geometry::EntityRef{owning_parts.front().m_uid,
+                                              Geometry::EntityType::Part};
                 }
             } else if(wants_solid) {
-                const auto owning_solids = document->findRelatedEntities(
-                    uid, Geometry::EntityType::Face, Geometry::EntityType::Solid);
+                const auto owning_solids =
+                    document->findRelatedEntities(ref, Geometry::EntityType::Solid);
                 if(!owning_solids.empty() &&
                    owning_solids.front().m_uid != Geometry::INVALID_ENTITY_UID) {
-                    type = Geometry::EntityType::Solid;
-                    uid = owning_solids.front().m_uid;
+                    ref = Geometry::EntityRef{owning_solids.front().m_uid,
+                                              Geometry::EntityType::Solid};
                 }
             } else if(wants_wire) {
-                const auto owning_wires = document->findRelatedEntities(
-                    uid, Geometry::EntityType::Face, Geometry::EntityType::Wire);
+                const auto owning_wires =
+                    document->findRelatedEntities(ref, Geometry::EntityType::Wire);
                 if(!owning_wires.empty() &&
                    owning_wires.front().m_uid != Geometry::INVALID_ENTITY_UID) {
-                    type = Geometry::EntityType::Wire;
-                    uid = owning_wires.front().m_uid;
+                    ref = Geometry::EntityRef{owning_wires.front().m_uid,
+                                              Geometry::EntityType::Wire};
                 } else {
-                    type = Geometry::EntityType::None;
-                    uid = Geometry::INVALID_ENTITY_UID;
+                    ref = Geometry::EntityRef{};
                 }
             }
         }
     }
 
-    if(type != ctx.m_lastHoverType || uid != ctx.m_lastHoverUid) {
-        ctx.m_lastHoverType = type;
-        ctx.m_lastHoverUid = uid;
-        ctx.m_sceneRenderer.setHighlightedEntity(uid, type);
+    if(ref.m_type != ctx.m_lastHoverType || ref.m_uid != ctx.m_lastHoverUid) {
+        ctx.m_lastHoverType = ref.m_type;
+        ctx.m_lastHoverUid = ref.m_uid;
+        ctx.m_sceneRenderer.setHighlightedEntity(ref);
     }
 
-    applyPendingPickAction(ctx.m_selectManager, ctx.m_pendingPickAction, uid, type);
+    applyPendingPickAction(ctx.m_selectManager, ctx.m_pendingPickAction, ref);
 }
 } // namespace
 void GLViewportRenderer::render() {
@@ -606,11 +612,11 @@ void GLViewportRenderer::render() {
     auto& select_manager = Render::SelectManager::instance();
     const bool pick_enabled = select_manager.isPickEnabled();
 
-    if(pick_enabled && m_pickFbo) {
-        PickingContext ctx{*m_sceneRenderer, *m_pickFbo,     m_renderData,        m_viewportSize,
-                           m_itemSize,       m_cursorPos,    m_devicePixelRatio,  view,
-                           projection,       select_manager, m_pendingPickAction, m_lastHoverType,
-                           m_lastHoverUid};
+    if(pick_enabled && m_sceneRenderer->pickingPass()) {
+        PickingContext ctx{
+            *m_sceneRenderer,   m_renderData,  m_viewportSize, m_itemSize,     m_cursorPos,
+            m_devicePixelRatio, view,          projection,     select_manager, m_pendingPickAction,
+            m_lastHoverType,    m_lastHoverUid};
         processPicking(ctx);
     }
 

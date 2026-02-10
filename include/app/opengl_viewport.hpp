@@ -170,7 +170,6 @@ private:
     QPointF m_cursorPos;
     qreal m_devicePixelRatio{1.0};
 
-    std::unique_ptr<QOpenGLFramebufferObject> m_pickFbo;
     Geometry::EntityType m_lastHoverType{Geometry::EntityType::None};
     Geometry::EntityUID m_lastHoverUid{Geometry::INVALID_ENTITY_UID};
 
