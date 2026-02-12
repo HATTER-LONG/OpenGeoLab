@@ -113,12 +113,19 @@ void OutlineHighlight::renderOutline(QOpenGLFunctions& gl,
     gl.glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
     gl.glStencilMask(0x00);
     gl.glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-    gl.glDisable(GL_DEPTH_TEST);
+    // Keep depth testing enabled so outlines are depth-tested against scene
+    // but avoid writing to the depth buffer so the outline doesn't block other draws
+    gl.glEnable(GL_DEPTH_TEST);
+    gl.glDepthMask(GL_FALSE);
 
-    const float scale = 1.0f + m_outlineWidth * 0.01f;
+    // Reduce the scale multiplier to make outline thinner
+    const float scale = 1.0f + m_outlineWidth * 0.005f;
     outline_shader->setUniformValue(m_outlineColorLoc, color);
 
     drawMatchingWithCenter(batch.faceMeshes(), scale);
+
+    // Restore depth write state
+    gl.glDepthMask(GL_TRUE);
 
     outline_shader->release();
 

@@ -146,6 +146,9 @@ void GLViewport::mousePressEvent(QMouseEvent* event) {
 }
 
 void GLViewport::mouseMoveEvent(QMouseEvent* event) {
+    if(!hasFocus()) {
+        forceActiveFocus();
+    }
     m_cursorPos = event->position();
     if(window()) {
         m_devicePixelRatio = window()->devicePixelRatio();
@@ -552,16 +555,16 @@ void processPicking(PickingContext& ctx) {
         }
     }
 
-    if((wants_part || wants_solid || wants_wire) &&
-       (ref.m_type == Geometry::EntityType::Face) && ref.isValid()) {
+    if((wants_part || wants_solid || wants_wire) && (ref.m_type == Geometry::EntityType::Face) &&
+       ref.isValid()) {
         if(document) {
             if(wants_part) {
                 const auto owning_parts =
                     document->findRelatedEntities(ref, Geometry::EntityType::Part);
                 if(!owning_parts.empty() &&
                    owning_parts.front().m_uid != Geometry::INVALID_ENTITY_UID) {
-                    ref = Geometry::EntityRef{owning_parts.front().m_uid,
-                                              Geometry::EntityType::Part};
+                    ref =
+                        Geometry::EntityRef{owning_parts.front().m_uid, Geometry::EntityType::Part};
                 }
             } else if(wants_solid) {
                 const auto owning_solids =
@@ -576,8 +579,8 @@ void processPicking(PickingContext& ctx) {
                     document->findRelatedEntities(ref, Geometry::EntityType::Wire);
                 if(!owning_wires.empty() &&
                    owning_wires.front().m_uid != Geometry::INVALID_ENTITY_UID) {
-                    ref = Geometry::EntityRef{owning_wires.front().m_uid,
-                                              Geometry::EntityType::Wire};
+                    ref =
+                        Geometry::EntityRef{owning_wires.front().m_uid, Geometry::EntityType::Wire};
                 } else {
                     ref = Geometry::EntityRef{};
                 }
