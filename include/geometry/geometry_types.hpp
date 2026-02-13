@@ -26,6 +26,7 @@ namespace OpenGeoLab::Geometry {
  * @brief Enumeration of geometric entity types
  *
  * Used for type identification and selection mode filtering.
+ *
  */
 enum class EntityType : uint8_t {
     None = 0,      ///< No entity type / invalid
@@ -39,6 +40,7 @@ enum class EntityType : uint8_t {
     Compound = 8,  ///< Compound entity (collection of shapes)
     Part = 9       ///< UI-level part (independent component)
 };
+
 /**
  * @brief Convert string to EntityType
  * @param value String representation of entity type
@@ -64,7 +66,7 @@ enum class EntityType : uint8_t {
  * EntityId provides a globally unique identifier across all entity types.
  * It can be used to quickly locate any entity in the geometry system.
  */
-using EntityId = uint64_t;
+using EntityId = uint32_t;
 
 /**
  * @brief Type-scoped unique identifier within the same entity type
@@ -73,7 +75,7 @@ using EntityId = uint64_t;
  * and edge UID 1 are different entities. Combined with EntityType, it forms
  * a complete entity reference.
  */
-using EntityUID = uint64_t;
+using EntityUID = uint32_t;
 
 /// Invalid/null EntityId constant
 constexpr EntityId INVALID_ENTITY_ID = 0;
