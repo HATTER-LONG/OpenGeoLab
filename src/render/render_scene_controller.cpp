@@ -59,4 +59,12 @@ void CameraState::fitToBoundingBox(const Geometry::BoundingBox3D& bbox) {
 
     LOG_DEBUG("CameraState: Fit to bounding box, distance={:.2f}", distance);
 }
+// =============================================================================
+// RenderSceneController
+// =============================================================================
+RenderSceneController& RenderSceneController::instance() {
+    static RenderSceneController instance;
+    return instance;
+}
+
 } // namespace OpenGeoLab::Render

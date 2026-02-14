@@ -1,6 +1,8 @@
 #pragma once
 
+#include "geometry/geometry_document.hpp"
 #include "geometry/geometry_types.hpp"
+#include "render/render_data.hpp"
 
 #include <QMatrix4x4>
 #include <QVector3D>
@@ -50,13 +52,55 @@ struct CameraState {
 };
 
 class RenderSceneController : public Kangaroo::Util::NonCopyMoveable {
-public:
+protected:
     RenderSceneController() = default;
+
+public:
+    static RenderSceneController& instance();
     virtual ~RenderSceneController() = default;
 
     virtual CameraState& cameraState() { return m_cameraState; }
 
+    void setCamera(const CameraState& camera, bool notify = true);
+
+    void refreshScene(bool notify = true);
+
+    void fitToScene(bool notify = true);
+
+    void resetCamera(bool notify = true);
+
+    void setFrontView(bool notify = true);
+
+    void setBackView(bool notify = true);
+
+    void setTopView(bool notify = true);
+
+    void setBottomView(bool notify = true);
+
+    void setLeftView(bool notify = true);
+
+    void setRightView(bool notify = true);
+
+    [[nodiscard]] const DocumentRenderData& renderData() const;
+
+    [[nodiscard]] Geometry::GeometryDocumentPtr currentGeometryDocument() const;
+
+    // TODO(layton): Add methods to get mesh document, e.g.:
+    // [[nodiscard]] Mesh::MeshDocumentPtr currentMeshDocument() const;
+    void setPartGeometryVisible(Geometry::EntityUID part_uid, bool visible);
+
+    void setPartMeshVisible(Geometry::EntityUID part_uid, bool visible);
+    [[nodiscard]] bool isPartGeometryVisible(Geometry::EntityUID part_uid) const;
+    [[nodiscard]] bool isPartMeshVisible(Geometry::EntityUID part_uid) const;
+
 private:
     CameraState m_cameraState;
+
+    struct PartVisibility {
+        bool m_geometryVisible{true};
+        bool m_meshVisible{true};
+    };
+    mutable std::mutex m_visibilityMutex;
+    std::unordered_map<Geometry::EntityUID, PartVisibility> m_partVisibility;
 };
 } // namespace OpenGeoLab::Render
