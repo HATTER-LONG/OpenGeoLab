@@ -152,7 +152,7 @@ public:
     // Render Data Access (GeometryDocument interface)
     // =========================================================================
 
-    [[nodiscard]] Render::DocumentRenderData
+    [[nodiscard]] const Render::DocumentRenderData&
     getRenderData(const Render::TessellationOptions& options) override;
 
     void invalidateRenderData() override;
@@ -187,8 +187,9 @@ private:
      * @param options Tessellation options
      * @return Render mesh for the face
      */
-    [[nodiscard]] Render::RenderMesh generateFaceMesh(const GeometryEntityImplPtr& entity,
-                                                      const Render::TessellationOptions& options);
+    [[nodiscard]] Render::GeometryRenderData
+    generateFaceMesh(const GeometryEntityImplPtr& entity,
+                     const Render::TessellationOptions& options);
 
     /**
      * @brief Generate render mesh for an edge entity
@@ -196,15 +197,17 @@ private:
      * @param options Tessellation options
      * @return Render mesh for the edge
      */
-    [[nodiscard]] Render::RenderMesh generateEdgeMesh(const GeometryEntityImplPtr& entity,
-                                                      const Render::TessellationOptions& options);
+    [[nodiscard]] Render::GeometryRenderData
+    generateEdgeMesh(const GeometryEntityImplPtr& entity,
+                     const Render::TessellationOptions& options);
 
     /**
      * @brief Generate render mesh for a vertex entity
      * @param entity Vertex entity
      * @return Render mesh for the vertex
      */
-    [[nodiscard]] Render::RenderMesh generateVertexMesh(const GeometryEntityImplPtr& entity);
+    [[nodiscard]] Render::GeometryRenderData
+    generateVertexMesh(const GeometryEntityImplPtr& entity);
 
     /**
      * @brief Emit a change notification to all subscribers

@@ -53,11 +53,11 @@ struct CameraState {
 
 class RenderSceneController : public Kangaroo::Util::NonCopyMoveable {
 protected:
-    RenderSceneController() = default;
+    RenderSceneController();
 
 public:
     static RenderSceneController& instance();
-    virtual ~RenderSceneController() = default;
+    virtual ~RenderSceneController();
 
     virtual CameraState& cameraState() { return m_cameraState; }
 
@@ -85,16 +85,55 @@ public:
 
     [[nodiscard]] Geometry::GeometryDocumentPtr currentGeometryDocument() const;
 
-    // TODO(layton): Add methods to get mesh document, e.g.:
-    // [[nodiscard]] Mesh::MeshDocumentPtr currentMeshDocument() const;
     void setPartGeometryVisible(Geometry::EntityUID part_uid, bool visible);
 
     void setPartMeshVisible(Geometry::EntityUID part_uid, bool visible);
     [[nodiscard]] bool isPartGeometryVisible(Geometry::EntityUID part_uid) const;
     [[nodiscard]] bool isPartMeshVisible(Geometry::EntityUID part_uid) const;
 
+    [[nodiscard]] Util::ScopedConnection subscribeToCameraChanged(std::function<void()> callback) {
+        return m_cameraChanged.connect(callback);
+    }
+
+    [[nodiscard]] Util::ScopedConnection
+    subscribeToGeometryChanged(std::function<void()> callback) {
+        return m_geometryChanged.connect(callback);
+    }
+
+    [[nodiscard]] Util::ScopedConnection subscribeToMeshChanged(std::function<void()> callback) {
+        return m_meshChanged.connect(callback);
+    }
+
+    [[nodiscard]] Util::ScopedConnection
+    subscribeToSceneNeedsUpdate(std::function<void()> callback) {
+        return m_sceneNeedsUpdate.connect(callback);
+    }
+
+private:
+    void subscribeToGeometryDocument();
+
+    void subscribeToMeshDocument();
+
+    void handleDocumentGeometryChanged(const Geometry::GeometryChangeEvent& event);
+
+    void handleDocumentMeshChanged();
+
+    void updateGeometryRenderData();
+
+    void updateMeshRenderData();
+
 private:
     CameraState m_cameraState;
+
+    Util::ScopedConnection m_geometryDocumentConnection;
+    Util::ScopedConnection m_meshDocumentConnection;
+
+    Util::Signal<> m_geometryChanged;
+    Util::Signal<> m_meshChanged;
+    Util::Signal<> m_cameraChanged;
+    Util::Signal<> m_sceneNeedsUpdate;
+
+    DocumentRenderData m_renderData;
 
     struct PartVisibility {
         bool m_geometryVisible{true};

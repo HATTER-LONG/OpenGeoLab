@@ -9,6 +9,8 @@
 #pragma once
 
 #include "geometry/geometry_types.hpp"
+#include "mesh/mesh_types.hpp"
+#include "render/pick_entity_type.hpp"
 
 #include <cstdint>
 #include <vector>
@@ -95,22 +97,8 @@ enum class RenderPrimitiveType : uint8_t {
     TriangleFan = 5    ///< GL_TRIANGLE_FAN
 };
 
-/**
- * @brief Mesh data for a single renderable entity
- *
- * Contains vertex and index data for rendering a geometry entity.
- * Each mesh corresponds to one entity (vertex, edge, face, etc.).
- */
-struct RenderMesh {
-    Geometry::EntityId m_entityId{Geometry::INVALID_ENTITY_ID}; ///< Source entity ID
-    Geometry::EntityUID m_entityUid{
-        Geometry::INVALID_ENTITY_UID}; ///< Type-scoped UID (for picking)
-    Geometry::EntityType m_entityType{Geometry::EntityType::None}; ///< Entity type
-
-    Geometry::EntityKey m_owningPart{};    ///< Owning part entity (if applicable)
-    Geometry::EntityKey m_owningSolid{};   ///< Owning solid entity (if applicable)
-    Geometry::EntityKeySet m_owningWire{}; ///< Owning wire entity (if applicable)
-
+struct BaseRenderData {
+    PickEntityType m_pickType{PickEntityType::None};                     ///< Type for GPU picking
     RenderPrimitiveType m_primitiveType{RenderPrimitiveType::Triangles}; ///< Primitive type
 
     std::vector<RenderVertex> m_vertices; ///< Vertex data
@@ -147,23 +135,53 @@ struct RenderMesh {
     [[nodiscard]] bool isIndexed() const { return !m_indices.empty(); }
 };
 
-/**
- * @brief Complete render data for a geometry document
- *
- * Contains all mesh data needed to render a document's geometry.
- * Organized by entity type for selective rendering.
- */
-struct DocumentRenderData {
-    std::vector<RenderMesh> m_faceMeshes;   ///< Face/surface meshes
-    std::vector<RenderMesh> m_edgeMeshes;   ///< Edge/curve meshes
-    std::vector<RenderMesh> m_vertexMeshes; ///< Vertex/point meshes
+struct GeometryRenderData : public BaseRenderData {
+    Geometry::EntityId m_entityId{Geometry::INVALID_ENTITY_ID}; ///< Source entity ID
+    Geometry::EntityUID m_entityUid{
+        Geometry::INVALID_ENTITY_UID}; ///< Type-scoped UID (for picking)
 
-    std::vector<RenderMesh> m_meshElementMeshes; ///< FEM mesh element wireframe meshes
-    std::vector<RenderMesh> m_meshNodeMeshes;    ///< FEM mesh node point meshes
+    Geometry::EntityKey m_owningPart{};    ///< Owning part entity (if applicable)
+    Geometry::EntityKey m_owningSolid{};   ///< Owning solid entity (if applicable)
+    Geometry::EntityKeySet m_owningWire{}; ///< Owning wire entity (if applicable)
+};
+
+struct MeshRenderData : public BaseRenderData {
+    Mesh::MeshNodeId m_nodeId{Mesh::INVALID_MESH_NODE_ID}; ///< Source node ID (for node meshes)
+
+    Mesh::MeshElementId m_elementId{
+        Mesh::INVALID_MESH_ELEMENT_ID}; ///< Source element ID (for element meshes)
+    Mesh::MeshElementUID m_elementUid{
+        Mesh::INVALID_MESH_ELEMENT_UID}; ///< Type-scoped UID (for picking)
+};
+
+struct DocumentRenderData {
+    std::vector<GeometryRenderData> m_faceMeshes;   ///< Face/surface meshes
+    std::vector<GeometryRenderData> m_edgeMeshes;   ///< Edge/curve meshes
+    std::vector<GeometryRenderData> m_vertexMeshes; ///< Vertex/point meshes
+
+    std::vector<MeshRenderData> m_meshElementMeshes; ///< FEM mesh element wireframe meshes
+    std::vector<MeshRenderData> m_meshNodeMeshes;    ///< FEM mesh node point meshes
 
     Geometry::BoundingBox3D m_boundingBox; ///< Combined bounding box
 
     uint64_t m_version{0}; ///< Data version for change detection
+
+    void updateGeometryRenderData(const DocumentRenderData& new_data) {
+        m_faceMeshes = new_data.m_faceMeshes;
+        m_edgeMeshes = new_data.m_edgeMeshes;
+        m_vertexMeshes = new_data.m_vertexMeshes;
+        m_boundingBox.expand(new_data.m_boundingBox);
+
+        markModified();
+    }
+
+    void updateMeshRenderData(const DocumentRenderData& new_data) {
+        m_meshElementMeshes = new_data.m_meshElementMeshes;
+        m_meshNodeMeshes = new_data.m_meshNodeMeshes;
+        m_boundingBox.expand(new_data.m_boundingBox);
+
+        markModified();
+    }
 
     /**
      * @brief Check if render data is empty

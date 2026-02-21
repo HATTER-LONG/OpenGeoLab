@@ -4,12 +4,13 @@
  */
 
 #include "mesh/mesh_service.hpp"
-
 #include "mesh/mesh_action.hpp"
 #include "util/logger.hpp"
 #include "util/progress_bridge.hpp"
 
 #include "action/generate_mesh_action.hpp"
+
+#include "mesh_documentImpl.hpp"
 
 #include <kangaroo/util/component_factory.hpp>
 
@@ -53,6 +54,7 @@ void registerServices() {
     g_ComponentFactory.registInstanceFactoryWithID<MeshServiceFactory>("MeshService");
     g_ComponentFactory.registFactoryWithID<GenerateMeshActionFactory>(
         GenerateMeshAction::actionName());
+    g_ComponentFactory.registInstanceFactory<MeshDocumentImplSingletonFactory>();
 }
 
 } // namespace OpenGeoLab::Mesh

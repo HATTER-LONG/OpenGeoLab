@@ -6,6 +6,25 @@
 #include <string>
 #include <unordered_set>
 namespace OpenGeoLab::Mesh {
+// =============================================================================
+// Mesh Entity Type (domain-level: Node vs Element)
+// =============================================================================
+
+/**
+ * @brief Mesh entity type for domain-level identification
+ *
+ * Used in the picking and selection system to distinguish mesh nodes from
+ * mesh elements. Separate from Geometry::EntityType to maintain clean
+ * domain separation.
+ */
+enum class EntityType : uint8_t {
+    Invalid = 0,
+    Node = 1,   ///< Mesh node (point in FEM mesh)
+    Element = 2 ///< Mesh element (triangle, quad, etc.)
+};
+
+[[nodiscard]] std::string meshEntityTypeToString(EntityType type);
+[[nodiscard]] EntityType meshEntityTypeFromString(std::string_view str);
 
 // =============================================================================
 // Mesh Element Type Definitions

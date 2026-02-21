@@ -1,4 +1,5 @@
 #include "render/render_scene_controller.hpp"
+#include "mesh/mesh_document.hpp"
 #include "util/logger.hpp"
 
 namespace OpenGeoLab::Render {
@@ -67,4 +68,190 @@ RenderSceneController& RenderSceneController::instance() {
     return instance;
 }
 
+RenderSceneController::RenderSceneController() {
+    LOG_TRACE("RenderSceneController: Initialized");
+    subscribeToGeometryDocument();
+    subscribeToMeshDocument();
+    updateGeometryRenderData();
+    updateMeshRenderData();
+}
+
+RenderSceneController::~RenderSceneController() {
+    LOG_TRACE("RenderSceneController: Destroyed");
+    // TODO(Layton): detach signals
+}
+
+void RenderSceneController::subscribeToGeometryDocument() {
+    auto document = GeoDocumentInstance;
+    m_geometryDocumentConnection =
+        document->subscribeToChanges([this](const Geometry::GeometryChangeEvent& event) {
+            handleDocumentGeometryChanged(event);
+        });
+}
+
+void RenderSceneController::handleDocumentGeometryChanged(
+    const Geometry::GeometryChangeEvent& event) {
+    LOG_DEBUG("RenderSceneController: Geometry document changed, type={}",
+              static_cast<int>(event.m_type));
+    updateGeometryRenderData();
+    m_geometryChanged.emitSignal();
+}
+
+void RenderSceneController::updateGeometryRenderData() {
+    auto document = GeoDocumentInstance;
+
+    auto render_data = document->getRenderData(TessellationOptions::defaultOptions());
+
+    m_renderData.updateGeometryRenderData(render_data);
+
+    LOG_DEBUG("RenderSceneController: Updated geometry render data, total meshes={}",
+              m_renderData.meshCount());
+}
+
+void RenderSceneController::subscribeToMeshDocument() {
+    auto document = MeshDocumentInstance;
+    m_meshDocumentConnection =
+        document->subscribeToChanges([this]() { handleDocumentMeshChanged(); });
+}
+
+void RenderSceneController::handleDocumentMeshChanged() {
+    LOG_DEBUG("RenderSceneController: Mesh document changed");
+    updateMeshRenderData();
+    m_meshChanged.emitSignal();
+}
+
+void RenderSceneController::updateMeshRenderData() {
+    auto document = MeshDocumentInstance;
+    auto render_data = document->getRenderData();
+    m_renderData.updateMeshRenderData(render_data);
+    LOG_DEBUG("RenderSceneController: Updated mesh render data, total meshes={}",
+              m_renderData.meshCount());
+}
+
+void RenderSceneController::setCamera(const CameraState& camera, bool notify) {
+    m_cameraState = camera;
+    if(notify) {
+        m_cameraChanged.emitSignal();
+    }
+}
+
+void RenderSceneController::refreshScene(bool notify) {
+    LOG_DEBUG("RenderSceneController: Refreshing scene");
+    updateGeometryRenderData();
+    updateMeshRenderData();
+    if(notify) {
+        // TODO(Layton): Maybe we should have unseparate signals for geometry vs mesh changes, so we
+        // can avoid unnecessary updates in some cases?
+        m_geometryChanged.emitSignal();
+        m_meshChanged.emitSignal();
+    }
+}
+
+void RenderSceneController::fitToScene(bool notify) {
+    if(m_renderData.isEmpty()) {
+        m_cameraState.reset();
+    } else {
+        m_cameraState.fitToBoundingBox(m_renderData.m_boundingBox);
+    }
+    if(notify) {
+        m_cameraChanged.emitSignal();
+    }
+}
+void RenderSceneController::resetCamera(bool notify) {
+    m_cameraState.reset();
+    if(notify) {
+        m_cameraChanged.emitSignal();
+    }
+}
+
+void RenderSceneController::setFrontView(bool notify) {
+    LOG_DEBUG("RenderSceneController: Setting front view");
+    const float distance = (m_cameraState.m_position - m_cameraState.m_target).length();
+    m_cameraState.m_position = m_cameraState.m_target + QVector3D(0.0f, 0.0f, distance);
+    m_cameraState.m_up = QVector3D(0.0f, 1.0f, 0.0f);
+    if(notify) {
+        m_cameraChanged.emitSignal();
+    }
+}
+
+void RenderSceneController::setTopView(bool notify) {
+    LOG_DEBUG("RenderSceneController: Setting top view");
+    const float distance = (m_cameraState.m_position - m_cameraState.m_target).length();
+    m_cameraState.m_position = m_cameraState.m_target + QVector3D(0.0f, distance, 0.0f);
+    m_cameraState.m_up = QVector3D(0.0f, 0.0f, -1.0f);
+    if(notify) {
+        m_cameraChanged.emitSignal();
+    }
+}
+
+void RenderSceneController::setLeftView(bool notify) {
+    LOG_DEBUG("RenderSceneController: Setting left view");
+    const float distance = (m_cameraState.m_position - m_cameraState.m_target).length();
+    m_cameraState.m_position = m_cameraState.m_target + QVector3D(-distance, 0.0f, 0.0f);
+    m_cameraState.m_up = QVector3D(0.0f, 1.0f, 0.0f);
+    if(notify) {
+        m_cameraChanged.emitSignal();
+    }
+}
+
+void RenderSceneController::setRightView(bool notify) {
+    LOG_DEBUG("RenderSceneController: Setting right view");
+    const float distance = (m_cameraState.m_position - m_cameraState.m_target).length();
+    m_cameraState.m_position = m_cameraState.m_target + QVector3D(distance, 0.0f, 0.0f);
+    m_cameraState.m_up = QVector3D(0.0f, 1.0f, 0.0f);
+    if(notify) {
+        m_cameraChanged.emitSignal();
+    }
+}
+
+void RenderSceneController::setBackView(bool notify) {
+    LOG_DEBUG("RenderSceneController: Setting back view");
+    const float distance = (m_cameraState.m_position - m_cameraState.m_target).length();
+    m_cameraState.m_position = m_cameraState.m_target + QVector3D(0.0f, 0.0f, -distance);
+    m_cameraState.m_up = QVector3D(0.0f, 1.0f, 0.0f);
+    if(notify) {
+        m_cameraChanged.emitSignal();
+    }
+}
+
+void RenderSceneController::setBottomView(bool notify) {
+    LOG_DEBUG("RenderSceneController: Setting bottom view");
+    const float distance = (m_cameraState.m_position - m_cameraState.m_target).length();
+    m_cameraState.m_position = m_cameraState.m_target + QVector3D(0.0f, -distance, 0.0f);
+    m_cameraState.m_up = QVector3D(0.0f, 0.0f, 1.0f);
+    if(notify) {
+        m_cameraChanged.emitSignal();
+    }
+}
+// =============================================================================
+// Per-part visibility
+// =============================================================================
+
+void RenderSceneController::setPartGeometryVisible(Geometry::EntityUID part_uid, bool visible) {
+    {
+        std::lock_guard lock(m_visibilityMutex);
+        m_partVisibility[part_uid].m_geometryVisible = visible;
+    }
+    m_sceneNeedsUpdate.emitSignal();
+}
+
+void RenderSceneController::setPartMeshVisible(Geometry::EntityUID part_uid, bool visible) {
+    {
+        std::lock_guard lock(m_visibilityMutex);
+        m_partVisibility[part_uid].m_meshVisible = visible;
+    }
+    m_sceneNeedsUpdate.emitSignal();
+}
+
+bool RenderSceneController::isPartGeometryVisible(Geometry::EntityUID part_uid) const {
+    std::lock_guard lock(m_visibilityMutex);
+    auto it = m_partVisibility.find(part_uid);
+    return it == m_partVisibility.end() || it->second.m_geometryVisible;
+}
+
+bool RenderSceneController::isPartMeshVisible(Geometry::EntityUID part_uid) const {
+    std::lock_guard lock(m_visibilityMutex);
+    auto it = m_partVisibility.find(part_uid);
+    return it == m_partVisibility.end() || it->second.m_meshVisible;
+}
 } // namespace OpenGeoLab::Render

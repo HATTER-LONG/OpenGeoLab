@@ -5,6 +5,41 @@
 #include <unordered_map>
 
 namespace OpenGeoLab::Mesh {
+// =============================================================================
+// Mesh EntityType conversions
+// =============================================================================
+
+std::string meshEntityTypeToString(EntityType type) {
+    switch(type) {
+    case EntityType::Invalid:
+        return "Invalid";
+    case EntityType::Node:
+        return "MeshNode";
+    case EntityType::Element:
+        return "MeshElement";
+    default:
+        break;
+    }
+    throw std::invalid_argument("Unknown Mesh::EntityType value");
+}
+
+EntityType meshEntityTypeFromString(std::string_view str) {
+    if(str == "Invalid") {
+        return EntityType::Invalid;
+    }
+    if(str == "MeshNode" || str == "Node") {
+        return EntityType::Node;
+    }
+    if(str == "MeshElement" || str == "Element") {
+        return EntityType::Element;
+    }
+    throw std::invalid_argument("Unknown Mesh::EntityType string: " + std::string(str));
+}
+
+// =============================================================================
+// MeshElementType conversions
+// =============================================================================
+
 std::string meshElementTypeToString(MeshElementType type) {
     switch(type) {
     case MeshElementType::Invalid:

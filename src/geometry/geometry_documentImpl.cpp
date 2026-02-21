@@ -51,7 +51,7 @@ bool isIdentityTrsf(const gp_Trsf& trsf) {
            trsf.TranslationPart().SquareModulus() == 0.0;
 }
 
-void computeSmoothVertexNormals(Render::RenderMesh& mesh) {
+void computeSmoothVertexNormals(Render::GeometryRenderData& mesh) {
     if(mesh.m_vertices.empty() || mesh.m_indices.size() < 3) {
         return;
     }
@@ -285,7 +285,7 @@ LoadResult GeometryDocumentImpl::appendShape(const TopoDS_Shape& shape,
 // Render Data Implementation
 // =============================================================================
 
-Render::DocumentRenderData
+const Render::DocumentRenderData&
 GeometryDocumentImpl::getRenderData(const Render::TessellationOptions& options) {
     std::lock_guard<std::mutex> lock(m_renderDataMutex);
 
@@ -347,12 +347,12 @@ std::vector<EntityKey> GeometryDocumentImpl::findRelatedEntities(EntityUID entit
                                                                  EntityType related_type) const {
     return m_relationshipIndex.findRelatedEntities(entity_uid, entity_type, related_type);
 }
-Render::RenderMesh
+Render::GeometryRenderData
 GeometryDocumentImpl::generateFaceMesh(const GeometryEntityImplPtr& entity,
                                        const Render::TessellationOptions& options) {
-    Render::RenderMesh mesh;
+    Render::GeometryRenderData mesh;
     mesh.m_entityId = entity->entityId();
-    mesh.m_entityType = EntityType::Face;
+    mesh.m_pickType = Render::PickEntityType::Face;
     mesh.m_entityUid = entity->entityUID();
     mesh.m_primitiveType = Render::RenderPrimitiveType::Triangles;
 
@@ -461,12 +461,12 @@ GeometryDocumentImpl::generateFaceMesh(const GeometryEntityImplPtr& entity,
     return mesh;
 }
 
-Render::RenderMesh
+Render::GeometryRenderData
 GeometryDocumentImpl::generateEdgeMesh(const GeometryEntityImplPtr& entity,
                                        const Render::TessellationOptions& options) {
-    Render::RenderMesh mesh;
+    Render::GeometryRenderData mesh;
     mesh.m_entityId = entity->entityId();
-    mesh.m_entityType = EntityType::Edge;
+    mesh.m_pickType = Render::PickEntityType::Edge;
     mesh.m_entityUid = entity->entityUID();
     mesh.m_primitiveType = Render::RenderPrimitiveType::LineStrip;
 
@@ -562,11 +562,12 @@ GeometryDocumentImpl::generateEdgeMesh(const GeometryEntityImplPtr& entity,
     return mesh;
 }
 
-Render::RenderMesh GeometryDocumentImpl::generateVertexMesh(const GeometryEntityImplPtr& entity) {
-    Render::RenderMesh mesh;
+Render::GeometryRenderData
+GeometryDocumentImpl::generateVertexMesh(const GeometryEntityImplPtr& entity) {
+    Render::GeometryRenderData mesh;
     mesh.m_entityId = entity->entityId();
     mesh.m_entityUid = entity->entityUID();
-    mesh.m_entityType = EntityType::Vertex;
+    mesh.m_pickType = Render::PickEntityType::Vertex;
     mesh.m_primitiveType = Render::RenderPrimitiveType::Points;
     constexpr float vertex_color[4] = {0.2f, 1.0f, 0.4f, 1.0f};
 

@@ -3,11 +3,10 @@
 #include "mesh/mesh_types.hpp"
 
 #include <array>
-#include <kangaroo/util/noncopyable.hpp>
 
 namespace OpenGeoLab::Mesh {
 
-class MeshElement : public Kangaroo::Util::NonCopyMoveable {
+class MeshElement {
 public:
     explicit MeshElement(MeshElementType type);
 

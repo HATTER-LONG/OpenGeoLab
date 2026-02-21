@@ -136,7 +136,7 @@ public:
      * @note This method may cache tessellated data. Call invalidateRenderData()
      *       to force regeneration after geometry changes.
      */
-    [[nodiscard]] virtual Render::DocumentRenderData
+    [[nodiscard]] virtual const Render::DocumentRenderData&
     getRenderData(const Render::TessellationOptions& options) = 0;
 
     /**
