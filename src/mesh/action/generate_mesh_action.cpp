@@ -77,7 +77,7 @@ nlohmann::json GenerateMeshAction::execute(const nlohmann::json& params,
            entity_obj.contains("type") && entity_obj["type"].is_string()) {
             const Geometry::EntityUID entity_uid = entity_obj["uid"].get<Geometry::EntityUID>();
             const Geometry::EntityType entity_type =
-                Geometry::entityTypeFromString(entity_obj["type"].get<std::string>());
+                Geometry::entityTypeFromString(entity_obj["type"].get<std::string>()).value();
             if(entity_type == Geometry::EntityType::None) {
                 ERROR_AND_RETURN("Invalid entity type in 'entities'");
             }
@@ -160,7 +160,7 @@ GenerateMeshAction::createShapeFromFaceEntities(const Geometry::EntityRefSet& en
             auto entity_ptr = doc->findByUIDAndType(entity_ref.m_uid, entity_ref.m_type);
             if(!entity_ptr) {
                 LOG_WARN("GenerateMeshAction: Entity not found: uid={}, type={}", entity_ref.m_uid,
-                         Geometry::entityTypeToString(entity_ref.m_type));
+                         Geometry::entityTypeToString(entity_ref.m_type).value());
                 continue;
             }
             face_entity_ptrs.push_back(entity_ptr);

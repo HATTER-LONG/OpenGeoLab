@@ -94,7 +94,7 @@ void RenderSceneController::handleDocumentGeometryChanged(
     LOG_DEBUG("RenderSceneController: Geometry document changed, type={}",
               static_cast<int>(event.m_type));
     updateGeometryRenderData();
-    m_geometryChanged.emitSignal();
+    m_sceneNeedsUpdate.emitSignal();
 }
 
 void RenderSceneController::updateGeometryRenderData() {
@@ -117,7 +117,7 @@ void RenderSceneController::subscribeToMeshDocument() {
 void RenderSceneController::handleDocumentMeshChanged() {
     LOG_DEBUG("RenderSceneController: Mesh document changed");
     updateMeshRenderData();
-    m_meshChanged.emitSignal();
+    m_sceneNeedsUpdate.emitSignal();
 }
 
 void RenderSceneController::updateMeshRenderData() {
@@ -131,7 +131,7 @@ void RenderSceneController::updateMeshRenderData() {
 void RenderSceneController::setCamera(const CameraState& camera, bool notify) {
     m_cameraState = camera;
     if(notify) {
-        m_cameraChanged.emitSignal();
+        m_sceneNeedsUpdate.emitSignal();
     }
 }
 
@@ -140,10 +140,7 @@ void RenderSceneController::refreshScene(bool notify) {
     updateGeometryRenderData();
     updateMeshRenderData();
     if(notify) {
-        // TODO(Layton): Maybe we should have unseparate signals for geometry vs mesh changes, so we
-        // can avoid unnecessary updates in some cases?
-        m_geometryChanged.emitSignal();
-        m_meshChanged.emitSignal();
+        m_sceneNeedsUpdate.emitSignal();
     }
 }
 
@@ -154,13 +151,13 @@ void RenderSceneController::fitToScene(bool notify) {
         m_cameraState.fitToBoundingBox(m_renderData.m_boundingBox);
     }
     if(notify) {
-        m_cameraChanged.emitSignal();
+        m_sceneNeedsUpdate.emitSignal();
     }
 }
 void RenderSceneController::resetCamera(bool notify) {
     m_cameraState.reset();
     if(notify) {
-        m_cameraChanged.emitSignal();
+        m_sceneNeedsUpdate.emitSignal();
     }
 }
 
@@ -170,7 +167,7 @@ void RenderSceneController::setFrontView(bool notify) {
     m_cameraState.m_position = m_cameraState.m_target + QVector3D(0.0f, 0.0f, distance);
     m_cameraState.m_up = QVector3D(0.0f, 1.0f, 0.0f);
     if(notify) {
-        m_cameraChanged.emitSignal();
+        m_sceneNeedsUpdate.emitSignal();
     }
 }
 
@@ -180,7 +177,7 @@ void RenderSceneController::setTopView(bool notify) {
     m_cameraState.m_position = m_cameraState.m_target + QVector3D(0.0f, distance, 0.0f);
     m_cameraState.m_up = QVector3D(0.0f, 0.0f, -1.0f);
     if(notify) {
-        m_cameraChanged.emitSignal();
+        m_sceneNeedsUpdate.emitSignal();
     }
 }
 
@@ -190,7 +187,7 @@ void RenderSceneController::setLeftView(bool notify) {
     m_cameraState.m_position = m_cameraState.m_target + QVector3D(-distance, 0.0f, 0.0f);
     m_cameraState.m_up = QVector3D(0.0f, 1.0f, 0.0f);
     if(notify) {
-        m_cameraChanged.emitSignal();
+        m_sceneNeedsUpdate.emitSignal();
     }
 }
 
@@ -200,7 +197,7 @@ void RenderSceneController::setRightView(bool notify) {
     m_cameraState.m_position = m_cameraState.m_target + QVector3D(distance, 0.0f, 0.0f);
     m_cameraState.m_up = QVector3D(0.0f, 1.0f, 0.0f);
     if(notify) {
-        m_cameraChanged.emitSignal();
+        m_sceneNeedsUpdate.emitSignal();
     }
 }
 
@@ -210,7 +207,7 @@ void RenderSceneController::setBackView(bool notify) {
     m_cameraState.m_position = m_cameraState.m_target + QVector3D(0.0f, 0.0f, -distance);
     m_cameraState.m_up = QVector3D(0.0f, 1.0f, 0.0f);
     if(notify) {
-        m_cameraChanged.emitSignal();
+        m_sceneNeedsUpdate.emitSignal();
     }
 }
 
@@ -220,7 +217,7 @@ void RenderSceneController::setBottomView(bool notify) {
     m_cameraState.m_position = m_cameraState.m_target + QVector3D(0.0f, -distance, 0.0f);
     m_cameraState.m_up = QVector3D(0.0f, 0.0f, 1.0f);
     if(notify) {
-        m_cameraChanged.emitSignal();
+        m_sceneNeedsUpdate.emitSignal();
     }
 }
 // =============================================================================

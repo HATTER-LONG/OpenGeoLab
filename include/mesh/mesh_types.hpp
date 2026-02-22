@@ -3,6 +3,7 @@
 #include "util/core_identity.hpp"
 
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <unordered_set>
 namespace OpenGeoLab::Mesh {
@@ -10,21 +11,14 @@ namespace OpenGeoLab::Mesh {
 // Mesh Entity Type (domain-level: Node vs Element)
 // =============================================================================
 
-/**
- * @brief Mesh entity type for domain-level identification
- *
- * Used in the picking and selection system to distinguish mesh nodes from
- * mesh elements. Separate from Geometry::EntityType to maintain clean
- * domain separation.
- */
 enum class EntityType : uint8_t {
     Invalid = 0,
     Node = 1,   ///< Mesh node (point in FEM mesh)
     Element = 2 ///< Mesh element (triangle, quad, etc.)
 };
 
-[[nodiscard]] std::string meshEntityTypeToString(EntityType type);
-[[nodiscard]] EntityType meshEntityTypeFromString(std::string_view str);
+[[nodiscard]] std::optional<std::string> meshEntityTypeToString(EntityType type) noexcept;
+[[nodiscard]] std::optional<EntityType> meshEntityTypeFromString(std::string_view str) noexcept;
 
 // =============================================================================
 // Mesh Element Type Definitions
@@ -45,20 +39,21 @@ enum class MeshElementType : uint8_t {
     Prism6, // 6-node prism
 };
 
-[[nodiscard]] std::string meshElementTypeToString(MeshElementType type);
-[[nodiscard]] MeshElementType meshElementTypeFromString(std::string_view str);
+[[nodiscard]] std::optional<std::string> meshElementTypeToString(MeshElementType type) noexcept;
+[[nodiscard]] std::optional<MeshElementType>
+meshElementTypeFromString(std::string_view str) noexcept;
 
 // =============================================================================
 // ID System
 // =============================================================================
 // Global identifier for any mesh node
-using MeshNodeId = uint64_t;
+using MeshNodeId = uint32_t;
 
 /// Global unique identifier for any mesh element
-using MeshElementId = uint64_t;
+using MeshElementId = uint32_t;
 
 /// Type-scoped unique identifier within the same mesh element type
-using MeshElementUID = uint64_t;
+using MeshElementUID = uint32_t;
 
 /// Invalid/null MeshNodeId constant
 constexpr MeshNodeId INVALID_MESH_NODE_ID = 0;
@@ -88,6 +83,11 @@ uint64_t getCurrentMeshElementUIDCounter(MeshElementType type);
 void resetMeshNodeIdGenerator();
 
 uint64_t getCurrentMeshNodeIdCounter();
+
+// =============================================================================
+// Mesh Node id unordered set
+// =============================================================================
+using MeshNodeIdSet = std::unordered_set<MeshNodeId>;
 
 // =============================================================================
 // MeshElementKey (id+uid+type)

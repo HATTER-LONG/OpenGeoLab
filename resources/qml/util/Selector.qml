@@ -11,15 +11,20 @@ Item {
     implicitHeight: contentColumn.implicitHeight
     implicitWidth: 300
 
-    readonly property int none_type: 0
-    readonly property int vertex_type: 1
-    readonly property int edge_type: 2
-    readonly property int wire_type: 4
-    readonly property int face_type: 8
-    readonly property int solid_type: 16
-    readonly property int part_type: 32
+    readonly property int vertex_type: 1 << 0
+    readonly property int edge_type: 1 << 1
+    readonly property int wire_type: 1 << 2
+    readonly property int face_type: 1 << 3
+    readonly property int shell_type: 1 << 4
+    readonly property int solid_type: 1 << 5
+    readonly property int comp_solid_type: 1 << 6
+    readonly property int compound_type: 1 << 7
+    readonly property int part_type: 1 << 8
+    readonly property int mesh_node_type: 1 << 9
+    readonly property int mesh_element_type: 1 << 10
+    readonly property int none_type: 1 << 11
 
-    readonly property int all_types: vertex_type | edge_type | wire_type | face_type | solid_type | part_type
+    readonly property int all_types: vertex_type | edge_type | wire_type | face_type | shell_type | solid_type | comp_solid_type | compound_type | part_type | mesh_node_type | mesh_element_type
 
     /// Bitmask of entity types that are allowed to be picked in this selector.
     /// Parent pages can override this to restrict available buttons and pick types.
@@ -89,19 +94,8 @@ Item {
         if (!root.isEntityTypeVisible(type)) {
             return;
         }
-        var current = root.selectedTypes;
-        if ((current & type) === 0) {
-            if (type === root.part_type || type === root.solid_type || type === root.wire_type) {
-                current = root.none_type;
-            } else if (type === root.vertex_type || type === root.edge_type || type === root.face_type) {
-                current &= ~(root.wire_type | root.solid_type | root.part_type);
-            }
-            current |= type;
-        } else {
-            current &= ~type;
-        }
-        if (current !== root.none_type) {
-            SelectManagerService.activateSelectMode(current);
+        if (root.selectedTypes !== root.none_type) {
+            SelectManagerService.activateSelectMode(root.selectedTypes);
         } else {
             SelectManagerService.activateSelectMode(root.none_type);
             SelectManagerService.deactivateSelectMode();

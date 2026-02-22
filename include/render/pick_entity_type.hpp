@@ -19,7 +19,6 @@
 
 #include <cstdint>
 #include <optional>
-#include <string>
 
 namespace OpenGeoLab::Render {
 
@@ -30,23 +29,72 @@ namespace OpenGeoLab::Render {
  * for backward compatibility with existing pick buffer encoding.
  */
 enum class PickEntityType : uint8_t {
-    None = 0,
-
     // Geometry domain (values match Geometry::EntityType)
-    Vertex = 1,
-    Edge = 2,
-    Wire = 3,
-    Face = 4,
-    Shell = 5,
-    Solid = 6,
-    CompSolid = 7,
-    Compound = 8,
-    Part = 9,
+    Vertex = 0,
+    Edge = 1,
+    Wire = 2,
+    Face = 3,
+    Shell = 4,
+    Solid = 5,
+    CompSolid = 6,
+    Compound = 7,
+    Part = 8,
 
     // Mesh domain
-    MeshNode = 10,
-    MeshElement = 11
+    MeshNode = 9,
+    MeshElement = 10,
+
+    // Default/invalid type
+    None = 11,
 };
+
+enum class PickMask : uint32_t {
+    Vertex = 1 << 0,
+    Edge = 1 << 1,
+    Wire = 1 << 2,
+    Face = 1 << 3,
+    Shell = 1 << 4,
+    Solid = 1 << 5,
+    CompSolid = 1 << 6,
+    Compound = 1 << 7,
+    Part = 1 << 8,
+
+    MeshNode = 1 << 9,
+    MeshElement = 1 << 10,
+
+    None = 1 << 11,
+};
+
+constexpr PickMask toMask(PickEntityType type) {
+    return static_cast<PickMask>(1 << static_cast<uint8_t>(type));
+}
+
+constexpr PickEntityType toPickEntityType(Geometry::EntityType t) {
+    if(t == Geometry::EntityType::None) {
+        return PickEntityType::None;
+    }
+    return static_cast<PickEntityType>(static_cast<uint8_t>(t));
+}
+
+constexpr PickEntityType toPickEntityType(Mesh::EntityType t) {
+    switch(t) {
+    case Mesh::EntityType::Node:
+        return PickEntityType::MeshNode;
+    case Mesh::EntityType::Element:
+        return PickEntityType::MeshElement;
+    default:
+        break;
+    }
+    return PickEntityType::None;
+}
+
+constexpr PickMask operator|(PickMask a, PickMask b) {
+    return static_cast<PickMask>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+}
+
+constexpr PickMask operator&(PickMask a, PickMask b) {
+    return static_cast<PickMask>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
+}
 
 // =============================================================================
 // Domain conversion
@@ -116,16 +164,5 @@ toGeometryType(PickEntityType t) noexcept {
 [[nodiscard]] constexpr bool isMeshDomain(PickEntityType t) noexcept {
     return t == PickEntityType::MeshNode || t == PickEntityType::MeshElement;
 }
-
-/**
- * @brief Convert PickEntityType to human-readable string
- */
-[[nodiscard]] std::string pickEntityTypeToString(PickEntityType t);
-
-/**
- * @brief Convert string to PickEntityType
- * @throws std::invalid_argument if the string is not recognized
- */
-[[nodiscard]] PickEntityType pickEntityTypeFromString(std::string_view str);
 
 } // namespace OpenGeoLab::Render

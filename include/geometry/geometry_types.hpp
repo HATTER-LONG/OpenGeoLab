@@ -13,6 +13,7 @@
 #include "util/point_vector3d.hpp"
 
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <unordered_set>
 
@@ -29,32 +30,31 @@ namespace OpenGeoLab::Geometry {
  *
  */
 enum class EntityType : uint8_t {
-    None = 0,      ///< No entity type / invalid
-    Vertex = 1,    ///< Point/vertex entity
-    Edge = 2,      ///< Edge/curve entity
-    Wire = 3,      ///< Wire entity (collection of connected edges)
-    Face = 4,      ///< Face/surface entity
-    Shell = 5,     ///< Shell entity (collection of connected faces)
-    Solid = 6,     ///< Solid body entity
-    CompSolid = 7, ///< Composite solid entity
-    Compound = 8,  ///< Compound entity (collection of shapes)
-    Part = 9       ///< UI-level part (independent component)
+    Vertex = 0,    ///< Point/vertex entity
+    Edge = 1,      ///< Edge/curve entity
+    Wire = 2,      ///< Wire entity (collection of connected edges)
+    Face = 3,      ///< Face/surface entity
+    Shell = 4,     ///< Shell entity (collection of connected faces)
+    Solid = 5,     ///< Solid body entity
+    CompSolid = 6, ///< Composite solid entity
+    Compound = 7,  ///< Compound entity (collection of shapes)
+    Part = 8,      ///< UI-level part (independent component)
+    None = 9,      ///< No entity type / invalid
 };
 
 /**
  * @brief Convert string to EntityType
  * @param value String representation of entity type
- * @return Corresponding EntityType enumeration value
- * @throws std::invalid_argument if the string is not a valid type
+ * @return Optional EntityType enumeration value, or std::nullopt if invalid
  */
-[[nodiscard]] EntityType entityTypeFromString(std::string_view value);
+[[nodiscard]] std::optional<EntityType> entityTypeFromString(std::string_view value) noexcept;
 
 /**
  * @brief Convert EntityType to string
  * @param type EntityType value
- * @return Corresponding type name string
+ * @return Corresponding type name string, or std::nullopt if invalid
  */
-[[nodiscard]] std::string entityTypeToString(EntityType type);
+[[nodiscard]] std::optional<std::string> entityTypeToString(EntityType type) noexcept;
 
 // =============================================================================
 // ID System

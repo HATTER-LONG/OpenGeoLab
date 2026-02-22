@@ -3,8 +3,8 @@
 
 namespace OpenGeoLab::Mesh {
 std::shared_ptr<MeshDocumentImpl> MeshDocumentImpl::instance() {
-    static std::shared_ptr<MeshDocumentImpl> instance = std::make_shared<MeshDocumentImpl>();
-    return instance;
+    static auto inst = std::shared_ptr<MeshDocumentImpl>(new MeshDocumentImpl());
+    return inst;
 }
 
 // =============================================================================

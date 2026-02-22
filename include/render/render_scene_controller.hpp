@@ -91,19 +91,6 @@ public:
     [[nodiscard]] bool isPartGeometryVisible(Geometry::EntityUID part_uid) const;
     [[nodiscard]] bool isPartMeshVisible(Geometry::EntityUID part_uid) const;
 
-    [[nodiscard]] Util::ScopedConnection subscribeToCameraChanged(std::function<void()> callback) {
-        return m_cameraChanged.connect(callback);
-    }
-
-    [[nodiscard]] Util::ScopedConnection
-    subscribeToGeometryChanged(std::function<void()> callback) {
-        return m_geometryChanged.connect(callback);
-    }
-
-    [[nodiscard]] Util::ScopedConnection subscribeToMeshChanged(std::function<void()> callback) {
-        return m_meshChanged.connect(callback);
-    }
-
     [[nodiscard]] Util::ScopedConnection
     subscribeToSceneNeedsUpdate(std::function<void()> callback) {
         return m_sceneNeedsUpdate.connect(callback);
@@ -128,9 +115,6 @@ private:
     Util::ScopedConnection m_geometryDocumentConnection;
     Util::ScopedConnection m_meshDocumentConnection;
 
-    Util::Signal<> m_geometryChanged;
-    Util::Signal<> m_meshChanged;
-    Util::Signal<> m_cameraChanged;
     Util::Signal<> m_sceneNeedsUpdate;
 
     DocumentRenderData m_renderData;

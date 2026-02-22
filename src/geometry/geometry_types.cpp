@@ -7,6 +7,7 @@
 
 #include <array>
 #include <atomic>
+#include <optional>
 #include <stdexcept>
 #include <unordered_map>
 
@@ -33,7 +34,7 @@ std::array<std::atomic<EntityUID>, 10> g_next_entity_uids = {
 };
 
 } // namespace
-EntityType entityTypeFromString(std::string_view value) {
+std::optional<EntityType> entityTypeFromString(std::string_view value) noexcept {
     static const std::unordered_map<std::string_view, EntityType> type_map = {
         {"None", EntityType::None},         {"Vertex", EntityType::Vertex},
         {"Edge", EntityType::Edge},         {"Wire", EntityType::Wire},
@@ -45,10 +46,10 @@ EntityType entityTypeFromString(std::string_view value) {
     if(it != type_map.end()) {
         return it->second;
     }
-    throw std::invalid_argument("Invalid entity type string: " + std::string(value));
+    return std::nullopt;
 }
 
-std::string entityTypeToString(EntityType type) {
+std::optional<std::string> entityTypeToString(EntityType type) noexcept {
     switch(type) {
     case EntityType::None:
         return "None";
@@ -73,7 +74,7 @@ std::string entityTypeToString(EntityType type) {
     default:
         break;
     }
-    throw std::invalid_argument("Invalid entity type enum value");
+    return std::nullopt;
 }
 EntityId generateEntityId() { return g_next_entity_id.fetch_add(1, std::memory_order_relaxed); }
 

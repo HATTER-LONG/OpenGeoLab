@@ -96,14 +96,13 @@ nlohmann::json QueryEntityInfoAction::execute(const nlohmann::json& params,
         const auto uid = static_cast<EntityUID>(h["uid"].get<uint64_t>());
         const auto type_str = h["type"].get<std::string>();
 
-        EntityType type = EntityType::None;
-        try {
-            type = entityTypeFromString(type_str);
-        } catch(const std::exception& e) {
+        auto type_opt = entityTypeFromString(type_str);
+        if(!type_opt) {
             response["success"] = false;
-            response["error"] = std::string("Invalid entity type: ") + e.what();
+            response["error"] = "Invalid entity type: " + type_str;
             return response;
         }
+        EntityType type = *type_opt;
 
         const auto entity = document->findImplByUIDAndType(uid, type);
         if(!entity) {
@@ -113,7 +112,7 @@ nlohmann::json QueryEntityInfoAction::execute(const nlohmann::json& params,
         }
 
         nlohmann::json info;
-        info["type"] = entityTypeToString(entity->entityType());
+        info["type"] = entityTypeToString(entity->entityType()).value();
         info["uid"] = static_cast<uint64_t>(entity->entityUID());
         info["id"] = entity->entityId();
         info["name"] = entity->name();

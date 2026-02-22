@@ -9,7 +9,7 @@ namespace OpenGeoLab::Mesh {
 // Mesh EntityType conversions
 // =============================================================================
 
-std::string meshEntityTypeToString(EntityType type) {
+std::optional<std::string> meshEntityTypeToString(EntityType type) noexcept {
     switch(type) {
     case EntityType::Invalid:
         return "Invalid";
@@ -20,27 +20,27 @@ std::string meshEntityTypeToString(EntityType type) {
     default:
         break;
     }
-    throw std::invalid_argument("Unknown Mesh::EntityType value");
+    return std::nullopt;
 }
 
-EntityType meshEntityTypeFromString(std::string_view str) {
-    if(str == "Invalid") {
-        return EntityType::Invalid;
+std::optional<EntityType> meshEntityTypeFromString(std::string_view str) noexcept {
+    static std::unordered_map<std::string_view, EntityType> string_to_type = {
+        {"Invalid", EntityType::Invalid}, {"MeshNode", EntityType::Node},
+        {"Node", EntityType::Node},       {"MeshElement", EntityType::Element},
+        {"Element", EntityType::Element},
+    };
+    auto it = string_to_type.find(str);
+    if(it != string_to_type.end()) {
+        return it->second;
     }
-    if(str == "MeshNode" || str == "Node") {
-        return EntityType::Node;
-    }
-    if(str == "MeshElement" || str == "Element") {
-        return EntityType::Element;
-    }
-    throw std::invalid_argument("Unknown Mesh::EntityType string: " + std::string(str));
+    return std::nullopt;
 }
 
 // =============================================================================
 // MeshElementType conversions
 // =============================================================================
 
-std::string meshElementTypeToString(MeshElementType type) {
+std::optional<std::string> meshElementTypeToString(MeshElementType type) noexcept {
     switch(type) {
     case MeshElementType::Invalid:
         return "Invalid";
@@ -60,10 +60,10 @@ std::string meshElementTypeToString(MeshElementType type) {
         break;
     }
 
-    throw std::invalid_argument("Unknown MeshElementType value");
+    return std::nullopt;
 }
 
-MeshElementType meshElementTypeFromString(std::string_view str) {
+std::optional<MeshElementType> meshElementTypeFromString(std::string_view str) noexcept {
     static std::unordered_map<std::string_view, MeshElementType> string_to_type = {
         {"Invalid", MeshElementType::Invalid},   {"Line", MeshElementType::Line},
         {"Triangle", MeshElementType::Triangle}, {"Quad4", MeshElementType::Quad4},
@@ -74,7 +74,7 @@ MeshElementType meshElementTypeFromString(std::string_view str) {
     if(it != string_to_type.end()) {
         return it->second;
     }
-    throw std::invalid_argument("Unknown MeshElementType string: " + std::string(str));
+    return std::nullopt;
 }
 namespace {
 std::atomic<MeshNodeId> g_mesh_node_id_counter{1};

@@ -5,7 +5,8 @@
 namespace OpenGeoLab::Mesh {
 class MeshDocumentImpl : public MeshDocument,
                          public std::enable_shared_from_this<MeshDocumentImpl> {
-protected:
+
+private:
     MeshDocumentImpl() = default;
 
 public:
@@ -13,7 +14,6 @@ public:
      * @brief Get the singleton instance.
      */
     static std::shared_ptr<MeshDocumentImpl> instance();
-
     ~MeshDocumentImpl() override = default;
 
     // -------------------------------------------------------------------------
