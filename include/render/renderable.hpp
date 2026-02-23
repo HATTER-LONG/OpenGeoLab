@@ -2,31 +2,29 @@
  * @file renderable.hpp
  * @brief Renderable and RenderBatch definitions for batched GPU drawing
  *
- * Encapsulates drawable objects and supports batching/instancing to reduce
- * draw calls. Each RenderBatch groups meshes with compatible GPU state
- * (same VAO layout, same material) for efficient rendering.
+ * Each category (faces, edges, vertices, mesh elements, mesh nodes)
+ * uses a single RenderableBuffer (VAO/VBO/EBO). RenderBatch holds all
+ * category buffers and per-entity metadata for sub-draw operations.
  */
 
 #pragma once
 
-#include "geometry/geometry_types.hpp"
 #include "render/render_data.hpp"
+#include "render/render_types.hpp"
 
 #include <QOpenGLBuffer>
 #include <QOpenGLFunctions>
 #include <QOpenGLVertexArrayObject>
-#include <QVector3D>
-#include <QVector4D>
 #include <memory>
-#include <unordered_set>
 #include <vector>
 
 namespace OpenGeoLab::Render {
 
 /**
- * @brief GPU-side buffers for a single renderable mesh
+ * @brief GPU-side buffers for a batched category of entities
  *
- * Holds VAO/VBO/EBO and metadata identifying the source entity.
+ * Holds VAO/VBO/EBO and aggregate draw counts. No per-entity metadata;
+ * entity info is stored in RenderEntityInfoMap within RenderBatch.
  */
 struct RenderableBuffer {
     std::unique_ptr<QOpenGLVertexArrayObject> m_vao;
@@ -37,18 +35,6 @@ struct RenderableBuffer {
     int m_indexCount{0};
     RenderPrimitiveType m_primitiveType{RenderPrimitiveType::Triangles};
 
-    Geometry::EntityType m_entityType{Geometry::EntityType::None};
-    Geometry::EntityUID m_entityUid{Geometry::INVALID_ENTITY_UID};
-
-    Geometry::EntityUID m_owningPartUid{Geometry::INVALID_ENTITY_UID};
-    Geometry::EntityUID m_owningSolidUid{Geometry::INVALID_ENTITY_UID};
-    std::unordered_set<Geometry::EntityUID> m_owningWireUid{};
-
-    QVector3D m_centroid{0.0f, 0.0f, 0.0f}; ///< Geometric centroid for outline scaling
-
-    QVector4D m_hoverColor{1.0f, 1.0f, 1.0f, 1.0f};
-    QVector4D m_selectedColor{1.0f, 1.0f, 1.0f, 1.0f};
-
     RenderableBuffer();
     ~RenderableBuffer();
 
@@ -57,14 +43,17 @@ struct RenderableBuffer {
     RenderableBuffer(const RenderableBuffer&) = delete;
     RenderableBuffer& operator=(const RenderableBuffer&) = delete;
 
+    /** @brief Release GPU resources (VAO, VBO, EBO). */
     void destroy();
+
+    [[nodiscard]] bool isValid() const { return m_vertexCount > 0; }
 };
 
 /**
- * @brief Collection of renderable buffers organized by entity type
+ * @brief Batched render data organized by entity category
  *
- * RenderBatch holds all uploaded GPU buffers and provides methods
- * to upload from DocumentRenderData and draw individual meshes.
+ * One RenderableBuffer per category, plus RenderEntityInfoMaps
+ * for per-entity sub-draw, selection, and hover operations.
  */
 class RenderBatch {
 public:
@@ -77,72 +66,94 @@ public:
     RenderBatch& operator=(const RenderBatch&) = delete;
 
     /**
-     * @brief Upload all mesh data from DocumentRenderData to the GPU.
-     * @param gl OpenGL functions
-     * @param data Source render data
+     * @brief Upload all batched mesh data from DocumentRenderData to the GPU.
      */
     void upload(QOpenGLFunctions& gl, const DocumentRenderData& data);
 
-    /**
-     * @brief Release all GPU resources.
-     */
+    /** @brief Destroy all category buffers and clear entity maps. */
     void clear();
 
-    [[nodiscard]] std::vector<RenderableBuffer>& faceMeshes() { return m_faceMeshBuffers; }
-    [[nodiscard]] std::vector<RenderableBuffer>& edgeMeshes() { return m_edgeMeshBuffers; }
-    [[nodiscard]] std::vector<RenderableBuffer>& vertexMeshes() { return m_vertexMeshBuffers; }
-    [[nodiscard]] std::vector<RenderableBuffer>& meshElementMeshes() {
-        return m_meshElementMeshBuffers;
-    }
-    [[nodiscard]] std::vector<RenderableBuffer>& meshNodeMeshes() { return m_meshNodeMeshBuffers; }
+    [[nodiscard]] RenderableBuffer& faceBuffer() { return m_faceBuffer; }
+    [[nodiscard]] RenderableBuffer& edgeBuffer() { return m_edgeBuffer; }
+    [[nodiscard]] RenderableBuffer& vertexBuffer() { return m_vertexBuffer; }
+    [[nodiscard]] RenderableBuffer& meshElementBuffer() { return m_meshElementBuffer; }
+    [[nodiscard]] RenderableBuffer& meshNodeBuffer() { return m_meshNodeBuffer; }
 
-    [[nodiscard]] const std::vector<RenderableBuffer>& faceMeshes() const {
-        return m_faceMeshBuffers;
+    [[nodiscard]] const RenderableBuffer& faceBuffer() const { return m_faceBuffer; }
+    [[nodiscard]] const RenderableBuffer& edgeBuffer() const { return m_edgeBuffer; }
+    [[nodiscard]] const RenderableBuffer& vertexBuffer() const { return m_vertexBuffer; }
+    [[nodiscard]] const RenderableBuffer& meshElementBuffer() const { return m_meshElementBuffer; }
+    [[nodiscard]] const RenderableBuffer& meshNodeBuffer() const { return m_meshNodeBuffer; }
+
+    [[nodiscard]] RenderEntityInfoMap& faceEntities() { return m_faceEntities; }
+    [[nodiscard]] RenderEntityInfoMap& edgeEntities() { return m_edgeEntities; }
+    [[nodiscard]] RenderEntityInfoMap& vertexEntities() { return m_vertexEntities; }
+    [[nodiscard]] RenderEntityInfoMap& meshElementEntities() { return m_meshElementEntities; }
+    [[nodiscard]] RenderEntityInfoMap& meshNodeEntities() { return m_meshNodeEntities; }
+
+    [[nodiscard]] const RenderEntityInfoMap& faceEntities() const { return m_faceEntities; }
+    [[nodiscard]] const RenderEntityInfoMap& edgeEntities() const { return m_edgeEntities; }
+    [[nodiscard]] const RenderEntityInfoMap& vertexEntities() const { return m_vertexEntities; }
+    [[nodiscard]] const RenderEntityInfoMap& meshElementEntities() const {
+        return m_meshElementEntities;
     }
-    [[nodiscard]] const std::vector<RenderableBuffer>& edgeMeshes() const {
-        return m_edgeMeshBuffers;
-    }
-    [[nodiscard]] const std::vector<RenderableBuffer>& vertexMeshes() const {
-        return m_vertexMeshBuffers;
-    }
-    [[nodiscard]] const std::vector<RenderableBuffer>& meshElementMeshes() const {
-        return m_meshElementMeshBuffers;
-    }
-    [[nodiscard]] const std::vector<RenderableBuffer>& meshNodeMeshes() const {
-        return m_meshNodeMeshBuffers;
-    }
+    [[nodiscard]] const RenderEntityInfoMap& meshNodeEntities() const { return m_meshNodeEntities; }
 
     [[nodiscard]] bool empty() const {
-        return m_faceMeshBuffers.empty() && m_edgeMeshBuffers.empty() &&
-               m_vertexMeshBuffers.empty() && m_meshElementMeshBuffers.empty() &&
-               m_meshNodeMeshBuffers.empty();
+        return !m_faceBuffer.isValid() && !m_edgeBuffer.isValid() && !m_vertexBuffer.isValid() &&
+               !m_meshElementBuffer.isValid() && !m_meshNodeBuffer.isValid();
     }
 
     /**
-     * @brief Draw a single renderable buffer.
-     * @param gl OpenGL functions
-     * @param buf The buffer to draw
-     * @param primitive_override If non-zero, override the buffer's primitive type
+     * @brief Draw all geometry in a buffer with one draw call.
+     * @param gl Active OpenGL functions context
+     * @param buf RenderableBuffer to draw
+     * @param primitive_override Override primitive type (0 = use buffer default)
      */
-    static void draw(QOpenGLFunctions& gl, RenderableBuffer& buf, GLenum primitive_override = 0);
+    static void drawAll(QOpenGLFunctions& gl, RenderableBuffer& buf, GLenum primitive_override = 0);
+
+    /**
+     * @brief Draw a sub-range of the index buffer (for indexed categories like faces/edges).
+     * @param gl Active OpenGL functions context
+     * @param buf RenderableBuffer to draw from
+     * @param index_offset Starting index offset in the EBO
+     * @param index_count Number of indices to draw
+     */
+    static void drawIndexRange(QOpenGLFunctions& gl,
+                               RenderableBuffer& buf,
+                               uint32_t index_offset,
+                               uint32_t index_count);
+
+    /**
+     * @brief Draw a sub-range of the vertex buffer (for non-indexed categories like points).
+     * @param gl Active OpenGL functions context
+     * @param buf RenderableBuffer to draw from
+     * @param vertex_offset Starting vertex offset in the VBO
+     * @param vertex_count Number of vertices to draw
+     * @param primitive OpenGL primitive type (e.g. GL_POINTS, GL_LINES)
+     */
+    static void drawVertexRange(QOpenGLFunctions& gl,
+                                RenderableBuffer& buf,
+                                uint32_t vertex_offset,
+                                uint32_t vertex_count,
+                                GLenum primitive);
 
 private:
-    void uploadMeshList(QOpenGLFunctions& gl,
-                        const std::vector<RenderMesh>& meshes,
-                        std::vector<RenderableBuffer>& out,
-                        bool need_index);
+    void uploadCategory(QOpenGLFunctions& gl, const RenderMesh& mesh, RenderableBuffer& buf);
 
-    static void uploadSingleMesh(QOpenGLFunctions& gl,
-                                 const RenderMesh& mesh,
-                                 QOpenGLVertexArrayObject& vao,
-                                 QOpenGLBuffer& vbo,
-                                 QOpenGLBuffer& ebo);
+    static void setupVertexAttributes(QOpenGLFunctions& gl);
 
-    std::vector<RenderableBuffer> m_faceMeshBuffers;
-    std::vector<RenderableBuffer> m_edgeMeshBuffers;
-    std::vector<RenderableBuffer> m_vertexMeshBuffers;
-    std::vector<RenderableBuffer> m_meshElementMeshBuffers;
-    std::vector<RenderableBuffer> m_meshNodeMeshBuffers;
+    RenderableBuffer m_faceBuffer;
+    RenderableBuffer m_edgeBuffer;
+    RenderableBuffer m_vertexBuffer;
+    RenderableBuffer m_meshElementBuffer;
+    RenderableBuffer m_meshNodeBuffer;
+
+    RenderEntityInfoMap m_faceEntities;
+    RenderEntityInfoMap m_edgeEntities;
+    RenderEntityInfoMap m_vertexEntities;
+    RenderEntityInfoMap m_meshElementEntities;
+    RenderEntityInfoMap m_meshNodeEntities;
 };
 
 } // namespace OpenGeoLab::Render

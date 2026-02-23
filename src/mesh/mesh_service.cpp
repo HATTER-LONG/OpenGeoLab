@@ -12,6 +12,7 @@
 #include "util/progress_bridge.hpp"
 
 #include "action/generate_mesh_action.hpp"
+#include "action/query_mesh_entity_info_action.hpp"
 
 #include <QCoreApplication>
 #include <QMetaObject>
@@ -66,6 +67,8 @@ void registerServices() {
     g_ComponentFactory.registInstanceFactory<MeshDocumentImplSingletonFactory>();
     g_ComponentFactory.registFactoryWithID<GenerateMeshActionFactory>(
         GenerateMeshAction::actionName());
+    g_ComponentFactory.registFactoryWithID<QueryMeshEntityInfoActionFactory>(
+        QueryMeshEntityInfoAction::actionName());
 }
 
 } // namespace OpenGeoLab::Mesh

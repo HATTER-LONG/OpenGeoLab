@@ -5,11 +5,15 @@
  * Handles rendering of mesh wireframe edges and node points separately
  * from the geometry pass, allowing independent visibility control and
  * preventing interference with geometry picking and highlighting.
+ *
+ * Uses batched rendering: one draw call per category for base mesh,
+ * plus sub-draw calls for selected/hovered entity highlighting.
  */
 
 #pragma once
 
 #include "render/render_pass.hpp"
+#include "render/render_types.hpp"
 #include "render/renderable.hpp"
 #include "render/select_manager.hpp"
 
@@ -24,6 +28,9 @@ namespace OpenGeoLab::Render {
  * This pass is separate from GeometryPass to allow independent visibility
  * control and to prevent mesh rendering from interfering with geometry
  * picking and highlighting.
+ *
+ * With batched buffers, base rendering uses drawAll() per category.
+ * Hover/selection uses sub-draw for affected entities.
  */
 class MeshPass : public RenderPass {
 public:
@@ -39,16 +46,12 @@ public:
 
     /**
      * @brief Set the entity to highlight on hover.
-     * @param uid Entity UID (lower 24 bits used for matching)
-     * @param type Entity type for hover matching
+     * @param uid56 56-bit entity uid
+     * @param type Render entity type for hover matching
      */
-    void setHighlightedEntity(Geometry::EntityUID uid, Geometry::EntityType type);
+    void setHighlightedEntity(uint64_t uid56, RenderEntityType type);
 
 private:
-    [[nodiscard]] bool isMeshEntityHovered(const RenderableBuffer& buf) const;
-    [[nodiscard]] bool isMeshSelected(const RenderableBuffer& buf, const SelectManager& sm) const;
-    [[nodiscard]] static bool uidMatches24(Geometry::EntityUID a, Geometry::EntityUID b);
-
     // Uniform locations (cached from "mesh" shader owned by RendererCore)
     int m_mvpLoc{-1};
     int m_modelLoc{-1};
@@ -60,8 +63,8 @@ private:
     int m_useOverrideColorLoc{-1};
     int m_overrideColorLoc{-1};
 
-    Geometry::EntityType m_hoverType{Geometry::EntityType::None};
-    Geometry::EntityUID m_hoverUid{Geometry::INVALID_ENTITY_UID};
+    RenderEntityType m_hoverType{RenderEntityType::None};
+    uint64_t m_hoverUid56{0};
 };
 
 } // namespace OpenGeoLab::Render

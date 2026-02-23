@@ -1,3 +1,7 @@
+/**
+ * @file trackball_controller.cpp
+ * @brief Implementation of trackball-style camera orbit controller
+ */
 #include "render/trackball_controller.hpp"
 
 #include <QtMath>

@@ -1,3 +1,11 @@
+/**
+ * @file Selector.qml
+ * @brief Reusable entity type selector with pick mode and selection display
+ *
+ * Provides entity type buttons (Vertex, Edge, Face, etc.), pick mode
+ * indicator, selected entity chips with removal, and clear functionality.
+ * Parent pages can restrict available types via the allowedTypes property.
+ */
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
@@ -18,8 +26,11 @@ Item {
     readonly property int face_type: 8
     readonly property int solid_type: 16
     readonly property int part_type: 32
+    readonly property int mesh_node_type: 64
+    readonly property int mesh_element_type: 128
 
     readonly property int all_types: vertex_type | edge_type | wire_type | face_type | solid_type | part_type
+    readonly property int all_mesh_types: mesh_node_type | mesh_element_type
 
     /// Bitmask of entity types that are allowed to be picked in this selector.
     /// Parent pages can override this to restrict available buttons and pick types.
@@ -44,7 +55,7 @@ Item {
         return (root.allowedTypes & type) !== 0;
     }
 
-    readonly property int visibleTypeButtonCount: (root.isEntityTypeVisible(root.vertex_type) ? 1 : 0) + (root.isEntityTypeVisible(root.edge_type) ? 1 : 0) + (root.isEntityTypeVisible(root.face_type) ? 1 : 0) + (root.isEntityTypeVisible(root.wire_type) ? 1 : 0) + (root.isEntityTypeVisible(root.solid_type) ? 1 : 0) + (root.isEntityTypeVisible(root.part_type) ? 1 : 0)
+    readonly property int visibleTypeButtonCount: (root.isEntityTypeVisible(root.vertex_type) ? 1 : 0) + (root.isEntityTypeVisible(root.edge_type) ? 1 : 0) + (root.isEntityTypeVisible(root.face_type) ? 1 : 0) + (root.isEntityTypeVisible(root.wire_type) ? 1 : 0) + (root.isEntityTypeVisible(root.solid_type) ? 1 : 0) + (root.isEntityTypeVisible(root.part_type) ? 1 : 0) + (root.isEntityTypeVisible(root.mesh_node_type) ? 1 : 0) + (root.isEntityTypeVisible(root.mesh_element_type) ? 1 : 0)
 
     function typeButtonWidth(barWidth, spacing) {
         var count = root.visibleTypeButtonCount;
@@ -222,6 +233,24 @@ Item {
                     iconSource: "qrc:/opengeolab/resources/icons/box.svg"
                     selected: ((root.selectedTypes & root.part_type) !== 0)
                     onClicked: root.onEntityTypeClicked(root.part_type)
+                }
+
+                EntityTypeButton {
+                    width: root.typeButtonWidth(typeButtonRow.width, typeButtonRow.spacing)
+                    visible: root.isEntityTypeVisible(root.mesh_node_type)
+                    entityType: "Node"
+                    iconSource: "qrc:/opengeolab/resources/icons/vertex.svg"
+                    selected: ((root.selectedTypes & root.mesh_node_type) !== 0)
+                    onClicked: root.onEntityTypeClicked(root.mesh_node_type)
+                }
+
+                EntityTypeButton {
+                    width: root.typeButtonWidth(typeButtonRow.width, typeButtonRow.spacing)
+                    visible: root.isEntityTypeVisible(root.mesh_element_type)
+                    entityType: "Element"
+                    iconSource: "qrc:/opengeolab/resources/icons/mesh.svg"
+                    selected: ((root.selectedTypes & root.mesh_element_type) !== 0)
+                    onClicked: root.onEntityTypeClicked(root.mesh_element_type)
                 }
             }
         }

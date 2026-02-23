@@ -60,9 +60,13 @@ Recent additions:
 - Mesh module: MeshDocument stores/queries mesh nodes and elements; GenerateMeshAction generates meshes from geometry faces via Gmsh
   - Supports triangle/quad/auto element type selection
   - Supports 2D surface mesh and 3D volume mesh generation
+  - New `query_mesh_entity_info` action for querying mesh node/element details (adjacency, coordinates, etc.)
+  - New MeshQueryPage for displaying mesh entity information
 - Render pipeline supports mesh data (wireframe/nodes) visualization, picking, and highlighting
   - MeshPass renders FEM mesh elements and nodes independently from geometry
   - Face selection outline fix: scales from entity centroid, not world origin
+  - SceneRenderer refactored to ISceneRenderer interface + component factory pattern
+  - Render signal consolidation: removed redundant `subscribeCameraChanged`, unified to `subscribeSceneNeedsUpdate`
 - SelectManager supports `mesh_node`/`mesh_element` pick types
 - Sidebar per-part geometry/mesh visibility toggles (via ViewportService and RenderSceneController)
 - QML floating pages automatically restore OpenGL viewport focus on close

@@ -84,6 +84,7 @@ public:
 
     /**
      * @brief Upload render data to GPU.
+     * @param data Document render data containing all category batches to upload
      */
     void uploadMeshData(const DocumentRenderData& data);
 
@@ -102,6 +103,8 @@ public:
 
     /**
      * @brief Get a pass by name.
+     * @param name Null-terminated pass name to search for
+     * @return Pointer to the matching RenderPass, or nullptr if not found
      */
     [[nodiscard]] RenderPass* findPass(const char* name) const;
 
@@ -111,6 +114,9 @@ public:
 
     /**
      * @brief Execute all enabled passes in order.
+     * @param camera_pos Camera position in world space
+     * @param view_matrix View transformation matrix
+     * @param projection_matrix Projection transformation matrix
      */
     void render(const QVector3D& camera_pos,
                 const QMatrix4x4& view_matrix,
@@ -122,12 +128,15 @@ public:
 
     /**
      * @brief Get or create a shader program by key.
-     * Returns nullptr if not found.
+     * @param key Unique string identifier for the shader program
+     * @return Pointer to the shader program, or nullptr if not found
      */
     [[nodiscard]] QOpenGLShaderProgram* shader(const std::string& key) const;
 
     /**
      * @brief Register a compiled shader program.
+     * @param key Unique string identifier for the shader program
+     * @param program Compiled shader program (ownership transferred)
      */
     void registerShader(const std::string& key, std::unique_ptr<QOpenGLShaderProgram> program);
 

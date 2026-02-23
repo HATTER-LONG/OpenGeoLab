@@ -1,3 +1,8 @@
+/**
+ * @file mesh_element.cpp
+ * @brief Implementation of MeshElement construction and UID generation
+ */
+
 #include "mesh/mesh_element.hpp"
 namespace OpenGeoLab::Mesh {
 MeshElement::MeshElement(MeshElementType type)

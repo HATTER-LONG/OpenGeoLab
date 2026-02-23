@@ -105,7 +105,7 @@ const CameraState& RenderSceneController::camera() const { return m_camera; }
 void RenderSceneController::setCamera(const CameraState& camera, bool notify) {
     m_camera = camera;
     if(notify) {
-        m_cameraChanged.emitSignal();
+        m_sceneNeedsUpdate.emitSignal();
     }
 }
 void RenderSceneController::refreshScene(bool notify) {
@@ -124,14 +124,14 @@ void RenderSceneController::fitToScene(bool notify) {
         m_camera.fitToBoundingBox(m_renderData.m_boundingBox);
     }
     if(notify) {
-        m_cameraChanged.emitSignal();
+        m_sceneNeedsUpdate.emitSignal();
     }
 }
 
 void RenderSceneController::resetCamera(bool notify) {
     m_camera.reset();
     if(notify) {
-        m_cameraChanged.emitSignal();
+        m_sceneNeedsUpdate.emitSignal();
     }
 }
 
@@ -141,7 +141,7 @@ void RenderSceneController::setFrontView(bool notify) {
     m_camera.m_position = m_camera.m_target + QVector3D(0.0f, 0.0f, distance);
     m_camera.m_up = QVector3D(0.0f, 1.0f, 0.0f);
     if(notify) {
-        m_cameraChanged.emitSignal();
+        m_sceneNeedsUpdate.emitSignal();
     }
 }
 
@@ -151,7 +151,7 @@ void RenderSceneController::setTopView(bool notify) {
     m_camera.m_position = m_camera.m_target + QVector3D(0.0f, distance, 0.0f);
     m_camera.m_up = QVector3D(0.0f, 0.0f, -1.0f);
     if(notify) {
-        m_cameraChanged.emitSignal();
+        m_sceneNeedsUpdate.emitSignal();
     }
 }
 
@@ -161,7 +161,7 @@ void RenderSceneController::setLeftView(bool notify) {
     m_camera.m_position = m_camera.m_target + QVector3D(-distance, 0.0f, 0.0f);
     m_camera.m_up = QVector3D(0.0f, 1.0f, 0.0f);
     if(notify) {
-        m_cameraChanged.emitSignal();
+        m_sceneNeedsUpdate.emitSignal();
     }
 }
 
@@ -171,7 +171,7 @@ void RenderSceneController::setRightView(bool notify) {
     m_camera.m_position = m_camera.m_target + QVector3D(distance, 0.0f, 0.0f);
     m_camera.m_up = QVector3D(0.0f, 1.0f, 0.0f);
     if(notify) {
-        m_cameraChanged.emitSignal();
+        m_sceneNeedsUpdate.emitSignal();
     }
 }
 
@@ -181,7 +181,7 @@ void RenderSceneController::setBackView(bool notify) {
     m_camera.m_position = m_camera.m_target + QVector3D(0.0f, 0.0f, -distance);
     m_camera.m_up = QVector3D(0.0f, 1.0f, 0.0f);
     if(notify) {
-        m_cameraChanged.emitSignal();
+        m_sceneNeedsUpdate.emitSignal();
     }
 }
 
@@ -191,18 +191,13 @@ void RenderSceneController::setBottomView(bool notify) {
     m_camera.m_position = m_camera.m_target + QVector3D(0.0f, -distance, 0.0f);
     m_camera.m_up = QVector3D(0.0f, 0.0f, 1.0f);
     if(notify) {
-        m_cameraChanged.emitSignal();
+        m_sceneNeedsUpdate.emitSignal();
     }
 }
 
 Util::ScopedConnection
 RenderSceneController::subscribeGeometryChanged(std::function<void()> callback) {
     return m_geometryChanged.connect(std::move(callback));
-}
-
-Util::ScopedConnection
-RenderSceneController::subscribeCameraChanged(std::function<void()> callback) {
-    return m_cameraChanged.connect(std::move(callback));
 }
 
 Util::ScopedConnection
@@ -286,12 +281,7 @@ void RenderSceneController::updateRenderData() {
             auto mesh_doc = MeshDocumentInstance;
             if(mesh_doc && mesh_doc->nodeCount() > 0) {
                 auto mesh_data = mesh_doc->getRenderData();
-                for(auto& m : mesh_data.m_meshElementMeshes) {
-                    m_renderData.m_meshElementMeshes.push_back(std::move(m));
-                }
-                for(auto& m : mesh_data.m_meshNodeMeshes) {
-                    m_renderData.m_meshNodeMeshes.push_back(std::move(m));
-                }
+                m_renderData.merge(std::move(mesh_data));
             }
         } catch(const std::exception& e) {
             LOG_WARN("RenderSceneController: Failed to get mesh render data: {}", e.what());
@@ -302,8 +292,8 @@ void RenderSceneController::updateRenderData() {
         m_hasGeometry = !m_renderData.isEmpty();
 
         LOG_DEBUG(
-            "RenderSceneController: Updated render data, meshCount={}, hasGeometry={}, version={}",
-            m_renderData.meshCount(), m_hasGeometry, m_renderData.m_version);
+            "RenderSceneController: Updated render data, entities={}, hasGeometry={}, version={}",
+            m_renderData.entityCount(), m_hasGeometry, m_renderData.m_version);
     } catch(const std::exception& e) {
         LOG_ERROR("RenderSceneController: Exception updating render data: {}", e.what());
         m_renderData.clear();

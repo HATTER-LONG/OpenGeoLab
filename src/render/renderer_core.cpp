@@ -21,6 +21,8 @@ const char* const MESH_VERTEX_SHADER = R"(
 layout(location = 0) in vec3 aPosition;
 layout(location = 1) in vec3 aNormal;
 layout(location = 2) in vec4 aColor;
+layout(location = 3) in uint aUid;
+layout(location = 4) in uint aUidHigh;
 
 uniform mat4 uMVPMatrix;
 uniform mat4 uModelMatrix;
@@ -91,13 +93,22 @@ void main() {
 const char* const PICK_VERTEX_SHADER = R"(
 #version 330 core
 layout(location = 0) in vec3 aPosition;
+layout(location = 1) in vec3 aNormal;
+layout(location = 2) in vec4 aColor;
+layout(location = 3) in uint aUidLow;
+layout(location = 4) in uint aUidHigh;
 
 uniform mat4 uMVPMatrix;
 uniform float uPointSize;
 
+flat out uint vUidLow;
+flat out uint vUidHigh;
+
 void main() {
     gl_Position = uMVPMatrix * vec4(aPosition, 1.0);
     gl_PointSize = uPointSize;
+    vUidLow = aUidLow;
+    vUidHigh = aUidHigh;
 }
 )";
 
@@ -107,8 +118,14 @@ const char* const PICK_EDGE_GEOMETRY_SHADER = R"(
 layout(lines) in;
 layout(triangle_strip, max_vertices = 4) out;
 
+flat in uint vUidLow[];
+flat in uint vUidHigh[];
+
 uniform vec2 uViewport;
 uniform float uThickness;
+
+flat out uint gUidLow;
+flat out uint gUidHigh;
 
 void main() {
     vec4 p0 = gl_in[0].gl_Position;
@@ -133,6 +150,9 @@ void main() {
     vec2 off0 = offset_ndc * p0.w;
     vec2 off1 = offset_ndc * p1.w;
 
+    gUidLow = vUidLow[0];
+    gUidHigh = vUidHigh[0];
+
     gl_Position = p0 + vec4(off0, 0.0, 0.0);
     EmitVertex();
     gl_Position = p0 - vec4(off0, 0.0, 0.0);
@@ -147,20 +167,33 @@ void main() {
 
 const char* const PICK_FRAGMENT_SHADER = R"(
 #version 330 core
-uniform vec4 uPickColor;
-out vec4 fragColor;
+flat in uint vUidLow;
+flat in uint vUidHigh;
+layout(location = 0) out uvec2 outPickId;
 void main() {
-    fragColor = uPickColor;
+    outPickId = uvec2(vUidLow, vUidHigh);
 }
 )";
 
-// R32UI picking fragment shader (new integer-encoded picking)
+// Edge pick fragment (receives gUidLow/gUidHigh from geometry shader)
+const char* const PICK_EDGE_FRAGMENT_SHADER = R"(
+#version 330 core
+flat in uint gUidLow;
+flat in uint gUidHigh;
+layout(location = 0) out uvec2 outPickId;
+void main() {
+    outPickId = uvec2(gUidLow, gUidHigh);
+}
+)";
+
+// RG32UI picking fragment shader (integer-encoded picking, reads uid from vertex)
 const char* const PICK_R32UI_FRAGMENT_SHADER = R"(
 #version 430 core
-uniform uint uPickId;
-layout(location = 0) out uint outPickId;
+flat in uint vUidLow;
+flat in uint vUidHigh;
+layout(location = 0) out uvec2 outPickId;
 void main() {
-    outPickId = uPickId;
+    outPickId = uvec2(vUidLow, vUidHigh);
 }
 )";
 
@@ -360,8 +393,9 @@ void RendererCore::registerShader(const std::string& key,
 void RendererCore::setupDefaultShaders() {
     registerShader("mesh", compileShader("mesh", MESH_VERTEX_SHADER, MESH_FRAGMENT_SHADER));
     registerShader("pick", compileShader("pick", PICK_VERTEX_SHADER, PICK_FRAGMENT_SHADER));
-    registerShader("pick_edge", compileShader("pick_edge", PICK_VERTEX_SHADER, PICK_FRAGMENT_SHADER,
-                                              PICK_EDGE_GEOMETRY_SHADER));
+    registerShader("pick_edge",
+                   compileShader("pick_edge", PICK_VERTEX_SHADER, PICK_EDGE_FRAGMENT_SHADER,
+                                 PICK_EDGE_GEOMETRY_SHADER));
     registerShader("outline",
                    compileShader("outline", OUTLINE_VERTEX_SHADER, OUTLINE_FRAGMENT_SHADER));
 

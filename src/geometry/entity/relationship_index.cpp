@@ -1,3 +1,7 @@
+/**
+ * @file relationship_index.cpp
+ * @brief Implementation of entity parent-child relationship indexing and traversal
+ */
 #include "relationship_index.hpp"
 
 #include "entity_index.hpp"

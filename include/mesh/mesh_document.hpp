@@ -97,6 +97,42 @@ public:
     elementsByType(MeshElementType type) const = 0;
 
     // -------------------------------------------------------------------------
+    // Topology Queries
+    // -------------------------------------------------------------------------
+
+    /**
+     * @brief Find all elements that reference a given node.
+     * @param node_id Node id to look up.
+     * @return Vector of element ids containing this node.
+     */
+    [[nodiscard]] virtual std::vector<MeshElementId>
+    findElementsByNodeId(MeshNodeId node_id) const = 0;
+
+    /**
+     * @brief Find all nodes adjacent to a given node (connected via shared elements).
+     * @param node_id Source node id.
+     * @return Vector of adjacent node ids.
+     */
+    [[nodiscard]] virtual std::vector<MeshNodeId>
+    findAdjacentNodes(MeshNodeId node_id) const = 0;
+
+    /**
+     * @brief Find all elements adjacent to a given element (sharing at least one node).
+     * @param element_id Source element id.
+     * @return Vector of adjacent element ids.
+     */
+    [[nodiscard]] virtual std::vector<MeshElementId>
+    findAdjacentElements(MeshElementId element_id) const = 0;
+
+    /**
+     * @brief Find an element by its type-scoped UID.
+     * @param uid Element UID.
+     * @return Pointer to the element, or nullptr if not found.
+     */
+    [[nodiscard]] virtual const MeshElement*
+    findElementByUID(MeshElementUID uid) const = 0;
+
+    // -------------------------------------------------------------------------
     // Clear
     // -------------------------------------------------------------------------
 

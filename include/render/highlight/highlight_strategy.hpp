@@ -9,22 +9,29 @@
 
 #pragma once
 
-#include "geometry/geometry_types.hpp"
 #include "render/render_pass.hpp"
+#include "render/render_types.hpp"
 #include "render/renderable.hpp"
 
 #include <QOpenGLFunctions>
-#include <unordered_set>
 
 namespace OpenGeoLab::Render {
 
 /**
- * @brief Set of entities to highlight (uid+type pairs)
+ * @brief Set of entities to highlight (RenderEntityType + uid56 pairs)
  */
 struct HighlightSet {
     struct Entry {
-        Geometry::EntityType m_type{Geometry::EntityType::None};
-        Geometry::EntityUID m_uid{Geometry::INVALID_ENTITY_UID};
+        RenderEntityType m_type{RenderEntityType::None};
+        uint64_t m_uid56{0};
+
+        [[nodiscard]] bool isValid() const {
+            return m_type != RenderEntityType::None && m_uid56 != 0;
+        }
+
+        [[nodiscard]] uint64_t packed() const {
+            return RenderUID::encode(m_type, m_uid56).m_packed;
+        }
     };
 
     std::vector<Entry> m_hover;    ///< Currently hovered entities

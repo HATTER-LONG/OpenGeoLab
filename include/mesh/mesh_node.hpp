@@ -1,3 +1,8 @@
+/**
+ * @file mesh_node.hpp
+ * @brief Mesh node representation with 3D coordinates and unique identifier
+ */
+
 #pragma once
 
 #include "mesh/mesh_types.hpp"
@@ -5,8 +10,20 @@
 #include <kangaroo/util/noncopyable.hpp>
 
 namespace OpenGeoLab::Mesh {
+/**
+ * @brief A mesh node defined by a unique identifier and 3D coordinates.
+ *
+ * Each MeshNode is assigned a globally-unique MeshNodeId at construction.
+ */
 class MeshNode {
 public:
+    /**
+     * @brief Construct a mesh node at the given 3D position.
+     * @param x X-coordinate.
+     * @param y Y-coordinate.
+     * @param z Z-coordinate.
+     * @note A unique MeshNodeId is auto-generated during construction.
+     */
     MeshNode(double x, double y, double z);
     ~MeshNode() = default;
 

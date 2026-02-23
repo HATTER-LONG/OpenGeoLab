@@ -89,9 +89,13 @@ cmake --build build
 - 网格模块：MeshDocument 存储/查询网格节点与单元，GenerateMeshAction 通过 Gmsh 从几何面生成网格
   - 支持三角形/四边形/自动单元类型选择
   - 支持 2D 表面网格和 3D 体网格生成
+  - 新增 `query_mesh_entity_info` 动作，支持查询网格节点/单元的详细信息（邻接关系、坐标等）
+  - 新增 MeshQueryPage 页面用于展示网格实体信息
 - 渲染管线支持网格数据（线框/节点）的可视化、拾取与高亮
   - MeshPass 独立渲染 FEM 网格单元和节点，与几何渲染解耦
   - 面选中轮廓修复：从实体质心缩放，而非世界原点
+  - SceneRenderer 重构为 ISceneRenderer 接口 + 组件工厂模式
+  - 渲染信号整合：移除冗余的 `subscribeCameraChanged`，统一使用 `subscribeSceneNeedsUpdate`
 - SelectManager 支持 `mesh_node`/`mesh_element` 拾取类型
 - 侧边栏 per-part 几何/网格显隐开关（通过 ViewportService 和 RenderSceneController 管理）
 - QML 页面关闭后自动恢复 OpenGL 视口焦点

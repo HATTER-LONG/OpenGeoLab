@@ -3,15 +3,16 @@
  * @brief Render data structures for OpenGL geometry visualization
  *
  * Defines data structures for transferring geometry to the rendering layer.
- * These structures are designed for efficient GPU upload and OpenGL rendering.
+ * Uses a batched design: one RenderMesh per entity category (faces, edges, etc.)
+ * with per-entity metadata in RenderEntityInfoMap for selection/hover sub-draw.
  */
 
 #pragma once
 
 #include "geometry/geometry_types.hpp"
+#include "render/render_types.hpp"
 
 #include <cstdint>
-#include <unordered_set>
 #include <vector>
 
 namespace OpenGeoLab::Render {
@@ -27,39 +28,38 @@ struct RenderColor {
 };
 
 /**
- * @brief Vertex data for rendering with position, normal, and color
+ * @brief Vertex data for rendering with position, normal, color, and entity uid.
  *
- * Packed structure for efficient GPU memory usage.
- * Layout: position (3 floats), normal (3 floats), color (4 floats)
+ * Packed structure for efficient GPU upload. The uid field carries the
+ * packed RenderUID so the pick shader can identify entities per-fragment
+ * without per-entity uniform calls.
+ *
+ * Layout: position (3 floats), normal (3 floats), color (4 floats), uid (2 uint32)
+ * Total: 48 bytes per vertex.
  */
 struct RenderVertex {
     float m_position[3]{0.0f, 0.0f, 0.0f};       ///< Vertex position (x, y, z)
     float m_normal[3]{0.0f, 0.0f, 1.0f};         ///< Vertex normal for lighting
     RenderColor m_color{0.8f, 0.8f, 0.8f, 1.0f}; ///< RGBA color
+    uint32_t m_uidLow{0};                        ///< Low 32 bits of packed RenderUID
+    uint32_t m_uidHigh{0};                       ///< High 32 bits of packed RenderUID
+
+    void setUid(uint64_t packed) {
+        m_uidLow = static_cast<uint32_t>(packed & 0xFFFFFFFFu);
+        m_uidHigh = static_cast<uint32_t>((packed >> 32u) & 0xFFFFFFFFu);
+    }
+    [[nodiscard]] uint64_t uid() const {
+        return static_cast<uint64_t>(m_uidLow) | (static_cast<uint64_t>(m_uidHigh) << 32u);
+    }
 
     RenderVertex() = default;
 
-    /**
-     * @brief Construct from position
-     * @param x X coordinate
-     * @param y Y coordinate
-     * @param z Z coordinate
-     */
     RenderVertex(float x, float y, float z) {
         m_position[0] = x;
         m_position[1] = y;
         m_position[2] = z;
     }
 
-    /**
-     * @brief Construct from position and normal
-     * @param px Position X
-     * @param py Position Y
-     * @param pz Position Z
-     * @param nx Normal X
-     * @param ny Normal Y
-     * @param nz Normal Z
-     */
     RenderVertex(float px, float py, float pz, float nx, float ny, float nz) { // NOLINT
         m_position[0] = px;
         m_position[1] = py;
@@ -69,13 +69,6 @@ struct RenderVertex {
         m_normal[2] = nz;
     }
 
-    /**
-     * @brief Set vertex color
-     * @param r Red component [0, 1]
-     * @param g Green component [0, 1]
-     * @param b Blue component [0, 1]
-     * @param a Alpha component [0, 1]
-     */
     void setColor(float r, float g, float b, float a = 1.0f) {
         m_color.m_r = r;
         m_color.m_g = g;
@@ -83,6 +76,8 @@ struct RenderVertex {
         m_color.m_a = a;
     }
 };
+
+static_assert(sizeof(RenderVertex) == 48, "RenderVertex must be 48 bytes for GPU layout");
 
 /**
  * @brief Render primitive type enumeration
@@ -97,21 +92,13 @@ enum class RenderPrimitiveType : uint8_t {
 };
 
 /**
- * @brief Mesh data for a single renderable entity
+ * @brief Batched mesh data container
  *
- * Contains vertex and index data for rendering a geometry entity.
- * Each mesh corresponds to one entity (vertex, edge, face, etc.).
+ * Holds vertex and index data for a category of entities (all faces, all edges, etc.).
+ * Per-entity identity is encoded in each vertex's m_uid field.
+ * Entity metadata (ownership, ranges, colors) is stored externally in RenderEntityInfoMap.
  */
 struct RenderMesh {
-    Geometry::EntityId m_entityId{Geometry::INVALID_ENTITY_ID}; ///< Source entity ID
-    Geometry::EntityUID m_entityUid{
-        Geometry::INVALID_ENTITY_UID}; ///< Type-scoped UID (for picking)
-    Geometry::EntityType m_entityType{Geometry::EntityType::None}; ///< Entity type
-
-    Geometry::EntityKey m_owningPart{};    ///< Owning part entity (if applicable)
-    Geometry::EntityKey m_owningSolid{};   ///< Owning solid entity (if applicable)
-    Geometry::EntityKeySet m_owningWire{}; ///< Owning wire entity (if applicable)
-
     RenderPrimitiveType m_primitiveType{RenderPrimitiveType::Triangles}; ///< Primitive type
 
     std::vector<RenderVertex> m_vertices; ///< Vertex data
@@ -119,109 +106,123 @@ struct RenderMesh {
 
     Geometry::BoundingBox3D m_boundingBox; ///< Mesh bounding box
 
-    RenderColor m_baseColor{};     ///< Base color associated with this mesh (informational)
-    RenderColor m_hoverColor{};    ///< Hover highlight color for this mesh
-    RenderColor m_selectedColor{}; ///< Selected/picked highlight color for this mesh
-
-    /**
-     * @brief Check if mesh has valid data
-     * @return true if mesh has vertices
-     */
     [[nodiscard]] bool isValid() const { return !m_vertices.empty(); }
-
-    /**
-     * @brief Get vertex count
-     * @return Number of vertices
-     */
     [[nodiscard]] size_t vertexCount() const { return m_vertices.size(); }
-
-    /**
-     * @brief Get index count
-     * @return Number of indices (0 for non-indexed)
-     */
     [[nodiscard]] size_t indexCount() const { return m_indices.size(); }
-
-    /**
-     * @brief Check if mesh uses indexed rendering
-     * @return true if index buffer is non-empty
-     */
     [[nodiscard]] bool isIndexed() const { return !m_indices.empty(); }
 };
 
 /**
- * @brief Complete render data for a geometry document
+ * @brief Complete render data for a document (geometry + mesh)
  *
- * Contains all mesh data needed to render a document's geometry.
- * Organized by entity type for selective rendering.
+ * Contains batched mesh data organized by entity category. Each category
+ * has a single RenderMesh (batch) plus a RenderEntityInfoMap for per-entity
+ * metadata needed for selection highlighting and sub-draw.
  */
 struct DocumentRenderData {
-    std::vector<RenderMesh> m_faceMeshes;   ///< Face/surface meshes
-    std::vector<RenderMesh> m_edgeMeshes;   ///< Edge/curve meshes
-    std::vector<RenderMesh> m_vertexMeshes; ///< Vertex/point meshes
+    RenderMesh m_faceBatch;        ///< All faces (GL_TRIANGLES, indexed)
+    RenderMesh m_edgeBatch;        ///< All edges (GL_LINES, indexed)
+    RenderMesh m_vertexBatch;      ///< All vertices (GL_POINTS)
+    RenderMesh m_meshElementBatch; ///< All FEM elements (GL_LINES, indexed)
+    RenderMesh m_meshNodeBatch;    ///< All FEM nodes (GL_POINTS)
 
-    std::vector<RenderMesh> m_meshElementMeshes; ///< FEM mesh element wireframe meshes
-    std::vector<RenderMesh> m_meshNodeMeshes;    ///< FEM mesh node point meshes
+    RenderEntityInfoMap m_faceEntities;
+    RenderEntityInfoMap m_edgeEntities;
+    RenderEntityInfoMap m_vertexEntities;
+    RenderEntityInfoMap m_meshElementEntities;
+    RenderEntityInfoMap m_meshNodeEntities;
 
     Geometry::BoundingBox3D m_boundingBox; ///< Combined bounding box
+    uint64_t m_version{0};                 ///< Data version for change detection
 
-    uint64_t m_version{0}; ///< Data version for change detection
-
-    /**
-     * @brief Check if render data is empty
-     * @return true if no meshes are present
-     */
     [[nodiscard]] bool isEmpty() const {
-        return m_faceMeshes.empty() && m_edgeMeshes.empty() && m_vertexMeshes.empty() &&
-               m_meshElementMeshes.empty() && m_meshNodeMeshes.empty();
+        return !m_faceBatch.isValid() && !m_edgeBatch.isValid() && !m_vertexBatch.isValid() &&
+               !m_meshElementBatch.isValid() && !m_meshNodeBatch.isValid();
     }
 
-    /**
-     * @brief Get total mesh count
-     * @return Sum of all mesh counts
-     */
-    [[nodiscard]] size_t meshCount() const {
-        return m_faceMeshes.size() + m_edgeMeshes.size() + m_vertexMeshes.size() +
-               m_meshElementMeshes.size() + m_meshNodeMeshes.size();
+    [[nodiscard]] size_t entityCount() const {
+        return m_faceEntities.size() + m_edgeEntities.size() + m_vertexEntities.size() +
+               m_meshElementEntities.size() + m_meshNodeEntities.size();
     }
 
-    /**
-     * @brief Clear all render data
-     */
+    /** @brief Clear all batches and entity maps, increment data version. */
     void clear() {
-        m_faceMeshes.clear();
-        m_edgeMeshes.clear();
-        m_vertexMeshes.clear();
-        m_meshElementMeshes.clear();
-        m_meshNodeMeshes.clear();
+        m_faceBatch = RenderMesh();
+        m_edgeBatch = RenderMesh();
+        m_vertexBatch = RenderMesh();
+        m_meshElementBatch = RenderMesh();
+        m_meshNodeBatch = RenderMesh();
+        m_faceEntities.clear();
+        m_edgeEntities.clear();
+        m_vertexEntities.clear();
+        m_meshElementEntities.clear();
+        m_meshNodeEntities.clear();
         m_boundingBox = Geometry::BoundingBox3D();
         ++m_version;
     }
 
-    /**
-     * @brief Increment version to signal data change
-     */
     void markModified() { ++m_version; }
 
-    /**
-     * @brief Update combined bounding box from all meshes
-     */
+    /** @brief Recompute combined bounding box from all sub-batch bounding boxes. */
     void updateBoundingBox() {
         m_boundingBox = Geometry::BoundingBox3D();
-        for(const auto& mesh : m_faceMeshes) {
-            m_boundingBox.expand(mesh.m_boundingBox);
+        m_boundingBox.expand(m_faceBatch.m_boundingBox);
+        m_boundingBox.expand(m_edgeBatch.m_boundingBox);
+        m_boundingBox.expand(m_vertexBatch.m_boundingBox);
+        m_boundingBox.expand(m_meshElementBatch.m_boundingBox);
+        m_boundingBox.expand(m_meshNodeBatch.m_boundingBox);
+    }
+
+    /**
+     * @brief Merge another DocumentRenderData into this one (move semantics).
+     *
+     * Appends the other's batched data to this document's batches,
+     * adjusting index offsets for correct rendering.
+     */
+    void merge(DocumentRenderData&& other) {
+        mergeBatch(m_faceBatch, m_faceEntities, std::move(other.m_faceBatch),
+                   std::move(other.m_faceEntities));
+        mergeBatch(m_edgeBatch, m_edgeEntities, std::move(other.m_edgeBatch),
+                   std::move(other.m_edgeEntities));
+        mergeBatch(m_vertexBatch, m_vertexEntities, std::move(other.m_vertexBatch),
+                   std::move(other.m_vertexEntities));
+        mergeBatch(m_meshElementBatch, m_meshElementEntities, std::move(other.m_meshElementBatch),
+                   std::move(other.m_meshElementEntities));
+        mergeBatch(m_meshNodeBatch, m_meshNodeEntities, std::move(other.m_meshNodeBatch),
+                   std::move(other.m_meshNodeEntities));
+    }
+
+private:
+    static void mergeBatch(RenderMesh& dst,
+                           RenderEntityInfoMap& dst_entities,
+                           RenderMesh&& src,
+                           RenderEntityInfoMap&& src_entities) {
+        if(!src.isValid()) {
+            return;
         }
-        for(const auto& mesh : m_edgeMeshes) {
-            m_boundingBox.expand(mesh.m_boundingBox);
+        if(!dst.isValid()) {
+            dst = std::move(src);
+            dst_entities.merge(std::move(src_entities));
+            return;
         }
-        for(const auto& mesh : m_vertexMeshes) {
-            m_boundingBox.expand(mesh.m_boundingBox);
+        const auto base_vertex = static_cast<uint32_t>(dst.m_vertices.size());
+        const auto base_index = static_cast<uint32_t>(dst.m_indices.size());
+
+        dst.m_vertices.insert(dst.m_vertices.end(), std::make_move_iterator(src.m_vertices.begin()),
+                              std::make_move_iterator(src.m_vertices.end()));
+
+        dst.m_indices.reserve(dst.m_indices.size() + src.m_indices.size());
+        for(uint32_t idx : src.m_indices) {
+            dst.m_indices.push_back(idx + base_vertex);
         }
-        for(const auto& mesh : m_meshElementMeshes) {
-            m_boundingBox.expand(mesh.m_boundingBox);
+
+        for(auto& [key, info] : src_entities) {
+            info.m_indexOffset += base_index;
+            info.m_vertexOffset += base_vertex;
+            dst_entities[key] = std::move(info);
         }
-        for(const auto& mesh : m_meshNodeMeshes) {
-            m_boundingBox.expand(mesh.m_boundingBox);
-        }
+
+        dst.m_boundingBox.expand(src.m_boundingBox);
     }
 };
 
@@ -233,26 +234,14 @@ struct TessellationOptions {
     double m_angularDeflection{0.5}; ///< Angular deflection in radians
     bool m_computeNormals{true};     ///< Compute vertex normals
 
-    /**
-     * @brief Create default options suitable for visualization
-     * @return TessellationOptions with balanced quality/performance
-     */
     [[nodiscard]] static TessellationOptions defaultOptions() {
         return TessellationOptions{0.05, 0.25, true};
     }
 
-    /**
-     * @brief Create high-quality options for detailed rendering
-     * @return TessellationOptions with higher quality
-     */
     [[nodiscard]] static TessellationOptions highQuality() {
         return TessellationOptions{0.01, 0.1, true};
     }
 
-    /**
-     * @brief Create low-quality options for fast preview
-     * @return TessellationOptions with lower quality
-     */
     [[nodiscard]] static TessellationOptions fastPreview() {
         return TessellationOptions{0.1, 0.5, false};
     }

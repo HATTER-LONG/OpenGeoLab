@@ -36,7 +36,7 @@ void HighlightPass::execute(QOpenGLFunctions& gl, const RenderPassContext& ctx) 
     for(const auto& sel : selections) {
         HighlightSet::Entry entry;
         entry.m_type = sel.m_type;
-        entry.m_uid = sel.m_uid;
+        entry.m_uid56 = sel.m_uid56;
         highlights.m_selected.push_back(entry);
     }
 

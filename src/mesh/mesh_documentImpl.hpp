@@ -14,6 +14,7 @@
 #include <memory>
 #include <mutex>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace OpenGeoLab::Mesh {
 
@@ -57,6 +58,22 @@ public:
     elementsByType(MeshElementType type) const override;
 
     // -------------------------------------------------------------------------
+    // Topology Queries
+    // -------------------------------------------------------------------------
+
+    [[nodiscard]] std::vector<MeshElementId>
+    findElementsByNodeId(MeshNodeId node_id) const override;
+
+    [[nodiscard]] std::vector<MeshNodeId>
+    findAdjacentNodes(MeshNodeId node_id) const override;
+
+    [[nodiscard]] std::vector<MeshElementId>
+    findAdjacentElements(MeshElementId element_id) const override;
+
+    [[nodiscard]] const MeshElement*
+    findElementByUID(MeshElementUID uid) const override;
+
+    // -------------------------------------------------------------------------
     // Clear
     // -------------------------------------------------------------------------
 
@@ -88,6 +105,12 @@ private:
 
     /// Per-type element index: (uid, type) -> elementId
     std::unordered_map<MeshElementRef, MeshElementId, MeshElementRefHash> m_refToId;
+
+    /// Reverse index: nodeId -> set of element IDs referencing this node
+    std::unordered_map<MeshNodeId, std::unordered_set<MeshElementId>> m_nodeToElements;
+
+    /// UID-only element index: elementUID -> elementId (for UID-based lookup)
+    std::unordered_map<MeshElementUID, MeshElementId> m_uidToId;
 };
 
 /**

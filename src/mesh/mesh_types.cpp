@@ -1,3 +1,8 @@
+/**
+ * @file mesh_types.cpp
+ * @brief Implementation of mesh type string conversions and UID counters
+ */
+
 #include "mesh/mesh_types.hpp"
 #include <array>
 #include <atomic>
@@ -21,6 +26,8 @@ std::string meshElementTypeToString(MeshElementType type) {
         return "Hexa8";
     case MeshElementType::Prism6:
         return "Prism6";
+    case MeshElementType::Pyramid5:
+        return "Pyramid5";
     default:
         break;
     }
@@ -34,6 +41,7 @@ MeshElementType meshElementTypeFromString(std::string_view str) {
         {"Triangle", MeshElementType::Triangle}, {"Quad4", MeshElementType::Quad4},
         {"Tetra4", MeshElementType::Tetra4},     {"Hexa8", MeshElementType::Hexa8},
         {"Prism6", MeshElementType::Prism6},
+        {"Pyramid5", MeshElementType::Pyramid5},
     };
     auto it = string_to_type.find(str);
     if(it != string_to_type.end()) {
@@ -44,14 +52,15 @@ MeshElementType meshElementTypeFromString(std::string_view str) {
 namespace {
 std::atomic<MeshNodeId> g_mesh_node_id_counter{1};
 std::atomic<MeshElementId> g_mesh_element_id_counter{1};
-std::array<std::atomic<MeshElementUID>, 7> g_mesh_element_uid_counters = {
+std::array<std::atomic<MeshElementUID>, 8> g_mesh_element_uid_counters = {
     std::atomic<MeshElementUID>{1}, // Invalid
     std::atomic<MeshElementUID>{1}, // Line
     std::atomic<MeshElementUID>{1}, // Triangle
     std::atomic<MeshElementUID>{1}, // Quad4
     std::atomic<MeshElementUID>{1}, // Tetra4
     std::atomic<MeshElementUID>{1}, // Hexa8
-    std::atomic<MeshElementUID>{1}  // Prism6
+    std::atomic<MeshElementUID>{1}, // Prism6
+    std::atomic<MeshElementUID>{1}  // Pyramid5
 };
 } // namespace
 

@@ -222,6 +222,7 @@ qt_add_qml_module(
   resources/qml/Pages/SmoothMeshPage.qml
   resources/qml/Pages/TrimPage.qml
   resources/qml/Pages/GeoQueryPage.qml
+  resources/qml/Pages/MeshQueryPage.qml
   resources/qml/util/BaseButton.qml
   resources/qml/util/BaseComboBox.qml
   resources/qml/util/Selector.qml

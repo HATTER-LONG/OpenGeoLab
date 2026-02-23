@@ -1,6 +1,9 @@
 /**
  * @file outline_highlight.cpp
  * @brief OutlineHighlight implementation - stencil-based outline rendering
+ *
+ * Uses batched entity info maps to find matching entities by uid56,
+ * then draws their index/vertex ranges for stencil outline generation.
  */
 
 #include "render/highlight/outline_highlight.hpp"
@@ -66,72 +69,165 @@ void OutlineHighlight::renderOutline(QOpenGLFunctions& gl,
         m_outlineCenterLoc = outline_shader->uniformLocation("uCenter");
     }
 
-    // Stencil-based outline:
-    // 1. Draw the entity to stencil buffer at original position
-    // 2. Draw a slightly scaled version (from centroid), only where stencil != 1
-
-    gl.glEnable(GL_STENCIL_TEST);
-    gl.glEnable(GL_DEPTH_TEST);
-
-    // Lambda that draws matching buffers and sets per-buffer centroid uniform
-    auto drawMatchingWithCenter = [&](auto& buffers, float scale) {
-        for(auto& buf : buffers) {
-            bool matches = false;
-            if(entry.m_type == buf.m_entityType) {
-                matches = (static_cast<uint32_t>(buf.m_entityUid) & 0xFFFFFFu) ==
-                          (static_cast<uint32_t>(entry.m_uid) & 0xFFFFFFu);
-            } else if(entry.m_type == Geometry::EntityType::Part) {
-                matches = (static_cast<uint32_t>(buf.m_owningPartUid) & 0xFFFFFFu) ==
-                          (static_cast<uint32_t>(entry.m_uid) & 0xFFFFFFu);
-            } else if(entry.m_type == Geometry::EntityType::Solid) {
-                matches = (static_cast<uint32_t>(buf.m_owningSolidUid) & 0xFFFFFFu) ==
-                          (static_cast<uint32_t>(entry.m_uid) & 0xFFFFFFu);
-            }
-
-            if(matches) {
-                outline_shader->setUniformValue(m_outlineCenterLoc, buf.m_centroid);
-                outline_shader->setUniformValue(m_outlineScaleLoc, scale);
-                RenderBatch::draw(gl, buf);
-            }
-        }
+    struct MatchInfo {
+        uint32_t m_indexOffset;
+        uint32_t m_indexCount;
+        QVector3D m_centroid;
     };
 
-    // Pass 1: Write 1 to stencil where the entity is drawn
-    gl.glStencilFunc(GL_ALWAYS, 1, 0xFF);
-    gl.glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
-    gl.glStencilMask(0xFF);
-    gl.glClear(GL_STENCIL_BUFFER_BIT);
-    gl.glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+    // --- Face matching ---
+    std::vector<MatchInfo> face_matches;
+    auto& face_buf = batch.faceBuffer();
+    if(face_buf.isValid()) {
+        for(const auto& [packed_uid, info] : batch.faceEntities()) {
+            const auto entity_type = info.m_uid.type();
+            const auto uid56 = info.m_uid.uid56();
+
+            bool match = false;
+            if(entry.m_type == entity_type) {
+                match = (uid56 == entry.m_uid56);
+            } else if(entry.m_type == RenderEntityType::Part) {
+                match = (info.m_owningPartUid56 == entry.m_uid56 && entry.m_uid56 != 0);
+            } else if(entry.m_type == RenderEntityType::Solid) {
+                match = (info.m_owningSolidUid56 == entry.m_uid56 && entry.m_uid56 != 0);
+            }
+
+            if(match && info.m_indexCount > 0) {
+                face_matches.push_back(
+                    {info.m_indexOffset, info.m_indexCount,
+                     QVector3D(info.m_centroid[0], info.m_centroid[1], info.m_centroid[2])});
+            }
+        }
+    }
+
+    // --- Edge matching (for Wire/Edge/Part/Solid selection) ---
+    std::vector<MatchInfo> edge_matches;
+    auto& edge_buf = batch.edgeBuffer();
+    if(edge_buf.isValid()) {
+        for(const auto& [packed_uid, info] : batch.edgeEntities()) {
+            const auto entity_type = info.m_uid.type();
+            const auto uid56 = info.m_uid.uid56();
+
+            bool match = false;
+            if(entry.m_type == entity_type) {
+                match = (uid56 == entry.m_uid56);
+            } else if(entry.m_type == RenderEntityType::Wire) {
+                for(const auto& wire_uid : info.m_owningWireUid56s) {
+                    if(wire_uid == entry.m_uid56 && entry.m_uid56 != 0) {
+                        match = true;
+                        break;
+                    }
+                }
+            } else if(entry.m_type == RenderEntityType::Part) {
+                match = (info.m_owningPartUid56 == entry.m_uid56 && entry.m_uid56 != 0);
+            } else if(entry.m_type == RenderEntityType::Solid) {
+                match = (info.m_owningSolidUid56 == entry.m_uid56 && entry.m_uid56 != 0);
+            }
+
+            if(match && info.m_indexCount > 0) {
+                edge_matches.push_back(
+                    {info.m_indexOffset, info.m_indexCount,
+                     QVector3D(info.m_centroid[0], info.m_centroid[1], info.m_centroid[2])});
+            }
+        }
+    }
+
+    // --- Vertex matching ---
+    struct VertexMatchInfo {
+        uint32_t m_vertexOffset;
+        uint32_t m_vertexCount;
+    };
+    std::vector<VertexMatchInfo> vertex_matches;
+    auto& vertex_buf = batch.vertexBuffer();
+    if(vertex_buf.isValid() && entry.m_type == RenderEntityType::Vertex) {
+        for(const auto& [packed_uid, info] : batch.vertexEntities()) {
+            const auto uid56 = info.m_uid.uid56();
+            if(uid56 == entry.m_uid56 && info.m_vertexCount > 0) {
+                vertex_matches.push_back({info.m_vertexOffset, info.m_vertexCount});
+            }
+        }
+    }
+
+    if(face_matches.empty() && edge_matches.empty() && vertex_matches.empty()) {
+        return;
+    }
 
     outline_shader->bind();
     outline_shader->setUniformValue(m_outlineMvpLoc, ctx.m_matrices.m_mvp);
     outline_shader->setUniformValue(m_outlineColorLoc, color);
 
-    drawMatchingWithCenter(batch.faceMeshes(), 1.0f);
+    // --- Draw face outlines (stencil-based) ---
+    if(!face_matches.empty()) {
+        gl.glEnable(GL_STENCIL_TEST);
+        gl.glEnable(GL_DEPTH_TEST);
 
-    // Pass 2: Draw scaled version where stencil != 1
-    gl.glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
-    gl.glStencilMask(0x00);
-    gl.glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-    // Keep depth testing enabled so outlines are depth-tested against scene
-    // but avoid writing to the depth buffer so the outline doesn't block other draws
-    gl.glEnable(GL_DEPTH_TEST);
-    gl.glDepthMask(GL_FALSE);
+        // Pass 1: Write 1 to stencil where the entity is drawn
+        gl.glStencilFunc(GL_ALWAYS, 1, 0xFF);
+        gl.glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+        gl.glStencilMask(0xFF);
+        gl.glClear(GL_STENCIL_BUFFER_BIT);
+        gl.glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 
-    // Reduce the scale multiplier to make outline thinner
-    const float scale = 1.0f + m_outlineWidth * 0.005f;
-    outline_shader->setUniformValue(m_outlineColorLoc, color);
+        for(const auto& m : face_matches) {
+            outline_shader->setUniformValue(m_outlineCenterLoc, m.m_centroid);
+            outline_shader->setUniformValue(m_outlineScaleLoc, 1.0f);
+            RenderBatch::drawIndexRange(gl, face_buf, m.m_indexOffset, m.m_indexCount);
+        }
 
-    drawMatchingWithCenter(batch.faceMeshes(), scale);
+        // Pass 2: Draw scaled version where stencil != 1
+        gl.glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+        gl.glStencilMask(0x00);
+        gl.glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+        gl.glDepthMask(GL_FALSE);
 
-    // Restore depth write state
-    gl.glDepthMask(GL_TRUE);
+        const float scale = 1.0f + m_outlineWidth * 0.005f;
+
+        for(const auto& m : face_matches) {
+            outline_shader->setUniformValue(m_outlineCenterLoc, m.m_centroid);
+            outline_shader->setUniformValue(m_outlineScaleLoc, scale);
+            RenderBatch::drawIndexRange(gl, face_buf, m.m_indexOffset, m.m_indexCount);
+        }
+
+        gl.glDepthMask(GL_TRUE);
+        gl.glStencilMask(0xFF);
+        gl.glStencilFunc(GL_ALWAYS, 0, 0xFF);
+        gl.glDisable(GL_STENCIL_TEST);
+    }
+
+    // --- Draw edge highlights (solid color, thick line) ---
+    if(!edge_matches.empty()) {
+        gl.glEnable(GL_DEPTH_TEST);
+        gl.glDepthFunc(GL_LEQUAL);
+
+        outline_shader->setUniformValue(m_outlineScaleLoc, 1.0f);
+        outline_shader->setUniformValue(m_outlineCenterLoc, QVector3D(0.0f, 0.0f, 0.0f));
+        gl.glLineWidth(4.0f);
+
+        for(const auto& m : edge_matches) {
+            RenderBatch::drawIndexRange(gl, edge_buf, m.m_indexOffset, m.m_indexCount);
+        }
+
+        gl.glLineWidth(1.0f);
+        gl.glDepthFunc(GL_LESS);
+    }
+
+    // --- Draw vertex highlights (solid color, large point) ---
+    if(!vertex_matches.empty()) {
+        gl.glEnable(GL_DEPTH_TEST);
+        gl.glDepthFunc(GL_LEQUAL);
+
+        outline_shader->setUniformValue(m_outlineScaleLoc, 1.0f);
+        outline_shader->setUniformValue(m_outlineCenterLoc, QVector3D(0.0f, 0.0f, 0.0f));
+
+        for(const auto& vm : vertex_matches) {
+            RenderBatch::drawVertexRange(gl, vertex_buf, vm.m_vertexOffset, vm.m_vertexCount,
+                                         GL_POINTS);
+        }
+
+        gl.glDepthFunc(GL_LESS);
+    }
 
     outline_shader->release();
-
-    gl.glStencilMask(0xFF);
-    gl.glStencilFunc(GL_ALWAYS, 0, 0xFF);
-    gl.glDisable(GL_STENCIL_TEST);
     gl.glEnable(GL_DEPTH_TEST);
 }
 

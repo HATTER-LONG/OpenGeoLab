@@ -5,7 +5,7 @@
 
 #include "select_control.hpp"
 
-#include "geometry/geometry_types.hpp"
+#include "render/render_types.hpp"
 #include "render/select_manager.hpp"
 
 #include <stdexcept>
@@ -38,12 +38,16 @@ namespace {
     throw std::invalid_argument("Unsupported pick type string");
 }
 
-[[nodiscard]] Geometry::EntityType entityTypeFromJson(const nlohmann::json& j) {
+[[nodiscard]] RenderEntityType entityTypeFromJson(const nlohmann::json& j) {
     if(j.is_number_integer()) {
-        return static_cast<Geometry::EntityType>(j.get<int>());
+        return static_cast<RenderEntityType>(j.get<int>());
     }
     if(j.is_string()) {
-        return Geometry::entityTypeFromString(j.get<std::string>());
+        const auto type = renderEntityTypeFromString(j.get<std::string>());
+        if(type == RenderEntityType::None) {
+            throw std::invalid_argument("Unknown entity type string: " + j.get<std::string>());
+        }
+        return type;
     }
     throw std::invalid_argument("Invalid entity type");
 }
@@ -94,8 +98,8 @@ nlohmann::json SelectControl::execute(const nlohmann::json& params,
             throw std::invalid_argument("select_ctrl.add requires {type, uid}");
         }
         const auto type = entityTypeFromJson(a["type"]);
-        const auto uid = static_cast<Geometry::EntityUID>(a["uid"].get<uint64_t>());
-        select_manager.addSelection(Geometry::EntityRef{uid, type});
+        const auto uid56 = static_cast<uint64_t>(a["uid"].get<uint64_t>() & 0x00FFFFFFFFFFFFFFu);
+        select_manager.addSelection(uid56, type);
     }
 
     if(ctrl.contains("remove") && ctrl["remove"].is_object()) {
@@ -104,8 +108,8 @@ nlohmann::json SelectControl::execute(const nlohmann::json& params,
             throw std::invalid_argument("select_ctrl.remove requires {type, uid}");
         }
         const auto type = entityTypeFromJson(r["type"]);
-        const auto uid = static_cast<Geometry::EntityUID>(r["uid"].get<uint64_t>());
-        select_manager.removeSelection(Geometry::EntityRef{uid, type});
+        const auto uid56 = static_cast<uint64_t>(r["uid"].get<uint64_t>() & 0x00FFFFFFFFFFFFFFu);
+        select_manager.removeSelection(uid56, type);
     }
 
     nlohmann::json response{{"status", "success"},
@@ -116,8 +120,8 @@ nlohmann::json SelectControl::execute(const nlohmann::json& params,
     if(want_get) {
         nlohmann::json arr = nlohmann::json::array();
         for(const auto& s : select_manager.selections()) {
-            arr.push_back(nlohmann::json{{"type", Geometry::entityTypeToString(s.m_type)},
-                                         {"uid", static_cast<uint64_t>(s.m_uid)}});
+            arr.push_back(nlohmann::json{{"type", renderEntityTypeToString(s.m_type)},
+                                         {"uid", static_cast<uint64_t>(s.m_uid56)}});
         }
         response["pick_enabled"] = select_manager.isPickEnabled();
         response["pick_types"] = static_cast<int>(select_manager.pickTypes());

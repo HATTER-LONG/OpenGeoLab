@@ -67,40 +67,40 @@ SelectManager::PickTypes SelectManager::pickTypes() const {
     return m_pickTypes;
 }
 
-bool SelectManager::isTypePickable(Geometry::EntityType type) const {
+bool SelectManager::isTypePickable(RenderEntityType type) const {
     std::lock_guard<std::mutex> lock(m_mutex);
 
     switch(type) {
-    case Geometry::EntityType::Vertex:
+    case RenderEntityType::Vertex:
         return hasAny(m_pickTypes, PickTypes::Vertex);
-    case Geometry::EntityType::Edge:
+    case RenderEntityType::Edge:
         return hasAny(m_pickTypes, PickTypes::Edge);
-    case Geometry::EntityType::Wire:
+    case RenderEntityType::Wire:
         return hasAny(m_pickTypes, PickTypes::Wire);
-    case Geometry::EntityType::Face:
+    case RenderEntityType::Face:
         return hasAny(m_pickTypes, PickTypes::Face);
-    case Geometry::EntityType::Solid:
+    case RenderEntityType::Solid:
         return hasAny(m_pickTypes, PickTypes::Solid);
-    case Geometry::EntityType::Part:
+    case RenderEntityType::Part:
         return hasAny(m_pickTypes, PickTypes::Part);
-    case Geometry::EntityType::MeshNode:
+    case RenderEntityType::MeshNode:
         return hasAny(m_pickTypes, PickTypes::MeshNode);
-    case Geometry::EntityType::MeshElement:
+    case RenderEntityType::MeshElement:
         return hasAny(m_pickTypes, PickTypes::MeshElement);
     default:
         return false;
     }
 }
 
-bool SelectManager::addSelection(Geometry::EntityUID uid, Geometry::EntityType type) {
-    if(!isValidSelection(uid, type)) {
+bool SelectManager::addSelection(uint64_t uid56, RenderEntityType type) {
+    if(!isValidSelection(uid56, type)) {
         return false;
     }
 
     bool added = false;
     {
         std::lock_guard<std::mutex> lock(m_mutex);
-        const PickResult pr{type, uid};
+        const PickResult pr{type, uid56};
         if(m_selections.find(pr) == m_selections.end()) {
             m_selections.insert(pr);
             added = true;
@@ -108,42 +108,42 @@ bool SelectManager::addSelection(Geometry::EntityUID uid, Geometry::EntityType t
     }
 
     if(added) {
-        const PickResult pr{type, uid};
+        const PickResult pr{type, uid56};
         m_selectionChanged.emitSignal(pr, SelectionChangeAction::Added);
     }
 
     return added;
 }
 
-bool SelectManager::removeSelection(Geometry::EntityUID uid, Geometry::EntityType type) {
-    if(!isValidSelection(uid, type)) {
+bool SelectManager::removeSelection(uint64_t uid56, RenderEntityType type) {
+    if(!isValidSelection(uid56, type)) {
         return false;
     }
 
     bool removed = false;
     {
         std::lock_guard<std::mutex> lock(m_mutex);
-        const PickResult pr{type, uid};
+        const PickResult pr{type, uid56};
         if(m_selections.erase(pr) > 0) {
             removed = true;
         }
     }
 
     if(removed) {
-        const PickResult pr{type, uid};
+        const PickResult pr{type, uid56};
         m_selectionChanged.emitSignal(pr, SelectionChangeAction::Removed);
     }
 
     return removed;
 }
 
-bool SelectManager::containsSelection(Geometry::EntityUID uid, Geometry::EntityType type) const {
-    if(!isValidSelection(uid, type)) {
+bool SelectManager::containsSelection(uint64_t uid56, RenderEntityType type) const {
+    if(!isValidSelection(uid56, type)) {
         return false;
     }
 
     std::lock_guard<std::mutex> lock(m_mutex);
-    const PickResult pr{type, uid};
+    const PickResult pr{type, uid56};
     return m_selections.find(pr) != m_selections.end();
 }
 
@@ -224,8 +224,8 @@ SelectManager::PickTypes SelectManager::normalizePickTypes(PickTypes types) {
     return types & vef_mask;
 }
 
-bool SelectManager::isValidSelection(Geometry::EntityUID uid, Geometry::EntityType type) {
-    return (type != Geometry::EntityType::None) && (uid != Geometry::INVALID_ENTITY_UID);
+bool SelectManager::isValidSelection(uint64_t uid56, RenderEntityType type) {
+    return (type != RenderEntityType::None) && (uid56 != 0);
 }
 
 } // namespace OpenGeoLab::Render

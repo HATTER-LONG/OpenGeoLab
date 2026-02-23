@@ -4,16 +4,17 @@
 
 OpenGeoLab uses a **modular pass-based OpenGL rendering pipeline** with three layers:
 
-1. **SceneRenderer (Facade)** — Public API maintaining backward compatibility
+1. **ISceneRenderer (Interface)** — Public API, created via component factory
 2. **RendererCore (Central Engine)** — Manages GL context, shaders, resources, and pass execution
 3. **RenderPass Implementations** — Individual rendering stages
 
 ```
                          ┌──────────────────────┐
-                         │   SceneRenderer       │  ← Facade (public API)
-                         │   (scene_renderer.hpp)│
+                         │  ISceneRenderer       │  ← Interface (public API)
+                         │  (scene_renderer.hpp) │
                          └─────────┬────────────┘
-                                   │ delegates
+                                   │ implemented by SceneRenderer
+                                   │ (created via component factory)
                          ┌─────────▼────────────┐
                          │   RendererCore        │  ← GL resource manager
                          │   (renderer_core.hpp) │
@@ -53,7 +54,7 @@ Per frame, `RendererCore::render()` executes passes in registration order:
 
 ### SceneRenderer (`scene_renderer.hpp`)
 
-Thin facade over RendererCore + registered passes. Maintains the original public API for backward compatibility with `GLViewportRenderer` in `opengl_viewport.cpp`.
+Implementation of `ISceneRenderer` interface, created via `SceneRendererFactory` (component factory pattern). `GLViewportRenderer` creates the instance through the factory, allowing potential alternative implementations.
 
 **Responsibilities:**
 - Initialize the render pipeline (register passes, create shaders)
@@ -149,11 +150,16 @@ DocumentRenderData ◄──── merge ────── DocumentRenderData
     │ RendererCore::uploadMeshData()
     ▼
 RenderBatch (GPU)
-    ├── faceMeshBuffers      (VAO/VBO/EBO per face)
-    ├── edgeMeshBuffers      (VAO/VBO/EBO per edge)
-    ├── vertexMeshBuffers    (VAO/VBO per vertex)
-    ├── meshElementMeshBuffers (VAO/VBO/EBO per mesh element)
-    └── meshNodeMeshBuffers  (VAO/VBO per mesh node)
+    ├── faceBuffer           (single VAO/VBO/EBO, all faces batched)
+    ├── edgeBuffer           (single VAO/VBO/EBO, all edges batched)
+    ├── vertexBuffer         (single VAO/VBO, all vertices batched)
+    ├── meshElementBuffer    (single VAO/VBO/EBO, all mesh elements batched)
+    ├── meshNodeBuffer       (single VAO/VBO, all mesh nodes batched)
+    ├── faceEntities         (RenderEntityInfoMap for sub-draw)
+    ├── edgeEntities         (RenderEntityInfoMap for sub-draw)
+    ├── vertexEntities       (RenderEntityInfoMap for sub-draw)
+    ├── meshElementEntities  (RenderEntityInfoMap for sub-draw)
+    └── meshNodeEntities     (RenderEntityInfoMap for sub-draw)
 ```
 
 ### Vertex Layout (RenderVertex)
@@ -166,15 +172,14 @@ RenderBatch (GPU)
 
 Total stride: 40 bytes per vertex.
 
-### Entity Identification in RenderableBuffer
+### Entity Identification in RenderBatch
 
-Each `RenderableBuffer` carries:
-- `m_entityType` / `m_entityUid` — The entity this buffer represents
+With batched rendering, entity metadata is stored in `RenderEntityInfoMap` (keyed by `RenderUID`), not per-buffer. Each `RenderEntityInfo` entry carries:
+- `m_renderUID` — Packed 64-bit identifier (8-bit type + 56-bit uid)
 - `m_owningPartUid` — The Part this entity belongs to (for visibility/selection)
-- `m_owningSolidUid` — The Solid this entity belongs to
-- `m_owningWireUid` — The Wire(s) this entity belongs to
 - `m_centroid` — Bounding box center (used for outline scaling)
-- `m_hoverColor` / `m_selectedColor` — Override colors for highlighting
+- `m_indexOffset` / `m_indexCount` — Sub-range within the shared index buffer (for indexed draws)
+- `m_vertexOffset` / `m_vertexCount` — Sub-range within the shared vertex buffer (for non-indexed draws)
 
 ## Shader Programs
 

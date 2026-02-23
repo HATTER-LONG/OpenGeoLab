@@ -392,3 +392,70 @@
 - `elementSize` 为非正数
 - Gmsh 导入/剖分失败
 - 操作被取消
+
+### 5.2 query_mesh_entity_info
+- action：`"query_mesh_entity_info"`
+- 用途：根据 QML 拾取返回的 (uid, type) 列表，查询网格节点/单元的详细信息（用于 Mesh Query 页面）。
+
+请求：
+```json
+{
+  "action": "query_mesh_entity_info",
+  "entities": [
+    { "uid": 42, "type": "MeshNode" },
+    { "uid": 7, "type": "MeshElement" }
+  ]
+}
+```
+
+字段说明：
+- `entities`（必须）：要查询的网格实体列表，每项含 `uid`（整数）和 `type`（`"MeshNode"` 或 `"MeshElement"`）
+
+响应（成功）：
+```json
+{
+  "success": true,
+  "total": 2,
+  "entities": [
+    {
+      "type": "MeshNode",
+      "nodeId": 42,
+      "position": [1.0, 2.0, 3.0],
+      "adjacentElements": [
+        { "elementId": 1, "elementUID": 1, "elementType": "Triangle" }
+      ],
+      "adjacentNodes": [
+        { "nodeId": 43, "position": [1.5, 2.5, 3.5] }
+      ]
+    },
+    {
+      "type": "MeshElement",
+      "elementId": 7,
+      "elementUID": 7,
+      "elementType": "Triangle",
+      "nodeCount": 3,
+      "nodes": [
+        { "nodeId": 1, "position": [0.0, 0.0, 0.0] },
+        { "nodeId": 2, "position": [1.0, 0.0, 0.0] },
+        { "nodeId": 3, "position": [0.5, 1.0, 0.0] }
+      ],
+      "adjacentElements": [
+        { "elementId": 8, "elementUID": 8, "elementType": "Triangle" }
+      ]
+    }
+  ],
+  "not_found": []
+}
+```
+
+响应（失败）示例：
+```json
+{ "success": false, "error": "Missing or invalid 'entities' array" }
+```
+
+可能的失败原因：
+- 参数不是 JSON 对象
+- 缺少或非法的 `entities` 数组
+- 实体句柄缺少 `uid` 或 `type` 字段
+- 网格文档未加载
+- 操作被取消

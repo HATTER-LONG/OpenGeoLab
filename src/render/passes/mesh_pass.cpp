@@ -1,10 +1,12 @@
 /**
  * @file mesh_pass.cpp
- * @brief MeshPass implementation - FEM mesh element and node rendering
+ * @brief MeshPass implementation - batched FEM mesh element and node rendering
+ *
+ * Uses one draw call per category (elements, nodes) for base rendering,
+ * plus sub-draw calls for hover/selection highlighting.
  */
 
 #include "render/passes/mesh_pass.hpp"
-#include "render/render_scene_controller.hpp"
 #include "render/renderer_core.hpp"
 #include "util/logger.hpp"
 
@@ -34,7 +36,7 @@ void MeshPass::execute(QOpenGLFunctions& gl, const RenderPassContext& ctx) {
     }
 
     auto& batch = core->batch();
-    if(batch.meshElementMeshes().empty() && batch.meshNodeMeshes().empty()) {
+    if(!batch.meshElementBuffer().isValid() && !batch.meshNodeBuffer().isValid()) {
         return;
     }
 
@@ -68,56 +70,79 @@ void MeshPass::execute(QOpenGLFunctions& gl, const RenderPassContext& ctx) {
     shader->setUniformValue(m_useLightingLoc, 0); // Mesh uses flat color, no lighting
 
     const auto& sm = SelectManager::instance();
-    const auto& scene_ctrl = RenderSceneController::instance();
 
-    // Render mesh elements (wireframe lines)
-    gl.glDepthFunc(GL_LEQUAL);
+    // Render mesh elements (wireframe lines) — one drawAll + sub-draws
+    auto& elem_buf = batch.meshElementBuffer();
+    if(elem_buf.isValid()) {
+        gl.glDepthFunc(GL_LEQUAL);
+        gl.glLineWidth(1.5f);
 
-    for(auto& buf : batch.meshElementMeshes()) {
-        if(!scene_ctrl.isPartMeshVisible(buf.m_owningPartUid)) {
-            continue;
+        shader->setUniformValue(m_useOverrideColorLoc, 0);
+        RenderBatch::drawAll(gl, elem_buf);
+
+        // Hover/selection overlay for elements
+        for(const auto& [packed_uid, info] : batch.meshElementEntities()) {
+            const auto uid56 = info.m_uid.uid56();
+            const auto entity_type = info.m_uid.type();
+
+            const bool is_selected = sm.containsSelection(uid56, entity_type);
+            const bool is_hover =
+                (m_hoverType == entity_type) && (uid56 == m_hoverUid56) && (m_hoverUid56 != 0);
+
+            if(is_selected) {
+                gl.glLineWidth(3.0f);
+                shader->setUniformValue(m_useOverrideColorLoc, 1);
+                shader->setUniformValue(m_overrideColorLoc,
+                                        QVector4D(info.m_selectedColor[0], info.m_selectedColor[1],
+                                                  info.m_selectedColor[2],
+                                                  info.m_selectedColor[3]));
+                RenderBatch::drawIndexRange(gl, elem_buf, info.m_indexOffset, info.m_indexCount);
+            } else if(is_hover) {
+                gl.glLineWidth(3.0f);
+                shader->setUniformValue(m_useOverrideColorLoc, 1);
+                shader->setUniformValue(m_overrideColorLoc,
+                                        QVector4D(info.m_hoverColor[0], info.m_hoverColor[1],
+                                                  info.m_hoverColor[2], info.m_hoverColor[3]));
+                RenderBatch::drawIndexRange(gl, elem_buf, info.m_indexOffset, info.m_indexCount);
+            }
         }
-        const bool is_hover = isMeshEntityHovered(buf);
-        const float line_width = is_hover ? 3.0f : 1.5f;
-        gl.glLineWidth(line_width);
-
-        const bool is_selected = isMeshSelected(buf, sm);
-
-        if(is_selected) {
-            shader->setUniformValue(m_useOverrideColorLoc, 1);
-            shader->setUniformValue(m_overrideColorLoc, buf.m_selectedColor);
-        } else if(is_hover) {
-            shader->setUniformValue(m_useOverrideColorLoc, 1);
-            shader->setUniformValue(m_overrideColorLoc, buf.m_hoverColor);
-        } else {
-            shader->setUniformValue(m_useOverrideColorLoc, 0);
-        }
-
-        RenderBatch::draw(gl, buf);
     }
 
-    // Render mesh nodes (points)
-    for(auto& buf : batch.meshNodeMeshes()) {
-        if(!scene_ctrl.isPartMeshVisible(buf.m_owningPartUid)) {
-            continue;
+    // Render mesh nodes (points) — one drawAll + sub-draws
+    auto& node_buf = batch.meshNodeBuffer();
+    if(node_buf.isValid()) {
+        shader->setUniformValue(m_pointSizeLoc, 4.0f);
+        shader->setUniformValue(m_useOverrideColorLoc, 0);
+        RenderBatch::drawAll(gl, node_buf, GL_POINTS);
+
+        // Hover/selection overlay for nodes
+        for(const auto& [packed_uid, info] : batch.meshNodeEntities()) {
+            const auto uid56 = info.m_uid.uid56();
+            const auto entity_type = info.m_uid.type();
+
+            const bool is_selected = sm.containsSelection(uid56, entity_type);
+            const bool is_hover =
+                (m_hoverType == entity_type) && (uid56 == m_hoverUid56) && (m_hoverUid56 != 0);
+
+            if(is_selected) {
+                shader->setUniformValue(m_pointSizeLoc, 5.0f);
+                shader->setUniformValue(m_useOverrideColorLoc, 1);
+                shader->setUniformValue(m_overrideColorLoc,
+                                        QVector4D(info.m_selectedColor[0], info.m_selectedColor[1],
+                                                  info.m_selectedColor[2],
+                                                  info.m_selectedColor[3]));
+                RenderBatch::drawVertexRange(gl, node_buf, info.m_vertexOffset, info.m_vertexCount,
+                                             GL_POINTS);
+            } else if(is_hover) {
+                shader->setUniformValue(m_pointSizeLoc, 7.0f);
+                shader->setUniformValue(m_useOverrideColorLoc, 1);
+                shader->setUniformValue(m_overrideColorLoc,
+                                        QVector4D(info.m_hoverColor[0], info.m_hoverColor[1],
+                                                  info.m_hoverColor[2], info.m_hoverColor[3]));
+                RenderBatch::drawVertexRange(gl, node_buf, info.m_vertexOffset, info.m_vertexCount,
+                                             GL_POINTS);
+            }
         }
-        const bool is_hover = isMeshEntityHovered(buf);
-        const bool is_selected = isMeshSelected(buf, sm);
-
-        const float point_size = is_hover ? 7.0f : is_selected ? 5.0f : 4.0f;
-        shader->setUniformValue(m_pointSizeLoc, point_size);
-
-        if(is_selected) {
-            shader->setUniformValue(m_useOverrideColorLoc, 1);
-            shader->setUniformValue(m_overrideColorLoc, buf.m_selectedColor);
-        } else if(is_hover) {
-            shader->setUniformValue(m_useOverrideColorLoc, 1);
-            shader->setUniformValue(m_overrideColorLoc, buf.m_hoverColor);
-        } else {
-            shader->setUniformValue(m_useOverrideColorLoc, 0);
-        }
-
-        RenderBatch::draw(gl, buf, GL_POINTS);
     }
 
     gl.glDepthFunc(GL_LESS);
@@ -132,26 +157,14 @@ void MeshPass::cleanup(QOpenGLFunctions& gl) {
     LOG_DEBUG("MeshPass: Cleanup");
 }
 
-void MeshPass::setHighlightedEntity(Geometry::EntityUID uid, Geometry::EntityType type) {
-    if(type == Geometry::EntityType::None || uid == Geometry::INVALID_ENTITY_UID) {
-        m_hoverType = Geometry::EntityType::None;
-        m_hoverUid = Geometry::INVALID_ENTITY_UID;
+void MeshPass::setHighlightedEntity(uint64_t uid56, RenderEntityType type) {
+    if(type == RenderEntityType::None || uid56 == 0) {
+        m_hoverType = RenderEntityType::None;
+        m_hoverUid56 = 0;
         return;
     }
     m_hoverType = type;
-    m_hoverUid = static_cast<Geometry::EntityUID>(uid & 0xFFFFFFu);
-}
-
-bool MeshPass::isMeshEntityHovered(const RenderableBuffer& buf) const {
-    return (m_hoverType == buf.m_entityType) && uidMatches24(buf.m_entityUid, m_hoverUid);
-}
-
-bool MeshPass::isMeshSelected(const RenderableBuffer& buf, const SelectManager& sm) const {
-    return sm.containsSelection(Geometry::EntityRef{buf.m_entityUid, buf.m_entityType});
-}
-
-bool MeshPass::uidMatches24(Geometry::EntityUID a, Geometry::EntityUID b) {
-    return (static_cast<uint32_t>(a) & 0xFFFFFFu) == (static_cast<uint32_t>(b) & 0xFFFFFFu);
+    m_hoverUid56 = uid56;
 }
 
 } // namespace OpenGeoLab::Render

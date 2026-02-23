@@ -299,3 +299,70 @@ Possible failure reasons:
 - `elementSize` is non-positive
 - Gmsh import/meshing failed
 - Operation was cancelled
+
+### 5.2 query_mesh_entity_info
+- action: `"query_mesh_entity_info"`
+- purpose: query detailed information for picked mesh nodes/elements (Mesh Query page).
+
+Request:
+```json
+{
+  "action": "query_mesh_entity_info",
+  "entities": [
+    { "uid": 42, "type": "MeshNode" },
+    { "uid": 7, "type": "MeshElement" }
+  ]
+}
+```
+
+Fields:
+- `entities` (required): array of mesh entity handles, each with `uid` (integer) and `type` (`"MeshNode"` or `"MeshElement"`)
+
+Response (success):
+```json
+{
+  "success": true,
+  "total": 2,
+  "entities": [
+    {
+      "type": "MeshNode",
+      "nodeId": 42,
+      "position": [1.0, 2.0, 3.0],
+      "adjacentElements": [
+        { "elementId": 1, "elementUID": 1, "elementType": "Triangle" }
+      ],
+      "adjacentNodes": [
+        { "nodeId": 43, "position": [1.5, 2.5, 3.5] }
+      ]
+    },
+    {
+      "type": "MeshElement",
+      "elementId": 7,
+      "elementUID": 7,
+      "elementType": "Triangle",
+      "nodeCount": 3,
+      "nodes": [
+        { "nodeId": 1, "position": [0.0, 0.0, 0.0] },
+        { "nodeId": 2, "position": [1.0, 0.0, 0.0] },
+        { "nodeId": 3, "position": [0.5, 1.0, 0.0] }
+      ],
+      "adjacentElements": [
+        { "elementId": 8, "elementUID": 8, "elementType": "Triangle" }
+      ]
+    }
+  ],
+  "not_found": []
+}
+```
+
+Failure response example:
+```json
+{ "success": false, "error": "Missing or invalid 'entities' array" }
+```
+
+Possible failure reasons:
+- Parameters are not a JSON object
+- Missing or invalid `entities` array
+- Entity handle missing `uid` or `type` field
+- No active mesh document loaded
+- Operation was cancelled

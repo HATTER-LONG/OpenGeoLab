@@ -1,3 +1,7 @@
+/**
+ * @file core_identity.hpp
+ * @brief Generic identity and hash templates for entity key/reference types
+ */
 #pragma once
 #include <compare>
 #include <concepts>
@@ -7,11 +11,10 @@
 namespace OpenGeoLab::Util {
 
 /**
- * ============================================================
- * CoreUidIdentity (Lightweight Reference)
- * ============================================================
- * Holds (uid, type) only. Defined first so that CoreIdentity
- * can declare an implicit conversion operator to it.
+ * @brief Lightweight identity holding only (uid, type) for type-scoped entity references.
+ *
+ * Defined before CoreIdentity so that the full key can declare
+ * an implicit conversion operator to this lighter reference form.
  */
 template <typename UidT, typename TypeT, UidT InvalidUid, TypeT InvalidType>
     requires std::is_enum_v<TypeT> && std::totally_ordered<UidT>
@@ -47,6 +50,7 @@ struct CoreUidIdentity {
     }
 };
 
+/// @brief Hash functor for CoreUidIdentity-like types with (uid, type) members.
 template <typename Key>
     requires requires(const Key& k) {
         { k.m_uid };
@@ -71,9 +75,9 @@ struct CoreUidIdentityHash {
 };
 
 /**
- * ============================================================
- * CoreIdentity (Full Key: id + uid + type)
- * ============================================================
+ * @brief Full identity key holding (id, uid, type) for globally unique entity identification.
+ *
+ * Implicitly convertible to the corresponding CoreUidIdentity (drops the id field).
  */
 template <typename IdT,
           typename UidT,
@@ -125,6 +129,7 @@ struct CoreIdentity {
     }
 };
 
+/// @brief Hash functor for CoreIdentity-like types with (id, uid, type) members.
 template <typename Key>
     requires requires(const Key& k) {
         { k.m_id };

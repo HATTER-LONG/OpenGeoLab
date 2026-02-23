@@ -1,99 +1,144 @@
 /**
  * @file scene_renderer.hpp
- * @brief OpenGL scene renderer facade
+ * @brief Abstract scene renderer interface for OpenGL rendering
  *
- * SceneRenderer is now a thin facade over RendererCore + registered RenderPasses.
- * It maintains the original public API for backward compatibility with
- * GLViewportRenderer in opengl_viewport.cpp.
+ * ISceneRenderer defines the public API for the rendering pipeline.
+ * All internal details (render passes, highlight strategies, renderer core)
+ * are hidden behind this interface. Concrete implementations are created
+ * via SceneRendererFactory.
  */
 
 #pragma once
 
-#include "render/passes/geometry_pass.hpp"
-#include "render/passes/highlight_pass.hpp"
-#include "render/passes/mesh_pass.hpp"
-#include "render/passes/picking_pass.hpp"
 #include "render/render_data.hpp"
-#include "render/renderer_core.hpp"
+
+#include <kangaroo/util/component_factory.hpp>
+#include <kangaroo/util/noncopyable.hpp>
 
 #include <QMatrix4x4>
+#include <QPointF>
 #include <QSize>
+#include <QSizeF>
 #include <QVector3D>
+#include <cstdint>
 #include <memory>
 
 namespace OpenGeoLab::Render {
 
-class SelectManager;
+/**
+ * @brief Action requested by the viewport for entity picking
+ */
+enum class PickAction : uint8_t {
+    None = 0,   ///< No action
+    Add = 1,    ///< Add entity to selection
+    Remove = 2, ///< Remove entity from selection
+};
 
 /**
- * @brief Facade for the modular rendering pipeline
+ * @brief Input parameters for pixel picking
  *
- * Delegates to RendererCore for GL resource management and pass scheduling.
- * Keeps the original API surface so existing code can migrate incrementally.
+ * Encapsulates all information needed to perform a pick operation,
+ * including cursor position, viewport geometry, and camera matrices.
  */
-class SceneRenderer {
-public:
-    SceneRenderer();
-    ~SceneRenderer();
-
-    SceneRenderer(const SceneRenderer&) = delete;
-    SceneRenderer& operator=(const SceneRenderer&) = delete;
-    SceneRenderer(SceneRenderer&&) = delete;
-    SceneRenderer& operator=(SceneRenderer&&) = delete;
-
-    void initialize();
-    [[nodiscard]] bool isInitialized() const;
-
-    void setViewportSize(const QSize& size);
-    void uploadMeshData(const DocumentRenderData& render_data);
-
-    /**
-     * @brief Render the picking pass and populate the internal pick FBO.
-     */
-    void renderPicking(const QMatrix4x4& view_matrix, const QMatrix4x4& projection_matrix);
-
-    /**
-     * @brief Set the entity to be highlighted on hover.
-     */
-    void setHighlightedEntity(Geometry::EntityUID uid, Geometry::EntityType type);
-
-    /// @overload EntityRef-based convenience.
-    void setHighlightedEntity(const Geometry::EntityRef& ref) {
-        setHighlightedEntity(ref.m_uid, ref.m_type);
-    }
-
-    /**
-     * @brief Render the complete scene (delegates to RendererCore passes).
-     */
-    void render(const QVector3D& camera_pos,
-                const QMatrix4x4& view_matrix,
-                const QMatrix4x4& projection_matrix);
-
-    void cleanup();
-
-    // -------------------------------------------------------------------------
-    // Access to individual passes (for advanced use)
-    // -------------------------------------------------------------------------
-
-    [[nodiscard]] RendererCore& core() { return m_core; }
-    [[nodiscard]] const RendererCore& core() const { return m_core; }
-
-    [[nodiscard]] GeometryPass* geometryPass() const { return m_geometryPass; }
-    [[nodiscard]] MeshPass* meshPass() const { return m_meshPass; }
-    [[nodiscard]] PickingPass* pickingPass() const { return m_pickingPass.get(); }
-    [[nodiscard]] HighlightPass* highlightPass() const { return m_highlightPass; }
-
-private:
-    RendererCore m_core;
-
-    // Non-owning pointers to registered passes (RendererCore owns them)
-    GeometryPass* m_geometryPass{nullptr};
-    MeshPass* m_meshPass{nullptr};
-    HighlightPass* m_highlightPass{nullptr};
-
-    // PickingPass is owned directly by SceneRenderer (not RendererCore)
-    // because it is executed on-demand, not as part of the main pass list.
-    std::unique_ptr<PickingPass> m_pickingPass;
+struct PickingInput {
+    QPointF m_cursorPos;                   ///< Cursor position in item coordinates
+    QSizeF m_itemSize;                     ///< Item size in logical pixels
+    qreal m_devicePixelRatio{1.0};         ///< Device pixel ratio (HiDPI scaling)
+    QMatrix4x4 m_viewMatrix;               ///< View transformation matrix
+    QMatrix4x4 m_projectionMatrix;         ///< Projection transformation matrix
+    PickAction m_action{PickAction::None}; ///< Pending pick action
 };
+
+/**
+ * @brief Abstract interface for the scene rendering pipeline
+ *
+ * Provides a clean public API for viewport rendering, data upload,
+ * and picking. All internal implementation details (render passes,
+ * shader management, highlight strategies) are hidden.
+ *
+ * Create instances via SceneRendererFactory.
+ */
+class ISceneRenderer : public Kangaroo::Util::NonCopyMoveable {
+public:
+    ISceneRenderer() = default;
+    virtual ~ISceneRenderer() = default;
+
+    /**
+     * @brief Initialize OpenGL resources and the rendering pipeline
+     * @note Must be called with a valid OpenGL context current
+     */
+    virtual void initialize() = 0;
+
+    /**
+     * @brief Check whether the renderer has been initialized
+     */
+    [[nodiscard]] virtual bool isInitialized() const = 0;
+
+    /**
+     * @brief Update the viewport size
+     * @param size New viewport size in pixels
+     */
+    virtual void setViewportSize(const QSize& size) = 0;
+
+    /**
+     * @brief Upload render data to GPU buffers
+     * @param render_data Document render data to upload
+     */
+    virtual void uploadMeshData(const DocumentRenderData& render_data) = 0;
+
+    /**
+     * @brief Process pixel picking for hover and selection
+     *
+     * Internally handles:
+     * - Pick-enable check via SelectManager
+     * - Rendering the pick pass
+     * - Reading and decoding pick pixels
+     * - Owner entity mapping (Face -> Part/Solid/Wire)
+     * - Hover highlight updates
+     * - Selection add/remove via SelectManager
+     *
+     * @param input Picking parameters (cursor, viewport, matrices, action)
+     */
+    virtual void processPicking(const PickingInput& input) = 0;
+
+    /**
+     * @brief Render the complete scene
+     * @param camera_pos Camera position in world space
+     * @param view_matrix View transformation matrix
+     * @param projection_matrix Projection transformation matrix
+     */
+    virtual void render(const QVector3D& camera_pos,
+                        const QMatrix4x4& view_matrix,
+                        const QMatrix4x4& projection_matrix) = 0;
+
+    /**
+     * @brief Release all GPU resources
+     */
+    virtual void cleanup() = 0;
+};
+
+/**
+ * @brief Factory for creating ISceneRenderer instances
+ *
+ * Registered in g_ComponentFactory. Create instances via:
+ * @code
+ * auto renderer = g_ComponentFactory.createObjectWithID<SceneRendererFactory>("SceneRenderer");
+ * @endcode
+ */
+class SceneRendererFactory
+    : public Kangaroo::Util::FactoryTraits<SceneRendererFactory, ISceneRenderer> {
+public:
+    SceneRendererFactory() = default;
+    ~SceneRendererFactory() = default;
+
+    /** @brief Create a new SceneRenderer instance. @return Unique pointer to the implementation. */
+    virtual tObjectPtr create() = 0;
+};
+
+/**
+ * @brief Register SceneRendererFactory into the global component factory
+ * @note Called once during application startup (typically from registerServices)
+ */
+void registerSceneRendererFactory();
 
 } // namespace OpenGeoLab::Render

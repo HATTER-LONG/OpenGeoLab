@@ -194,29 +194,31 @@ private:
     void removeEntityRecursive(EntityId entity_id, size_t& removed_count);
 
     /**
-     * @brief Generate render mesh for a face entity
+     * @brief Append face entity data to the batched render data
+     * @param data Output render data (face batch + entity info map)
      * @param entity Face entity
      * @param options Tessellation options
-     * @return Render mesh for the face
      */
-    [[nodiscard]] Render::RenderMesh generateFaceMesh(const GeometryEntityImplPtr& entity,
-                                                      const Render::TessellationOptions& options);
+    void appendFaceToBatch(Render::DocumentRenderData& data,
+                           const GeometryEntityImplPtr& entity,
+                           const Render::TessellationOptions& options);
 
     /**
-     * @brief Generate render mesh for an edge entity
+     * @brief Append edge entity data to the batched render data
+     * @param data Output render data (edge batch + entity info map)
      * @param entity Edge entity
      * @param options Tessellation options
-     * @return Render mesh for the edge
      */
-    [[nodiscard]] Render::RenderMesh generateEdgeMesh(const GeometryEntityImplPtr& entity,
-                                                      const Render::TessellationOptions& options);
+    void appendEdgeToBatch(Render::DocumentRenderData& data,
+                           const GeometryEntityImplPtr& entity,
+                           const Render::TessellationOptions& options);
 
     /**
-     * @brief Generate render mesh for a vertex entity
+     * @brief Append vertex entity data to the batched render data
+     * @param data Output render data (vertex batch + entity info map)
      * @param entity Vertex entity
-     * @return Render mesh for the vertex
      */
-    [[nodiscard]] Render::RenderMesh generateVertexMesh(const GeometryEntityImplPtr& entity);
+    void appendVertexToBatch(Render::DocumentRenderData& data, const GeometryEntityImplPtr& entity);
 
     /**
      * @brief Emit a change notification to all subscribers

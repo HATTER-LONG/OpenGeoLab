@@ -5,14 +5,13 @@
  * SelectManager is a render-layer singleton that stores:
  * - Whether the viewport is currently in picking mode
  * - Which entity types are eligible for picking
- * - The current set of picked results (type + uid)
+ * - The current set of picked results (RenderEntityType + uid56)
  *
- * It exposes lightweight signals (Util::Signal) so UI/viewports can subscribe
- * and trigger redraws when selection state changes.
+ * Uses RenderEntityType to unify geometry and mesh entity identification.
  */
 
 #pragma once
-#include "geometry/geometry_types.hpp"
+#include "render/render_types.hpp"
 #include "util/signal.hpp"
 #include <kangaroo/util/noncopyable.hpp>
 
@@ -45,39 +44,34 @@ public:
     };
 
     /**
-     * @brief A picked entity reference
+     * @brief A picked entity reference using RenderEntityType + 56-bit uid
      */
     struct PickResult {
-        Geometry::EntityType m_type{Geometry::EntityType::None};
-        Geometry::EntityUID m_uid{Geometry::INVALID_ENTITY_UID};
+        RenderEntityType m_type{RenderEntityType::None};
+        uint64_t m_uid56{0};
 
         PickResult() = default;
-        PickResult(Geometry::EntityType type, Geometry::EntityUID uid) : m_type(type), m_uid(uid) {}
+        PickResult(RenderEntityType type, uint64_t uid56) : m_type(type), m_uid56(uid56) {}
 
-        /// Construct from EntityRef for seamless interop.
-        PickResult(const Geometry::EntityRef& ref)
-            : m_type(ref.m_type), m_uid(ref.m_uid) {} // NOLINT
+        /// Construct from RenderUID
+        explicit PickResult(RenderUID uid) : m_type(uid.type()), m_uid56(uid.uid56()) {}
 
-        /// Convert to EntityRef (lightweight, no allocation).
-        [[nodiscard]] operator Geometry::EntityRef() const noexcept { // NOLINT
-            return {m_uid, m_type};
+        /// Convert to RenderUID
+        [[nodiscard]] RenderUID toRenderUID() const noexcept {
+            return RenderUID::encode(m_type, m_uid56);
         }
-
-        /// Convert to EntityRef explicitly.
-        [[nodiscard]] Geometry::EntityRef toRef() const noexcept { return {m_uid, m_type}; }
 
         bool operator==(const PickResult& other) const noexcept {
-            return m_type == other.m_type && m_uid == other.m_uid;
+            return m_type == other.m_type && m_uid56 == other.m_uid56;
         }
         [[nodiscard]] bool isValid() const noexcept {
-            return (m_type != Geometry::EntityType::None) &&
-                   (m_uid != Geometry::INVALID_ENTITY_UID);
+            return (m_type != RenderEntityType::None) && (m_uid56 != 0);
         }
 
         struct Hash {
             std::size_t operator()(const PickResult& pr) const noexcept {
                 std::size_t h1 = std::hash<uint32_t>{}(static_cast<uint32_t>(pr.m_type));
-                std::size_t h2 = std::hash<Geometry::EntityUID>{}(pr.m_uid);
+                std::size_t h2 = std::hash<uint64_t>{}(pr.m_uid56);
                 return h1 ^ (h2 << 1);
             }
         };
@@ -89,99 +83,80 @@ public:
     enum class SelectionChangeAction : uint8_t { Added = 0, Removed = 1, Cleared = 2 };
 
 public:
-    /**
-     * @brief Get singleton instance
-     */
     static SelectManager& instance();
 
     SelectManager();
     ~SelectManager();
 
-    /**
-     * @brief Enable/disable picking mode
-     */
+    /** @brief Enable or disable interactive picking mode. */
     void setPickEnabled(bool enabled);
-
-    /**
-     * @brief Check whether picking mode is enabled
-     */
+    /** @brief Whether interactive picking mode is currently active. */
     [[nodiscard]] bool isPickEnabled() const;
 
-    /**
-     * @brief Set allowed pick types (will be normalized to satisfy exclusivity rules)
-     */
+    /** @brief Set the bitmask of entity types eligible for picking. */
     void setPickTypes(PickTypes types);
-
-    /**
-     * @brief Get allowed pick types
-     */
+    /** @brief Current bitmask of pickable entity types. */
     [[nodiscard]] PickTypes pickTypes() const;
 
     /**
-     * @brief Check if the given entity type is allowed by the current pick types
+     * @brief Check whether entities of @p type are currently pickable.
+     * @param type The render entity type to query.
      */
-    [[nodiscard]] bool isTypePickable(Geometry::EntityType type) const;
+    [[nodiscard]] bool isTypePickable(RenderEntityType type) const;
 
     /**
-     * @brief Add a pick result to the selection set
-     * @return true if added (was not present)
+     * @brief Add an entity to the selection set.
+     * @return true if the entity was newly added, false if already selected.
      */
-    bool addSelection(Geometry::EntityUID uid, Geometry::EntityType type);
-    /// @overload EntityRef-based convenience.
-    bool addSelection(const Geometry::EntityRef& ref) {
-        return addSelection(ref.m_uid, ref.m_type);
+    bool addSelection(uint64_t uid56, RenderEntityType type);
+    bool addSelection(const PickResult& pr) { return addSelection(pr.m_uid56, pr.m_type); }
+
+    /**
+     * @brief Remove an entity from the selection set.
+     * @return true if the entity was removed, false if not found.
+     */
+    bool removeSelection(uint64_t uid56, RenderEntityType type);
+    bool removeSelection(const PickResult& pr) { return removeSelection(pr.m_uid56, pr.m_type); }
+
+    /** @brief Check whether an entity is in the current selection set. */
+    [[nodiscard]] bool containsSelection(uint64_t uid56, RenderEntityType type) const;
+    [[nodiscard]] bool containsSelection(const PickResult& pr) const {
+        return containsSelection(pr.m_uid56, pr.m_type);
     }
 
-    /**
-     * @brief Remove a pick result from the selection set
-     * @return true if removed (was present)
-     */
-    bool removeSelection(Geometry::EntityUID uid, Geometry::EntityType type);
-    /// @overload EntityRef-based convenience.
-    bool removeSelection(const Geometry::EntityRef& ref) {
-        return removeSelection(ref.m_uid, ref.m_type);
-    }
-
-    /**
-     * @brief Check if a pick result exists in the current selection set
-     */
-    [[nodiscard]] bool containsSelection(Geometry::EntityUID uid, Geometry::EntityType type) const;
-    /// @overload EntityRef-based convenience.
-    [[nodiscard]] bool containsSelection(const Geometry::EntityRef& ref) const {
-        return containsSelection(ref.m_uid, ref.m_type);
-    }
-
-    /**
-     * @brief Get current selection results (copy)
-     */
+    /** @brief Return a snapshot of all currently selected entities. */
     [[nodiscard]] std::vector<PickResult> selections() const;
 
-    /**
-     * @brief Clear all selection results
-     */
+    /** @brief Remove all entities from the selection set. */
     void clearSelections();
 
     /**
-     * @brief Subscribe to changes in pick enable/types
+     * @brief Subscribe to pick type changes.
+     * @param callback Invoked with the new PickTypes bitmask.
+     * @return Scoped connection that disconnects on destruction.
      */
     [[nodiscard]] Util::ScopedConnection
     subscribePickSettingsChanged(std::function<void(PickTypes)> callback);
 
     /**
-     * @brief Subscribe to changes in pick enabled state
+     * @brief Subscribe to pick enabled/disabled state changes.
+     * @param callback Invoked with the new enabled state.
+     * @return Scoped connection that disconnects on destruction.
      */
     [[nodiscard]] Util::ScopedConnection
     subscribePickEnabledChanged(std::function<void(bool)> callback);
 
     /**
-     * @brief Subscribe to changes in selection results
+     * @brief Subscribe to selection changes (add, remove, clear).
+     * @param callback Invoked with the affected entity and the action performed.
+     * @return Scoped connection that disconnects on destruction.
      */
     [[nodiscard]] Util::ScopedConnection
     subscribeSelectionChanged(std::function<void(PickResult, SelectionChangeAction)> callback);
 
 private:
     [[nodiscard]] static PickTypes normalizePickTypes(PickTypes types);
-    [[nodiscard]] static bool isValidSelection(Geometry::EntityUID uid, Geometry::EntityType type);
+    [[nodiscard]] static bool isValidSelection(uint64_t uid56, RenderEntityType type);
 
 private:
     mutable std::mutex m_mutex;

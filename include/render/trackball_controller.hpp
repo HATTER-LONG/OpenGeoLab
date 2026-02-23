@@ -38,6 +38,10 @@ public:
     void setViewportSize(const QSizeF& size);
     void setSpeed(float speed);
 
+    /**
+     * @brief Synchronize internal controller state from the given camera.
+     * @param camera Camera state to read current orientation and distance from
+     */
     void syncFromCamera(const Render::CameraState& camera);
 
     bool isActive() const;
@@ -63,6 +67,11 @@ public:
      */
     void end();
 
+    /**
+     * @brief Apply zoom from mouse wheel input.
+     * @param steps Number of wheel steps (positive = zoom in, negative = zoom out)
+     * @param camera Camera state to update with the new zoom distance
+     */
     void wheelZoom(float steps, Render::CameraState& camera);
 
 private:

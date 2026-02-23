@@ -6,6 +6,8 @@
 #include "render/render_service.hpp"
 #include "action/select_control.hpp"
 #include "action/viewport_control.hpp"
+#include "render/scene_renderer.hpp"
+
 
 #include "render/render_action.hpp"
 #include "util/logger.hpp"
@@ -42,6 +44,7 @@ void registerServices() {
     g_ComponentFactory.registInstanceFactoryWithID<RenderServiceFactory>("RenderService");
     g_ComponentFactory.registFactoryWithID<ViewPortControlFactory>("ViewPortControl");
     g_ComponentFactory.registFactoryWithID<SelectControlFactory>("SelectControl");
+    registerSceneRendererFactory();
 }
 
 } // namespace OpenGeoLab::Render

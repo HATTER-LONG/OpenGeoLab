@@ -1,11 +1,15 @@
 /**
  * @file geometry_pass.hpp
  * @brief Geometry rendering pass (faces, edges, vertices with lighting)
+ *
+ * Uses batched rendering: one draw call per category for base geometry,
+ * plus sub-draw calls for selected/hovered entity highlighting.
  */
 
 #pragma once
 
 #include "render/render_pass.hpp"
+#include "render/render_types.hpp"
 #include "render/renderable.hpp"
 #include "render/select_manager.hpp"
 
@@ -16,6 +20,10 @@ namespace OpenGeoLab::Render {
 
 /**
  * @brief Renders the main geometry scene with Phong lighting, hover, and selection highlighting.
+ *
+ * With batched buffers, base rendering uses drawAll() for each category (one draw call).
+ * Hover/selection highlighting uses drawIndexRange()/drawVertexRange() to sub-draw
+ * only the affected entity's portion with an override color.
  */
 class GeometryPass : public RenderPass {
 public:
@@ -31,34 +39,26 @@ public:
 
     /**
      * @brief Set the entity to highlight on hover.
-     * @param uid Entity UID to highlight (lower 24 bits used for matching)
-     * @param type Entity type for hover matching
+     * @param uid56 56-bit entity uid
+     * @param type Render entity type for hover matching
      */
-    void setHighlightedEntity(Geometry::EntityUID uid, Geometry::EntityType type);
-
-    /// @overload EntityRef-based convenience.
-    void setHighlightedEntity(const Geometry::EntityRef& ref) {
-        setHighlightedEntity(ref.m_uid, ref.m_type);
-    }
+    void setHighlightedEntity(uint64_t uid56, RenderEntityType type);
 
 private:
-    void renderFaces(QOpenGLFunctions& gl, RenderBatch& batch, const SelectManager& sm);
-    void renderEdges(QOpenGLFunctions& gl, RenderBatch& batch, const SelectManager& sm);
-    void renderVertices(QOpenGLFunctions& gl, RenderBatch& batch, const SelectManager& sm);
+    void renderFaces(QOpenGLFunctions& gl,
+                     QOpenGLShaderProgram& shader,
+                     RenderBatch& batch,
+                     const SelectManager& sm);
+    void renderEdges(QOpenGLFunctions& gl,
+                     QOpenGLShaderProgram& shader,
+                     RenderBatch& batch,
+                     const SelectManager& sm);
+    void renderVertices(QOpenGLFunctions& gl,
+                        QOpenGLShaderProgram& shader,
+                        RenderBatch& batch,
+                        const SelectManager& sm);
 
-    void setOverrideColor(bool enabled, const QVector4D& color);
-    void drawBuffer(QOpenGLFunctions& gl, RenderableBuffer& buf, GLenum primitive);
-
-    [[nodiscard]] bool isMeshSelected(const RenderableBuffer& buf, const SelectManager& sm) const;
-    [[nodiscard]] bool isFaceHovered(const RenderableBuffer& buf) const;
-    [[nodiscard]] bool isEdgeHovered(const RenderableBuffer& buf) const;
-    [[nodiscard]] bool isVertexHovered(const RenderableBuffer& buf) const;
-
-    [[nodiscard]] static bool uidMatches24(Geometry::EntityUID a, Geometry::EntityUID b);
-    [[nodiscard]] static bool uidMatchesSet24(const std::unordered_set<Geometry::EntityUID>& set,
-                                              Geometry::EntityUID uid);
-
-    std::unique_ptr<QOpenGLShaderProgram> m_shader;
+    void setOverrideColor(QOpenGLShaderProgram& shader, bool enabled, const QVector4D& color = {});
 
     // Uniform locations
     int m_mvpLoc{-1};
@@ -71,8 +71,8 @@ private:
     int m_useOverrideColorLoc{-1};
     int m_overrideColorLoc{-1};
 
-    Geometry::EntityType m_hoverType{Geometry::EntityType::None};
-    Geometry::EntityUID m_hoverUid{Geometry::INVALID_ENTITY_UID};
+    RenderEntityType m_hoverType{RenderEntityType::None};
+    uint64_t m_hoverUid56{0};
 };
 
 } // namespace OpenGeoLab::Render

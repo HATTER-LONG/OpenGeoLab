@@ -108,6 +108,18 @@ QtObject {
                                 tooltip: qsTr("Smooth Mesh")
                             }
                         ]
+                    },
+                    {
+                        title: qsTr("Inspect"),
+                        items: [
+                            {
+                                type: "button",
+                                id: "meshQuery",
+                                text: qsTr("Query"),
+                                iconSource: ribbonConfig.iconBasePath + "query.svg",
+                                tooltip: qsTr("Query Mesh")
+                            }
+                        ]
                     }
                 ]
             },

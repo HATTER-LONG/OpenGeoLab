@@ -47,7 +47,34 @@ MeshElementType gmshTypeToMeshElementType(int gmsh_type) {
         return MeshElementType::Hexa8;
     case 6:
         return MeshElementType::Prism6;
+    case 7:
+        return MeshElementType::Pyramid5;
+    case 8:
+        LOG_WARN("GenerateMeshAction: Unsupported 2nd-order 3-node line (gmsh type 8)");
+        return MeshElementType::Invalid;
+    case 9:
+        LOG_WARN("GenerateMeshAction: Unsupported 2nd-order 6-node triangle (gmsh type 9)");
+        return MeshElementType::Invalid;
+    case 10:
+        LOG_WARN("GenerateMeshAction: Unsupported 2nd-order 9-node quad (gmsh type 10)");
+        return MeshElementType::Invalid;
+    case 11:
+        LOG_WARN("GenerateMeshAction: Unsupported 2nd-order 10-node tetra (gmsh type 11)");
+        return MeshElementType::Invalid;
+    case 12:
+        LOG_WARN("GenerateMeshAction: Unsupported 2nd-order 27-node hexa (gmsh type 12)");
+        return MeshElementType::Invalid;
+    case 13:
+        LOG_WARN("GenerateMeshAction: Unsupported 2nd-order 18-node prism (gmsh type 13)");
+        return MeshElementType::Invalid;
+    case 14:
+        LOG_WARN("GenerateMeshAction: Unsupported 2nd-order 14-node pyramid (gmsh type 14)");
+        return MeshElementType::Invalid;
+    case 15:
+        // 1-node point element, skip silently
+        return MeshElementType::Invalid;
     default:
+        LOG_WARN("GenerateMeshAction: Unknown Gmsh element type {}", gmsh_type);
         return MeshElementType::Invalid;
     }
 }

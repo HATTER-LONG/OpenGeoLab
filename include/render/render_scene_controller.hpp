@@ -210,13 +210,6 @@ public:
     [[nodiscard]] Util::ScopedConnection subscribeGeometryChanged(std::function<void()> callback);
 
     /**
-     * @brief Subscribe to camera changes
-     * @param callback Callback executed when camera updates
-     * @return Scoped connection that disconnects on destruction
-     */
-    [[nodiscard]] Util::ScopedConnection subscribeCameraChanged(std::function<void()> callback);
-
-    /**
      * @brief Subscribe to scene update requests
      *
      * This signal indicates a redraw should happen (e.g., camera changed).
@@ -238,7 +231,6 @@ private:
     bool m_hasGeometry{false};                       ///< Whether geometry is loaded
 
     Util::Signal<> m_geometryChanged;
-    Util::Signal<> m_cameraChanged;
     Util::Signal<> m_sceneNeedsUpdate;
 
     /// Per-part visibility state: {partUID -> {geoVisible, meshVisible}}

@@ -40,7 +40,6 @@ EntityType entityTypeFromString(std::string_view value) {
         {"Face", EntityType::Face},         {"Shell", EntityType::Shell},
         {"Solid", EntityType::Solid},       {"CompSolid", EntityType::CompSolid},
         {"Compound", EntityType::Compound}, {"Part", EntityType::Part},
-        {"MeshNode", EntityType::MeshNode}, {"MeshElement", EntityType::MeshElement},
     };
     auto it = type_map.find(value);
     if(it != type_map.end()) {
@@ -71,10 +70,6 @@ std::string entityTypeToString(EntityType type) {
         return "Compound";
     case EntityType::Part:
         return "Part";
-    case EntityType::MeshNode:
-        return "MeshNode";
-    case EntityType::MeshElement:
-        return "MeshElement";
     default:
         break;
     }

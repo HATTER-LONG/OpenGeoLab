@@ -5,7 +5,7 @@
  * GLViewport provides a QML-integrable 3D viewport that renders geometry
  * using OpenGL. It supports camera manipulation (rotate, pan, zoom) and
  * integrates with RenderSceneController for scene management. The actual rendering
- * is delegated to SceneRenderer from the render module.
+ * is delegated to ISceneRenderer from the render module.
  */
 
 #pragma once
@@ -32,12 +32,12 @@ class GLViewportRenderer;
  * @brief QML-integrable OpenGL viewport for 3D geometry visualization
  *
  * GLViewport provides:
- * - OpenGL rendering of geometry from RenderSceneController via SceneRenderer
+ * - OpenGL rendering of geometry from RenderSceneController via ISceneRenderer
  * - Mouse-based camera manipulation (orbit, pan, zoom)
  * - Integration with the application's render service
  *
  * @note This class handles QML integration and input; rendering logic is
- *       delegated to Render::SceneRenderer.
+ *       delegated to Render::ISceneRenderer.
  */
 class GLViewport : public QQuickFramebufferObject {
     Q_OBJECT
@@ -76,18 +76,9 @@ public:
     [[nodiscard]] qreal devicePixelRatio() const { return m_devicePixelRatio; }
 
     /**
-     * @brief Pending pick action requested by mouse input
-     */
-    enum class PickAction : uint8_t {
-        None = 0,
-        Add = 1,
-        Remove = 2,
-    };
-
-    /**
      * @brief Consume the pending pick action (used by the render thread)
      */
-    [[nodiscard]] PickAction consumePickAction();
+    [[nodiscard]] Render::PickAction consumePickAction();
 signals:
     void hasGeometryChanged();
     void geometryChanged();
@@ -110,7 +101,6 @@ private:
     bool m_hasGeometry{false};
 
     Util::ScopedConnection m_sceneNeedsUpdateConn;
-    Util::ScopedConnection m_cameraChangedConn;
     Util::ScopedConnection m_geometryChangedConn;
     Util::ScopedConnection m_pickSettingsChangedConn;
     Util::ScopedConnection m_selectionChangedConn;
@@ -123,13 +113,13 @@ private:
 
     QPointF m_pressPos;            ///< Position at last mouse press (for click/drag detection)
     bool m_movedSincePress{false}; ///< Whether cursor moved beyond threshold since press
-    PickAction m_pendingPickAction{PickAction::None}; ///< Pending add/remove selection request
+    Render::PickAction m_pendingPickAction{Render::PickAction::None}; ///< Pending pick action
 };
 
 /**
  * @brief OpenGL renderer for GLViewport
  *
- * Handles the actual OpenGL rendering of geometry meshes using SceneRenderer.
+ * Handles the actual OpenGL rendering of geometry meshes using ISceneRenderer.
  * Created by GLViewport::createRenderer().
  */
 class GLViewportRenderer : public QQuickFramebufferObject::Renderer {
@@ -156,8 +146,8 @@ public:
     void synchronize(QQuickFramebufferObject* item) override;
 
 private:
-    const GLViewport* m_viewport{nullptr};                  ///< Parent viewport item
-    std::unique_ptr<Render::SceneRenderer> m_sceneRenderer; ///< Rendering component
+    const GLViewport* m_viewport{nullptr};                   ///< Parent viewport item
+    std::unique_ptr<Render::ISceneRenderer> m_sceneRenderer; ///< Rendering component
 
     bool m_needsDataUpload{false}; ///< Whether mesh data needs uploading
 
@@ -170,10 +160,7 @@ private:
     QPointF m_cursorPos;
     qreal m_devicePixelRatio{1.0};
 
-    Geometry::EntityType m_lastHoverType{Geometry::EntityType::None};
-    Geometry::EntityUID m_lastHoverUid{Geometry::INVALID_ENTITY_UID};
-
-    GLViewport::PickAction m_pendingPickAction{GLViewport::PickAction::None};
+    Render::PickAction m_pendingPickAction{Render::PickAction::None};
 };
 
 } // namespace OpenGeoLab::App

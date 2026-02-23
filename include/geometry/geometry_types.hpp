@@ -38,8 +38,6 @@ enum class EntityType : uint8_t {
     CompSolid = 7,   ///< Composite solid entity
     Compound = 8,    ///< Compound entity (collection of shapes)
     Part = 9,        ///< UI-level part (independent component)
-    MeshNode = 10,   ///< Mesh node (point in FEM mesh)
-    MeshElement = 11 ///< Mesh element (triangle, quad, etc.)
 };
 /**
  * @brief Convert string to EntityType

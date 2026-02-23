@@ -59,14 +59,14 @@ public:
      * @param entity_uid Type-scoped entity id
      * @param entity_type Entity type name (e.g. "Edge", "Face")
      */
-    Q_INVOKABLE void selectEntity(uint32_t entity_uid, const QString& entity_type);
+    Q_INVOKABLE void selectEntity(uint64_t entity_uid, const QString& entity_type);
 
     /**
      * @brief Remove an entity from the current selection by uid and type
      * @param entity_uid Type-scoped entity id
      * @param entity_type Entity type name (e.g. "Edge", "Face")
      */
-    Q_INVOKABLE void removeEntity(uint32_t entity_uid, const QString& entity_type);
+    Q_INVOKABLE void removeEntity(uint64_t entity_uid, const QString& entity_type);
 
     /**
      * @brief Check whether an entity (uid+type) is selected
@@ -74,18 +74,18 @@ public:
      * @param entity_type Entity type name
      * @return true if the entity is in the current selection set
      */
-    Q_INVOKABLE bool isEntitySelected(uint32_t entity_uid, const QString& entity_type) const;
+    Q_INVOKABLE bool isEntitySelected(uint64_t entity_uid, const QString& entity_type) const;
 
     /**
      * @brief Get all current selections
      * @return Vector of (uid, type) pairs
      */
-    Q_INVOKABLE QVector<QPair<uint32_t, QString>> currentSelections() const;
+    Q_INVOKABLE QVector<QPair<uint64_t, QString>> currentSelections() const;
 
 signals:
     void selectModeChanged(uint32_t select_types);
-    void entitySelected(uint32_t entity_uid, const QString& entity_type);
-    void entityRemoved(uint32_t entity_uid, const QString& entity_type);
+    void entitySelected(uint64_t entity_uid, const QString& entity_type);
+    void entityRemoved(uint64_t entity_uid, const QString& entity_type);
     void selectModeActivated(bool enabled);
     void selectionCleared();
 
