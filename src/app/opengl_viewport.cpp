@@ -1,5 +1,7 @@
 #include "app/opengl_viewport.hpp"
+#include "opengl_viewport_render.hpp"
 #include "render/render_scene_controller.hpp"
+#include "render/render_select_manager.hpp"
 #include "render/trackball_controller.hpp"
 
 namespace OpenGeoLab::App {
@@ -34,6 +36,10 @@ GLViewport::GLViewport(QQuickItem* parent) : QQuickFramebufferObject(parent) {
     m_sceneNeedsUpdateConn = scene_controller.subscribeToSceneNeedsUpdate([this]() {
         QMetaObject::invokeMethod(this, &GLViewport::onSceneNeedsUpdate, Qt::QueuedConnection);
     });
+    m_cameraChangedConn = Render::RenderSelectManager::instance().subscribeSelectionChanged(
+        [this](Render::PickResult, Render::SelectionChangeAction) {
+            QMetaObject::invokeMethod(this, &GLViewport::onSceneNeedsUpdate, Qt::QueuedConnection);
+        });
 }
 
 GLViewport::~GLViewport() = default;
@@ -44,6 +50,10 @@ void GLViewport::onSceneNeedsUpdate() {
         m_trackballController.syncFromCamera(m_cameraState);
     }
     update();
+}
+
+QQuickFramebufferObject::Renderer* GLViewport::createRenderer() const {
+    return new GLViewportRender(this);
 }
 
 } // namespace OpenGeoLab::App

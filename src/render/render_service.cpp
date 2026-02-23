@@ -7,6 +7,7 @@
 #include "action/viewport_control.hpp"
 
 #include "render/render_action.hpp"
+#include "render_sceneImpl.hpp"
 #include "util/logger.hpp"
 
 #include <QMetaObject>
@@ -39,6 +40,7 @@ RenderServiceFactory::tObjectSharedPtr RenderServiceFactory::instance() const {
 void registerServices() {
     LOG_DEBUG("RenderService: Registering render services");
     g_ComponentFactory.registInstanceFactoryWithID<RenderServiceFactory>("RenderService");
+    g_ComponentFactory.registFactoryWithID<SceneRendererFactoryImpl>("SceneRenderer");
     g_ComponentFactory.registFactoryWithID<ViewPortControlFactory>("ViewPortControl");
 }
 

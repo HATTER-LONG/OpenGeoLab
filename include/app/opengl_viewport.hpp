@@ -20,6 +20,12 @@ public:
     explicit GLViewport(QQuickItem* parent = nullptr);
     ~GLViewport() override;
 
+    /**
+     * @brief Create the renderer for this viewport
+     * @return New renderer instance
+     */
+    QQuickFramebufferObject::Renderer* createRenderer() const override;
+
 private slots:
     void onSceneNeedsUpdate();
     // void onRenderNeedsUpdate();
@@ -30,8 +36,7 @@ private:
 
     Util::ScopedConnection m_sceneNeedsUpdateConn;
     Util::ScopedConnection m_cameraChangedConn;
-    Util::ScopedConnection m_geometryChangedConn;
-    Util::ScopedConnection m_meshChangedConn;
+    Util::ScopedConnection m_selectionChangedConn;
 };
 
 } // namespace OpenGeoLab::App
