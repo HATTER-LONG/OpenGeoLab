@@ -1,4 +1,5 @@
 #pragma once
+#include "render/render_data.hpp"
 #include <QOpenGLFunctions>
 #include <QSize>
 
@@ -15,8 +16,19 @@ public:
 
     bool isInitialized() const { return m_initialized; }
 
+    void cleanup();
+
+    [[nodiscard]] bool checkGLCapabilities() const;
+
+    void setViewportSize(const QSize& size);
+
+    [[nodiscard]] const QSize& viewportSize() const { return m_viewportSize; }
+
+    void uploadMeshData(const DocumentRenderData& data);
+
 private:
     bool m_initialized{false};
+    QSize m_viewportSize{800, 600};
 };
 
 } // namespace OpenGeoLab::Render
