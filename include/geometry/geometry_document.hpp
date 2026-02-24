@@ -128,15 +128,7 @@ public:
     // Render Data Access
     // -------------------------------------------------------------------------
 
-    /**
-     * @brief Get render data for OpenGL visualization
-     * @param options Tessellation options for mesh generation
-     * @return Complete render data including faces, edges, and vertices
-     *
-     * @note This method may cache tessellated data. Call invalidateRenderData()
-     *       to force regeneration after geometry changes.
-     */
-    [[nodiscard]] virtual const Render::DocumentRenderData&
+    [[nodiscard]] virtual const Render::RenderData&
     getRenderData(const Render::TessellationOptions& options) = 0;
 
     /**

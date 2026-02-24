@@ -69,13 +69,18 @@ PickMask RenderSelectManager::normalizePickTypes(PickMask types) {
 
     const bool wants_mesh_node =
         hasAny(types, PickMask::MeshNode) && !hasAny(m_pickTypes, PickMask::MeshNode);
+    const bool wants_mesh_line =
+        hasAny(types, PickMask::MeshLine) && !hasAny(m_pickTypes, PickMask::MeshLine);
     const bool wants_mesh_element =
         hasAny(types, PickMask::MeshElement) && !hasAny(m_pickTypes, PickMask::MeshElement);
 
-    if(wants_mesh_node || wants_mesh_element) {
+    if(wants_mesh_node || wants_mesh_line || wants_mesh_element) {
         auto result = PickMask::None;
         if(wants_mesh_node) {
             result = result | PickMask::MeshNode;
+        }
+        if(wants_mesh_line) {
+            result = result | PickMask::MeshLine;
         }
         if(wants_mesh_element) {
             result = result | PickMask::MeshElement;

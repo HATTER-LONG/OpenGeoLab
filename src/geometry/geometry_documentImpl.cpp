@@ -51,46 +51,6 @@ bool isIdentityTrsf(const gp_Trsf& trsf) {
            trsf.TranslationPart().SquareModulus() == 0.0;
 }
 
-void computeSmoothVertexNormals(Render::GeometryRenderData& mesh) {
-    if(mesh.m_vertices.empty() || mesh.m_indices.size() < 3) {
-        return;
-    }
-
-    std::vector<Util::Vec3d> accum(mesh.m_vertices.size());
-    for(size_t i = 0; i + 2 < mesh.m_indices.size(); i += 3) {
-        const uint32_t i0 = mesh.m_indices[i + 0];
-        const uint32_t i1 = mesh.m_indices[i + 1];
-        const uint32_t i2 = mesh.m_indices[i + 2];
-        if(i0 >= mesh.m_vertices.size() || i1 >= mesh.m_vertices.size() ||
-           i2 >= mesh.m_vertices.size()) {
-            continue;
-        }
-
-        const auto& v0 = mesh.m_vertices[i0];
-        const auto& v1 = mesh.m_vertices[i1];
-        const auto& v2 = mesh.m_vertices[i2];
-
-        const Util::Vec3d p0{v0.m_position[0], v0.m_position[1], v0.m_position[2]};
-        const Util::Vec3d p1{v1.m_position[0], v1.m_position[1], v1.m_position[2]};
-        const Util::Vec3d p2{v2.m_position[0], v2.m_position[1], v2.m_position[2]};
-
-        const Util::Vec3d n = (p1 - p0).cross(p2 - p0);
-        accum[i0] += n;
-        accum[i1] += n;
-        accum[i2] += n;
-    }
-
-    for(size_t i = 0; i < mesh.m_vertices.size(); ++i) {
-        const auto lsq = accum[i].squaredLength();
-        if(lsq < 1e-24) {
-            continue;
-        }
-        const double inv_len = 1.0 / std::sqrt(lsq);
-        mesh.m_vertices[i].m_normal[0] = static_cast<float>(accum[i].x * inv_len);
-        mesh.m_vertices[i].m_normal[1] = static_cast<float>(accum[i].y * inv_len);
-        mesh.m_vertices[i].m_normal[2] = static_cast<float>(accum[i].z * inv_len);
-    }
-}
 } // namespace
 
 bool GeometryDocumentImpl::addEntity(const GeometryEntityImplPtr& entity) {
@@ -285,50 +245,9 @@ LoadResult GeometryDocumentImpl::appendShape(const TopoDS_Shape& shape,
 // Render Data Implementation
 // =============================================================================
 
-const Render::DocumentRenderData&
+const Render::RenderData&
 GeometryDocumentImpl::getRenderData(const Render::TessellationOptions& options) {
     std::lock_guard<std::mutex> lock(m_renderDataMutex);
-
-    if(m_renderDataValid) {
-        return m_cachedRenderData;
-    }
-
-    m_cachedRenderData.clear();
-
-    // Generate face meshes
-    auto faces = entitiesByType(EntityType::Face);
-    LOG_DEBUG("getRenderData: Found {} faces in document", faces.size());
-    for(const auto& face : faces) {
-        auto mesh = generateFaceMesh(face, options);
-        if(mesh.isValid()) {
-            m_cachedRenderData.m_faceMeshes.push_back(std::move(mesh));
-        }
-    }
-
-    // Generate edge meshes
-    auto edges = entitiesByType(EntityType::Edge);
-    LOG_DEBUG("getRenderData: Found {} edges in document", edges.size());
-    for(const auto& edge : edges) {
-        auto mesh = generateEdgeMesh(edge, options);
-        if(mesh.isValid()) {
-            m_cachedRenderData.m_edgeMeshes.push_back(std::move(mesh));
-        }
-    }
-
-    // Generate vertex meshes
-    auto vertices = entitiesByType(EntityType::Vertex);
-    LOG_DEBUG("getRenderData: Found {} vertices in document", vertices.size());
-    for(const auto& vertex : vertices) {
-        auto mesh = generateVertexMesh(vertex);
-        if(mesh.isValid()) {
-            m_cachedRenderData.m_vertexMeshes.push_back(std::move(mesh));
-        }
-    }
-    LOG_DEBUG("getRenderData: Generated {} face meshes, {} edge meshes, {} vertex meshes",
-              m_cachedRenderData.m_faceMeshes.size(), m_cachedRenderData.m_edgeMeshes.size(),
-              m_cachedRenderData.m_vertexMeshes.size());
-    m_cachedRenderData.updateBoundingBox();
-    m_renderDataValid = true;
 
     return m_cachedRenderData;
 }
@@ -347,265 +266,21 @@ std::vector<EntityKey> GeometryDocumentImpl::findRelatedEntities(EntityUID entit
                                                                  EntityType related_type) const {
     return m_relationshipIndex.findRelatedEntities(entity_uid, entity_type, related_type);
 }
-Render::GeometryRenderData
+
+Render::RenderData
 GeometryDocumentImpl::generateFaceMesh(const GeometryEntityImplPtr& entity,
                                        const Render::TessellationOptions& options) {
-    Render::GeometryRenderData mesh;
-    mesh.m_entityId = entity->entityId();
-    mesh.m_pickType = Render::PickEntityType::Face;
-    mesh.m_entityUid = entity->entityUID();
-    mesh.m_primitiveType = Render::RenderPrimitiveType::Triangles;
-
-    const auto& shape = entity->shape();
-    if(shape.IsNull()) {
-        return mesh;
-    }
-
-    // Determine face color based on owning part
-    PartColor face_color(0.7f, 0.7f, 0.7f, 1.0f); // Default gray
-    auto parts = findRelatedEntities(entity->entityId(), EntityType::Part);
-    auto solids = findRelatedEntities(entity->entityId(), EntityType::Solid);
-    auto wires = findRelatedEntities(entity->entityId(), EntityType::Wire);
-    if(parts.empty()) {
-        return mesh;
-    }
-    mesh.m_owningPart = parts.front();
-    auto owning_part_id = mesh.m_owningPart.m_id;
-    // Use entity ID for consistent color assignment
-    face_color = PartColorPalette::getColorByEntityId(owning_part_id);
-
-    if(!solids.empty()) {
-        mesh.m_owningSolid = solids.front();
-    }
-    if(!wires.empty()) {
-        mesh.m_owningWire.insert(wires.begin(), wires.end());
-    }
-
-    // Mesh-level colors (base/hover/selected). Base is kept consistent with per-vertex colors.
-    mesh.m_baseColor = Render::RenderColor{face_color.r, face_color.g, face_color.b, face_color.a};
-    mesh.m_hoverColor = Render::RenderColor{0.310f, 0.765f, 0.969f, face_color.a};
-    mesh.m_selectedColor = Render::RenderColor{0.118f, 0.533f, 0.898f, face_color.a};
-
-    // (Re)mesh with current tessellation options to avoid reusing a coarse cached triangulation.
-    // This is important for curved primitives (cylinder/torus) to look smooth.
-    const double linear_deflection = std::max(1e-6, options.m_linearDeflection);
-    BRepMesh_IncrementalMesh mesher(shape, linear_deflection, Standard_False,
-                                    options.m_angularDeflection);
-
-    // Use OCC's triangulation (computed by BRepMesh)
-    TopLoc_Location loc;
-    const Handle(Poly_Triangulation) tri = BRep_Tool::Triangulation(TopoDS::Face(shape), loc);
-    if(tri.IsNull()) {
-        return mesh;
-    }
-
-    const gp_Trsf& trsf = loc.Transformation();
-    const bool has_transform = !isIdentityTrsf(trsf);
-
-    // Extract vertices
-    const Standard_Integer nb_nodes = tri->NbNodes();
-    mesh.m_vertices.reserve(static_cast<size_t>(nb_nodes));
-
-    for(Standard_Integer i = 1; i <= nb_nodes; ++i) {
-        gp_Pnt pnt = tri->Node(i);
-        if(has_transform) {
-            pnt.Transform(trsf);
-        }
-
-        Render::RenderVertex vertex(static_cast<float>(pnt.X()), static_cast<float>(pnt.Y()),
-                                    static_cast<float>(pnt.Z()));
-
-        // Set face color based on owning part
-        vertex.setColor(face_color.r, face_color.g, face_color.b, face_color.a);
-
-        // Get normal if available; otherwise compute smooth normals after indices are built.
-        if(options.m_computeNormals && tri->HasNormals()) {
-            gp_Dir normal = tri->Normal(i);
-            if(has_transform) {
-                normal.Transform(trsf);
-            }
-            vertex.m_normal[0] = static_cast<float>(normal.X());
-            vertex.m_normal[1] = static_cast<float>(normal.Y());
-            vertex.m_normal[2] = static_cast<float>(normal.Z());
-        }
-
-        mesh.m_vertices.push_back(vertex);
-        mesh.m_boundingBox.expand(Util::Pt3d(pnt.X(), pnt.Y(), pnt.Z()));
-    }
-
-    // Extract triangles
-    const Standard_Integer nb_triangles = tri->NbTriangles();
-    mesh.m_indices.reserve(static_cast<size_t>(nb_triangles) * 3);
-
-    const TopAbs_Orientation orientation = shape.Orientation();
-
-    for(Standard_Integer i = 1; i <= nb_triangles; ++i) {
-        const Poly_Triangle& triangle = tri->Triangle(i);
-        Standard_Integer n1, n2, n3;
-        triangle.Get(n1, n2, n3);
-
-        // Adjust winding based on face orientation
-        if(orientation == TopAbs_REVERSED) {
-            std::swap(n2, n3);
-        }
-
-        mesh.m_indices.push_back(static_cast<uint32_t>(n1 - 1));
-        mesh.m_indices.push_back(static_cast<uint32_t>(n2 - 1));
-        mesh.m_indices.push_back(static_cast<uint32_t>(n3 - 1));
-    }
-
-    if(options.m_computeNormals && !tri->HasNormals()) {
-        computeSmoothVertexNormals(mesh);
-    }
-
-    return mesh;
+    return {};
 }
 
-Render::GeometryRenderData
+Render::RenderData
 GeometryDocumentImpl::generateEdgeMesh(const GeometryEntityImplPtr& entity,
                                        const Render::TessellationOptions& options) {
-    Render::GeometryRenderData mesh;
-    mesh.m_entityId = entity->entityId();
-    mesh.m_pickType = Render::PickEntityType::Edge;
-    mesh.m_entityUid = entity->entityUID();
-    mesh.m_primitiveType = Render::RenderPrimitiveType::LineStrip;
-
-    // Owning info (for selection propagation & wire picking/highlighting)
-    {
-        const auto owning_parts = findRelatedEntities(entity->entityId(), EntityType::Part);
-        if(!owning_parts.empty()) {
-            mesh.m_owningPart = owning_parts.front();
-        }
-        const auto owning_solids = findRelatedEntities(entity->entityId(), EntityType::Solid);
-        if(!owning_solids.empty()) {
-            mesh.m_owningSolid = owning_solids.front();
-        }
-        const auto owning_wires = findRelatedEntities(entity->entityId(), EntityType::Wire);
-        if(!owning_wires.empty()) {
-            mesh.m_owningWire.insert(owning_wires.begin(), owning_wires.end());
-        }
-    }
-
-    // Edge color: yellow for visibility
-    constexpr float edge_color[4] = {1.0f, 0.8f, 0.2f, 1.0f};
-    mesh.m_baseColor =
-        Render::RenderColor{edge_color[0], edge_color[1], edge_color[2], edge_color[3]};
-    mesh.m_hoverColor = Render::RenderColor{1.0f, 0.6f, 0.6f, edge_color[3]};
-    mesh.m_selectedColor = Render::RenderColor{1.0f, 0.0f, 0.0f, edge_color[3]};
-    const auto& shape = entity->shape();
-    if(shape.IsNull()) {
-        return mesh;
-    }
-
-    const TopoDS_Edge& edge = TopoDS::Edge(shape);
-
-    const double linear_deflection = std::max(1e-6, options.m_linearDeflection);
-    BRepMesh_IncrementalMesh mesher(shape, linear_deflection, Standard_False,
-                                    options.m_angularDeflection);
-
-    // Prefer polygonal data generated by meshing (most consistent with surface triangulation).
-    {
-        TopLoc_Location loc;
-        const Handle(Poly_Polygon3D) polygon = BRep_Tool::Polygon3D(edge, loc);
-        if(!polygon.IsNull()) {
-            const TColgp_Array1OfPnt& nodes = polygon->Nodes();
-            const gp_Trsf& trsf = loc.Transformation();
-
-            for(Standard_Integer i = nodes.Lower(); i <= nodes.Upper(); ++i) {
-                gp_Pnt pnt = nodes(i);
-                if(!isIdentityTrsf(trsf)) {
-                    pnt.Transform(trsf);
-                }
-                auto& vertex = mesh.m_vertices.emplace_back(static_cast<float>(pnt.X()),
-                                                            static_cast<float>(pnt.Y()),
-                                                            static_cast<float>(pnt.Z()));
-                vertex.setColor(edge_color[0], edge_color[1], edge_color[2], edge_color[3]);
-                mesh.m_boundingBox.expand(Util::Pt3d(pnt.X(), pnt.Y(), pnt.Z()));
-            }
-
-            return mesh;
-        }
-    }
-
-    Standard_Real first, last;
-    TopLoc_Location curve_loc;
-    const Handle(Geom_Curve) curve = BRep_Tool::Curve(edge, curve_loc, first, last);
-
-    if(curve.IsNull()) {
-        return mesh;
-    }
-
-    const gp_Trsf& curve_trsf = curve_loc.Transformation();
-    const bool has_transform = !isIdentityTrsf(curve_trsf);
-
-    // Sample the curve
-    GCPnts_UniformDeflection sampler(GeomAdaptor_Curve(curve, first, last), linear_deflection);
-
-    if(!sampler.IsDone()) {
-        return mesh;
-    }
-
-    const Standard_Integer nb_points = sampler.NbPoints();
-    mesh.m_vertices.reserve(static_cast<size_t>(nb_points));
-
-    for(Standard_Integer i = 1; i <= nb_points; ++i) {
-        gp_Pnt pnt = sampler.Value(i);
-        if(has_transform) {
-            pnt.Transform(curve_trsf);
-        }
-        auto& vertex = mesh.m_vertices.emplace_back(
-            static_cast<float>(pnt.X()), static_cast<float>(pnt.Y()), static_cast<float>(pnt.Z()));
-        vertex.setColor(edge_color[0], edge_color[1], edge_color[2], edge_color[3]);
-        mesh.m_boundingBox.expand(Util::Pt3d(pnt.X(), pnt.Y(), pnt.Z()));
-    }
-
-    return mesh;
+    return {};
 }
 
-Render::GeometryRenderData
-GeometryDocumentImpl::generateVertexMesh(const GeometryEntityImplPtr& entity) {
-    Render::GeometryRenderData mesh;
-    mesh.m_entityId = entity->entityId();
-    mesh.m_entityUid = entity->entityUID();
-    mesh.m_pickType = Render::PickEntityType::Vertex;
-    mesh.m_primitiveType = Render::RenderPrimitiveType::Points;
-    constexpr float vertex_color[4] = {0.2f, 1.0f, 0.4f, 1.0f};
-
-    mesh.m_baseColor =
-        Render::RenderColor{vertex_color[0], vertex_color[1], vertex_color[2], vertex_color[3]};
-    mesh.m_hoverColor = Render::RenderColor{1.0f, 0.6f, 0.0f, vertex_color[3]};
-    mesh.m_selectedColor = Render::RenderColor{1.0f, 0.3f, 0.0f, vertex_color[3]};
-    const auto& shape = entity->shape();
-    if(shape.IsNull()) {
-        return mesh;
-    }
-
-    // Owning info (for selection propagation & wire picking/highlighting)
-    {
-        const auto owning_parts = findRelatedEntities(entity->entityId(), EntityType::Part);
-        if(!owning_parts.empty()) {
-            mesh.m_owningPart = owning_parts.front();
-        }
-        const auto owning_solids = findRelatedEntities(entity->entityId(), EntityType::Solid);
-        if(!owning_solids.empty()) {
-            mesh.m_owningSolid = owning_solids.front();
-        }
-        const auto owning_wires = findRelatedEntities(entity->entityId(), EntityType::Wire);
-        if(!owning_wires.empty()) {
-            mesh.m_owningWire.insert(owning_wires.begin(), owning_wires.end());
-        }
-    }
-
-    const TopoDS_Vertex& vertex = TopoDS::Vertex(shape);
-    const gp_Pnt pnt = BRep_Tool::Pnt(vertex);
-
-    auto& render_vertex = mesh.m_vertices.emplace_back(
-        static_cast<float>(pnt.X()), static_cast<float>(pnt.Y()), static_cast<float>(pnt.Z()));
-    render_vertex.setColor(vertex_color[0], vertex_color[1], vertex_color[2], vertex_color[3]);
-
-    mesh.m_boundingBox.expand(Util::Pt3d(pnt.X(), pnt.Y(), pnt.Z()));
-
-    return mesh;
+Render::RenderData GeometryDocumentImpl::generateVertexMesh(const GeometryEntityImplPtr& entity) {
+    return {};
 }
 
 // =============================================================================

@@ -101,11 +101,6 @@ void RenderSceneController::updateGeometryRenderData() {
     auto document = GeoDocumentInstance;
 
     auto render_data = document->getRenderData(TessellationOptions::defaultOptions());
-
-    m_renderData.updateGeometryRenderData(render_data);
-
-    LOG_DEBUG("RenderSceneController: Updated geometry render data, total meshes={}",
-              m_renderData.meshCount());
 }
 
 void RenderSceneController::subscribeToMeshDocument() {
@@ -123,9 +118,6 @@ void RenderSceneController::handleDocumentMeshChanged() {
 void RenderSceneController::updateMeshRenderData() {
     auto document = MeshDocumentInstance;
     auto render_data = document->getRenderData();
-    m_renderData.updateMeshRenderData(render_data);
-    LOG_DEBUG("RenderSceneController: Updated mesh render data, total meshes={}",
-              m_renderData.meshCount());
 }
 
 void RenderSceneController::setCamera(const CameraState& camera, bool notify) {
@@ -145,11 +137,6 @@ void RenderSceneController::refreshScene(bool notify) {
 }
 
 void RenderSceneController::fitToScene(bool notify) {
-    if(m_renderData.isEmpty()) {
-        m_cameraState.reset();
-    } else {
-        m_cameraState.fitToBoundingBox(m_renderData.m_boundingBox);
-    }
     if(notify) {
         m_sceneNeedsUpdate.emitSignal();
     }

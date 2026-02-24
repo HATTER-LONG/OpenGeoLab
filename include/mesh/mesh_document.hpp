@@ -102,15 +102,7 @@ public:
     // Render Data
     // -------------------------------------------------------------------------
 
-    /**
-     * @brief Generate render data for mesh visualization.
-     * @return Render data containing mesh element and node meshes.
-     *
-     * @note The returned data includes wireframe edges for mesh elements
-     *       and point data for mesh nodes. Mesh elements use EntityType::MeshElement
-     *       and nodes use EntityType::MeshNode for picking compatibility.
-     */
-    [[nodiscard]] virtual const Render::DocumentRenderData& getRenderData() = 0;
+    [[nodiscard]] virtual const Render::RenderData& getRenderData() = 0;
 
     // -------------------------------------------------------------------------
     // Change Notification

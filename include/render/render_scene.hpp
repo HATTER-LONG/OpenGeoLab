@@ -45,8 +45,6 @@ public:
 
     virtual void setViewportSize(const QSize& size) = 0;
 
-    virtual void uploadMeshData(const DocumentRenderData& data) = 0;
-
     virtual void processPicking(const PickingInput& input) = 0;
 
     virtual void render(const QVector3D& camera_pos,

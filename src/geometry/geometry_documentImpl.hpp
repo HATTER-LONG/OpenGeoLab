@@ -152,7 +152,7 @@ public:
     // Render Data Access (GeometryDocument interface)
     // =========================================================================
 
-    [[nodiscard]] const Render::DocumentRenderData&
+    [[nodiscard]] const Render::RenderData&
     getRenderData(const Render::TessellationOptions& options) override;
 
     void invalidateRenderData() override;
@@ -187,9 +187,8 @@ private:
      * @param options Tessellation options
      * @return Render mesh for the face
      */
-    [[nodiscard]] Render::GeometryRenderData
-    generateFaceMesh(const GeometryEntityImplPtr& entity,
-                     const Render::TessellationOptions& options);
+    [[nodiscard]] Render::RenderData generateFaceMesh(const GeometryEntityImplPtr& entity,
+                                                      const Render::TessellationOptions& options);
 
     /**
      * @brief Generate render mesh for an edge entity
@@ -197,17 +196,15 @@ private:
      * @param options Tessellation options
      * @return Render mesh for the edge
      */
-    [[nodiscard]] Render::GeometryRenderData
-    generateEdgeMesh(const GeometryEntityImplPtr& entity,
-                     const Render::TessellationOptions& options);
+    [[nodiscard]] Render::RenderData generateEdgeMesh(const GeometryEntityImplPtr& entity,
+                                                      const Render::TessellationOptions& options);
 
     /**
      * @brief Generate render mesh for a vertex entity
      * @param entity Vertex entity
      * @return Render mesh for the vertex
      */
-    [[nodiscard]] Render::GeometryRenderData
-    generateVertexMesh(const GeometryEntityImplPtr& entity);
+    [[nodiscard]] Render::RenderData generateVertexMesh(const GeometryEntityImplPtr& entity);
 
     /**
      * @brief Emit a change notification to all subscribers
@@ -224,7 +221,7 @@ private:
     Util::Signal<const GeometryChangeEvent&> m_changeSignal;
 
     /// Cached render data
-    mutable Render::DocumentRenderData m_cachedRenderData;
+    mutable Render::RenderData m_cachedRenderData;
     mutable bool m_renderDataValid{false};
     mutable std::mutex m_renderDataMutex;
 };

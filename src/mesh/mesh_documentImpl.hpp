@@ -48,7 +48,7 @@ public:
     // Render Data
     // -------------------------------------------------------------------------
 
-    [[nodiscard]] const Render::DocumentRenderData& getRenderData() override;
+    [[nodiscard]] const Render::RenderData& getRenderData() override;
 
     // -------------------------------------------------------------------------
     // Change Notification
@@ -59,26 +59,16 @@ public:
     void notifyChanged() override;
 
 private:
-    /**
-     * @brief Generate edge wireframe render meshes for 2D elements.
-     */
-    void generateElementEdgeRenderData();
-
-    /**
-     * @brief Generate node point render meshes.
-     */
-    void generateNodeRenderData();
-
-private:
     std::vector<MeshNode> m_nodes;       ///< List of mesh nodes
     std::vector<MeshElement> m_elements; ///< List of mesh elements
     std::unordered_map<MeshElementRef, MeshElementId, MeshElementRefHash>
         m_refToId; ///< Fast lookup for elements by (uid, type)
 
-    bool m_renderDataDirty{true};            ///< Flag to indicate if render data needs regeneration
-    Render::DocumentRenderData m_renderData; ///< Cached render data for visualization
-
     Util::Signal<> m_changeSignal; /// Change notification signal
+    /// Cached render data
+    mutable Render::RenderData m_cachedRenderData;
+    mutable bool m_renderDataValid{false};
+    mutable std::mutex m_renderDataMutex;
 };
 
 /**

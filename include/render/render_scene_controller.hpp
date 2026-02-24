@@ -81,7 +81,7 @@ public:
 
     void setRightView(bool notify = true);
 
-    [[nodiscard]] const DocumentRenderData& renderData() const;
+    [[nodiscard]] const RenderBucket& renderData() const;
 
     [[nodiscard]] Geometry::GeometryDocumentPtr currentGeometryDocument() const;
 
@@ -117,7 +117,7 @@ private:
 
     Util::Signal<> m_sceneNeedsUpdate;
 
-    DocumentRenderData m_renderData;
+    RenderBucket m_renderData;
 
     struct PartVisibility {
         bool m_geometryVisible{true};

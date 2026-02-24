@@ -1,17 +1,3 @@
-/**
- * @file pick_entity_type.hpp
- * @brief Unified entity type for GPU picking across Geometry and Mesh domains
- *
- * PickEntityType provides a single enum that spans both the Geometry domain
- * (Vertex, Edge, Face, etc.) and the Mesh domain (MeshNode, MeshElement).
- * This is the type used in the GPU pick buffer encoding, SelectManager,
- * and all render-layer entity identification.
- *
- * Domain-specific entity types (Geometry::EntityType, Mesh::EntityType)
- * are used in their respective domain layers. Conversion functions are
- * provided to map between domain types and PickEntityType.
- */
-
 #pragma once
 
 #include "geometry/geometry_types.hpp"
@@ -22,12 +8,6 @@
 
 namespace OpenGeoLab::Render {
 
-/**
- * @brief Unified entity type for GPU picking and selection
- *
- * Numeric values for geometry types match Geometry::EntityType values
- * for backward compatibility with existing pick buffer encoding.
- */
 enum class PickEntityType : uint8_t {
     // Geometry domain (values match Geometry::EntityType)
     Vertex = 0,
@@ -42,10 +22,11 @@ enum class PickEntityType : uint8_t {
 
     // Mesh domain
     MeshNode = 9,
-    MeshElement = 10,
+    MeshLine = 10,
+    MeshElement = 11,
 
     // Default/invalid type
-    None = 11,
+    None = 12,
 };
 
 enum class PickMask : uint32_t {
@@ -60,9 +41,10 @@ enum class PickMask : uint32_t {
     Part = 1 << 8,
 
     MeshNode = 1 << 9,
-    MeshElement = 1 << 10,
+    MeshLine = 1 << 10,
+    MeshElement = 1 << 11,
 
-    None = 1 << 11,
+    None = 1 << 12,
 };
 
 constexpr PickMask toMask(PickEntityType type) {
@@ -129,7 +111,7 @@ constexpr PickMask operator&(PickMask a, PickMask b) {
 [[nodiscard]] constexpr std::optional<Geometry::EntityType>
 toGeometryType(PickEntityType t) noexcept {
     const auto val = static_cast<uint8_t>(t);
-    if(val >= 1 && val <= 9) {
+    if(val >= 0 && val <= 8) {
         return static_cast<Geometry::EntityType>(val);
     }
     return std::nullopt;
@@ -143,6 +125,7 @@ toGeometryType(PickEntityType t) noexcept {
     switch(t) {
     case PickEntityType::MeshNode:
         return Mesh::EntityType::Node;
+    case PickEntityType::MeshLine:
     case PickEntityType::MeshElement:
         return Mesh::EntityType::Element;
     default:
@@ -155,14 +138,15 @@ toGeometryType(PickEntityType t) noexcept {
  */
 [[nodiscard]] constexpr bool isGeometryDomain(PickEntityType t) noexcept {
     const auto val = static_cast<uint8_t>(t);
-    return val >= 1 && val <= 9;
+    return val >= 0 && val <= 8;
 }
 
 /**
  * @brief Check if the type belongs to the Mesh domain
  */
 [[nodiscard]] constexpr bool isMeshDomain(PickEntityType t) noexcept {
-    return t == PickEntityType::MeshNode || t == PickEntityType::MeshElement;
+    return t == PickEntityType::MeshNode || t == PickEntityType::MeshLine ||
+           t == PickEntityType::MeshElement;
 }
 
 } // namespace OpenGeoLab::Render

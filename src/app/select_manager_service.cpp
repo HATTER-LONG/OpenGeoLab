@@ -8,7 +8,8 @@ namespace OpenGeoLab::App {
 namespace {
 
 QString convertPickResultTypeToString(const Render::PickResult& result) {
-    if(result.m_type == Render::PickEntityType::MeshElement) {
+    if(result.m_type == Render::PickEntityType::MeshElement ||
+       result.m_type == Render::PickEntityType::MeshLine) {
         const auto mesh_elem_type_opt =
             meshElementTypeToString(static_cast<Mesh::MeshElementType>(result.m_meshElementType));
         if(mesh_elem_type_opt.has_value()) {

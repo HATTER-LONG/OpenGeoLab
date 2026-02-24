@@ -11,7 +11,6 @@ std::shared_ptr<MeshDocumentImpl> MeshDocumentImpl::instance() {
 // Node Management
 // =============================================================================
 bool MeshDocumentImpl::addNode(MeshNode node) {
-    m_renderDataDirty = true;
     const MeshNodeId id = node.nodeId();
     if(id == INVALID_MESH_NODE_ID || m_nodes.size() != id) {
         return false;
@@ -36,7 +35,6 @@ size_t MeshDocumentImpl::nodeCount() const { return m_nodes.size(); }
 // =============================================================================
 
 bool MeshDocumentImpl::addElement(MeshElement element) {
-    m_renderDataDirty = true;
     const MeshElementId id = element.elementId();
     if(id == INVALID_MESH_ELEMENT_ID || element.elementType() == MeshElementType::Invalid ||
        id != m_elements.size()) {
@@ -92,101 +90,7 @@ void MeshDocumentImpl::notifyChanged() {
 // Render Data
 // =============================================================================
 
-const Render::DocumentRenderData& MeshDocumentImpl::getRenderData() {
-    if(!m_renderDataDirty) {
-        return m_renderData;
-    }
-    generateElementEdgeRenderData();
-    generateNodeRenderData();
-    m_renderData.updateBoundingBox();
-    m_renderDataDirty = false;
-    return m_renderData;
-}
-
-void MeshDocumentImpl::generateElementEdgeRenderData() {
-    try {
-
-        for(const auto& element : m_elements) {
-
-            const auto node_ids = element.nodeIds();
-            const size_t n = node_ids.size();
-            if(!element.isValid() || node_ids.size() < 2 || node_ids.size() > 8) {
-                continue;
-            }
-
-            Render::MeshRenderData mesh;
-            mesh.m_pickType = Render::PickEntityType::MeshElement;
-            mesh.m_elementId = element.elementId();
-            mesh.m_elementUid = element.elementUID();
-            mesh.m_primitiveType = Render::RenderPrimitiveType::Lines;
-
-            // Wireframe color: light green for mesh elements.
-            mesh.m_baseColor = Render::RenderColor{0.2f, 0.8f, 0.3f, 1.0f};
-            mesh.m_hoverColor = Render::RenderColor{1.0f, 1.0f, 0.0f, 1.0f};
-            mesh.m_selectedColor = Render::RenderColor{1.0f, 0.5f, 0.0f, 1.0f};
-
-            // Collect node positions.
-            std::vector<Render::RenderVertex> verts;
-            verts.reserve(n);
-            for(uint8_t i = 0; i < n; ++i) {
-                const MeshNodeId nid = element.nodeId(i);
-                auto node = findNodeById(nid);
-                Render::RenderVertex v;
-                v.m_position[0] = static_cast<float>(node.x());
-                v.m_position[1] = static_cast<float>(node.y());
-                v.m_position[2] = static_cast<float>(node.z());
-                v.m_color = mesh.m_baseColor;
-                mesh.m_boundingBox.expand(node.position());
-                verts.push_back(v);
-            }
-
-            if(verts.size() < 2) {
-                continue;
-            }
-
-            mesh.m_vertices = std::move(verts);
-            // Generate line indices for wireframe: closed polygon edges.
-            const auto vcount = static_cast<uint32_t>(mesh.m_vertices.size());
-            for(uint32_t i = 0; i < vcount; ++i) {
-                mesh.m_indices.push_back(i);
-                mesh.m_indices.push_back((i + 1) % vcount);
-            }
-            m_renderData.m_meshElementMeshes.emplace_back(std::move(mesh));
-        }
-    } catch(const std::exception& e) {
-        LOG_ERROR("MeshDocumentImpl: Exception in generateElementEdgeRenderData: {}", e.what());
-        throw e;
-    }
-}
-
-void MeshDocumentImpl::generateNodeRenderData() {
-    m_renderData.m_meshNodeMeshes.clear();
-    for(const auto& node : m_nodes) {
-        if(node.nodeId() == INVALID_MESH_NODE_ID) {
-            continue;
-        }
-
-        Render::MeshRenderData mesh;
-        mesh.m_pickType = Render::PickEntityType::MeshNode;
-        mesh.m_nodeId = node.nodeId();
-        mesh.m_primitiveType = Render::RenderPrimitiveType::Points;
-
-        // Node color: cyan for visibility
-        mesh.m_baseColor = Render::RenderColor{0.0f, 1.0f, 1.0f, 1.0f};
-        mesh.m_hoverColor = Render::RenderColor{1.0f, 1.0f, 0.0f, 1.0f};
-        mesh.m_selectedColor = Render::RenderColor{1.0f, 0.5f, 0.0f, 1.0f};
-
-        Render::RenderVertex v;
-        v.m_position[0] = static_cast<float>(node.x());
-        v.m_position[1] = static_cast<float>(node.y());
-        v.m_position[2] = static_cast<float>(node.z());
-        v.m_color = mesh.m_baseColor;
-        mesh.m_boundingBox.expand(node.position());
-        mesh.m_vertices.push_back(v);
-
-        m_renderData.m_meshNodeMeshes.emplace_back(std::move(mesh));
-    }
-}
+const Render::RenderData& MeshDocumentImpl::getRenderData() { return m_cachedRenderData; }
 
 // =============================================================================
 // Factory
