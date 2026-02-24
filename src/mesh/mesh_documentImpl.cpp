@@ -36,7 +36,7 @@ size_t MeshDocumentImpl::nodeCount() const { return m_nodes.size(); }
 
 bool MeshDocumentImpl::addElement(MeshElement element) {
     const MeshElementId id = element.elementId();
-    if(id == INVALID_MESH_ELEMENT_ID || element.elementType() == MeshElementType::Invalid ||
+    if(id == INVALID_MESH_ELEMENT_ID || element.elementType() == MeshElementType::None ||
        id != m_elements.size()) {
         return false;
     }

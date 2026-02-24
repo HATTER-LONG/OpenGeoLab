@@ -86,12 +86,12 @@ EntityUID generateEntityUID(EntityType type) {
     return g_next_entity_uids[index].fetch_add(1, std::memory_order_relaxed);
 }
 
-uint32_t getMaxIdByType(EntityType type) {
+uint64_t getMaxIdByType(EntityType type) {
     const auto index = static_cast<size_t>(type);
     if(index >= g_next_entity_uids.size()) {
         throw std::invalid_argument("Invalid EntityType for max UID retrieval");
     }
-    return static_cast<uint32_t>(g_next_entity_uids[index].load(std::memory_order_relaxed) - 1);
+    return static_cast<uint64_t>(g_next_entity_uids[index].load(std::memory_order_relaxed) - 1);
 }
 
 void resetEntityUIDGenerator(EntityType type) {

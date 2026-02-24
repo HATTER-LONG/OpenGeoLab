@@ -30,7 +30,7 @@ public:
 
     bool isValid() const {
         return m_id != INVALID_MESH_ELEMENT_ID && m_uid != INVALID_MESH_ELEMENT_UID &&
-               m_type != MeshElementType::Invalid;
+               m_type != MeshElementType::None;
     }
 
     MeshElementKey elementKey() const { return MeshElementKey(m_id, m_uid, m_type); }
@@ -60,7 +60,7 @@ private:
 private:
     MeshElementId m_id{INVALID_MESH_ELEMENT_ID};
     MeshElementUID m_uid{INVALID_MESH_ELEMENT_UID};
-    MeshElementType m_type{MeshElementType::Invalid};
+    MeshElementType m_type{MeshElementType::None};
 
     std::array<MeshNodeId, 8> m_nodeIds{};
 };

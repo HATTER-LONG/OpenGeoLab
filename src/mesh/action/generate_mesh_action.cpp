@@ -31,7 +31,7 @@ namespace {
 
 /**
  * @brief Map a Gmsh element type code to our MeshElementType.
- * @return MeshElementType::Invalid for unsupported types.
+ * @return MeshElementType::None for unsupported types.
  */
 MeshElementType gmshTypeToMeshElementType(int gmsh_type) {
     switch(gmsh_type) {
@@ -47,8 +47,10 @@ MeshElementType gmshTypeToMeshElementType(int gmsh_type) {
         return MeshElementType::Hexa8;
     case 6:
         return MeshElementType::Prism6;
+    case 7:
+        return MeshElementType::Pyramid5;
     default:
-        return MeshElementType::Invalid;
+        return MeshElementType::None;
     }
 }
 
@@ -266,7 +268,7 @@ void GenerateMeshAction::importShapeToGmshAndMesh(const TopoDS_Shape& shape,
 
     for(size_t ti = 0; ti < element_types.size(); ++ti) {
         const MeshElementType our_type = gmshTypeToMeshElementType(element_types[ti]);
-        if(our_type == MeshElementType::Invalid) {
+        if(our_type == MeshElementType::None) {
             LOG_DEBUG("GenerateMeshAction: Skipping unsupported Gmsh element type {}",
                       element_types[ti]);
             continue;

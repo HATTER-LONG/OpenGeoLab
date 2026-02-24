@@ -2,5 +2,5 @@
 
 namespace OpenGeoLab::Mesh {
 MeshNode::MeshNode(double x, double y, double z)
-    : m_uid(generateMeshNodeId()), m_position{x, y, z} {}
+    : m_uid(generateMeshElementUID(MeshElementType::Node)), m_position{x, y, z} {}
 } // namespace OpenGeoLab::Mesh

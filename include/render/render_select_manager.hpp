@@ -1,8 +1,6 @@
 #pragma once
 
-#include "geometry/geometry_types.hpp"
-#include "mesh/mesh_types.hpp"
-#include "render/pick_entity_type.hpp"
+#include "render/render_types.hpp"
 #include "util/signal.hpp"
 
 #include <cstdint>
@@ -11,22 +9,11 @@
 namespace OpenGeoLab::Render {
 
 struct PickResult {
-    uint32_t m_uid;        ///< Type-scoped unique identifier, Note: MeshNode only has node id
-    PickEntityType m_type; ///< Entity type for selection filtering
+    uint64_t m_uid;          ///< Type-scoped unique identifier, Note: MeshNode only has node id
+    RenderEntityType m_type; ///< Entity type for selection filtering
 
-    Mesh::MeshElementType m_meshElementType{
-        Mesh::MeshElementType::Invalid}; ///< Mesh element type (if applicable)
-    bool operator==(const PickResult& other) const noexcept {
-        if(m_uid != other.m_uid) {
-            return false;
-        }
-        if(m_type != other.m_type) {
-            return false;
-        }
-        if(m_type == PickEntityType::MeshElement) {
-            return m_meshElementType == other.m_meshElementType;
-        }
-        return true;
+    bool operator==(const PickResult& other) const {
+        return m_uid == other.m_uid && m_type == other.m_type;
     }
 };
 
@@ -37,11 +24,7 @@ struct PickResultHash {
     std::size_t operator()(const PickResult& result) const noexcept {
         std::size_t seed = 0;
         hashCombine(seed, result.m_uid);
-        hashCombine(seed, static_cast<std::underlying_type_t<PickEntityType>>(result.m_type));
-        if(result.m_type == PickEntityType::MeshElement) {
-            hashCombine(seed, static_cast<std::underlying_type_t<Mesh::MeshElementType>>(
-                                  result.m_meshElementType));
-        }
+        hashCombine(seed, static_cast<std::underlying_type_t<RenderEntityType>>(result.m_type));
         return seed;
     }
 };
@@ -61,25 +44,17 @@ public:
     void setPickEnabled(bool enabled);
     bool isPickEnabled() const;
 
-    void setPickTypes(PickMask types);
+    void setPickTypes(RenderEntityTypeMask types);
 
-    PickMask getPickTypes() const;
+    RenderEntityTypeMask getPickTypes() const;
 
-    bool isTypePickable(PickEntityType type) const;
+    bool isTypePickable(RenderEntityType type) const;
 
-    PickMask normalizePickTypes(PickMask types);
+    RenderEntityTypeMask normalizePickTypes(RenderEntityTypeMask types);
 
-    bool addSelection(Geometry::EntityUID entity_uid, Geometry::EntityType type);
+    bool addSelection(uint64_t entity_uid, RenderEntityType type);
 
-    bool removeSelection(Geometry::EntityUID entity_uid, Geometry::EntityType type);
-
-    bool addSelection(Mesh::MeshElementUID element_id, Mesh::MeshElementType type);
-
-    bool removeSelection(Mesh::MeshElementUID element_id, Mesh::MeshElementType type);
-
-    bool addSelection(Mesh::MeshNodeId node_id);
-
-    bool removeSelection(Mesh::MeshNodeId node_id);
+    bool removeSelection(uint64_t entity_uid, RenderEntityType type);
 
     void clearSelection();
 
@@ -89,7 +64,8 @@ public:
         return m_pickEnabledChanged.connect(std::move(callback));
     }
 
-    Util::ScopedConnection subscribePickSettingsChanged(std::function<void(PickMask)> callback) {
+    Util::ScopedConnection
+    subscribePickSettingsChanged(std::function<void(RenderEntityTypeMask)> callback) {
         return m_pickSettingsChanged.connect(std::move(callback));
     }
 
@@ -99,21 +75,13 @@ public:
     }
 
 private:
-    bool modifySelection(SelectionChangeAction action, PickResult result);
-
-private:
     mutable std::mutex m_mutex;
     bool m_pickEnabled{false};
-    PickMask m_pickTypes{PickMask::None};
+    RenderEntityTypeMask m_pickTypes{RenderEntityTypeMask::None};
 
     PickResultSet m_currentSelections;
 
-    // Geometry::EntityRefSet m_selectedGeometryEntities;
-
-    // Mesh::MeshElementRefSet m_selectedMeshElements;
-    // Mesh::MeshNodeIdSet m_selectedMeshNodes;
-
-    Util::Signal<PickMask> m_pickSettingsChanged;
+    Util::Signal<RenderEntityTypeMask> m_pickSettingsChanged;
     Util::Signal<bool> m_pickEnabledChanged;
     Util::Signal<PickResult, SelectionChangeAction> m_selectionChanged;
 };

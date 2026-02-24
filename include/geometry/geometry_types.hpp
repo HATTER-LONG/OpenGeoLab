@@ -66,7 +66,7 @@ enum class EntityType : uint8_t {
  * EntityId provides a globally unique identifier across all entity types.
  * It can be used to quickly locate any entity in the geometry system.
  */
-using EntityId = uint32_t;
+using EntityId = uint64_t;
 
 /**
  * @brief Type-scoped unique identifier within the same entity type
@@ -75,7 +75,7 @@ using EntityId = uint32_t;
  * and edge UID 1 are different entities. Combined with EntityType, it forms
  * a complete entity reference.
  */
-using EntityUID = uint32_t;
+using EntityUID = uint64_t;
 
 /// Invalid/null EntityId constant
 constexpr EntityId INVALID_ENTITY_ID = 0;
@@ -101,7 +101,7 @@ constexpr EntityUID INVALID_ENTITY_UID = 0;
  * @param type The entity type to query
  * @return The maximum assigned EntityUID for the given type
  */
-[[nodiscard]] uint32_t getMaxIdByType(EntityType type);
+[[nodiscard]] uint64_t getMaxIdByType(EntityType type);
 
 /**
  * @brief Reset UID generator for a specific type (for testing purposes)

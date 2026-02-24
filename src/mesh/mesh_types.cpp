@@ -5,36 +5,6 @@
 #include <unordered_map>
 
 namespace OpenGeoLab::Mesh {
-// =============================================================================
-// Mesh EntityType conversions
-// =============================================================================
-
-std::optional<std::string> meshEntityTypeToString(EntityType type) noexcept {
-    switch(type) {
-    case EntityType::Invalid:
-        return "Invalid";
-    case EntityType::Node:
-        return "MeshNode";
-    case EntityType::Element:
-        return "MeshElement";
-    default:
-        break;
-    }
-    return std::nullopt;
-}
-
-std::optional<EntityType> meshEntityTypeFromString(std::string_view str) noexcept {
-    static std::unordered_map<std::string_view, EntityType> string_to_type = {
-        {"Invalid", EntityType::Invalid}, {"MeshNode", EntityType::Node},
-        {"Node", EntityType::Node},       {"MeshElement", EntityType::Element},
-        {"Element", EntityType::Element},
-    };
-    auto it = string_to_type.find(str);
-    if(it != string_to_type.end()) {
-        return it->second;
-    }
-    return std::nullopt;
-}
 
 // =============================================================================
 // MeshElementType conversions
@@ -42,8 +12,8 @@ std::optional<EntityType> meshEntityTypeFromString(std::string_view str) noexcep
 
 std::optional<std::string> meshElementTypeToString(MeshElementType type) noexcept {
     switch(type) {
-    case MeshElementType::Invalid:
-        return "Invalid";
+    case MeshElementType::Node:
+        return "Node";
     case MeshElementType::Line:
         return "Line";
     case MeshElementType::Triangle:
@@ -56,6 +26,8 @@ std::optional<std::string> meshElementTypeToString(MeshElementType type) noexcep
         return "Hexa8";
     case MeshElementType::Prism6:
         return "Prism6";
+    case MeshElementType::Pyramid5:
+        return "Pyramid5";
     default:
         break;
     }
@@ -65,10 +37,10 @@ std::optional<std::string> meshElementTypeToString(MeshElementType type) noexcep
 
 std::optional<MeshElementType> meshElementTypeFromString(std::string_view str) noexcept {
     static std::unordered_map<std::string_view, MeshElementType> string_to_type = {
-        {"Invalid", MeshElementType::Invalid},   {"Line", MeshElementType::Line},
+        {"Node", MeshElementType::Node},         {"Line", MeshElementType::Line},
         {"Triangle", MeshElementType::Triangle}, {"Quad4", MeshElementType::Quad4},
         {"Tetra4", MeshElementType::Tetra4},     {"Hexa8", MeshElementType::Hexa8},
-        {"Prism6", MeshElementType::Prism6},
+        {"Prism6", MeshElementType::Prism6},     {"Pyramid5", MeshElementType::Pyramid5},
     };
     auto it = string_to_type.find(str);
     if(it != string_to_type.end()) {
@@ -77,16 +49,16 @@ std::optional<MeshElementType> meshElementTypeFromString(std::string_view str) n
     return std::nullopt;
 }
 namespace {
-std::atomic<MeshNodeId> g_mesh_node_id_counter{1};
 std::atomic<MeshElementId> g_mesh_element_id_counter{1};
-std::array<std::atomic<MeshElementUID>, 7> g_mesh_element_uid_counters = {
-    std::atomic<MeshElementUID>{1}, // Invalid
+std::array<std::atomic<MeshElementUID>, 8> g_mesh_element_uid_counters = {
+    std::atomic<MeshElementUID>{1}, // Node
     std::atomic<MeshElementUID>{1}, // Line
     std::atomic<MeshElementUID>{1}, // Triangle
     std::atomic<MeshElementUID>{1}, // Quad4
     std::atomic<MeshElementUID>{1}, // Tetra4
     std::atomic<MeshElementUID>{1}, // Hexa8
-    std::atomic<MeshElementUID>{1}  // Prism6
+    std::atomic<MeshElementUID>{1}, // Prism6
+    std::atomic<MeshElementUID>{1}  // Pyramid5
 };
 } // namespace
 
@@ -127,16 +99,6 @@ uint64_t getCurrentMeshElementUIDCounter(MeshElementType type) {
         throw std::invalid_argument("Invalid MeshElementType for UID counter retrieval");
     }
     return g_mesh_element_uid_counters[index].load(std::memory_order_relaxed);
-}
-
-[[nodiscard]] MeshNodeId generateMeshNodeId() {
-    return g_mesh_node_id_counter.fetch_add(1, std::memory_order_relaxed);
-}
-
-void resetMeshNodeIdGenerator() { g_mesh_node_id_counter.store(1, std::memory_order_relaxed); }
-
-uint64_t getCurrentMeshNodeIdCounter() {
-    return g_mesh_node_id_counter.load(std::memory_order_relaxed);
 }
 
 } // namespace OpenGeoLab::Mesh
