@@ -1,23 +1,15 @@
 #pragma once
-#include "render/render_data.hpp"
+
+#include "render/render_types.hpp"
 
 #include <QMatrix4x4>
 #include <QPointF>
 #include <QSizeF>
-#include <cstdint>
 
 #include <kangaroo/util/component_factory.hpp>
 #include <kangaroo/util/noncopyable.hpp>
 
 namespace OpenGeoLab::Render {
-/**
- * @brief Action requested by the viewport for entity picking
- */
-enum class PickAction : uint8_t {
-    None = 0,   ///< No action
-    Add = 1,    ///< Add entity to selection
-    Remove = 2, ///< Remove entity from selection
-};
 
 /**
  * @brief Input parameters for pixel picking

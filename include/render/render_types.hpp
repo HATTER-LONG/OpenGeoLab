@@ -1,3 +1,5 @@
+#pragma once
+
 #include "geometry/geometry_types.hpp"
 #include "mesh/mesh_types.hpp"
 
@@ -102,4 +104,9 @@ constexpr Mesh::MeshElementType toMeshElementType(RenderEntityType t) {
     return Mesh::MeshElementType::None;
 }
 
+enum class PickAction : uint8_t {
+    None = 0,   ///< No action
+    Add = 1,    ///< Add entity to selection
+    Remove = 2, ///< Remove entity from selection
+};
 } // namespace OpenGeoLab::Render

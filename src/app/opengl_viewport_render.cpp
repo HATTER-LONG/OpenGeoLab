@@ -4,18 +4,27 @@
 #include <QMouseEvent>
 #include <QOpenGLContext>
 #include <QOpenGLFramebufferObject>
+#include <QOpenGLFunctions>
 #include <QQuickWindow>
 #include <QWheelEvent>
 #include <QtCore/QMetaObject>
 #include <QtMath>
-#include <qopenglfunctions.h>
 
 namespace OpenGeoLab::App {
-GLViewportRender::GLViewportRender(const GLViewport* viewport) : m_viewport(viewport) {
+GLViewportRender::GLViewportRender(const GLViewport* viewport)
+    : m_viewport(viewport),
+      m_renderScene(
+          g_ComponentFactory.createObjectWithID<Render::SceneRendererFactory>("SceneRenderer")) {
+
+    assert(m_renderScene);
     LOG_TRACE("GLViewportRenderer created");
 }
 
-GLViewportRender::~GLViewportRender() { LOG_TRACE("GLViewportRenderer destroyed"); }
+GLViewportRender::~GLViewportRender() {
+    m_renderScene->cleanup();
+    LOG_TRACE("GLViewportRenderer destroyed");
+}
+
 void GLViewportRender::render() {
     // For now, just clear the viewport with a solid color.
     auto* ctx = QOpenGLContext::currentContext();

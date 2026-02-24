@@ -2,6 +2,7 @@
 #pragma once
 
 #include "render/render_scene_controller.hpp"
+#include "render/render_types.hpp"
 #include "render/trackball_controller.hpp"
 #include "util/signal.hpp"
 
@@ -26,6 +27,15 @@ public:
      */
     QQuickFramebufferObject::Renderer* createRenderer() const override;
 
+protected:
+    void keyPressEvent(QKeyEvent* event) override;
+    void keyReleaseEvent(QKeyEvent* event) override;
+    void mousePressEvent(QMouseEvent* event) override;
+    void mouseMoveEvent(QMouseEvent* event) override;
+    void mouseReleaseEvent(QMouseEvent* event) override;
+    void wheelEvent(QWheelEvent* event) override;
+    void hoverMoveEvent(QHoverEvent* event) override;
+
 private slots:
     void onSceneNeedsUpdate();
     // void onRenderNeedsUpdate();
@@ -37,6 +47,17 @@ private:
     Util::ScopedConnection m_sceneNeedsUpdateConn;
     Util::ScopedConnection m_cameraChangedConn;
     Util::ScopedConnection m_selectionChangedConn;
+
+    QPointF m_cursorPos;           ///< Latest cursor position (for hover picking)
+    QPointF m_pressPos;            ///< Position at last mouse press (for click/drag detection)
+    bool m_movedSincePress{false}; ///< Whether cursor moved beyond threshold since press
+
+    qreal m_devicePixelRatio{1.0}; ///< Cached device pixel ratio
+
+    Qt::MouseButtons m_pressedButtons;        ///< Currently pressed mouse buttons
+    Qt::KeyboardModifiers m_pressedModifiers; ///< Currently pressed keyboard modifiers
+    Render::PickAction m_pendingPickAction{
+        Render::PickAction::None}; ///< Pending pick action on mouse releasek
 };
 
 } // namespace OpenGeoLab::App
