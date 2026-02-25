@@ -51,6 +51,12 @@ struct CameraState {
     void fitToBoundingBox(const Geometry::BoundingBox3D& bbox);
 };
 
+enum class SceneUpdateType : uint8_t {
+    GeometryChanged = 0,
+    MeshChanged = 1,
+    CameraChanged = 2,
+};
+
 class RenderSceneController : public Kangaroo::Util::NonCopyMoveable {
 protected:
     RenderSceneController();
@@ -92,7 +98,7 @@ public:
     [[nodiscard]] bool isPartMeshVisible(Geometry::EntityUID part_uid) const;
 
     [[nodiscard]] Util::ScopedConnection
-    subscribeToSceneNeedsUpdate(std::function<void()> callback) {
+    subscribeToSceneNeedsUpdate(std::function<void(SceneUpdateType)> callback) {
         return m_sceneNeedsUpdate.connect(callback);
     }
 
@@ -115,7 +121,7 @@ private:
     Util::ScopedConnection m_geometryDocumentConnection;
     Util::ScopedConnection m_meshDocumentConnection;
 
-    Util::Signal<> m_sceneNeedsUpdate;
+    Util::Signal<SceneUpdateType> m_sceneNeedsUpdate;
 
     RenderData m_renderData;
 

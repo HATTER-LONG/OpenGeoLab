@@ -37,8 +37,10 @@ protected:
     void hoverMoveEvent(QHoverEvent* event) override;
 
 private slots:
-    void onSceneNeedsUpdate();
+    void onSceneNeedsUpdate(Render::SceneUpdateType type = Render::SceneUpdateType::CameraChanged);
     // void onRenderNeedsUpdate();
+signals:
+    void geometryChanged();
 
 private:
     Render::CameraState m_cameraState;                 ///< Local camera state copy

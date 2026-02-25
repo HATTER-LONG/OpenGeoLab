@@ -12,6 +12,16 @@ struct RenderColor {
     float m_g{0.8f}; ///< Green component [0, 1]
     float m_b{0.8f}; ///< Blue component [0, 1]
     float m_a{1.0f}; ///< Alpha component [0, 1]
+
+    [[nodiscard]] std::string toHex() const {
+        auto to_byte = [](float c) -> uint8_t {
+            return static_cast<uint8_t>(std::round(c * 255.0f));
+        };
+        char buffer[9];
+        std::snprintf(buffer, sizeof(buffer), "#%02X%02X%02X", to_byte(m_r), to_byte(m_g),
+                      to_byte(m_b));
+        return std::string(buffer);
+    }
 };
 
 /**
@@ -51,8 +61,8 @@ struct RenderPrimitive {
 
     bool m_visible{true};
 
-    std::vector<float> m_positions;  ///< Interleaved vertex positions (x, y, z)
-    std::vector<uint32_t> m_indices; ///< Index buffer for indexed drawing
+    std::vector<Util::Pt3d> m_positions;
+    std::vector<uint32_t> m_indices;
 
     [[nodiscard]] bool isValid() const {
         return !m_positions.empty() && !m_indices.empty() && m_uid != 0 &&

@@ -78,7 +78,7 @@ void BackendService::request(const QString& module_name, const QString& params) 
         }
     }
 
-    m_currentActionName = extractActionName(param_json);
+    auto current_action_name = extractActionName(param_json);
 
     const bool silent = isSilentRequest(param_json);
     if(!silent) {
@@ -103,12 +103,12 @@ void BackendService::request(const QString& module_name, const QString& params) 
             auto result = service->processRequest(module_name.toStdString(), param_json, reporter);
             LOG_DEBUG("Silent backend request [{}] completed successfully.",
                       qPrintable(module_name));
-            emit operationFinished(module_name, m_currentActionName,
+            emit operationFinished(module_name, current_action_name,
                                    QString::fromStdString(result.dump()));
         } catch(const std::exception& e) {
             // Keep errors visible to logs, but don't trigger UI progress overlay.
             LOG_ERROR("Silent backend error [{}]: {}", qPrintable(module_name), e.what());
-            emit operationFailed(module_name, m_currentActionName,
+            emit operationFailed(module_name, current_action_name,
                                  QStringLiteral("Silent request error: ") +
                                      QString::fromStdString(e.what()));
         }
@@ -117,9 +117,11 @@ void BackendService::request(const QString& module_name, const QString& params) 
 
     if(m_busy) {
         const auto err = QStringLiteral("Service is currently busy. Cannot process new request.");
-        emit operationFailed(module_name, m_currentActionName, err);
+        emit operationFailed(module_name, current_action_name, err);
         return;
     }
+
+    m_currentActionName = current_action_name;
     setBusyInternal(true);
 
     m_currentModuleName = module_name;

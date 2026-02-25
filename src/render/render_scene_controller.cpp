@@ -94,13 +94,18 @@ void RenderSceneController::handleDocumentGeometryChanged(
     LOG_DEBUG("RenderSceneController: Geometry document changed, type={}",
               static_cast<int>(event.m_type));
     updateGeometryRenderData();
-    m_sceneNeedsUpdate.emitSignal();
+    m_sceneNeedsUpdate.emitSignal(SceneUpdateType::GeometryChanged);
 }
 
 void RenderSceneController::updateGeometryRenderData() {
     auto document = GeoDocumentInstance;
 
-    auto render_data = document->getRenderData(TessellationOptions::defaultOptions());
+    auto default_options = Render::TessellationOptions::defaultOptions();
+    auto ret = document->getRenderData(m_renderData, default_options);
+    if(!ret) {
+        LOG_ERROR("RenderSceneController: Failed to get geometry render data");
+        m_renderData.clear();
+    }
 }
 
 void RenderSceneController::subscribeToMeshDocument() {
@@ -112,7 +117,7 @@ void RenderSceneController::subscribeToMeshDocument() {
 void RenderSceneController::handleDocumentMeshChanged() {
     LOG_DEBUG("RenderSceneController: Mesh document changed");
     updateMeshRenderData();
-    m_sceneNeedsUpdate.emitSignal();
+    m_sceneNeedsUpdate.emitSignal(SceneUpdateType::MeshChanged);
 }
 
 void RenderSceneController::updateMeshRenderData() {
@@ -123,7 +128,7 @@ void RenderSceneController::updateMeshRenderData() {
 void RenderSceneController::setCamera(const CameraState& camera, bool notify) {
     m_cameraState = camera;
     if(notify) {
-        m_sceneNeedsUpdate.emitSignal();
+        m_sceneNeedsUpdate.emitSignal(SceneUpdateType::CameraChanged);
     }
 }
 
@@ -132,19 +137,19 @@ void RenderSceneController::refreshScene(bool notify) {
     updateGeometryRenderData();
     updateMeshRenderData();
     if(notify) {
-        m_sceneNeedsUpdate.emitSignal();
+        m_sceneNeedsUpdate.emitSignal(SceneUpdateType::GeometryChanged);
     }
 }
 
 void RenderSceneController::fitToScene(bool notify) {
     if(notify) {
-        m_sceneNeedsUpdate.emitSignal();
+        m_sceneNeedsUpdate.emitSignal(SceneUpdateType::GeometryChanged);
     }
 }
 void RenderSceneController::resetCamera(bool notify) {
     m_cameraState.reset();
     if(notify) {
-        m_sceneNeedsUpdate.emitSignal();
+        m_sceneNeedsUpdate.emitSignal(SceneUpdateType::CameraChanged);
     }
 }
 
@@ -154,7 +159,7 @@ void RenderSceneController::setFrontView(bool notify) {
     m_cameraState.m_position = m_cameraState.m_target + QVector3D(0.0f, 0.0f, distance);
     m_cameraState.m_up = QVector3D(0.0f, 1.0f, 0.0f);
     if(notify) {
-        m_sceneNeedsUpdate.emitSignal();
+        m_sceneNeedsUpdate.emitSignal(SceneUpdateType::CameraChanged);
     }
 }
 
@@ -164,7 +169,7 @@ void RenderSceneController::setTopView(bool notify) {
     m_cameraState.m_position = m_cameraState.m_target + QVector3D(0.0f, distance, 0.0f);
     m_cameraState.m_up = QVector3D(0.0f, 0.0f, -1.0f);
     if(notify) {
-        m_sceneNeedsUpdate.emitSignal();
+        m_sceneNeedsUpdate.emitSignal(SceneUpdateType::CameraChanged);
     }
 }
 
@@ -174,7 +179,7 @@ void RenderSceneController::setLeftView(bool notify) {
     m_cameraState.m_position = m_cameraState.m_target + QVector3D(-distance, 0.0f, 0.0f);
     m_cameraState.m_up = QVector3D(0.0f, 1.0f, 0.0f);
     if(notify) {
-        m_sceneNeedsUpdate.emitSignal();
+        m_sceneNeedsUpdate.emitSignal(SceneUpdateType::CameraChanged);
     }
 }
 
@@ -184,7 +189,7 @@ void RenderSceneController::setRightView(bool notify) {
     m_cameraState.m_position = m_cameraState.m_target + QVector3D(distance, 0.0f, 0.0f);
     m_cameraState.m_up = QVector3D(0.0f, 1.0f, 0.0f);
     if(notify) {
-        m_sceneNeedsUpdate.emitSignal();
+        m_sceneNeedsUpdate.emitSignal(SceneUpdateType::CameraChanged);
     }
 }
 
@@ -194,7 +199,7 @@ void RenderSceneController::setBackView(bool notify) {
     m_cameraState.m_position = m_cameraState.m_target + QVector3D(0.0f, 0.0f, -distance);
     m_cameraState.m_up = QVector3D(0.0f, 1.0f, 0.0f);
     if(notify) {
-        m_sceneNeedsUpdate.emitSignal();
+        m_sceneNeedsUpdate.emitSignal(SceneUpdateType::CameraChanged);
     }
 }
 
@@ -204,7 +209,7 @@ void RenderSceneController::setBottomView(bool notify) {
     m_cameraState.m_position = m_cameraState.m_target + QVector3D(0.0f, -distance, 0.0f);
     m_cameraState.m_up = QVector3D(0.0f, 0.0f, 1.0f);
     if(notify) {
-        m_sceneNeedsUpdate.emitSignal();
+        m_sceneNeedsUpdate.emitSignal(SceneUpdateType::CameraChanged);
     }
 }
 // =============================================================================
@@ -216,7 +221,7 @@ void RenderSceneController::setPartGeometryVisible(Geometry::EntityUID part_uid,
         std::lock_guard lock(m_visibilityMutex);
         m_partVisibility[part_uid].m_geometryVisible = visible;
     }
-    m_sceneNeedsUpdate.emitSignal();
+    m_sceneNeedsUpdate.emitSignal(SceneUpdateType::GeometryChanged);
 }
 
 void RenderSceneController::setPartMeshVisible(Geometry::EntityUID part_uid, bool visible) {
@@ -224,7 +229,7 @@ void RenderSceneController::setPartMeshVisible(Geometry::EntityUID part_uid, boo
         std::lock_guard lock(m_visibilityMutex);
         m_partVisibility[part_uid].m_meshVisible = visible;
     }
-    m_sceneNeedsUpdate.emitSignal();
+    m_sceneNeedsUpdate.emitSignal(SceneUpdateType::MeshChanged);
 }
 
 bool RenderSceneController::isPartGeometryVisible(Geometry::EntityUID part_uid) const {

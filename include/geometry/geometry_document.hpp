@@ -128,16 +128,8 @@ public:
     // Render Data Access
     // -------------------------------------------------------------------------
 
-    [[nodiscard]] virtual const Render::RenderData&
-    getRenderData(const Render::TessellationOptions& options) = 0;
-
-    /**
-     * @brief Invalidate cached render data
-     *
-     * Call this method to force regeneration of render data on the next
-     * getRenderData() call. Automatically called when geometry changes.
-     */
-    virtual void invalidateRenderData() = 0;
+    [[nodiscard]] virtual bool getRenderData(Render::RenderData& render_data,
+                                             const Render::TessellationOptions& options) = 0;
 
     // -------------------------------------------------------------------------
     // Entity Lookup

@@ -65,6 +65,7 @@ Rectangle {
 
             try {
                 const data = JSON.parse(result);
+                console.log("[DocumentSideBar] Received part list:", data.parts);
                 sidebar.partListModel = data.parts || [];
                 sidebar.isLoading = false;
             } catch (e) {
@@ -84,9 +85,7 @@ Rectangle {
     }
 
     // Initial load on component completion
-    Component.onCompleted: {
-        refreshPartList();
-    }
+    Component.onCompleted: {}
 
     // Toggle button
     Rectangle {

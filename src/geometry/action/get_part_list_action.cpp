@@ -5,7 +5,7 @@
 
 #include "get_part_list_action.hpp"
 #include "../geometry_documentImpl.hpp"
-#include "geometry/part_color.hpp"
+#include "util/color_map.hpp"
 #include "util/logger.hpp"
 
 namespace OpenGeoLab::Geometry {
@@ -51,9 +51,9 @@ nlohmann::json GetPartListAction::execute(const nlohmann::json& /*params*/,
         part_info["name"] = part->name();
 
         // Get color for this part based on entity ID for consistency
-        PartColor color = PartColorPalette::getColorByEntityId(part->entityId());
+        Render::RenderColor color = Util::ColorMap::instance().getColorForPartId(part->entityUID());
         part_info["color"] = color.toHex();
-        part_info["color_rgba"] = {color.r, color.g, color.b, color.a};
+        part_info["color_rgba"] = {color.m_r, color.m_g, color.m_b, color.m_a};
 
         // Count entities by type within this part
         nlohmann::json entity_counts;

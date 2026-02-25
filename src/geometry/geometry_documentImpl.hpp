@@ -152,10 +152,8 @@ public:
     // Render Data Access (GeometryDocument interface)
     // =========================================================================
 
-    [[nodiscard]] const Render::RenderData&
-    getRenderData(const Render::TessellationOptions& options) override;
-
-    void invalidateRenderData() override;
+    [[nodiscard]] bool getRenderData(Render::RenderData& render_data,
+                                     const Render::TessellationOptions& options) override;
 
     // =========================================================================
     // Change Notification (GeometryDocument interface)
@@ -174,42 +172,20 @@ public:
     }
 
 private:
-    /**
-     * @brief Helper for recursive entity removal.
-     * @param entity_id Entity to remove.
-     * @param removed_count Counter for removed entities.
-     */
     void removeEntityRecursive(EntityId entity_id, size_t& removed_count);
 
-    /**
-     * @brief Generate render mesh for a face entity
-     * @param entity Face entity
-     * @param options Tessellation options
-     * @return Render mesh for the face
-     */
-    [[nodiscard]] Render::RenderData generateFaceMesh(const GeometryEntityImplPtr& entity,
-                                                      const Render::TessellationOptions& options);
+    void generateFaceMesh(Render::RenderData& render_data,
+                          const GeometryEntityImplPtr& entity,
+                          const Render::TessellationOptions& options);
 
-    /**
-     * @brief Generate render mesh for an edge entity
-     * @param entity Edge entity
-     * @param options Tessellation options
-     * @return Render mesh for the edge
-     */
-    [[nodiscard]] Render::RenderData generateEdgeMesh(const GeometryEntityImplPtr& entity,
-                                                      const Render::TessellationOptions& options);
+    void generateEdgeMesh(Render::RenderData& render_data,
+                          const GeometryEntityImplPtr& entity,
+                          const Render::TessellationOptions& options);
 
-    /**
-     * @brief Generate render mesh for a vertex entity
-     * @param entity Vertex entity
-     * @return Render mesh for the vertex
-     */
-    [[nodiscard]] Render::RenderData generateVertexMesh(const GeometryEntityImplPtr& entity);
+    void generateVertexMesh(Render::RenderData& render_data,
+                            const GeometryEntityImplPtr& entity,
+                            const Render::TessellationOptions& options);
 
-    /**
-     * @brief Emit a change notification to all subscribers
-     * @param event Change event to emit
-     */
     void emitChangeEvent(const GeometryChangeEvent& event);
 
 private:
@@ -220,10 +196,10 @@ private:
     /// Signal for geometry change notifications
     Util::Signal<const GeometryChangeEvent&> m_changeSignal;
 
-    /// Cached render data
-    mutable Render::RenderData m_cachedRenderData;
-    mutable bool m_renderDataValid{false};
     mutable std::mutex m_renderDataMutex;
+    // /// Cached render data
+    // mutable Render::RenderData m_cachedRenderData;
+    // mutable bool m_renderDataValid{false};
 };
 /**
  * @brief Singleton factory for GeometryDocumentImpl

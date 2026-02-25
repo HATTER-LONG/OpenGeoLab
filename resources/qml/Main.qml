@@ -35,15 +35,15 @@ ApplicationWindow {
      * if no model is loaded.
      */
     function initializeScene() {
-        BackendService.request("RenderService", JSON.stringify({
-            action: "ViewPortControl",
-            view_ctrl: {
-                refresh: true
-            },
-            _meta: {
-                silent: true
-            }
-        }));
+        // BackendService.request("RenderService", JSON.stringify({
+        //     action: "ViewPortControl",
+        //     view_ctrl: {
+        //         refresh: true
+        //     },
+        //     _meta: {
+        //         silent: true
+        //     }
+        // }));
     }
     header: RibbonMenu.RibbonToolBar {
         id: ribbonToolBar
@@ -85,15 +85,15 @@ ApplicationWindow {
         target: glViewport
         function onGeometryChanged() {
             // Auto-fit camera when geometry changes
-            BackendService.request("RenderService", JSON.stringify({
-                action: "ViewPortControl",
-                view_ctrl: {
-                    fit: true
-                },
-                _meta: {
-                    silent: true
-                }
-            }));
+            // BackendService.request("RenderService", JSON.stringify({
+            //     action: "ViewPortControl",
+            //     view_ctrl: {
+            //         fit: true
+            //     },
+            //     _meta: {
+            //         silent: true
+            //     }
+            // }));
             // Refresh part list in sidebar
             documentSideBar.refreshPartList();
         }

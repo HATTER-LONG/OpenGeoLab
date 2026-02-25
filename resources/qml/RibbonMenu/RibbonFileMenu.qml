@@ -72,6 +72,7 @@ Popup {
             iconSource: Theme.isDark ? "qrc:/opengeolab/resources/icons/dark.svg" : "qrc:/opengeolab/resources/icons/light.svg"
             onClicked: {
                 Theme.toggleMode();
+                ColorMapService.setThemeMode(Theme.mode);
                 fileMenu.close();
             }
         }

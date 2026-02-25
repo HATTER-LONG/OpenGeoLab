@@ -5,10 +5,8 @@
 
 #include "geometry_documentImpl.hpp"
 #include "entity/geometry_entityImpl.hpp"
-#include "geometry/part_color.hpp"
 #include "shape_builder.hpp"
 #include "util/logger.hpp"
-#include "util/point_vector3d.hpp"
 #include "util/progress_callback.hpp"
 
 #include <BRepMesh_IncrementalMesh.hxx>
@@ -22,6 +20,9 @@
 #include <TopAbs_Orientation.hxx>
 #include <TopLoc_Location.hxx>
 #include <TopoDS.hxx>
+#include <TopoDS_Edge.hxx>
+#include <TopoDS_Face.hxx>
+#include <TopoDS_Vertex.hxx>
 #include <gp_Dir.hxx>
 #include <gp_Pnt.hxx>
 #include <gp_Trsf.hxx>
@@ -241,21 +242,6 @@ LoadResult GeometryDocumentImpl::appendShape(const TopoDS_Shape& shape,
     }
 }
 
-// =============================================================================
-// Render Data Implementation
-// =============================================================================
-
-const Render::RenderData&
-GeometryDocumentImpl::getRenderData(const Render::TessellationOptions& options) {
-    std::lock_guard<std::mutex> lock(m_renderDataMutex);
-
-    return m_cachedRenderData;
-}
-
-void GeometryDocumentImpl::invalidateRenderData() {
-    std::lock_guard<std::mutex> lock(m_renderDataMutex);
-    m_renderDataValid = false;
-}
 std::vector<EntityKey> GeometryDocumentImpl::findRelatedEntities(EntityId entity_id,
                                                                  EntityType related_type) const {
     return m_relationshipIndex.findRelatedEntities(entity_id, related_type);
@@ -267,20 +253,195 @@ std::vector<EntityKey> GeometryDocumentImpl::findRelatedEntities(EntityUID entit
     return m_relationshipIndex.findRelatedEntities(entity_uid, entity_type, related_type);
 }
 
-Render::RenderData
-GeometryDocumentImpl::generateFaceMesh(const GeometryEntityImplPtr& entity,
-                                       const Render::TessellationOptions& options) {
-    return {};
+// =============================================================================
+// Render Data Implementation
+// =============================================================================
+
+bool GeometryDocumentImpl::getRenderData(Render::RenderData& render_data,
+                                         const Render::TessellationOptions& options) {
+    std::lock_guard<std::mutex> lock(m_renderDataMutex);
+    render_data.m_geometry.clear();
+
+    auto faces = m_entityIndex.entitiesByType(EntityType::Face);
+    auto edges = m_entityIndex.entitiesByType(EntityType::Edge);
+    auto vertices = m_entityIndex.entitiesByType(EntityType::Vertex);
+
+    render_data.m_geometry.reserve(faces.size() + edges.size() + vertices.size());
+
+    for(const auto& face : faces) {
+        generateFaceMesh(render_data, face, options);
+    }
+    for(const auto& edge : edges) {
+        generateEdgeMesh(render_data, edge, options);
+    }
+    for(const auto& vertex : vertices) {
+        generateVertexMesh(render_data, vertex, options);
+    }
+    return true;
 }
 
-Render::RenderData
-GeometryDocumentImpl::generateEdgeMesh(const GeometryEntityImplPtr& entity,
-                                       const Render::TessellationOptions& options) {
-    return {};
+void GeometryDocumentImpl::generateFaceMesh(Render::RenderData& render_data,
+                                            const GeometryEntityImplPtr& entity,
+                                            const Render::TessellationOptions& options) {
+    if(!entity || !entity->hasShape()) {
+        return;
+    }
+
+    const auto face = TopoDS::Face(entity->shape());
+
+    BRepMesh_IncrementalMesh mesher(face, options.m_linearDeflection, Standard_False,
+                                    options.m_angularDeflection, Standard_False);
+    (void)mesher;
+    TopLoc_Location loc;
+    const Handle(Poly_Triangulation) triangulation = BRep_Tool::Triangulation(face, loc);
+    if(triangulation.IsNull() || triangulation->NbNodes() < 3 || triangulation->NbTriangles() < 1) {
+        return;
+    }
+
+    Render::RenderPrimitive face_primitive;
+    face_primitive.m_uid = entity->entityUID();
+    face_primitive.m_entityType = Render::RenderEntityType::Face;
+    face_primitive.m_topology = Render::PrimitiveTopology::Triangles;
+    face_primitive.m_passType = Render::RenderPassType::Geometry;
+    auto part_key = findRelatedEntities(entity->entityId(), EntityType::Part);
+
+    if(!part_key.empty()) {
+        face_primitive.m_partUID = part_key.front().m_uid;
+    }
+    const int reserved_nodes = triangulation->NbNodes();
+    const int triangles = triangulation->NbTriangles();
+    face_primitive.m_positions.reserve(reserved_nodes);
+    face_primitive.m_indices.reserve(triangles * 3);
+
+    const gp_Trsf& trsf = loc.Transformation();
+    const bool has_non_identity_trsf = !isIdentityTrsf(trsf);
+    for(int i = 1; i <= triangulation->NbNodes(); ++i) {
+        const gp_Pnt& pnt = triangulation->Node(i);
+        if(has_non_identity_trsf) {
+            gp_Pnt transformed_pnt = pnt.Transformed(trsf);
+            face_primitive.m_positions.emplace_back(transformed_pnt.X(), transformed_pnt.Y(),
+                                                    transformed_pnt.Z());
+        } else {
+            face_primitive.m_positions.emplace_back(pnt.X(), pnt.Y(), pnt.Z());
+        }
+    }
+
+    for(int i = 1; i <= triangles; ++i) {
+        const Poly_Triangle& tri = triangulation->Triangle(i);
+        Standard_Integer n1 = 0, n2 = 0, n3 = 0;
+        tri.Get(n1, n2, n3);
+        if(face.Orientation() == TopAbs_REVERSED) {
+            std::swap(n1, n3);
+        }
+        face_primitive.m_indices.push_back(static_cast<uint32_t>(n1 - 1));
+        face_primitive.m_indices.push_back(static_cast<uint32_t>(n2 - 1));
+        face_primitive.m_indices.push_back(static_cast<uint32_t>(n3 - 1));
+    }
+
+    if(face_primitive.isValid()) {
+        render_data.m_geometry.push_back(std::move(face_primitive));
+    }
+    return;
 }
 
-Render::RenderData GeometryDocumentImpl::generateVertexMesh(const GeometryEntityImplPtr& entity) {
-    return {};
+void GeometryDocumentImpl::generateEdgeMesh(Render::RenderData& render_data,
+                                            const GeometryEntityImplPtr& entity,
+                                            const Render::TessellationOptions& options) {
+    if(!entity || !entity->hasShape()) {
+        return;
+    }
+    auto edge = TopoDS::Edge(entity->shape());
+
+    Render::RenderPrimitive edge_primitive;
+    edge_primitive.m_uid = entity->entityUID();
+    edge_primitive.m_entityType = Render::RenderEntityType::Edge;
+    edge_primitive.m_topology = Render::PrimitiveTopology::Lines;
+    edge_primitive.m_passType = Render::RenderPassType::Geometry;
+    auto part_key = findRelatedEntities(entity->entityId(), EntityType::Part);
+    if(!part_key.empty()) {
+        edge_primitive.m_partUID = part_key.front().m_uid;
+    }
+
+    TopLoc_Location location;
+    const Handle(Poly_Polygon3D) polygon = BRep_Tool::Polygon3D(edge, location);
+    const gp_Trsf trsf = location.Transformation();
+    if(!polygon.IsNull() && polygon->NbNodes() >= 2) {
+        const auto& nodes = polygon->Nodes();
+        const Standard_Integer lower = nodes.Lower();
+        const Standard_Integer upper = nodes.Upper();
+
+        const Standard_Integer count = upper - lower + 1;
+        edge_primitive.m_positions.reserve(static_cast<size_t>(count));
+        edge_primitive.m_indices.reserve(
+            static_cast<size_t>(std::max<Standard_Integer>(0, count - 1)) * 2);
+
+        for(Standard_Integer idx = lower; idx <= upper; ++idx) {
+            gp_Pnt point = nodes.Value(idx);
+            if(!isIdentityTrsf(trsf)) {
+                point.Transform(trsf);
+            }
+            edge_primitive.m_positions.emplace_back(point.X(), point.Y(), point.Z());
+        }
+
+        for(Standard_Integer i = 0; i + 1 < count; ++i) {
+            edge_primitive.m_indices.push_back(static_cast<uint32_t>(i));
+            edge_primitive.m_indices.push_back(static_cast<uint32_t>(i + 1));
+        }
+    } else {
+        Standard_Real first = 0.0, last = 0.0;
+        Handle(Geom_Curve) curve = BRep_Tool::Curve(edge, location, first, last);
+        if(curve.IsNull()) {
+            return;
+        }
+        GeomAdaptor_Curve gac(curve, first, last);
+        GCPnts_UniformDeflection sampler(gac, std::max(options.m_linearDeflection, 1.0e-3), first,
+                                         last);
+        if(!sampler.IsDone() || sampler.NbPoints() < 2) {
+            return;
+        }
+        const Standard_Integer count = sampler.NbPoints();
+        edge_primitive.m_positions.reserve(static_cast<size_t>(count));
+        edge_primitive.m_indices.reserve(
+            static_cast<size_t>(std::max<Standard_Integer>(0, count - 1)) * 2);
+        for(Standard_Integer i = 1; i <= count; ++i) {
+            gp_Pnt point = sampler.Value(i);
+            if(!isIdentityTrsf(trsf)) {
+                point.Transform(trsf);
+            }
+            edge_primitive.m_positions.emplace_back(point.X(), point.Y(), point.Z());
+            if(i > 1) {
+                edge_primitive.m_indices.push_back(static_cast<uint32_t>(i - 2));
+                edge_primitive.m_indices.push_back(static_cast<uint32_t>(i - 1));
+            }
+        }
+    }
+
+    if(edge_primitive.isValid()) {
+        render_data.m_geometry.push_back(std::move(edge_primitive));
+    }
+    return;
+}
+
+void GeometryDocumentImpl::generateVertexMesh(Render::RenderData& render_data,
+                                              const GeometryEntityImplPtr& entity,
+                                              const Render::TessellationOptions& /*options*/) {
+    if(!entity || !entity->hasShape()) {
+        return;
+    }
+
+    const auto vertex = TopoDS::Vertex(entity->shape());
+
+    Render::RenderPrimitive vertex_primitive;
+    vertex_primitive.m_uid = entity->entityUID();
+    vertex_primitive.m_entityType = Render::RenderEntityType::Vertex;
+    vertex_primitive.m_topology = Render::PrimitiveTopology::Points;
+    vertex_primitive.m_passType = Render::RenderPassType::Geometry;
+    const gp_Pnt& pnt = BRep_Tool::Pnt(vertex);
+    vertex_primitive.m_positions.emplace_back(pnt.X(), pnt.Y(), pnt.Z());
+    if(vertex_primitive.isValid()) {
+        render_data.m_geometry.push_back(std::move(vertex_primitive));
+    }
+    return;
 }
 
 // =============================================================================
@@ -293,7 +454,6 @@ GeometryDocumentImpl::subscribeToChanges(std::function<void(const GeometryChange
 }
 
 void GeometryDocumentImpl::emitChangeEvent(const GeometryChangeEvent& event) {
-    invalidateRenderData();
     m_changeSignal.emitSignal(event);
 }
 

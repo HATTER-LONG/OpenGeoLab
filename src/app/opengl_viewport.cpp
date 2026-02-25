@@ -34,18 +34,24 @@ GLViewport::GLViewport(QQuickItem* parent) : QQuickFramebufferObject(parent) {
 
     auto& scene_controller = Render::RenderSceneController::instance();
     m_cameraState = scene_controller.cameraState();
-    m_sceneNeedsUpdateConn = scene_controller.subscribeToSceneNeedsUpdate([this]() {
-        QMetaObject::invokeMethod(this, &GLViewport::onSceneNeedsUpdate, Qt::QueuedConnection);
-    });
+    m_sceneNeedsUpdateConn =
+        scene_controller.subscribeToSceneNeedsUpdate([this](Render::SceneUpdateType type) {
+            QMetaObject::invokeMethod(this, &GLViewport::onSceneNeedsUpdate, Qt::QueuedConnection,
+                                      type);
+        });
     m_cameraChangedConn = Render::RenderSelectManager::instance().subscribeSelectionChanged(
         [this](Render::PickResult, Render::SelectionChangeAction) {
-            QMetaObject::invokeMethod(this, &GLViewport::onSceneNeedsUpdate, Qt::QueuedConnection);
+            QMetaObject::invokeMethod(this, &GLViewport::onSceneNeedsUpdate, Qt::QueuedConnection,
+                                      Render::SceneUpdateType::CameraChanged);
         });
 }
 
 GLViewport::~GLViewport() = default;
 
-void GLViewport::onSceneNeedsUpdate() {
+void GLViewport::onSceneNeedsUpdate(Render::SceneUpdateType type) {
+    if(type == Render::SceneUpdateType::GeometryChanged) {
+        emit geometryChanged();
+    }
     m_cameraState = Render::RenderSceneController::instance().cameraState();
     if(!m_trackballController.isActive()) {
         m_trackballController.syncFromCamera(m_cameraState);
@@ -153,7 +159,11 @@ void GLViewport::mouseReleaseEvent(QMouseEvent* event) {
 }
 
 void GLViewport::wheelEvent(QWheelEvent* event) {
-    if((m_pressedButtons & Qt::ControlModifier)) {
+    if(!hasFocus()) {
+        forceActiveFocus();
+    }
+    m_pressedModifiers = QGuiApplication::queryKeyboardModifiers();
+    if((m_pressedModifiers & Qt::ControlModifier)) {
         m_trackballController.setViewportSize(size());
         const float steps = event->angleDelta().y() / 120.0f;
         m_trackballController.wheelZoom(steps * 2.0f, m_cameraState);
@@ -161,6 +171,17 @@ void GLViewport::wheelEvent(QWheelEvent* event) {
         update();
     }
 
+    event->accept();
+}
+
+void GLViewport::hoverMoveEvent(QHoverEvent* event) {
+    if(Render::RenderSelectManager::instance().isPickEnabled()) {
+        m_cursorPos = event->position();
+        if(window()) {
+            m_devicePixelRatio = window()->devicePixelRatio();
+        }
+        update();
+    }
     event->accept();
 }
 } // namespace OpenGeoLab::App
