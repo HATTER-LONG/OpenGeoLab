@@ -8,13 +8,13 @@
 #include "geometry/part_color.hpp"
 #include "shape_builder.hpp"
 #include "util/logger.hpp"
-#include "util/point_vector3d.hpp"
 #include "util/progress_callback.hpp"
 
 #include <BRepMesh_IncrementalMesh.hxx>
 #include <BRep_Tool.hxx>
 #include <GCPnts_UniformDeflection.hxx>
 #include <GeomAdaptor_Curve.hxx>
+#include <Geom_Curve.hxx>
 #include <Poly_Polygon3D.hxx>
 #include <Poly_Triangle.hxx>
 #include <Poly_Triangulation.hxx>
@@ -22,9 +22,14 @@
 #include <TopAbs_Orientation.hxx>
 #include <TopLoc_Location.hxx>
 #include <TopoDS.hxx>
+#include <TopoDS_Edge.hxx>
+#include <TopoDS_Face.hxx>
+#include <TopoDS_Vertex.hxx>
 #include <gp_Dir.hxx>
 #include <gp_Pnt.hxx>
 #include <gp_Trsf.hxx>
+
+#include <algorithm>
 
 namespace OpenGeoLab::Geometry {
 
@@ -49,6 +54,16 @@ namespace {
 bool isIdentityTrsf(const gp_Trsf& trsf) {
     return trsf.IsNegative() == Standard_False && trsf.ScaleFactor() == 1.0 &&
            trsf.TranslationPart().SquareModulus() == 0.0;
+}
+
+Render::RenderColor toRenderColor(const PartColor& color) {
+    return Render::RenderColor{color.r, color.g, color.b, color.a};
+}
+
+void appendPointToPrimitive(Render::RenderPrimitive& primitive, const gp_Pnt& point) {
+    primitive.m_positions.push_back(static_cast<float>(point.X()));
+    primitive.m_positions.push_back(static_cast<float>(point.Y()));
+    primitive.m_positions.push_back(static_cast<float>(point.Z()));
 }
 
 } // namespace
@@ -249,6 +264,35 @@ const Render::RenderData&
 GeometryDocumentImpl::getRenderData(const Render::TessellationOptions& options) {
     std::lock_guard<std::mutex> lock(m_renderDataMutex);
 
+    if(m_renderDataValid) {
+        return m_cachedRenderData;
+    }
+
+    m_cachedRenderData.clear();
+
+    for(const auto& entity : entitiesByType(EntityType::Face)) {
+        auto face_data = generateFaceMesh(entity, options);
+        m_cachedRenderData.m_primitives.insert(m_cachedRenderData.m_primitives.end(),
+                                               face_data.m_primitives.begin(),
+                                               face_data.m_primitives.end());
+    }
+
+    for(const auto& entity : entitiesByType(EntityType::Edge)) {
+        auto edge_data = generateEdgeMesh(entity, options);
+        m_cachedRenderData.m_primitives.insert(m_cachedRenderData.m_primitives.end(),
+                                               edge_data.m_primitives.begin(),
+                                               edge_data.m_primitives.end());
+    }
+
+    for(const auto& entity : entitiesByType(EntityType::Vertex)) {
+        auto vertex_data = generateVertexMesh(entity);
+        m_cachedRenderData.m_primitives.insert(m_cachedRenderData.m_primitives.end(),
+                                               vertex_data.m_primitives.begin(),
+                                               vertex_data.m_primitives.end());
+    }
+
+    m_renderDataValid = true;
+
     return m_cachedRenderData;
 }
 
@@ -270,17 +314,163 @@ std::vector<EntityKey> GeometryDocumentImpl::findRelatedEntities(EntityUID entit
 Render::RenderData
 GeometryDocumentImpl::generateFaceMesh(const GeometryEntityImplPtr& entity,
                                        const Render::TessellationOptions& options) {
-    return {};
+    Render::RenderData data;
+    if(!entity || !entity->hasShape()) {
+        return data;
+    }
+
+    const auto face = TopoDS::Face(entity->shape());
+    if(face.IsNull()) {
+        return data;
+    }
+
+    BRepMesh_IncrementalMesh mesher(face, options.m_linearDeflection, false,
+                                    options.m_angularDeflection, false);
+    (void)mesher;
+
+    TopLoc_Location location;
+    const Handle(Poly_Triangulation) triangulation = BRep_Tool::Triangulation(face, location);
+    if(triangulation.IsNull() || triangulation->NbNodes() < 3 || triangulation->NbTriangles() < 1) {
+        return data;
+    }
+
+    Render::RenderPrimitive primitive;
+    primitive.m_pass = Render::RenderPassType::Geometry;
+    primitive.m_entityType = Render::RenderEntityType::Face;
+    primitive.m_topology = Render::PrimitiveTopology::Triangles;
+    primitive.m_color = toRenderColor(
+        PartColorPalette::getColorByEntityId(static_cast<EntityId>(entity->entityId())));
+
+    const gp_Trsf trsf = location.Transformation();
+    for(Standard_Integer node_index = 1; node_index <= triangulation->NbNodes(); ++node_index) {
+        gp_Pnt point = triangulation->Node(node_index);
+        if(!isIdentityTrsf(trsf)) {
+            point.Transform(trsf);
+        }
+        appendPointToPrimitive(primitive, point);
+    }
+
+    for(Standard_Integer tri_index = 1; tri_index <= triangulation->NbTriangles(); ++tri_index) {
+        Poly_Triangle triangle = triangulation->Triangle(tri_index);
+        Standard_Integer n1 = 0;
+        Standard_Integer n2 = 0;
+        Standard_Integer n3 = 0;
+        triangle.Get(n1, n2, n3);
+
+        if(face.Orientation() == TopAbs_REVERSED) {
+            std::swap(n2, n3);
+        }
+
+        primitive.m_indices.push_back(static_cast<uint32_t>(n1 - 1));
+        primitive.m_indices.push_back(static_cast<uint32_t>(n2 - 1));
+        primitive.m_indices.push_back(static_cast<uint32_t>(n3 - 1));
+    }
+
+    if(!primitive.empty()) {
+        data.m_primitives.push_back(std::move(primitive));
+    }
+    return data;
 }
 
 Render::RenderData
 GeometryDocumentImpl::generateEdgeMesh(const GeometryEntityImplPtr& entity,
                                        const Render::TessellationOptions& options) {
-    return {};
+    Render::RenderData data;
+    if(!entity || !entity->hasShape()) {
+        return data;
+    }
+
+    const auto edge = TopoDS::Edge(entity->shape());
+    if(edge.IsNull()) {
+        return data;
+    }
+
+    Render::RenderPrimitive primitive;
+    primitive.m_pass = Render::RenderPassType::Geometry;
+    primitive.m_entityType = Render::RenderEntityType::Edge;
+    primitive.m_topology = Render::PrimitiveTopology::Lines;
+    primitive.m_color = Render::RenderColor{0.12f, 0.12f, 0.12f, 1.0f};
+
+    TopLoc_Location location;
+    const Handle(Poly_Polygon3D) polygon = BRep_Tool::Polygon3D(edge, location);
+    const gp_Trsf trsf = location.Transformation();
+
+    if(!polygon.IsNull() && polygon->NbNodes() >= 2) {
+        const auto& nodes = polygon->Nodes();
+        const Standard_Integer lower = nodes.Lower();
+        const Standard_Integer upper = nodes.Upper();
+
+        for(Standard_Integer index = lower; index <= upper; ++index) {
+            gp_Pnt point = nodes.Value(index);
+            if(!isIdentityTrsf(trsf)) {
+                point.Transform(trsf);
+            }
+            appendPointToPrimitive(primitive, point);
+        }
+
+        for(Standard_Integer index = 1; index < (upper - lower + 1); ++index) {
+            primitive.m_indices.push_back(static_cast<uint32_t>(index - 1));
+            primitive.m_indices.push_back(static_cast<uint32_t>(index));
+        }
+    } else {
+        Standard_Real first_param = 0.0;
+        Standard_Real last_param = 0.0;
+        const Handle(Geom_Curve) curve = BRep_Tool::Curve(edge, first_param, last_param);
+        if(curve.IsNull()) {
+            return data;
+        }
+
+        GeomAdaptor_Curve adaptor(curve, first_param, last_param);
+        GCPnts_UniformDeflection sampler(adaptor, std::max(options.m_linearDeflection, 1.0e-3),
+                                         first_param, last_param);
+
+        if(!sampler.IsDone() || sampler.NbPoints() < 2) {
+            return data;
+        }
+
+        for(Standard_Integer index = 1; index <= sampler.NbPoints(); ++index) {
+            gp_Pnt point = sampler.Value(index);
+            if(!isIdentityTrsf(trsf)) {
+                point.Transform(trsf);
+            }
+            appendPointToPrimitive(primitive, point);
+            if(index > 1) {
+                primitive.m_indices.push_back(static_cast<uint32_t>(index - 2));
+                primitive.m_indices.push_back(static_cast<uint32_t>(index - 1));
+            }
+        }
+    }
+
+    if(primitive.m_positions.size() >= 6) {
+        data.m_primitives.push_back(std::move(primitive));
+    }
+
+    return data;
 }
 
 Render::RenderData GeometryDocumentImpl::generateVertexMesh(const GeometryEntityImplPtr& entity) {
-    return {};
+    Render::RenderData data;
+    if(!entity || !entity->hasShape()) {
+        return data;
+    }
+
+    const auto vertex = TopoDS::Vertex(entity->shape());
+    if(vertex.IsNull()) {
+        return data;
+    }
+
+    Render::RenderPrimitive primitive;
+    primitive.m_pass = Render::RenderPassType::Geometry;
+    primitive.m_entityType = Render::RenderEntityType::Vertex;
+    primitive.m_topology = Render::PrimitiveTopology::Points;
+    primitive.m_color = Render::RenderColor{0.92f, 0.52f, 0.08f, 1.0f};
+
+    appendPointToPrimitive(primitive, BRep_Tool::Pnt(vertex));
+
+    if(!primitive.empty()) {
+        data.m_primitives.push_back(std::move(primitive));
+    }
+    return data;
 }
 
 // =============================================================================

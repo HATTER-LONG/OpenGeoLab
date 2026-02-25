@@ -45,6 +45,15 @@ Signals:
 
 See: `docs/json_protocols.en.md`.
 
+## Rendering Scope (Phase-1)
+- In scope: `Surface/Wireframe/Points` display modes, `geometry/mesh/post` pass buckets, base-color rendering.
+- Out of scope: texture/PBR/advanced material system and complex post-processing effects.
+- Data contract:
+  - `RenderPrimitive`: topology (points/lines/triangles), color, visibility, position/index arrays.
+  - `RenderData`: primitive collection for one domain.
+  - `RenderBucket`: grouped data for `geometry-pass`, `mesh-pass`, and `post-pass`.
+- Control flow: `ViewToolBar.qml` → `RenderService(ViewPortControl)` → `RenderSceneController` → `GLViewportRender/RenderSceneImpl`.
+
 Recent addition:
 - The Geo Query page calls `GeometryService` action `query_entity_info` to query detailed info for the currently selected entities (type+uid) and renders the results in a list.
 

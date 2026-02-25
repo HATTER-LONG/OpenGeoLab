@@ -14,6 +14,8 @@ namespace OpenGeoLab::Render {
  */
 enum class ViewPreset { Front = 0, Back = 1, Left = 2, Right = 3, Top = 4, Bottom = 5 };
 
+enum class ViewRenderMode { Surface = 0, Wireframe = 1, Points = 2 };
+
 /**
  * @brief Render action that controls camera presets or triggers a refresh
  */
@@ -27,6 +29,7 @@ public:
 
 private:
     void applyPreset(ViewPreset preset);
+    void applyRenderMode(ViewRenderMode mode);
 
 private:
     ViewPreset m_preset{ViewPreset::Front};

@@ -163,4 +163,12 @@ void GLViewport::wheelEvent(QWheelEvent* event) {
 
     event->accept();
 }
+
+void GLViewport::hoverMoveEvent(QHoverEvent* event) {
+    m_cursorPos = event->position();
+    if(window()) {
+        m_devicePixelRatio = window()->devicePixelRatio();
+    }
+    event->accept();
+}
 } // namespace OpenGeoLab::App

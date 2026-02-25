@@ -1,6 +1,8 @@
 #include "mesh_documentImpl.hpp"
 #include "util/logger.hpp"
 
+#include <unordered_map>
+
 namespace OpenGeoLab::Mesh {
 std::shared_ptr<MeshDocumentImpl> MeshDocumentImpl::instance() {
     static auto inst = std::shared_ptr<MeshDocumentImpl>(new MeshDocumentImpl());
@@ -81,6 +83,10 @@ Util::ScopedConnection MeshDocumentImpl::subscribeToChanges(std::function<void()
 }
 
 void MeshDocumentImpl::notifyChanged() {
+    {
+        std::lock_guard<std::mutex> lock(m_renderDataMutex);
+        m_renderDataValid = false;
+    }
     LOG_DEBUG("MeshDocumentImpl: Notifying change, nodes={}, elements={}", m_nodes.size(),
               m_elements.size());
     m_changeSignal.emitSignal();
@@ -90,7 +96,81 @@ void MeshDocumentImpl::notifyChanged() {
 // Render Data
 // =============================================================================
 
-const Render::RenderData& MeshDocumentImpl::getRenderData() { return m_cachedRenderData; }
+const Render::RenderData& MeshDocumentImpl::getRenderData() {
+    std::lock_guard<std::mutex> lock(m_renderDataMutex);
+    if(m_renderDataValid) {
+        return m_cachedRenderData;
+    }
+
+    m_cachedRenderData.clear();
+
+    std::unordered_map<MeshNodeId, Util::Pt3d> node_lookup;
+    node_lookup.reserve(m_nodes.size());
+    for(const auto& node : m_nodes) {
+        node_lookup.emplace(node.nodeId(), node.position());
+    }
+
+    for(const auto& element : m_elements) {
+        const auto node_ids = element.nodeIds();
+        if(node_ids.empty()) {
+            continue;
+        }
+
+        Render::RenderPrimitive primitive;
+        primitive.m_pass = Render::RenderPassType::Mesh;
+        primitive.m_entityType = Render::toRenderEntityType(element.elementType());
+        primitive.m_color = Render::RenderColor{0.17f, 0.63f, 0.94f, 1.0f};
+
+        auto append_node = [&](MeshNodeId node_id) -> bool {
+            const auto it = node_lookup.find(node_id);
+            if(it == node_lookup.end()) {
+                return false;
+            }
+            primitive.m_positions.push_back(static_cast<float>(it->second.x));
+            primitive.m_positions.push_back(static_cast<float>(it->second.y));
+            primitive.m_positions.push_back(static_cast<float>(it->second.z));
+            return true;
+        };
+
+        switch(element.elementType()) {
+        case MeshElementType::Line:
+            primitive.m_topology = Render::PrimitiveTopology::Lines;
+            if(node_ids.size() < 2 || !append_node(node_ids[0]) || !append_node(node_ids[1])) {
+                continue;
+            }
+            primitive.m_indices = {0, 1};
+            break;
+
+        case MeshElementType::Triangle:
+            primitive.m_topology = Render::PrimitiveTopology::Triangles;
+            if(node_ids.size() < 3 || !append_node(node_ids[0]) || !append_node(node_ids[1]) ||
+               !append_node(node_ids[2])) {
+                continue;
+            }
+            primitive.m_indices = {0, 1, 2};
+            break;
+
+        case MeshElementType::Quad4:
+            primitive.m_topology = Render::PrimitiveTopology::Triangles;
+            if(node_ids.size() < 4 || !append_node(node_ids[0]) || !append_node(node_ids[1]) ||
+               !append_node(node_ids[2]) || !append_node(node_ids[3])) {
+                continue;
+            }
+            primitive.m_indices = {0, 1, 2, 0, 2, 3};
+            break;
+
+        default:
+            continue;
+        }
+
+        if(!primitive.empty()) {
+            m_cachedRenderData.m_primitives.push_back(std::move(primitive));
+        }
+    }
+
+    m_renderDataValid = true;
+    return m_cachedRenderData;
+}
 
 // =============================================================================
 // Factory

@@ -1,4 +1,5 @@
 #include "app/opengl_viewport_render.hpp"
+#include "render/render_scene_controller.hpp"
 #include "util/logger.hpp"
 
 #include <QMouseEvent>
@@ -9,6 +10,8 @@
 #include <QWheelEvent>
 #include <QtCore/QMetaObject>
 #include <QtMath>
+
+#include <algorithm>
 
 namespace OpenGeoLab::App {
 GLViewportRender::GLViewportRender(const GLViewport* viewport)
@@ -26,19 +29,28 @@ GLViewportRender::~GLViewportRender() {
 }
 
 void GLViewportRender::render() {
-    // For now, just clear the viewport with a solid color.
-    auto* ctx = QOpenGLContext::currentContext();
-    if(!ctx) {
-        LOG_WARN("GLViewportRender::render: no current OpenGL context");
-        return;
-    }
-    QOpenGLFunctions* f = ctx->functions();
-    if(!f || !framebufferObject()) {
+    auto* context = QOpenGLContext::currentContext();
+    if(!context || !framebufferObject()) {
+        LOG_WARN("GLViewportRender::render: no current OpenGL context or framebuffer");
         return;
     }
 
-    f->glViewport(0, 0, framebufferObject()->width(), framebufferObject()->height());
-    f->glClearColor(0.0f, 0.9f, 0.0f, 1.0f);
-    f->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    if(!m_renderScene->isInitialized()) {
+        m_renderScene->initialize();
+    }
+    m_renderScene->setViewportSize(framebufferObject()->size());
+
+    const auto& camera_state = Render::RenderSceneController::instance().cameraState();
+    const float aspect_ratio = static_cast<float>(framebufferObject()->width()) /
+                               static_cast<float>(std::max(1, framebufferObject()->height()));
+    const auto view_matrix = camera_state.viewMatrix();
+    const auto projection_matrix = camera_state.projectionMatrix(aspect_ratio);
+
+    m_renderScene->render(camera_state.m_position, view_matrix, projection_matrix);
+
+    QOpenGLFunctions* functions = context->functions();
+    if(functions) {
+        functions->glFlush();
+    }
 }
 } // namespace OpenGeoLab::App

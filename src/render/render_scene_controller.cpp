@@ -81,6 +81,12 @@ RenderSceneController::~RenderSceneController() {
     // TODO(Layton): detach signals
 }
 
+const RenderBucket& RenderSceneController::renderData() const { return m_renderData; }
+
+Geometry::GeometryDocumentPtr RenderSceneController::currentGeometryDocument() const {
+    return GeoDocumentInstance;
+}
+
 void RenderSceneController::subscribeToGeometryDocument() {
     auto document = GeoDocumentInstance;
     m_geometryDocumentConnection =
@@ -100,7 +106,9 @@ void RenderSceneController::handleDocumentGeometryChanged(
 void RenderSceneController::updateGeometryRenderData() {
     auto document = GeoDocumentInstance;
 
-    auto render_data = document->getRenderData(TessellationOptions::defaultOptions());
+    const auto& render_data = document->getRenderData(TessellationOptions::defaultOptions());
+    m_renderData.m_geometryPass = render_data;
+    ++m_renderRevision;
 }
 
 void RenderSceneController::subscribeToMeshDocument() {
@@ -117,7 +125,9 @@ void RenderSceneController::handleDocumentMeshChanged() {
 
 void RenderSceneController::updateMeshRenderData() {
     auto document = MeshDocumentInstance;
-    auto render_data = document->getRenderData();
+    const auto& render_data = document->getRenderData();
+    m_renderData.m_meshPass = render_data;
+    ++m_renderRevision;
 }
 
 void RenderSceneController::setCamera(const CameraState& camera, bool notify) {
@@ -203,6 +213,18 @@ void RenderSceneController::setBottomView(bool notify) {
     const float distance = (m_cameraState.m_position - m_cameraState.m_target).length();
     m_cameraState.m_position = m_cameraState.m_target + QVector3D(0.0f, -distance, 0.0f);
     m_cameraState.m_up = QVector3D(0.0f, 0.0f, 1.0f);
+    if(notify) {
+        m_sceneNeedsUpdate.emitSignal();
+    }
+}
+
+void RenderSceneController::setDisplayMode(RenderDisplayMode mode, bool notify) {
+    if(m_displayMode == mode) {
+        return;
+    }
+
+    m_displayMode = mode;
+    LOG_DEBUG("RenderSceneController: display mode changed to {}", static_cast<int>(mode));
     if(notify) {
         m_sceneNeedsUpdate.emitSignal();
     }

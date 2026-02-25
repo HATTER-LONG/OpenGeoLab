@@ -143,6 +143,25 @@
 { "status": "success", "action": "ViewPortControl" }
 ```
 
+#### 2.1.4 Render Mode
+`view_ctrl.render_mode` 为整数枚举：
+- 0: Surface
+- 1: Wireframe
+- 2: Points
+
+请求：
+```json
+{
+  "action": "ViewPortControl",
+  "view_ctrl": { "render_mode": 1 },
+  "_meta": { "silent": true }
+}
+```
+响应：
+```json
+{ "status": "success", "action": "ViewPortControl" }
+```
+
 ---
 
 ## 3. GeometryService

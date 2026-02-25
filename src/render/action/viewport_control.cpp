@@ -18,6 +18,10 @@ nlohmann::json ViewPortControl::execute(const nlohmann::json& params,
     if(view_ctrl.contains("view") && view_ctrl["view"].is_number_integer()) {
         const ViewPreset view = static_cast<ViewPreset>(view_ctrl["view"].get<int>());
         applyPreset(view);
+    } else if(view_ctrl.contains("render_mode") && view_ctrl["render_mode"].is_number_integer()) {
+        const ViewRenderMode render_mode =
+            static_cast<ViewRenderMode>(view_ctrl["render_mode"].get<int>());
+        applyRenderMode(render_mode);
     } else if(view_ctrl.contains("refresh") && view_ctrl["refresh"].is_boolean() &&
               view_ctrl["refresh"].get<bool>()) {
         RenderSceneController::instance().refreshScene();
@@ -54,6 +58,24 @@ void ViewPortControl::applyPreset(ViewPreset preset) {
         break;
     default:
         throw std::runtime_error("Unsupported view preset.");
+    }
+}
+
+void ViewPortControl::applyRenderMode(ViewRenderMode mode) {
+    auto& render_service = RenderSceneController::instance();
+
+    switch(mode) {
+    case ViewRenderMode::Surface:
+        render_service.setDisplayMode(RenderDisplayMode::Surface);
+        break;
+    case ViewRenderMode::Wireframe:
+        render_service.setDisplayMode(RenderDisplayMode::Wireframe);
+        break;
+    case ViewRenderMode::Points:
+        render_service.setDisplayMode(RenderDisplayMode::Points);
+        break;
+    default:
+        throw std::runtime_error("Unsupported render mode.");
     }
 }
 } // namespace OpenGeoLab::Render

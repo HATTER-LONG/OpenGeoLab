@@ -50,6 +50,39 @@ Rectangle {
             })
         }
 
+        // Surface mode
+        ViewToolButton {
+            iconSource: "qrc:/opengeolab/resources/icons/face.svg"
+            toolTipText: qsTr("Surface mode")
+            onClicked: viewToolbar.send("ViewPortControl", {
+                view_ctrl: {
+                    render_mode: 0
+                }
+            })
+        }
+
+        // Wireframe mode
+        ViewToolButton {
+            iconSource: "qrc:/opengeolab/resources/icons/wire.svg"
+            toolTipText: qsTr("Wireframe mode")
+            onClicked: viewToolbar.send("ViewPortControl", {
+                view_ctrl: {
+                    render_mode: 1
+                }
+            })
+        }
+
+        // Points mode
+        ViewToolButton {
+            iconSource: "qrc:/opengeolab/resources/icons/point.svg"
+            toolTipText: qsTr("Points mode")
+            onClicked: viewToolbar.send("ViewPortControl", {
+                view_ctrl: {
+                    render_mode: 2
+                }
+            })
+        }
+
         // Separator
         Rectangle {
             width: 1

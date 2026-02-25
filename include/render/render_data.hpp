@@ -1,5 +1,10 @@
 #pragma once
 
+#include "render/render_types.hpp"
+
+#include <cstdint>
+#include <vector>
+
 namespace OpenGeoLab::Render {
 
 /**
@@ -12,9 +17,89 @@ struct RenderColor {
     float m_a{1.0f}; ///< Alpha component [0, 1]
 };
 
-struct RenderData {};
+/**
+ * @brief Primitive topology used for draw calls
+ */
+enum class PrimitiveTopology : uint8_t {
+    Points = 0,
+    Lines = 1,
+    Triangles = 2,
+};
 
-struct RenderBucket {};
+/**
+ * @brief Render pass category
+ */
+enum class RenderPassType : uint8_t {
+    Geometry = 0,
+    Mesh = 1,
+    Post = 2,
+};
+
+/**
+ * @brief Viewport display mode for first-phase rendering
+ *
+ * In-scope for phase-1:
+ * - Surface (triangles)
+ * - Wireframe (lines)
+ * - Points
+ *
+ * Out-of-scope for phase-1:
+ * - Texture/material/PBR shading
+ * - Advanced post-processing effects
+ */
+enum class RenderDisplayMode : uint8_t {
+    Surface = 0,
+    Wireframe = 1,
+    Points = 2,
+};
+
+/**
+ * @brief CPU-side primitive payload for one draw item
+ */
+struct RenderPrimitive {
+    RenderPassType m_pass{RenderPassType::Geometry};            ///< Target pass
+    RenderEntityType m_entityType{RenderEntityType::None};      ///< Source entity classification
+    PrimitiveTopology m_topology{PrimitiveTopology::Triangles}; ///< Primitive topology
+    RenderColor m_color{};                                      ///< Base color
+    bool m_visible{true};                                       ///< Visibility flag
+
+    std::vector<float> m_positions;  ///< xyz triplets
+    std::vector<uint32_t> m_indices; ///< Optional indexed topology
+
+    [[nodiscard]] bool empty() const { return m_positions.empty(); }
+};
+
+/**
+ * @brief Collection of primitives generated from one document domain
+ */
+struct RenderData {
+    std::vector<RenderPrimitive> m_primitives;
+
+    void clear() { m_primitives.clear(); }
+
+    [[nodiscard]] bool empty() const { return m_primitives.empty(); }
+
+    [[nodiscard]] size_t primitiveCount() const { return m_primitives.size(); }
+};
+
+/**
+ * @brief Per-frame render bucket grouped by pass
+ */
+struct RenderBucket {
+    RenderData m_geometryPass;
+    RenderData m_meshPass;
+    RenderData m_postPass;
+
+    void clear() {
+        m_geometryPass.clear();
+        m_meshPass.clear();
+        m_postPass.clear();
+    }
+
+    [[nodiscard]] bool empty() const {
+        return m_geometryPass.empty() && m_meshPass.empty() && m_postPass.empty();
+    }
+};
 
 /**
  * @brief Options for tessellation and mesh generation

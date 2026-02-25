@@ -62,6 +62,20 @@ This document describes the current JSON-based protocols between QML and C++ (vi
 }
 ```
 
+#### Render mode
+`view_ctrl.render_mode` enum:
+- 0: Surface
+- 1: Wireframe
+- 2: Points
+
+```json
+{
+  "action": "ViewPortControl",
+  "view_ctrl": { "render_mode": 1 },
+  "_meta": { "silent": true }
+}
+```
+
 ### 2.2 SelectControl
 - action: `"SelectControl"`
 - purpose: control viewport picking mode (enable + pick types) and query/clear current selections.

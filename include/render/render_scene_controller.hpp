@@ -81,7 +81,13 @@ public:
 
     void setRightView(bool notify = true);
 
+    void setDisplayMode(RenderDisplayMode mode, bool notify = true);
+
+    [[nodiscard]] RenderDisplayMode displayMode() const { return m_displayMode; }
+
     [[nodiscard]] const RenderBucket& renderData() const;
+
+    [[nodiscard]] uint64_t renderRevision() const { return m_renderRevision; }
 
     [[nodiscard]] Geometry::GeometryDocumentPtr currentGeometryDocument() const;
 
@@ -118,6 +124,9 @@ private:
     Util::Signal<> m_sceneNeedsUpdate;
 
     RenderBucket m_renderData;
+    uint64_t m_renderRevision{0};
+
+    RenderDisplayMode m_displayMode{RenderDisplayMode::Surface};
 
     struct PartVisibility {
         bool m_geometryVisible{true};

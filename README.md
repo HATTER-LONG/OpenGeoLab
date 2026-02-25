@@ -75,6 +75,15 @@ cmake --build build
 
 完整协议清单见：`docs/json_protocols.md`
 
+## 渲染阶段说明（Phase-1）
+- In Scope：面片/线框/点三种显示模式、geometry/mesh/post 三类 pass 数据桶、基础颜色显示。
+- Out Scope：纹理/PBR/高级材质、复杂后处理特效。
+- 数据契约：
+  - `RenderPrimitive`：拓扑（点/线/三角形）、颜色、可见性、位置与索引。
+  - `RenderData`：单域渲染基元集合。
+  - `RenderBucket`：按 `geometry-pass`、`mesh-pass`、`post-pass` 分组。
+- 当前控制链路：`ViewToolBar.qml` → `RenderService(ViewPortControl)` → `RenderSceneController` → `GLViewportRender/RenderSceneImpl`。
+
 近期新增：
 - Geo Query 页面通过 `GeometryService` 的 `query_entity_info` action，基于当前拾取到的实体 (type+uid) 查询实体详细信息并在页面下方列表展示。
 
