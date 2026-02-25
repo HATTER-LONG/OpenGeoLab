@@ -35,9 +35,15 @@ private:
     };
 
     void ensureGpuResources();
+    bool ensurePickResources();
+    bool ensurePickFramebuffer(const QSize& size);
     void uploadBuckets(const RenderBucket& bucket, RenderDisplayMode mode);
     void drawBuckets(const QMatrix4x4& mvp);
+    void drawBuckets(const QMatrix4x4& mvp,
+                     QOpenGLShaderProgram& shader,
+                     std::array<GpuTopologyBucket, 3>& buckets);
     void releaseGpuResources();
+    void releasePickFramebuffer();
 
     static int topologyIndex(PrimitiveTopology topology);
 
@@ -45,7 +51,15 @@ private:
     QSize m_viewportSize;
     bool m_gpuReady{false};
     QOpenGLShaderProgram m_shader;
+    QOpenGLShaderProgram m_pickShader;
     std::array<GpuTopologyBucket, 3> m_topologyBuckets;
+    std::array<GpuTopologyBucket, 3> m_pickTopologyBuckets;
+
+    uint32_t m_pickFramebuffer{0};
+    uint32_t m_pickColorTexture{0};
+    uint32_t m_pickDepthRenderbuffer{0};
+    QSize m_pickBufferSize;
+
     uint64_t m_lastUploadedRevision{0};
     bool m_hasUploadedData{false};
     RenderDisplayMode m_lastUploadedMode{RenderDisplayMode::Surface};

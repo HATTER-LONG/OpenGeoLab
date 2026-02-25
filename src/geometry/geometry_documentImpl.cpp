@@ -5,7 +5,7 @@
 
 #include "geometry_documentImpl.hpp"
 #include "entity/geometry_entityImpl.hpp"
-#include "geometry/part_color.hpp"
+#include "render/render_color_manager.hpp"
 #include "shape_builder.hpp"
 #include "util/logger.hpp"
 #include "util/progress_callback.hpp"
@@ -56,14 +56,22 @@ bool isIdentityTrsf(const gp_Trsf& trsf) {
            trsf.TranslationPart().SquareModulus() == 0.0;
 }
 
-Render::RenderColor toRenderColor(const PartColor& color) {
-    return Render::RenderColor{color.r, color.g, color.b, color.a};
-}
-
 void appendPointToPrimitive(Render::RenderPrimitive& primitive, const gp_Pnt& point) {
     primitive.m_positions.push_back(static_cast<float>(point.X()));
     primitive.m_positions.push_back(static_cast<float>(point.Y()));
     primitive.m_positions.push_back(static_cast<float>(point.Z()));
+}
+
+uint64_t resolvePartColorKey(const GeometryDocumentImpl& doc, const GeometryEntityImplPtr& entity) {
+    if(!entity) {
+        return 1;
+    }
+
+    const auto owner_parts = doc.findRelatedEntities(entity->entityId(), EntityType::Part);
+    if(!owner_parts.empty() && owner_parts.front().m_uid != INVALID_ENTITY_UID) {
+        return owner_parts.front().m_uid;
+    }
+    return (entity->entityUID() == INVALID_ENTITY_UID) ? entity->entityId() : entity->entityUID();
 }
 
 } // namespace
@@ -337,9 +345,10 @@ GeometryDocumentImpl::generateFaceMesh(const GeometryEntityImplPtr& entity,
     Render::RenderPrimitive primitive;
     primitive.m_pass = Render::RenderPassType::Geometry;
     primitive.m_entityType = Render::RenderEntityType::Face;
+    primitive.m_entityUID = entity->entityUID();
     primitive.m_topology = Render::PrimitiveTopology::Triangles;
-    primitive.m_color = toRenderColor(
-        PartColorPalette::getColorByEntityId(static_cast<EntityId>(entity->entityId())));
+    primitive.m_color = Render::RenderColorManager::colorForPart(resolvePartColorKey(*this, entity),
+                                                                 Render::RenderColorRole::Face);
 
     const gp_Trsf trsf = location.Transformation();
     for(Standard_Integer node_index = 1; node_index <= triangulation->NbNodes(); ++node_index) {
@@ -388,8 +397,10 @@ GeometryDocumentImpl::generateEdgeMesh(const GeometryEntityImplPtr& entity,
     Render::RenderPrimitive primitive;
     primitive.m_pass = Render::RenderPassType::Geometry;
     primitive.m_entityType = Render::RenderEntityType::Edge;
+    primitive.m_entityUID = entity->entityUID();
     primitive.m_topology = Render::PrimitiveTopology::Lines;
-    primitive.m_color = Render::RenderColor{0.12f, 0.12f, 0.12f, 1.0f};
+    primitive.m_color = Render::RenderColorManager::colorForPart(resolvePartColorKey(*this, entity),
+                                                                 Render::RenderColorRole::Edge);
 
     TopLoc_Location location;
     const Handle(Poly_Polygon3D) polygon = BRep_Tool::Polygon3D(edge, location);
@@ -462,8 +473,10 @@ Render::RenderData GeometryDocumentImpl::generateVertexMesh(const GeometryEntity
     Render::RenderPrimitive primitive;
     primitive.m_pass = Render::RenderPassType::Geometry;
     primitive.m_entityType = Render::RenderEntityType::Vertex;
+    primitive.m_entityUID = entity->entityUID();
     primitive.m_topology = Render::PrimitiveTopology::Points;
-    primitive.m_color = Render::RenderColor{0.92f, 0.52f, 0.08f, 1.0f};
+    primitive.m_color = Render::RenderColorManager::colorForPart(resolvePartColorKey(*this, entity),
+                                                                 Render::RenderColorRole::Vertex);
 
     appendPointToPrimitive(primitive, BRep_Tool::Pnt(vertex));
 

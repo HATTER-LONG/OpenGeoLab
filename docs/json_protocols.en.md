@@ -64,7 +64,7 @@ This document describes the current JSON-based protocols between QML and C++ (vi
 
 #### Render mode
 `view_ctrl.render_mode` enum:
-- 0: Surface
+- 0: Surface (default combined display: surface + wireframe + points)
 - 1: Wireframe
 - 2: Points
 

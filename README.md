@@ -79,10 +79,16 @@ cmake --build build
 - In Scope：面片/线框/点三种显示模式、geometry/mesh/post 三类 pass 数据桶、基础颜色显示。
 - Out Scope：纹理/PBR/高级材质、复杂后处理特效。
 - 数据契约：
-  - `RenderPrimitive`：拓扑（点/线/三角形）、颜色、可见性、位置与索引。
+  - `RenderPrimitive`：拓扑（点/线/三角形）、颜色、可见性、位置与索引，以及 `entityUID+entityType` 拾取标识。
   - `RenderData`：单域渲染基元集合。
   - `RenderBucket`：按 `geometry-pass`、`mesh-pass`、`post-pass` 分组。
 - 当前控制链路：`ViewToolBar.qml` → `RenderService(ViewPortControl)` → `RenderSceneController` → `GLViewportRender/RenderSceneImpl`。
+
+当前实现要点：
+- `Surface` 模式默认显示 `surface + wireframe + points`；`Wireframe/Points` 分别只显示线/点。
+- 相机投影已切换为正交投影（非透视）。
+- 拾取采用离屏 `RG32UI` 编码（`56-bit UID + 8-bit type`），并按当前 pick type 过滤仅渲染目标类型以降低开销。
+- `SelectManagerService.queryEntityInfo(uid, type)` 支持反向查询：几何实体关系、网格节点坐标、网格单元节点连接。
 
 近期新增：
 - Geo Query 页面通过 `GeometryService` 的 `query_entity_info` action，基于当前拾取到的实体 (type+uid) 查询实体详细信息并在页面下方列表展示。

@@ -1,4 +1,6 @@
 #include "app/select_manager_service.hpp"
+#include "geometry/geometry_document.hpp"
+#include "mesh/mesh_document.hpp"
 #include "render/render_select_manager.hpp"
 #include "util/logger.hpp"
 #include <QtCore/QMetaObject>
@@ -36,6 +38,28 @@ Render::RenderEntityType convertStringToRenderEntityType(const QString& type_str
     }
 
     throw std::invalid_argument("Unknown entity type string: " + type_str.toStdString());
+}
+
+QVariantMap toVariantMap(const Geometry::EntityKey& key) {
+    QVariantMap map;
+    map["id"] = static_cast<qulonglong>(key.m_id);
+    map["uid"] = static_cast<qulonglong>(key.m_uid);
+    const auto type_opt = Geometry::entityTypeToString(key.m_type);
+    map["type"] = type_opt.has_value() ? QString::fromStdString(type_opt.value()) : "Invalid";
+    return map;
+}
+
+QVariantList collectRelated(Geometry::GeometryDocumentPtr doc,
+                            Geometry::EntityUID uid,
+                            Geometry::EntityType source,
+                            Geometry::EntityType related) {
+    QVariantList out;
+    const auto keys = doc->findRelatedEntities(uid, source, related);
+    out.reserve(static_cast<qsizetype>(keys.size()));
+    for(const auto& key : keys) {
+        out.push_back(toVariantMap(key));
+    }
+    return out;
 }
 } // namespace
 
@@ -133,6 +157,89 @@ QVector<QPair<uint64_t, QString>> SelectManagerService::currentSelections() cons
         out.append({static_cast<uint64_t>(pr.m_uid), convertPickResultTypeToString(pr)});
     }
     return out;
+}
+
+QVariantMap SelectManagerService::queryEntityInfo(uint64_t entity_uid,
+                                                  const QString& entity_type) const {
+    QVariantMap result;
+    result["uid"] = static_cast<qulonglong>(entity_uid);
+    result["type"] = entity_type;
+
+    Render::RenderEntityType render_type = Render::RenderEntityType::None;
+    try {
+        render_type = convertStringToRenderEntityType(entity_type);
+    } catch(...) {
+        result["found"] = false;
+        result["error"] = "unknown_entity_type";
+        return result;
+    }
+
+    if(Render::isGeometryDomain(render_type)) {
+        const auto geom_type = Render::toGeometryType(render_type);
+        auto doc = GeoDocumentInstance;
+        const auto entity = doc->findByUIDAndType(entity_uid, geom_type);
+        if(!entity) {
+            result["found"] = false;
+            return result;
+        }
+
+        result["found"] = true;
+        result["id"] = static_cast<qulonglong>(entity->entityId());
+        result["uid"] = static_cast<qulonglong>(entity->entityUID());
+
+        QVariantMap related;
+        related["part"] = collectRelated(doc, entity_uid, geom_type, Geometry::EntityType::Part);
+        related["solid"] = collectRelated(doc, entity_uid, geom_type, Geometry::EntityType::Solid);
+        related["wire"] = collectRelated(doc, entity_uid, geom_type, Geometry::EntityType::Wire);
+        related["face"] = collectRelated(doc, entity_uid, geom_type, Geometry::EntityType::Face);
+        related["edge"] = collectRelated(doc, entity_uid, geom_type, Geometry::EntityType::Edge);
+        related["vertex"] =
+            collectRelated(doc, entity_uid, geom_type, Geometry::EntityType::Vertex);
+        result["related"] = related;
+        return result;
+    }
+
+    if(render_type == Render::RenderEntityType::MeshNode) {
+        auto mesh = MeshDocumentInstance;
+        try {
+            const auto node = mesh->findNodeById(entity_uid);
+            result["found"] = true;
+            result["position"] = QVariantList{node.x(), node.y(), node.z()};
+        } catch(...) {
+            result["found"] = false;
+        }
+        return result;
+    }
+
+    if(render_type == Render::RenderEntityType::MeshLine ||
+       render_type == Render::RenderEntityType::MeshTriangle ||
+       render_type == Render::RenderEntityType::MeshQuad4 ||
+       render_type == Render::RenderEntityType::MeshTetra4 ||
+       render_type == Render::RenderEntityType::MeshHexa8 ||
+       render_type == Render::RenderEntityType::MeshPrism6 ||
+       render_type == Render::RenderEntityType::MeshPyramid5) {
+        auto mesh = MeshDocumentInstance;
+        try {
+            const auto element_type = Render::toMeshElementType(render_type);
+            const Mesh::MeshElementRef ref{entity_uid, element_type};
+            const auto element = mesh->findElementByRef(ref);
+            result["found"] = true;
+            result["id"] = static_cast<qulonglong>(element.elementId());
+            QVariantList node_ids;
+            const auto ids = element.nodeIds();
+            node_ids.reserve(static_cast<qsizetype>(ids.size()));
+            for(const auto node_id : ids) {
+                node_ids.push_back(static_cast<qulonglong>(node_id));
+            }
+            result["node_ids"] = node_ids;
+        } catch(...) {
+            result["found"] = false;
+        }
+        return result;
+    }
+
+    result["found"] = false;
+    return result;
 }
 
 } // namespace OpenGeoLab::App

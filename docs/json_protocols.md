@@ -145,7 +145,7 @@
 
 #### 2.1.4 Render Mode
 `view_ctrl.render_mode` 为整数枚举：
-- 0: Surface
+- 0: Surface（默认组合显示：surface + wireframe + points）
 - 1: Wireframe
 - 2: Points
 

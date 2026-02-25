@@ -46,6 +46,13 @@ void GLViewportRender::render() {
     const auto view_matrix = camera_state.viewMatrix();
     const auto projection_matrix = camera_state.projectionMatrix(aspect_ratio);
 
+    if(m_viewport) {
+        Render::PickingInput picking_input;
+        if(m_viewport->consumePendingPickingInput(picking_input)) {
+            m_renderScene->processPicking(picking_input);
+        }
+    }
+
     m_renderScene->render(camera_state.m_position, view_matrix, projection_matrix);
 
     QOpenGLFunctions* functions = context->functions();

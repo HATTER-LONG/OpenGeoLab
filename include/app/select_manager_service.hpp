@@ -8,6 +8,7 @@
 #include "util/signal.hpp"
 
 #include <QObject>
+#include <QVariantMap>
 #include <QtQml/qqml.h>
 
 namespace OpenGeoLab::App {
@@ -73,6 +74,14 @@ public:
      * @return Vector of (uid, type) pairs
      */
     Q_INVOKABLE QVector<QPair<uint64_t, QString>> currentSelections() const;
+
+    /**
+     * @brief Reverse lookup detailed entity information from (uid, type)
+     * @param entity_uid Type-scoped entity id
+     * @param entity_type Entity type name (e.g. "Vertex", "MeshLine")
+     * @return Map containing resolved identity and related/structural information
+     */
+    Q_INVOKABLE QVariantMap queryEntityInfo(uint64_t entity_uid, const QString& entity_type) const;
 
 signals:
     void selectModeChanged(uint32_t select_types);

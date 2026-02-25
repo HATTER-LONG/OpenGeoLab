@@ -2,6 +2,8 @@
 #include "mesh/mesh_document.hpp"
 #include "util/logger.hpp"
 
+#include <QtMath>
+
 namespace OpenGeoLab::Render {
 // =============================================================================
 // CameraState
@@ -15,7 +17,11 @@ QMatrix4x4 CameraState::viewMatrix() const {
 
 QMatrix4x4 CameraState::projectionMatrix(float aspect_ratio) const {
     QMatrix4x4 projection;
-    projection.perspective(m_fov, aspect_ratio, m_nearPlane, m_farPlane);
+    const float distance = std::max(1.0e-4f, (m_position - m_target).length());
+    const float half_height =
+        std::max(1.0e-3f, distance * std::tan(qDegreesToRadians(m_fov) * 0.5f));
+    const float half_width = std::max(1.0e-3f, half_height * std::max(1.0e-3f, aspect_ratio));
+    projection.ortho(-half_width, half_width, -half_height, half_height, m_nearPlane, m_farPlane);
     return projection;
 }
 
@@ -147,6 +153,22 @@ void RenderSceneController::refreshScene(bool notify) {
 }
 
 void RenderSceneController::fitToScene(bool notify) {
+    Geometry::BoundingBox3D bbox;
+    auto accumulate = [&bbox](const RenderData& data) {
+        for(const auto& primitive : data.m_primitives) {
+            const auto& pos = primitive.m_positions;
+            for(size_t i = 0; i + 2 < pos.size(); i += 3) {
+                bbox.expand(Util::Pt3d{pos[i], pos[i + 1], pos[i + 2]});
+            }
+        }
+    };
+
+    accumulate(m_renderData.m_geometryPass);
+    accumulate(m_renderData.m_meshPass);
+    accumulate(m_renderData.m_postPass);
+
+    m_cameraState.fitToBoundingBox(bbox);
+
     if(notify) {
         m_sceneNeedsUpdate.emitSignal();
     }

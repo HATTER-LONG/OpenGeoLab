@@ -1,4 +1,5 @@
 #include "mesh_documentImpl.hpp"
+#include "render/render_color_manager.hpp"
 #include "util/logger.hpp"
 
 #include <unordered_map>
@@ -104,6 +105,21 @@ const Render::RenderData& MeshDocumentImpl::getRenderData() {
 
     m_cachedRenderData.clear();
 
+    for(const auto& node : m_nodes) {
+        Render::RenderPrimitive primitive;
+        primitive.m_pass = Render::RenderPassType::Mesh;
+        primitive.m_entityType = Render::RenderEntityType::MeshNode;
+        primitive.m_entityUID = node.nodeId();
+        primitive.m_topology = Render::PrimitiveTopology::Points;
+        primitive.m_color = Render::RenderColorManager::colorForEntity(
+            Render::RenderEntityType::MeshNode, node.nodeId());
+        primitive.m_positions.push_back(static_cast<float>(node.x()));
+        primitive.m_positions.push_back(static_cast<float>(node.y()));
+        primitive.m_positions.push_back(static_cast<float>(node.z()));
+        primitive.m_indices = {0};
+        m_cachedRenderData.m_primitives.push_back(std::move(primitive));
+    }
+
     std::unordered_map<MeshNodeId, Util::Pt3d> node_lookup;
     node_lookup.reserve(m_nodes.size());
     for(const auto& node : m_nodes) {
@@ -119,7 +135,9 @@ const Render::RenderData& MeshDocumentImpl::getRenderData() {
         Render::RenderPrimitive primitive;
         primitive.m_pass = Render::RenderPassType::Mesh;
         primitive.m_entityType = Render::toRenderEntityType(element.elementType());
-        primitive.m_color = Render::RenderColor{0.17f, 0.63f, 0.94f, 1.0f};
+        primitive.m_entityUID = element.elementUID();
+        primitive.m_color = Render::RenderColorManager::colorForEntity(primitive.m_entityType,
+                                                                       primitive.m_entityUID);
 
         auto append_node = [&](MeshNodeId node_id) -> bool {
             const auto it = node_lookup.find(node_id);

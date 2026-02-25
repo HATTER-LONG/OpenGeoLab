@@ -5,6 +5,8 @@
 #include "render/trackball_controller.hpp"
 
 #include <QQuickWindow>
+
+#include <algorithm>
 namespace OpenGeoLab::App {
 namespace {
 [[nodiscard]] Render::TrackballController::Mode pickMode(Qt::MouseButtons buttons,
@@ -44,6 +46,24 @@ GLViewport::GLViewport(QQuickItem* parent) : QQuickFramebufferObject(parent) {
 }
 
 GLViewport::~GLViewport() = default;
+
+bool GLViewport::consumePendingPickingInput(Render::PickingInput& input) const {
+    if(m_pendingPickAction == Render::PickAction::None) {
+        return false;
+    }
+
+    input.m_cursorPos = m_cursorPos;
+    input.m_itemSize = size();
+    input.m_devicePixelRatio = m_devicePixelRatio;
+    input.m_viewMatrix = m_cameraState.viewMatrix();
+    const float aspect_ratio =
+        static_cast<float>(size().width()) / static_cast<float>(std::max(1.0, size().height()));
+    input.m_projectionMatrix = m_cameraState.projectionMatrix(aspect_ratio);
+    input.m_action = m_pendingPickAction;
+
+    m_pendingPickAction = Render::PickAction::None;
+    return true;
+}
 
 void GLViewport::onSceneNeedsUpdate() {
     m_cameraState = Render::RenderSceneController::instance().cameraState();

@@ -57,8 +57,9 @@ enum class RenderDisplayMode : uint8_t {
  * @brief CPU-side primitive payload for one draw item
  */
 struct RenderPrimitive {
-    RenderPassType m_pass{RenderPassType::Geometry};            ///< Target pass
-    RenderEntityType m_entityType{RenderEntityType::None};      ///< Source entity classification
+    RenderPassType m_pass{RenderPassType::Geometry};       ///< Target pass
+    RenderEntityType m_entityType{RenderEntityType::None}; ///< Source entity classification
+    uint64_t m_entityUID{0};                               ///< Type-scoped entity uid for picking
     PrimitiveTopology m_topology{PrimitiveTopology::Triangles}; ///< Primitive topology
     RenderColor m_color{};                                      ///< Base color
     bool m_visible{true};                                       ///< Visibility flag

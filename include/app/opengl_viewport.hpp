@@ -1,6 +1,7 @@
 
 #pragma once
 
+#include "render/render_scene.hpp"
 #include "render/render_scene_controller.hpp"
 #include "render/render_types.hpp"
 #include "render/trackball_controller.hpp"
@@ -20,6 +21,8 @@ class GLViewport : public QQuickFramebufferObject {
 public:
     explicit GLViewport(QQuickItem* parent = nullptr);
     ~GLViewport() override;
+
+    [[nodiscard]] bool consumePendingPickingInput(Render::PickingInput& input) const;
 
     /**
      * @brief Create the renderer for this viewport
@@ -56,7 +59,7 @@ private:
 
     Qt::MouseButtons m_pressedButtons;        ///< Currently pressed mouse buttons
     Qt::KeyboardModifiers m_pressedModifiers; ///< Currently pressed keyboard modifiers
-    Render::PickAction m_pendingPickAction{
+    mutable Render::PickAction m_pendingPickAction{
         Render::PickAction::None}; ///< Pending pick action on mouse releasek
 };
 

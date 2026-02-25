@@ -7,12 +7,20 @@
 
 
 # 开发步骤
-1. 渲染存入 56 位 id + 8 位 type 的 U32GL 纹理，支持 vertex/edge/face/solid/part/node/line element 的拾取。
-2. pick 功能优化获取像素，只针对目标类型进行渲染一帧数据(例如只拾取 vertex edge face，只渲染这三个，不渲染网格)，提升性能。
-3. 支持反向查询，已知 vertex edge face solid part node line element id 能获取对应的几何信息（例如 vertex id 获取 vertex 坐标，edge id 获取 edge 连接的 vertex id 等等）。以支持 part wire solid 拾取。
-4. 优化 render data 中的 color ，是否可以通过 part id 获取 color，达到同一 part 同一 color 的效果。而不用每个 render data 存储，edge vertex mesh 相关同理公用同一套颜色即可。
+0. 接通 Query 拾取功能，视察 qml 到 select 功能是否正常
+1. 当前 edge 颜色太灰了，edge 颜色要与 face vertex 区分开，要亮色。
+2. 模块化 render scene 模块功能，拆分成 render core 、以及 pass 处理模块，堆积到一起。
+4. 实现一个全局的 color 管理类，支持根据 part id 获取不同颜色的，统一 edge、vertex、mesh node、line、element 颜色，包括 hover 颜色 选中高亮颜色等等。
 5. 注释整改（分批）：按 `doxygen_comment_style.md` 与 `doxygen_comment_style_cn.md` 持续清理 `include/src/resources/qml/test`。
 6. 文档与计划收口：同步更新中英文 README 与 JSON 协议文档。
+
+# 当前完成状态（2026-02-25）
+- [x] 0 Query 拾取链路（QML → SelectControl → 离屏 pick）连通
+- [x] 1 Edge 颜色提亮并与 Face/Vertex 区分
+- [x] 2 RenderScene 按 core / gpu-pass / picking 模块拆分
+- [x] 4 全局 `RenderColorManager` 落地，统一 geometry/mesh 颜色入口并预留 hover/selected
+- [~] 5 注释整改持续进行（本批次已覆盖新增模块）
+- [x] 6 README 与 JSON 协议文档同步
 
 # 验收标准
 1. 工程可成功编译，程序可启动。
