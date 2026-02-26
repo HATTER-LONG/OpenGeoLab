@@ -1,3 +1,9 @@
+/**
+ * @file select_manager_service.cpp
+ * @brief SelectManagerService — bridges RenderSelectManager to QML for
+ *        pick-mode and entity-filter configuration.
+ */
+
 #include "app/select_manager_service.hpp"
 #include "render/render_select_manager.hpp"
 #include "util/logger.hpp"

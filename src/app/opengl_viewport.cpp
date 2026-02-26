@@ -1,3 +1,12 @@
+/**
+ * @file opengl_viewport.cpp
+ * @brief GLViewport input handling and GUI-thread scene update dispatch.
+ *
+ * Scene-update and selection-change signals are received via
+ * Qt::QueuedConnection to safely cross from background threads
+ * into the GUI thread.
+ */
+
 #include "app/opengl_viewport.hpp"
 #include "opengl_viewport_render.hpp"
 #include "render/render_scene_controller.hpp"
@@ -44,6 +53,9 @@ GLViewport::GLViewport(QQuickItem* parent) : QQuickFramebufferObject(parent) {
             QMetaObject::invokeMethod(this, &GLViewport::onSceneNeedsUpdate, Qt::QueuedConnection,
                                       Render::SceneUpdateType::CameraChanged);
         });
+    m_hoverChangedConn = Render::RenderSelectManager::instance().subscribeHoverChanged([this]() {
+        QMetaObject::invokeMethod(this, [this]() { update(); }, Qt::QueuedConnection);
+    });
 }
 
 GLViewport::~GLViewport() = default;

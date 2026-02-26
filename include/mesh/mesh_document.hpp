@@ -90,11 +90,61 @@ public:
     [[nodiscard]] virtual size_t elementCount() const = 0;
 
     // -------------------------------------------------------------------------
+    // Edge Element Construction
+    // -------------------------------------------------------------------------
+
+    /**
+     * @brief Build Line elements from edges of 2D/3D elements and populate relation maps.
+     *
+     * Scans all existing non-Line elements, extracts unique edges (node pairs),
+     * creates MeshElement(Line) for each unique edge not already present,
+     * and builds node↔line↔element lookup tables.
+     * Must be called after bulk element addition (e.g., after Gmsh import).
+     */
+    virtual void buildEdgeElements() = 0;
+
+    // -------------------------------------------------------------------------
+    // Relation Queries (node ↔ line ↔ element)
+    // -------------------------------------------------------------------------
+
+    /**
+     * @brief Find all Line elements containing a given node.
+     * @param node_id Node to query.
+     * @return Refs of Line elements, empty if none or node not found.
+     */
+    [[nodiscard]] virtual std::vector<MeshElementRef>
+    findLinesByNodeId(MeshNodeId node_id) const = 0;
+
+    /**
+     * @brief Find all non-Line elements containing a given node.
+     * @param node_id Node to query.
+     * @return Refs of face/volume elements, empty if none or node not found.
+     */
+    [[nodiscard]] virtual std::vector<MeshElementRef>
+    findElementsByNodeId(MeshNodeId node_id) const = 0;
+
+    /**
+     * @brief Find all non-Line elements that share a given edge (Line element).
+     * @param line_ref Reference to the Line element.
+     * @return Refs of elements sharing this edge, empty if none.
+     */
+    [[nodiscard]] virtual std::vector<MeshElementRef>
+    findElementsByLineRef(const MeshElementRef& line_ref) const = 0;
+
+    /**
+     * @brief Find all Line elements that are edges of a given non-Line element.
+     * @param element_ref Reference to the face/volume element.
+     * @return Refs of Line elements forming the element's edges, empty if none.
+     */
+    [[nodiscard]] virtual std::vector<MeshElementRef>
+    findLinesByElementRef(const MeshElementRef& element_ref) const = 0;
+
+    // -------------------------------------------------------------------------
     // Clear
     // -------------------------------------------------------------------------
 
     /**
-     * @brief Clear all nodes and elements.
+     * @brief Clear all nodes, elements, and relation maps.
      */
     virtual void clear() = 0;
 
@@ -102,6 +152,11 @@ public:
     // Render Data
     // -------------------------------------------------------------------------
 
+    /**
+     * @brief Generate render data from current mesh state.
+     * @param render_data Output render data to populate.
+     * @return true on success.
+     */
     [[nodiscard]] virtual bool getRenderData(Render::RenderData& render_data) = 0;
 
     // -------------------------------------------------------------------------

@@ -1,3 +1,8 @@
+/**
+ * @file mesh_node.cpp
+ * @brief MeshNode construction with automatic UID generation.
+ */
+
 #include "mesh/mesh_node.hpp"
 
 namespace OpenGeoLab::Mesh {

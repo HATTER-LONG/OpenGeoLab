@@ -212,6 +212,7 @@ qt_add_qml_module(
   resources/qml/Pages/SmoothMeshPage.qml
   resources/qml/Pages/TrimPage.qml
   resources/qml/Pages/GeoQueryPage.qml
+  resources/qml/Pages/MeshQueryPage.qml
   resources/qml/util/BaseButton.qml
   resources/qml/util/BaseComboBox.qml
   resources/qml/util/Selector.qml
@@ -276,8 +277,10 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE SPDLOG_ACTIVE_LEVEL=SPDLOG_LE
 # ==============================================================================
 
 target_include_directories(
-  ${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include"
-                          "${CMAKE_CURRENT_SOURCE_DIR}/include/app" # For Qt moc generated code
+  ${PROJECT_NAME}
+  PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include"
+          "${CMAKE_CURRENT_SOURCE_DIR}/include/app" # For Qt moc generated code
+          "${CMAKE_CURRENT_SOURCE_DIR}/src"
 )
 
 # ==============================================================================

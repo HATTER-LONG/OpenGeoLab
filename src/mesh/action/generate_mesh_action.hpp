@@ -7,9 +7,33 @@
 
 #include "geometry/geometry_types.hpp"
 #include "mesh/mesh_action.hpp"
-#include <TopoDS_Shape.hxx>
+#include "mesh/mesh_types.hpp"
+
+#include <TopoDS_Compound.hxx>
+
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 namespace OpenGeoLab::Mesh {
+
+/// @brief Consolidates all data flowing through the Gmsh mesh generation pipeline.
+struct GmshMeshContext {
+    // --- Input (set by caller) ---
+    double m_elementSize{1.0};
+    int m_meshDimension{2};
+    std::string m_elementType{"triangle"};
+
+    // --- Shape data (set by collectFaceShapes) ---
+    TopoDS_Compound m_compound;
+    std::vector<uint64_t> m_facePartUids; ///< Part UID per face in compound (parallel array)
+
+    // --- Gmsh mapping (set by importAndMapShape) ---
+    std::unordered_map<int64_t, uint64_t> m_tagToPartUid; ///< dimTagKey(dim,tag) -> Part UID
+
+    // --- Node mapping (set by extractNodes) ---
+    std::unordered_map<size_t, MeshNodeId> m_gmshToLocal; ///< Gmsh node tag -> local MeshNodeId
+};
 
 /**
  * @brief Action for generating mesh entities from selected geometry entities
@@ -33,25 +57,20 @@ public:
 
 private:
     /**
-     * @brief Build a compound TopoDS_Shape from the selected face/part/solid entities.
+     * @brief Collect Face shapes from selected entities and build OCC compound.
+     *
+     * For Part/Solid entities, all child faces inherit the Part's UID.
+     * For Face entities, the parent Part's UID is looked up via relation query.
+     * Fills ctx.m_compound and ctx.m_facePartUids.
      */
-    TopoDS_Shape createShapeFromFaceEntities(const Geometry::EntityRefSet& face_entities);
+    void collectFaceShapes(const Geometry::EntityRefSet& entities, GmshMeshContext& ctx);
 
     /**
-     * @brief Import shape into Gmsh, generate mesh, extract nodes/elements to MeshDocument.
-     * @param shape Compound shape to mesh
-     * @param element_size Global element size
-     * @param mesh_dimension 2 for surface mesh, 3 for volume mesh
-     * @param element_type "triangle", "quad", or "auto"
-     * @param progress_callback Progress reporting callback
+     * @brief Run the full Gmsh pipeline: import shape, generate mesh, extract to MeshDocument.
      *
      * Gmsh must already be initialized before calling this method.
      */
-    void importShapeToGmshAndMesh(const TopoDS_Shape& shape,
-                                  double element_size,
-                                  int mesh_dimension,
-                                  const std::string& element_type,
-                                  Util::ProgressCallback progress_callback);
+    void runGmshPipeline(GmshMeshContext& ctx, Util::ProgressCallback progress_callback);
 };
 
 class GenerateMeshActionFactory : public MeshActionFactory {

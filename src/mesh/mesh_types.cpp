@@ -1,3 +1,8 @@
+/**
+ * @file mesh_types.cpp
+ * @brief Mesh type definitions, ID generators, and string conversions.
+ */
+
 #include "mesh/mesh_types.hpp"
 #include <array>
 #include <atomic>

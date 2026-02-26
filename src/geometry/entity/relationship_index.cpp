@@ -1,3 +1,8 @@
+/**
+ * @file relationship_index.cpp
+ * @brief RelationshipIndex — parent/child topology traversal for BRep entities.
+ */
+
 #include "relationship_index.hpp"
 
 #include "entity_index.hpp"

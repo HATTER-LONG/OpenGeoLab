@@ -1,3 +1,8 @@
+/**
+ * @file mesh_node.hpp
+ * @brief FEM mesh node with 3D position and unique node identifier.
+ */
+
 #pragma once
 
 #include "mesh/mesh_types.hpp"
@@ -5,6 +10,8 @@
 #include <kangaroo/util/noncopyable.hpp>
 
 namespace OpenGeoLab::Mesh {
+
+/** @brief A single FEM mesh node with position and unique identifier. */
 class MeshNode {
 public:
     MeshNode(double x, double y, double z);

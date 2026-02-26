@@ -1,3 +1,8 @@
+/**
+ * @file trackball_controller.cpp
+ * @brief TrackballController — arcball-style camera rotation and zoom.
+ */
+
 #include "render/trackball_controller.hpp"
 
 #include <QtMath>

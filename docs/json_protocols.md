@@ -6,7 +6,7 @@
 
 ### 1.1 调用入口（QML）
 - API：`BackendService.request(moduleName, jsonString)`
-- `moduleName`：服务名（当前已注册：`RenderService` / `GeometryService` / `ReaderService`）
+- `moduleName`：服务名（当前已注册：`RenderService` / `GeometryService` / `ReaderService` / `MeshService`）
 - `jsonString`：JSON 字符串（建议始终传对象）
 
 ### 1.2 action 约定
@@ -64,7 +64,9 @@
 #### 2.2.2 设置拾取类型
 说明：
 - `vertex/edge/face` 可组合。
-- `solid/part` 为互斥模式（且与 `vertex/edge/face` 互斥）。
+- `wire/solid/part` 为互斥模式（且与 `vertex/edge/face` 互斥）。
+- `wire` 模式：点击边时自动解析到所属 Wire，高亮 Wire 下所有边。
+- `part` 模式：点击任意子实体时自动解析到所属 Part，高亮 Part 下所有实体。
 
 请求（字符串数组）：
 ```json
@@ -74,6 +76,10 @@
   "_meta": { "silent": true }
 }
 ```
+
+支持的拾取类型字符串：
+- 几何域：`"vertex"`, `"edge"`, `"face"`, `"wire"`, `"solid"`, `"part"`
+- 网格域：`"mesh_node"`, `"mesh_line"`, `"mesh_triangle"`, `"mesh_quad4"`, `"mesh_tetra4"`, `"mesh_hexa8"`, `"mesh_prism6"`, `"mesh_pyramid5"`
 
 #### 2.2.3 获取当前拾取结果
 请求：
@@ -135,6 +141,38 @@
 {
   "action": "ViewPortControl",
   "view_ctrl": { "view": 0 },
+  "_meta": { "silent": true }
+}
+```
+响应：
+```json
+{ "status": "success", "action": "ViewPortControl" }
+```
+
+#### 2.1.4 Toggle X-ray Mode
+开启/关闭 X-ray 模式（面片半透明，可看到遮挡的边线和网格元素）。同时作用于 GeometryPass 和 MeshPass。
+
+请求：
+```json
+{
+  "action": "ViewPortControl",
+  "view_ctrl": { "toggle_xray": true },
+  "_meta": { "silent": true }
+}
+```
+响应：
+```json
+{ "status": "success", "action": "ViewPortControl" }
+```
+
+#### 2.1.5 Cycle Mesh Display Mode
+循环切换网格显示模式：线框+节点 → 面片+点 → 面片+点+边 → 线框+节点…（默认：线框+节点）
+
+请求：
+```json
+{
+  "action": "ViewPortControl",
+  "view_ctrl": { "cycle_mesh_display": true },
   "_meta": { "silent": true }
 }
 ```
@@ -329,3 +367,122 @@
 - 失败：抛异常并走 `operationFailed`（error 为字符串描述）
 
 > 说明：ReaderService 会校验 `action == "load_model"`；其它 action 会返回失败（走 `operationFailed`）。
+
+---
+
+## 5. MeshService
+
+### 5.1 generate_mesh
+- action：`"generate_mesh"`
+- 用途：对选中的几何实体（Part/Solid/Face）进行网格剖分，使用 Gmsh 后端生成 FEM 网格。
+
+请求：
+```json
+{
+  "action": "generate_mesh",
+  "entities": [
+    { "type": "Part", "uid": 1 }
+  ],
+  "elementSize": 1.0,
+  "meshDimension": 2,
+  "elementType": "triangle"
+}
+```
+
+字段说明：
+- `entities`：待剖分实体列表（`{uid, type}` 数组），支持 Part/Solid/Face 类型
+- `elementSize`：目标网格尺寸（正数，默认 `1.0`）
+- `meshDimension`：网格维度，`2` 为面网格，`3` 为体网格（默认 `2`）
+- `elementType`：单元类型，可选 `"triangle"` / `"quad"` / `"auto"`（默认 `"triangle"`）
+
+响应：
+```json
+{
+  "success": true,
+  "nodeCount": 256,
+  "elementCount": 480
+}
+```
+
+失败响应示例：
+```json
+{ "success": false, "error": "No valid entities provided for meshing" }
+```
+
+### 5.2 query_mesh_info
+- action：`"query_mesh_info"`
+- 用途：根据 QML 拾取返回的 (uid, type) 列表，查询网格节点/单元的详细信息（用于 Mesh Query 页面）。
+
+**MeshLine 处理**：MeshLine 现为正式 MeshElement 对象，UID 由 `generateMeshElementUID(MeshElementType::Line)` 生成（类型作用域唯一），直接通过 `findElementByRef()` 查询。查询结果包含 `relatedElements`（共享该边的面/体元素引用）。Node 查询结果包含 `relatedLines` 和 `relatedElements`。非 Line 元素查询结果包含 `relatedLines`（构成该元素边的 Line 元素引用）。
+
+请求：
+```json
+{
+  "action": "query_mesh_info",
+  "entities": [
+    { "type": "Node", "uid": 42 },
+    { "type": "Triangle", "uid": 100 },
+    { "type": "Line", "uid": 5 }
+  ]
+}
+```
+
+响应：
+```json
+{
+  "success": true,
+  "total": 3,
+  "entities": [
+    {
+      "type": "Node",
+      "uid": 42,
+      "position": { "x": 1.0, "y": 2.0, "z": 3.0 },
+      "relatedLines": [
+        { "uid": 5, "type": "Line" },
+        { "uid": 8, "type": "Line" }
+      ],
+      "relatedElements": [
+        { "uid": 100, "type": "Triangle" }
+      ]
+    },
+    {
+      "type": "Triangle",
+      "uid": 100,
+      "elementId": 5,
+      "nodeCount": 3,
+      "nodeIds": [10, 11, 12],
+      "nodes": [
+        { "id": 10, "x": 0.0, "y": 0.0, "z": 0.0 },
+        { "id": 11, "x": 1.0, "y": 0.0, "z": 0.0 },
+        { "id": 12, "x": 0.5, "y": 1.0, "z": 0.0 }
+      ],
+      "relatedLines": [
+        { "uid": 5, "type": "Line" },
+        { "uid": 6, "type": "Line" },
+        { "uid": 7, "type": "Line" }
+      ]
+    },
+    {
+      "type": "Line",
+      "uid": 5,
+      "elementId": 200,
+      "nodeCount": 2,
+      "nodeIds": [10, 11],
+      "nodes": [
+        { "id": 10, "x": 0.0, "y": 0.0, "z": 0.0 },
+        { "id": 11, "x": 1.0, "y": 0.0, "z": 0.0 }
+      ],
+      "relatedElements": [
+        { "uid": 100, "type": "Triangle" },
+        { "uid": 101, "type": "Triangle" }
+      ]
+    }
+  ],
+  "not_found": []
+}
+```
+
+失败响应示例：
+```json
+{ "success": false, "error": "Missing or invalid 'entities' array" }
+```

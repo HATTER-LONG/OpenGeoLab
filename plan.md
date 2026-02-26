@@ -3,76 +3,14 @@
 
 # 软件架构
 - include 头文件包括对外接口，不同 src 下的目录为不同模块，只能通过 include 暴露的接口进行调用
+- 你作为一个 C++ CAE 软件相关的专家，负责整个软件的架构设计和核心功能实现，确保软件的高性能和稳定性。
+  - 功能要尽量模块化不要都堆在一起，后续维护和扩展都要基于模块化的设计来进行。
 
 # 计划任务
-1. 修改 geometry/mesh 的 id 与 uid 使用 uint64_t（使用其中的 56 位，另外 8 位为 type），全局修改当前已有接口；
-2. 设计一套 render data，支持 geometry 和 mesh 的渲染数据，包含顶点位置、颜色、法线等信息，并且要包含 connectivity 支持后续 pick 扩展，例如鼠标选取 part 类型，可以从像素中拿到相关 edge 或者 face 反推出对应 part。
-3. 完善 geometry / mesh document 构建 render data 接口，可以获取render 数据并且支持增量更新，例如当一个 face 的颜色发生改变时，只需要更新对应 face 的 render data 而不需要重新构建整个 document 的 render data。
-4. 检查 mesh document 构建数据是否合理尤其  gmshTypeToMeshElementType 接口，确保所有的 gmsh 元素类型都能正确转换为 mesh document 中的元素类型。
-5. 检查工程中所有的 qml cpp hpp 代码，完善或补充注释信息，当前注释不符合要求的也要进行修改。所有注释信息参考  doxygen_comment_style.md 文件中的要求进行编写。
-6. 注意更新 README.md 以及 docs/json_protocols.md 文件中的内容，确保与代码实现保持一致，以中文版本为准更新英文版本。
-7. 保证最终代码可以编译通过，并正确执行。
 
-整体数据设计如下：
-                    ┌──────────────────────────┐
-                    │        OCC Geometry      │
-                    │   TopoDS_Shape / Face    │
-                    └────────────┬─────────────┘
-                                 │
-                                 ▼
-                    ┌──────────────────────────┐
-                    │     GeometryAdapter      │
-                    │  Triangulate / Extract   │
-                    └────────────┬─────────────┘
-                                 │
-                                 ▼
-                    ┌──────────────────────────┐
-                    │   GeoRenderData (CPU)    │
-                    │ vertices / indices       │
-                    │ + EntityKey              │
-                    └────────────┬─────────────┘
-                                 │
-                                 │
-                                 │
-                    ┌──────────────────────────┐
-                    │        Gmsh Mesh         │
-                    │ nodes / elements         │
-                    └────────────┬─────────────┘
-                                 │
-                                 ▼
-                    ┌──────────────────────────┐
-                    │       MeshAdapter        │
-                    │  Surface extract         │
-                    └────────────┬─────────────┘
-                                 │
-                                 ▼
-                    ┌──────────────────────────┐
-                    │   MeshRenderData (CPU)   │
-                    │ vertices / indices       │
-                    │ + EntityKey              │
-                    └────────────┬─────────────┘
-                                 │
-                                 ▼
-          ┌──────────────────────────────────────────┐
-          │         RenderBucketBuilder               │
-          │  merge by primitive type + material      │
-          │  assign global renderId                  │
-          └────────────┬─────────────────────────────┘
-                       ▼
-          ┌──────────────────────────────────────────┐
-          │              RenderBucket                │
-          │ big VBO + EBO + SubMeshRange            │
-          │ idToEntity mapping                      │
-          └────────────┬─────────────────────────────┘
-                       ▼
-          ┌──────────────────────────────────────────┐
-          │               RenderChunk                │
-          │ split by element count / AABB            │
-          └────────────┬─────────────────────────────┘
-                       ▼
-          ┌──────────────────────────────────────────┐
-          │               RendererCore               │
-          │  MainPass / PickPass / Culling / BVH    │
-          └────────────┬─────────────────────────────┘
-                       ▼
-                         OpenGL
+1. 重构下 element line 相关，使用 generateMeshElementUID line type 生成对应 id，从生成 element node element 就创建 line，支持 node line element 三者互相关联查询。
+2. 检查 各个 cpp 中的代码，将过长，参数过多的函数方法进行模块化拆分。
+3. 检查工程中所有的 qml cpp hpp 代码，完善或补充注释信息，当前注释不符合要求的也要进行修改。所有注释信息参考  doxygen_comment_style.md 文件中的要求进行编写。
+4. 注意更新 README.md 以及 docs/json_protocols.md 文件中的内容，确保与代码实现保持一致，以中文版本为准更新英文版本。
+5. 更新 render_migration_guide 文档符合最新设计。
+5. 保证最终代码可以编译通过，并正确执行。

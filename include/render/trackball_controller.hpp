@@ -35,12 +35,19 @@ public:
 
     TrackballController();
 
+    /** @brief Set the viewport dimensions for coordinate normalization. */
     void setViewportSize(const QSizeF& size);
+
+    /** @brief Set the global speed multiplier for all interactions. */
     void setSpeed(float speed);
 
+    /** @brief Re-derive internal orientation state from an externally modified camera. */
     void syncFromCamera(const Render::CameraState& camera);
 
+    /** @brief True when a drag interaction (orbit/pan/zoom) is in progress. */
     bool isActive() const;
+
+    /** @brief Current interaction mode (None if not dragging). */
     Mode mode() const;
 
     /**
@@ -63,6 +70,11 @@ public:
      */
     void end();
 
+    /**
+     * @brief Apply a mouse-wheel zoom step.
+     * @param steps Number of wheel notches (positive = zoom in, negative = zoom out).
+     * @param camera Camera state to be updated.
+     */
     void wheelZoom(float steps, Render::CameraState& camera);
 
 private:
@@ -86,30 +98,31 @@ private:
     void freezeFromCamera(const Render::CameraState& camera);
 
 private:
-    QSizeF m_viewportSize{1.0, 1.0};
-    float m_speed{1.0f};
+    QSizeF m_viewportSize{1.0, 1.0};         ///< Viewport extent for coordinate normalization
+    float m_speed{1.0f};                      ///< Global interaction speed multiplier
 
-    Mode m_mode{Mode::None};
-    bool m_dragging{false};
+    Mode m_mode{Mode::None};                  ///< Current interaction mode (state machine)
+    bool m_dragging{false};                   ///< True while a drag gesture is active
 
-    QVector2D m_clickPos{0.0f, 0.0f};
-    QVector2D m_prevPos{0.0f, 0.0f};
+    QVector2D m_clickPos{0.0f, 0.0f};         ///< Cursor position at drag start
+    QVector2D m_prevPos{0.0f, 0.0f};          ///< Cursor position of previous update
 
-    QVector3D m_startVec{0.0f, 0.0f, 1.0f};
-    QVector3D m_stopVec{0.0f, 0.0f, 1.0f};
+    QVector3D m_startVec{0.0f, 0.0f, 1.0f};   ///< Sphere projection at drag start (orbit)
+    QVector3D m_stopVec{0.0f, 0.0f, 1.0f};    ///< Sphere projection at current cursor (orbit)
 
-    QQuaternion m_rotation;
-    QQuaternion m_rotationSum;
+    QQuaternion m_rotation;                    ///< Incremental rotation this drag
+    QQuaternion m_rotationSum;                 ///< Accumulated rotation across all drags
 
-    float m_translateLength{50.0f};
+    float m_translateLength{50.0f};            ///< Camera-to-target distance for pan scaling
 
-    float m_orbitScale{2.2f};
-    float m_panScale{0.0015f};
-    float m_zoomSpeed{1.5f};
-    float m_zoomBase{0.90f};
-    float m_zoomPixelsPerStep{60.0f};
+    // Tuning parameters
+    float m_orbitScale{2.2f};                  ///< Orbit rotation sensitivity
+    float m_panScale{0.0015f};                 ///< Pan translation sensitivity
+    float m_zoomSpeed{1.5f};                   ///< Zoom speed for drag-zoom
+    float m_zoomBase{0.90f};                   ///< Exponential base for wheel zoom steps
+    float m_zoomPixelsPerStep{60.0f};          ///< Pixels of drag per zoom step
 
-    float m_zoomSum{0.0f};
+    float m_zoomSum{0.0f};                     ///< Accumulated fractional scroll steps
 };
 
 } // namespace OpenGeoLab::Render

@@ -4,7 +4,6 @@
  */
 #include "service.hpp"
 #include "util/logger.hpp"
-#include <app/color_map_service.hpp>
 #include <app/log_service.hpp>
 #include <util/qml_spdlog_sink.hpp>
 
@@ -60,10 +59,8 @@ auto main(int argc, char** argv) -> int {
 
     // Create and register services as context properties
     OpenGeoLab::App::LogService log_service;
-    OpenGeoLab::App::ColorMapService color_map_service;
     OpenGeoLab::Util::installQmlSpdlogSink(&log_service);
     engine.rootContext()->setContextProperty("LogService", &log_service);
-    engine.rootContext()->setContextProperty("ColorMapService", &color_map_service);
 
     QObject::connect(
         &engine, &QQmlApplicationEngine::objectCreated, &app,
