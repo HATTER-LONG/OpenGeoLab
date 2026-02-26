@@ -102,7 +102,7 @@ public:
     // Render Data
     // -------------------------------------------------------------------------
 
-    [[nodiscard]] virtual const Render::RenderData& getRenderData() = 0;
+    [[nodiscard]] virtual bool getRenderData(Render::RenderData& render_data) = 0;
 
     // -------------------------------------------------------------------------
     // Change Notification

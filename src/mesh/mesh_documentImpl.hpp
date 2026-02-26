@@ -48,7 +48,7 @@ public:
     // Render Data
     // -------------------------------------------------------------------------
 
-    [[nodiscard]] const Render::RenderData& getRenderData() override;
+    [[nodiscard]] bool getRenderData(Render::RenderData& render_data) override;
 
     // -------------------------------------------------------------------------
     // Change Notification
@@ -65,9 +65,9 @@ private:
         m_refToId; ///< Fast lookup for elements by (uid, type)
 
     Util::Signal<> m_changeSignal; /// Change notification signal
-    /// Cached render data
-    mutable Render::RenderData m_cachedRenderData;
-    mutable bool m_renderDataValid{false};
+    // /// Cached render data
+    // mutable Render::RenderData m_cachedRenderData;
+    // mutable bool m_renderDataValid{false};
     mutable std::mutex m_renderDataMutex;
 };
 

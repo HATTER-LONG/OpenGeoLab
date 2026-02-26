@@ -122,7 +122,11 @@ void RenderSceneController::handleDocumentMeshChanged() {
 
 void RenderSceneController::updateMeshRenderData() {
     auto document = MeshDocumentInstance;
-    auto render_data = document->getRenderData();
+    const bool ret = document->getRenderData(m_renderData);
+    if(!ret) {
+        LOG_ERROR("RenderSceneController: Failed to get mesh render data");
+        m_renderData.m_mesh.clear();
+    }
 }
 
 void RenderSceneController::setCamera(const CameraState& camera, bool notify) {

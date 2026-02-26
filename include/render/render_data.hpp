@@ -65,9 +65,16 @@ struct RenderPrimitive {
     std::vector<uint32_t> m_indices;
 
     [[nodiscard]] bool isValid() const {
-        return !m_positions.empty() && !m_indices.empty() && m_uid != 0 &&
-               m_entityType != RenderEntityType::None && m_passType != RenderPassType::None &&
-               m_topology != PrimitiveTopology::Points;
+        if(m_positions.empty() || m_uid == 0 || m_entityType == RenderEntityType::None ||
+           m_passType == RenderPassType::None) {
+            return false;
+        }
+
+        if(m_topology == PrimitiveTopology::Points) {
+            return true;
+        }
+
+        return !m_indices.empty();
     }
 };
 
