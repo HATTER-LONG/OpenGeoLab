@@ -1,8 +1,17 @@
 #pragma once
 
+#include "geometry/geometry_types.hpp"
 #include "render/render_types.hpp"
+
 #include <cstdint>
+#include <unordered_map>
+#include <vector>
+
 namespace OpenGeoLab::Render {
+
+// =============================================================================
+// RenderColor
+// =============================================================================
 
 /**
  * @brief Simple RGBA color used by the render layer
@@ -23,6 +32,10 @@ struct RenderColor {
         return std::string(buffer);
     }
 };
+
+// =============================================================================
+// Enums
+// =============================================================================
 
 /**
  * @brief Primitive topology used for draw calls
@@ -51,46 +64,192 @@ enum class RenderDisplayModeMask : uint8_t {
     Mesh = 1 << 3
 };
 
-struct RenderPrimitive {
-    uint64_t m_uid{0};
-    uint64_t m_partUID{0};
+// =============================================================================
+// PickId — Encoded entity identifier for GPU picking
+// =============================================================================
 
-    RenderEntityType m_entityType{RenderEntityType::None};
+/**
+ * @brief Encodes (RenderEntityType, UID) into a single uint64_t for GPU picking.
+ *
+ * Layout: [56-bit UID | 8-bit type]
+ * Supports up to 2^56 unique entities per type. Encoded value 0 = background (no pick).
+ */
+struct PickId {
+    uint64_t m_encoded{0};
+
+    PickId() = default;
+    explicit constexpr PickId(uint64_t encoded) : m_encoded(encoded) {}
+
+    [[nodiscard]] static constexpr uint64_t encode(RenderEntityType type, uint64_t uid) {
+        return (uid << 8u) | static_cast<uint64_t>(type);
+    }
+
+    [[nodiscard]] static constexpr RenderEntityType decodeType(uint64_t encoded) {
+        return static_cast<RenderEntityType>(encoded & 0xFFu);
+    }
+
+    [[nodiscard]] static constexpr uint64_t decodeUID(uint64_t encoded) {
+        return encoded >> 8u;
+    }
+
+    [[nodiscard]] constexpr bool isValid() const { return m_encoded != 0; }
+};
+
+// =============================================================================
+// RenderVertex — Per-vertex data for GPU buffers
+// =============================================================================
+
+/**
+ * @brief GPU vertex layout: position + normal + color + pickId
+ *
+ * Total stride: 48 bytes. Normals are zero for line/point primitives.
+ * pickId is uint64_t [56-bit UID | 8-bit type], passed to GPU as uvec2.
+ */
+struct RenderVertex {
+    float m_position[3]{0.0f, 0.0f, 0.0f};    ///< World-space position (12 bytes)
+    float m_normal[3]{0.0f, 0.0f, 0.0f};      ///< Surface normal (12 bytes)
+    float m_color[4]{0.8f, 0.8f, 0.8f, 1.0f}; ///< RGBA color (16 bytes)
+    uint64_t m_pickId{0};                      ///< Encoded pick ID (8 bytes)
+};
+
+// =============================================================================
+// DrawRange — Describes one draw call into the flat buffer
+// =============================================================================
+
+/**
+ * @brief A contiguous range within a RenderPassData buffer for a single draw call.
+ */
+struct DrawRange {
+    uint32_t m_vertexOffset{0}; ///< First vertex index in the pass vertex buffer
+    uint32_t m_vertexCount{0};  ///< Number of vertices
+    uint32_t m_indexOffset{0};  ///< First index in the pass index buffer (0 = non-indexed)
+    uint32_t m_indexCount{0};   ///< Number of indices (0 = non-indexed draw)
     PrimitiveTopology m_topology{PrimitiveTopology::Triangles};
-    RenderPassType m_passType{RenderPassType::None};
+};
 
-    bool m_visible{true};
+// =============================================================================
+// RenderNodeKey — Identity for a semantic tree node
+// =============================================================================
 
-    std::vector<Util::Pt3d> m_positions;
-    std::vector<uint32_t> m_indices;
+/**
+ * @brief Identifies a RenderNode by (type, uid), matching the entity ID system.
+ */
+struct RenderNodeKey {
+    RenderEntityType m_type{RenderEntityType::None};
+    uint64_t m_uid{0};
 
-    [[nodiscard]] bool isValid() const {
-        if(m_positions.empty() || m_uid == 0 || m_entityType == RenderEntityType::None ||
-           m_passType == RenderPassType::None) {
-            return false;
-        }
+    bool operator==(const RenderNodeKey& o) const { return m_type == o.m_type && m_uid == o.m_uid; }
+    bool operator!=(const RenderNodeKey& o) const { return !(*this == o); }
+};
 
-        if(m_topology == PrimitiveTopology::Points) {
-            return true;
-        }
-
-        return !m_indices.empty();
+struct RenderNodeKeyHash {
+    std::size_t operator()(const RenderNodeKey& k) const noexcept {
+        std::size_t h = static_cast<std::size_t>(k.m_type);
+        h ^= std::hash<uint64_t>{}(k.m_uid) + 0x9e3779b97f4a7c15ULL + (h << 6) + (h >> 2);
+        return h;
     }
 };
 
+// =============================================================================
+// RenderNode — Semantic tree node
+// =============================================================================
+
+/**
+ * @brief A node in the render semantic tree.
+ *
+ * Mirrors the geometry/mesh entity hierarchy. Each node carries metadata
+ * (key, visibility, color, bounding box) and references to DrawRanges in
+ * flat GPU buffers. The tree is used for scene management, visibility
+ * toggling, and picking resolution — it does NOT own vertex data.
+ */
+struct RenderNode {
+    RenderNodeKey m_key;            ///< Entity identity (type + uid)
+    RenderColor m_color;            ///< Display color
+    bool m_visible{true};           ///< Visibility flag
+    Geometry::BoundingBox3D m_bbox; ///< Axis-aligned bounding box
+
+    /// DrawRanges per pass (e.g., a Face node has Triangles in Geometry pass)
+    std::unordered_map<RenderPassType, std::vector<DrawRange>> m_drawRanges;
+
+    /// Child nodes (Part -> Solid -> Face/Edge/Vertex hierarchy)
+    std::vector<RenderNode> m_children;
+};
+
+// =============================================================================
+// RenderPassData — Flat GPU buffer for a single render pass
+// =============================================================================
+
+/**
+ * @brief Aggregated vertex/index data for one render pass.
+ *
+ * All geometry (or mesh) primitives of the same pass are packed into a
+ * single contiguous buffer to minimize GPU state changes and draw calls.
+ */
+struct RenderPassData {
+    std::vector<RenderVertex> m_vertices; ///< Flat vertex buffer
+    std::vector<uint32_t> m_indices;      ///< Flat index buffer
+    bool m_dirty{true};                   ///< True when buffers need GPU re-upload
+};
+
+// =============================================================================
+// RenderData — Top-level render data container
+// =============================================================================
+
+/**
+ * @brief Complete render data snapshot combining semantic tree and flat GPU buffers.
+ *
+ * Produced by GeometryDocument and MeshDocument, consumed by the GL renderer.
+ */
 struct RenderData {
-    std::vector<RenderPrimitive> m_geometry;
-    std::vector<RenderPrimitive> m_mesh;
-    std::vector<RenderPrimitive> m_post;
+    /// Semantic tree roots (one per top-level Part or mesh group)
+    std::vector<RenderNode> m_roots;
 
+    /// Per-pass flat GPU buffer data
+    std::unordered_map<RenderPassType, RenderPassData> m_passData;
+
+    /// Scene-wide bounding box (union of all visible geometry)
+    Geometry::BoundingBox3D m_sceneBBox;
+
+    /// Dirty flags per domain
+    bool m_geometryDirty{true};
+    bool m_meshDirty{true};
+
+    /**
+     * @brief Clear all render data (geometry + mesh)
+     */
     void clear() {
-        m_geometry.clear();
-        m_mesh.clear();
-        m_post.clear();
+        m_roots.clear();
+        m_passData.clear();
+        m_sceneBBox = {};
+        m_geometryDirty = true;
+        m_meshDirty = true;
     }
 
-    bool hasContent() const { return !m_geometry.empty() || !m_mesh.empty() || !m_post.empty(); }
+    /**
+     * @brief Clear geometry-domain data only, preserving mesh data
+     */
+    void clearGeometry() {
+        // Remove geometry roots (RenderEntityType in geometry domain)
+        std::erase_if(m_roots,
+                      [](const RenderNode& n) { return isGeometryDomain(n.m_key.m_type); });
+        // Clear geometry pass buffer
+        m_passData.erase(RenderPassType::Geometry);
+        m_geometryDirty = true;
+    }
+
+    /**
+     * @brief Clear mesh-domain data only, preserving geometry data
+     */
+    void clearMesh() {
+        std::erase_if(m_roots, [](const RenderNode& n) { return isMeshDomain(n.m_key.m_type); });
+        m_passData.erase(RenderPassType::Mesh);
+        m_meshDirty = true;
+    }
 };
+
+// =============================================================================
+// TessellationOptions
+// =============================================================================
 
 /**
  * @brief Options for tessellation and mesh generation
@@ -100,26 +259,14 @@ struct TessellationOptions {
     double m_angularDeflection{0.5}; ///< Angular deflection in radians
     bool m_computeNormals{true};     ///< Compute vertex normals
 
-    /**
-     * @brief Create default options suitable for visualization
-     * @return TessellationOptions with balanced quality/performance
-     */
     [[nodiscard]] static TessellationOptions defaultOptions() {
         return TessellationOptions{0.05, 0.25, true};
     }
 
-    /**
-     * @brief Create high-quality options for detailed rendering
-     * @return TessellationOptions with higher quality
-     */
     [[nodiscard]] static TessellationOptions highQuality() {
         return TessellationOptions{0.01, 0.1, true};
     }
 
-    /**
-     * @brief Create low-quality options for fast preview
-     * @return TessellationOptions with lower quality
-     */
     [[nodiscard]] static TessellationOptions fastPreview() {
         return TessellationOptions{0.1, 0.5, false};
     }

@@ -49,7 +49,7 @@ Item {
         return (root.allowedTypes & type) !== 0;
     }
 
-    readonly property int visibleTypeButtonCount: (root.isEntityTypeVisible(root.vertex_type) ? 1 : 0) + (root.isEntityTypeVisible(root.edge_type) ? 1 : 0) + (root.isEntityTypeVisible(root.face_type) ? 1 : 0) + (root.isEntityTypeVisible(root.wire_type) ? 1 : 0) + (root.isEntityTypeVisible(root.solid_type) ? 1 : 0) + (root.isEntityTypeVisible(root.part_type) ? 1 : 0)
+    readonly property int visibleTypeButtonCount: (root.isEntityTypeVisible(root.vertex_type) ? 1 : 0) + (root.isEntityTypeVisible(root.edge_type) ? 1 : 0) + (root.isEntityTypeVisible(root.face_type) ? 1 : 0) + (root.isEntityTypeVisible(root.wire_type) ? 1 : 0) + (root.isEntityTypeVisible(root.solid_type) ? 1 : 0) + (root.isEntityTypeVisible(root.part_type) ? 1 : 0) + (root.isEntityTypeVisible(root.mesh_node_type) ? 1 : 0) + (root.isEntityTypeVisible(root.mesh_element_type) ? 1 : 0)
 
     function typeButtonWidth(barWidth, spacing) {
         var count = root.visibleTypeButtonCount;
@@ -94,9 +94,18 @@ Item {
         if (!root.isEntityTypeVisible(type)) {
             return;
         }
-        if (root.selectedTypes !== root.none_type) {
-            SelectManagerService.activateSelectMode(root.selectedTypes);
+
+        // Toggle the clicked type in the bitmask
+        var newTypes = root.selectedTypes ^ type;
+
+        // Filter by allowed types and strip none_type sentinel
+        newTypes = newTypes & root.allowedTypes;
+
+        if (newTypes !== 0) {
+            root.selectedTypes = newTypes;
+            SelectManagerService.activateSelectMode(newTypes);
         } else {
+            root.selectedTypes = root.none_type;
             SelectManagerService.activateSelectMode(root.none_type);
             SelectManagerService.deactivateSelectMode();
         }
@@ -216,6 +225,24 @@ Item {
                     iconSource: "qrc:/opengeolab/resources/icons/box.svg"
                     selected: ((root.selectedTypes & root.part_type) !== 0)
                     onClicked: root.onEntityTypeClicked(root.part_type)
+                }
+
+                EntityTypeButton {
+                    width: root.typeButtonWidth(typeButtonRow.width, typeButtonRow.spacing)
+                    visible: root.isEntityTypeVisible(root.mesh_node_type)
+                    entityType: "Node"
+                    iconSource: "qrc:/opengeolab/resources/icons/point.svg"
+                    selected: ((root.selectedTypes & root.mesh_node_type) !== 0)
+                    onClicked: root.onEntityTypeClicked(root.mesh_node_type)
+                }
+
+                EntityTypeButton {
+                    width: root.typeButtonWidth(typeButtonRow.width, typeButtonRow.spacing)
+                    visible: root.isEntityTypeVisible(root.mesh_element_type)
+                    entityType: "Element"
+                    iconSource: "qrc:/opengeolab/resources/icons/mesh.svg"
+                    selected: ((root.selectedTypes & root.mesh_element_type) !== 0)
+                    onClicked: root.onEntityTypeClicked(root.mesh_element_type)
                 }
             }
         }

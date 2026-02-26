@@ -174,18 +174,6 @@ public:
 private:
     void removeEntityRecursive(EntityId entity_id, size_t& removed_count);
 
-    void generateFaceMesh(Render::RenderData& render_data,
-                          const GeometryEntityImplPtr& entity,
-                          const Render::TessellationOptions& options);
-
-    void generateEdgeMesh(Render::RenderData& render_data,
-                          const GeometryEntityImplPtr& entity,
-                          const Render::TessellationOptions& options);
-
-    void generateVertexMesh(Render::RenderData& render_data,
-                            const GeometryEntityImplPtr& entity,
-                            const Render::TessellationOptions& options);
-
     void emitChangeEvent(const GeometryChangeEvent& event);
 
 private:

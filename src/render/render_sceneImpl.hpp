@@ -2,6 +2,10 @@
 
 #include "render/render_scene.hpp"
 
+#include "render/pass/geometry_pass.hpp"
+#include "render/pass/mesh_pass.hpp"
+#include "render/pass/pick_pass.hpp"
+
 namespace OpenGeoLab::Render {
 class RenderSceneImpl : public IRenderScene {
 public:
@@ -16,6 +20,15 @@ public:
                 const QMatrix4x4& view_matrix,
                 const QMatrix4x4& projection_matrix) override;
     void cleanup() override;
+
+private:
+    GeometryPass m_geometryPass;
+    MeshPass m_meshPass;
+    PickPass m_pickPass;
+
+    QSize m_viewportSize;
+    bool m_initialized{false};
+    bool m_pickPassInitialized{false};
 };
 
 // =============================================================================
@@ -29,7 +42,4 @@ public:
 
     tObjectPtr create() override { return std::make_unique<RenderSceneImpl>(); }
 };
-
-// void registerSceneRendererFactory() {
-// }
 } // namespace OpenGeoLab::Render

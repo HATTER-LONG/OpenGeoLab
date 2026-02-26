@@ -1,4 +1,5 @@
 #include "render/render_scene_controller.hpp"
+#include "geometry/geometry_document.hpp"
 #include "mesh/mesh_document.hpp"
 #include "util/logger.hpp"
 
@@ -104,7 +105,17 @@ void RenderSceneController::updateGeometryRenderData() {
     auto ret = document->getRenderData(m_renderData, default_options);
     if(!ret) {
         LOG_ERROR("RenderSceneController: Failed to get geometry render data");
-        m_renderData.clear();
+    }
+
+    // Apply per-part visibility from controller state
+    for(auto& root : m_renderData.m_roots) {
+        if(root.m_key.m_type == RenderEntityType::Part) {
+            std::lock_guard lock(m_visibilityMutex);
+            auto it = m_partVisibility.find(root.m_key.m_uid);
+            if(it != m_partVisibility.end()) {
+                root.m_visible = it->second.m_geometryVisible;
+            }
+        }
     }
 }
 
@@ -125,7 +136,6 @@ void RenderSceneController::updateMeshRenderData() {
     const bool ret = document->getRenderData(m_renderData);
     if(!ret) {
         LOG_ERROR("RenderSceneController: Failed to get mesh render data");
-        m_renderData.m_mesh.clear();
     }
 }
 
@@ -146,6 +156,9 @@ void RenderSceneController::refreshScene(bool notify) {
 }
 
 void RenderSceneController::fitToScene(bool notify) {
+    if(m_renderData.m_sceneBBox.isValid()) {
+        m_cameraState.fitToBoundingBox(m_renderData.m_sceneBBox);
+    }
     if(notify) {
         m_sceneNeedsUpdate.emitSignal(SceneUpdateType::GeometryChanged);
     }
@@ -215,6 +228,15 @@ void RenderSceneController::setBottomView(bool notify) {
     if(notify) {
         m_sceneNeedsUpdate.emitSignal(SceneUpdateType::CameraChanged);
     }
+}
+// =============================================================================
+// Render data access
+// =============================================================================
+
+const RenderData& RenderSceneController::renderData() const { return m_renderData; }
+
+Geometry::GeometryDocumentPtr RenderSceneController::currentGeometryDocument() const {
+    return GeoDocumentInstance;
 }
 // =============================================================================
 // Per-part visibility

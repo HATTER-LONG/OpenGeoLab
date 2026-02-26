@@ -27,6 +27,18 @@ public:
      */
     QQuickFramebufferObject::Renderer* createRenderer() const override;
 
+    // ── Accessors for renderer synchronization ──────────────────────────
+
+    /** @brief Consume and reset the pending pick action (called during synchronize) */
+    [[nodiscard]] Render::PickAction consumePendingPickAction() {
+        const auto action = m_pendingPickAction;
+        m_pendingPickAction = Render::PickAction::None;
+        return action;
+    }
+
+    [[nodiscard]] QPointF cursorPosition() const { return m_cursorPos; }
+    [[nodiscard]] qreal currentDevicePixelRatio() const { return m_devicePixelRatio; }
+
 protected:
     void keyPressEvent(QKeyEvent* event) override;
     void keyReleaseEvent(QKeyEvent* event) override;
