@@ -52,8 +52,11 @@ ServiceWorker::ServiceWorker(const QString& module_name,
       m_cancelRequested(cancel_requested) {}
 
 void ServiceWorker::process() {
-    Kangaroo::Util::Stopwatch stopwatch("Backend [" + m_moduleName.toStdString() + "]",
-                                        OpenGeoLab::getLogger());
+    std::unique_ptr<Kangaroo::Util::Stopwatch> stopwatch;
+    if(!m_silent) {
+        stopwatch = std::make_unique<Kangaroo::Util::Stopwatch>(
+            "Backend [" + m_moduleName.toStdString() + "]", OpenGeoLab::getLogger());
+    }
     try {
         auto service = g_ComponentFactory.getInstanceObjectWithID<IServiceSingletonFactory>(
             m_moduleName.toStdString());

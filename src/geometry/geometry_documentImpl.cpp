@@ -288,12 +288,14 @@ void GeometryDocumentImpl::generateFaceMesh(Render::RenderData& render_data,
     }
 
     const auto face = TopoDS::Face(entity->shape());
-
-    BRepMesh_IncrementalMesh mesher(face, options.m_linearDeflection, Standard_False,
-                                    options.m_angularDeflection, Standard_False);
-    (void)mesher;
     TopLoc_Location loc;
-    const Handle(Poly_Triangulation) triangulation = BRep_Tool::Triangulation(face, loc);
+    Handle(Poly_Triangulation) triangulation = BRep_Tool::Triangulation(face, loc);
+    if(triangulation.IsNull() || triangulation->NbNodes() < 3 || triangulation->NbTriangles() < 1) {
+        BRepMesh_IncrementalMesh mesher(face, options.m_linearDeflection, Standard_False,
+                                        options.m_angularDeflection, Standard_False);
+        (void)mesher;
+        triangulation = BRep_Tool::Triangulation(face, loc);
+    }
     if(triangulation.IsNull() || triangulation->NbNodes() < 3 || triangulation->NbTriangles() < 1) {
         return;
     }
