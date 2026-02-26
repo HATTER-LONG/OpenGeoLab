@@ -17,7 +17,7 @@ ApplicationWindow {
     title: qsTr("OpenGeoLab")
 
     // Expose key UI elements for floating pages positioning
-    property alias documentSideBar: documentSideBar
+    property alias documentSideBar: documentSideBarItem
 
     palette: Theme.palette
 
@@ -58,7 +58,7 @@ ApplicationWindow {
         anchors.fill: parent
         // Document sidebar on the left
         DocumentSideBar {
-            id: documentSideBar
+            id: documentSideBarItem
             anchors.top: parent.top
             anchors.bottom: parent.bottom
             anchors.left: parent.left
@@ -95,7 +95,7 @@ ApplicationWindow {
             //     }
             // }));
             // Refresh part list in sidebar
-            documentSideBar.refreshPartList();
+            documentSideBarItem.refreshPartList();
         }
     }
 

@@ -213,7 +213,7 @@ LoadResult GeometryDocumentImpl::appendShape(const TopoDS_Shape& shape,
     try {
         ShapeBuilder builder(shared_from_this());
 
-        auto subcallback = Util::makeScaledProgressCallback(progress, 0.1, 0.9);
+        auto subcallback = Util::makeScaledProgressCallback(progress, 0.1, 0.8);
 
         auto build_result = builder.buildFromShape(shape, name, subcallback);
 
@@ -222,7 +222,7 @@ LoadResult GeometryDocumentImpl::appendShape(const TopoDS_Shape& shape,
             return LoadResult::failure(build_result.m_errorMessage);
         }
 
-        if(!progress(0.95, "Finalizing...")) {
+        if(!progress(0.80, "Update geometry view data...")) {
             return LoadResult::failure("Operation cancelled");
         }
 

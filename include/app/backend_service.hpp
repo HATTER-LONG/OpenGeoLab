@@ -72,20 +72,48 @@ private slots:
     void onWorkerProgress(double progress, const QString& message);
     void onWorkerFinished(const QString& module_name, const QString& result);
     void onWorkerError(const QString& module_name, const QString& error);
+    void onWorkerThreadFinished();
 
 private:
+    struct RequestContext {
+        QString m_moduleName;
+        QString m_actionName;
+        bool m_silent{false};
+
+        void reset() {
+            m_moduleName.clear();
+            m_actionName.clear();
+            m_silent = false;
+        }
+    };
+
+    struct DeferredRequest {
+        bool m_pending{false};
+        QString m_moduleName;
+        QString m_params;
+
+        void reset() {
+            m_pending = false;
+            m_moduleName.clear();
+            m_params.clear();
+        }
+    };
+
     void setMessage(const QString& message);
     void setProgressInternal(double progress);
     void setBusyInternal(bool busy);
+    void scheduleDeferredRequestIfNeeded();
+    void processDeferredRequest();
     void cleanupWorker();
 
 private:
+    bool m_processingRequest{false};
     bool m_busy{false};
     double m_progress{0.0};
 
     QString m_message;
-    QString m_currentModuleName;
-    QString m_currentActionName;
+    RequestContext m_currentRequest;
+    DeferredRequest m_deferredRequest;
 
     std::atomic<bool> m_cancelRequested{false};
     QPointer<QThread> m_workerThread;

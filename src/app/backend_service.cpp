@@ -7,6 +7,10 @@
 #include "service_worker.hpp"
 #include "util/logger.hpp"
 
+#include <QMetaObject>
+
+#include <cmath>
+
 #include <nlohmann/json.hpp>
 
 #include <kangaroo/util/component_factory.hpp>
@@ -14,13 +18,6 @@
 namespace OpenGeoLab::App {
 
 namespace {
-class NullProgressReporter final : public IProgressReporter {
-public:
-    void reportProgress(double /*progress*/, const std::string& /*message*/) override {}
-    void reportError(const std::string& /*error_message*/) override {}
-    [[nodiscard]] bool isCancelled() const override { return false; }
-};
-
 [[nodiscard]] bool isSilentRequest(const nlohmann::json& params) {
     if(!params.is_object()) {
         return false;
@@ -30,6 +27,18 @@ public:
     }
     const auto& meta = params["_meta"];
     return meta.contains("silent") && meta["silent"].is_boolean() && meta["silent"].get<bool>();
+}
+
+[[nodiscard]] bool isDeferIfBusyRequest(const nlohmann::json& params) {
+    if(!params.is_object()) {
+        return false;
+    }
+    if(!params.contains("_meta") || !params["_meta"].is_object()) {
+        return false;
+    }
+    const auto& meta = params["_meta"];
+    return meta.contains("defer_if_busy") && meta["defer_if_busy"].is_boolean() &&
+           meta["defer_if_busy"].get<bool>();
 }
 
 [[nodiscard]] QString extractActionName(const nlohmann::json& params) {
@@ -78,9 +87,28 @@ void BackendService::request(const QString& module_name, const QString& params) 
         }
     }
 
-    auto current_action_name = extractActionName(param_json);
+    const auto current_action_name = extractActionName(param_json);
+
+    if(m_processingRequest) {
+        if(isDeferIfBusyRequest(param_json)) {
+            m_deferredRequest.m_pending = true;
+            m_deferredRequest.m_moduleName = module_name;
+            m_deferredRequest.m_params = params;
+            LOG_DEBUG("Backend busy, deferred request queued: module='{}', action='{}'",
+                      qPrintable(module_name), qPrintable(current_action_name));
+            return;
+        }
+        const auto err = QStringLiteral("Service is currently busy. Cannot process new request.");
+        emit operationFailed(module_name, current_action_name, err);
+        return;
+    }
 
     const bool silent = isSilentRequest(param_json);
+    m_processingRequest = true;
+    m_currentRequest.m_moduleName = module_name;
+    m_currentRequest.m_actionName = current_action_name;
+    m_currentRequest.m_silent = silent;
+
     if(!silent) {
         LOG_DEBUG("Backend request: module='{}'", qPrintable(module_name));
         if(param_json.is_object() && !param_json.empty()) {
@@ -88,53 +116,21 @@ void BackendService::request(const QString& module_name, const QString& params) 
         }
     }
 
-    // Silent requests are intended for frequent UI actions (e.g., view changes).
-    // They execute synchronously without progress overlay/log spam.
-    if(silent) {
-        try {
-            auto service = g_ComponentFactory.getInstanceObjectWithID<IServiceSingletonFactory>(
-                module_name.toStdString());
-            if(!service) {
-                throw std::runtime_error("Service factory not found for module: " +
-                                         module_name.toStdString());
-            }
-
-            auto reporter = std::make_shared<NullProgressReporter>();
-            auto result = service->processRequest(module_name.toStdString(), param_json, reporter);
-            LOG_DEBUG("Silent backend request [{}] completed successfully.",
-                      qPrintable(module_name));
-            emit operationFinished(module_name, current_action_name,
-                                   QString::fromStdString(result.dump()));
-        } catch(const std::exception& e) {
-            // Keep errors visible to logs, but don't trigger UI progress overlay.
-            LOG_ERROR("Silent backend error [{}]: {}", qPrintable(module_name), e.what());
-            emit operationFailed(module_name, current_action_name,
-                                 QStringLiteral("Silent request error: ") +
-                                     QString::fromStdString(e.what()));
-        }
-        return;
+    if(!silent) {
+        setBusyInternal(true);
     }
-
-    if(m_busy) {
-        const auto err = QStringLiteral("Service is currently busy. Cannot process new request.");
-        emit operationFailed(module_name, current_action_name, err);
-        return;
-    }
-
-    m_currentActionName = current_action_name;
-    setBusyInternal(true);
-
-    m_currentModuleName = module_name;
     m_cancelRequested.store(false);
 
-    setProgressInternal(0.0);
-    setMessage(QStringLiteral("Starting operation...[%1]").arg(module_name));
-    emit operationStarted(module_name, m_currentActionName);
+    if(!silent) {
+        setProgressInternal(0.0);
+        setMessage(QStringLiteral("Starting operation...[%1]").arg(module_name));
+        emit operationStarted(module_name, m_currentRequest.m_actionName);
+    }
 
     cleanupWorker();
     m_workerThread = new QThread(this);
     // Pass pre-parsed JSON to worker (avoids re-parsing in worker thread)
-    m_worker = new ServiceWorker(module_name, std::move(param_json), m_cancelRequested);
+    m_worker = new ServiceWorker(module_name, std::move(param_json), silent, m_cancelRequested);
     m_worker->moveToThread(m_workerThread);
 
     connect(m_workerThread, &QThread::started, m_worker, &ServiceWorker::process);
@@ -145,17 +141,21 @@ void BackendService::request(const QString& module_name, const QString& params) 
     connect(m_worker, &ServiceWorker::finished, m_workerThread, &QThread::quit);
     connect(m_worker, &ServiceWorker::errorOccurred, m_workerThread, &QThread::quit);
     connect(m_workerThread, &QThread::finished, m_worker, &QObject::deleteLater);
+    connect(m_workerThread, &QThread::finished, m_workerThread, &QObject::deleteLater);
+    connect(m_workerThread, &QThread::finished, this, &BackendService::onWorkerThreadFinished);
 
     m_workerThread->start();
 }
 
 void BackendService::cancel() {
-    if(!m_busy) {
+    if(!m_processingRequest) {
         return;
     }
     m_cancelRequested.store(true);
-    setMessage(
-        QStringLiteral("Cancellation requested for operation [%1]...").arg(m_currentModuleName));
+    if(!m_currentRequest.m_silent) {
+        setMessage(QStringLiteral("Cancellation requested for operation [%1]...")
+                       .arg(m_currentRequest.m_moduleName));
+    }
     if(m_workerThread && m_workerThread->isRunning()) {
         m_workerThread->quit();
         m_workerThread->wait(1000);
@@ -163,37 +163,75 @@ void BackendService::cancel() {
 }
 
 void BackendService::onWorkerProgress(double progress, const QString& message) {
+    if(m_currentRequest.m_silent) {
+        return;
+    }
     setProgressInternal(progress);
     if(!message.isEmpty()) {
         setMessage(message);
     }
-    emit operationProgress(m_currentModuleName, m_currentActionName, progress, message);
+    emit operationProgress(m_currentRequest.m_moduleName, m_currentRequest.m_actionName, progress,
+                           message);
 }
 
 void BackendService::onWorkerFinished(const QString& module_name, const QString& result) {
-    setProgressInternal(1.0);
-    setMessage(QStringLiteral("Operation [%1] completed successfully.").arg(module_name));
-    emit operationFinished(module_name, m_currentActionName, result);
-    cleanupWorker();
-    LOG_INFO("Backend operation [{}] finished successfully.", qPrintable(module_name));
-    setBusyInternal(false);
+    const auto request_context = m_currentRequest;
+    if(!request_context.m_silent) {
+        setProgressInternal(1.0);
+        setMessage(QStringLiteral("Operation [%1] completed successfully.").arg(module_name));
+        setBusyInternal(false);
+    }
+    m_processingRequest = false;
+    m_currentRequest.reset();
+
+    emit operationFinished(module_name, request_context.m_actionName, result);
+    if(request_context.m_silent) {
+        LOG_DEBUG("Silent backend request [{}] completed successfully.", qPrintable(module_name));
+    } else {
+        LOG_INFO("Backend operation [{}] finished successfully.", qPrintable(module_name));
+    }
 }
 
 void BackendService::onWorkerError(const QString& module_name, const QString& error) {
-    setProgressInternal(0.0);
-    setMessage(QStringLiteral("Operation [%1] failed: %2").arg(module_name, error));
-    emit operationFailed(module_name, m_currentActionName, error);
-    cleanupWorker();
-    LOG_ERROR("Backend error [{}]: {}", qPrintable(module_name), qPrintable(error));
-    setBusyInternal(false);
+    const auto request_context = m_currentRequest;
+    QString final_error = error;
+    if(request_context.m_silent) {
+        final_error = QStringLiteral("Silent request error: ") + error;
+    } else {
+        setProgressInternal(0.0);
+        setMessage(QStringLiteral("Operation [%1] failed: %2").arg(module_name, error));
+        setBusyInternal(false);
+    }
+    m_processingRequest = false;
+    m_currentRequest.reset();
+
+    emit operationFailed(module_name, request_context.m_actionName, final_error);
+    if(request_context.m_silent) {
+        LOG_ERROR("Silent backend error [{}]: {}", qPrintable(module_name), qPrintable(error));
+    } else {
+        LOG_ERROR("Backend error [{}]: {}", qPrintable(module_name), qPrintable(error));
+    }
+}
+
+void BackendService::onWorkerThreadFinished() {
+    m_worker.clear();
+    m_workerThread.clear();
+    scheduleDeferredRequestIfNeeded();
 }
 
 void BackendService::setMessage(const QString& message) {
+    if(m_message == message) {
+        return;
+    }
     m_message = message;
     emit messageChanged();
 }
 
 void BackendService::setProgressInternal(double progress) {
+    constexpr double progress_epsilon = 1e-4;
+    if(std::abs(m_progress - progress) < progress_epsilon) {
+        return;
+    }
     m_progress = progress;
     emit progressChanged();
 }
@@ -204,6 +242,29 @@ void BackendService::setBusyInternal(bool busy) {
     }
     m_busy = busy;
     emit busyChanged();
+}
+
+void BackendService::scheduleDeferredRequestIfNeeded() {
+    if(!m_processingRequest && m_deferredRequest.m_pending) {
+        QMetaObject::invokeMethod(
+            this, [this]() { processDeferredRequest(); }, Qt::QueuedConnection);
+    }
+}
+
+void BackendService::processDeferredRequest() {
+    if(m_processingRequest || !m_deferredRequest.m_pending) {
+        return;
+    }
+
+    const auto deferred_module_name = m_deferredRequest.m_moduleName;
+    const auto deferred_params = m_deferredRequest.m_params;
+    m_deferredRequest.reset();
+
+    if(deferred_module_name.trimmed().isEmpty()) {
+        return;
+    }
+
+    request(deferred_module_name, deferred_params);
 }
 
 void BackendService::cleanupWorker() {

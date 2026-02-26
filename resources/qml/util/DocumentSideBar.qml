@@ -48,7 +48,8 @@ Rectangle {
         BackendService.request("GeometryService", JSON.stringify({
             action: "get_part_list",
             _meta: {
-                silent: true
+                silent: true,
+                defer_if_busy: true
             }
         }));
     }
