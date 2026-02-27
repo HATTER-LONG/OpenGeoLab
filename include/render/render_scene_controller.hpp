@@ -136,7 +136,17 @@ public:
     /** @brief Current mesh display mode bitmask. */
     [[nodiscard]] RenderDisplayModeMask meshDisplayMode() const noexcept;
 
-    /** @brief Read-only access to the current render data snapshot. */
+    /**
+     * @brief Read-only access to the current render data snapshot.
+     *
+     * Thread-safety contract: this reference is read by the render thread during
+     * render() and processHover/processPicking. The GUI thread rebuilds the data
+     * in updateGeometryRenderData/updateMeshRenderData. Synchronization relies on
+     * Qt Scene Graph's synchronize() barrier — the GUI thread is blocked while
+     * synchronize() runs, and render data is not modified during render(). If the
+     * data-update frequency increases or a non-Qt renderer is introduced, consider
+     * adding a shared_mutex or double-buffering.
+     */
     [[nodiscard]] const RenderData& renderData() const;
 
     /** @brief Current geometry document (may be null if no document is loaded). */

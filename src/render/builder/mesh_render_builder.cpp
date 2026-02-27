@@ -261,7 +261,7 @@ bool MeshRenderBuilder::build(RenderData& render_data, const MeshRenderInput& in
         }
         const uint64_t id = nextEdgeId++;
         edgeKeyToSeqId[key] = id;
-        render_data.m_meshLineNodes[id] = {std::min(n0, n1), std::max(n0, n1)};
+        render_data.m_pickData.m_meshLineNodes[id] = {std::min(n0, n1), std::max(n0, n1)};
         return id;
     };
 

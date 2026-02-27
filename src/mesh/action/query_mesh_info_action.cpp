@@ -97,8 +97,8 @@ queryElement(const MeshDocumentImpl& doc, MeshElementUID uid, MeshElementType ty
  */
 [[nodiscard]] nlohmann::json queryMeshLine(const MeshDocumentImpl& doc, uint64_t edgeId) {
     const auto& renderData = Render::RenderSceneController::instance().renderData();
-    auto it = renderData.m_meshLineNodes.find(edgeId);
-    if(it == renderData.m_meshLineNodes.end()) {
+    auto it = renderData.m_pickData.m_meshLineNodes.find(edgeId);
+    if(it == renderData.m_pickData.m_meshLineNodes.end()) {
         return nlohmann::json{};
     }
 

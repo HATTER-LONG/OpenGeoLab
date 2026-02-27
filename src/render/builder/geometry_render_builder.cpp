@@ -95,12 +95,13 @@ bool GeometryRenderBuilder::build(RenderData& render_data, const GeometryRenderI
                 if(edge_entity) {
                     edgeToWire[edge_entity->entityUID()] = wire_uid;
                     // Edge may belong to multiple wires (shared edges between faces)
-                    auto& wires = render_data.m_edgeToWireUids[edge_entity->entityUID()];
+                    auto& wires = render_data.m_pickData.m_edgeToWireUids[edge_entity->entityUID()];
                     if(std::find(wires.begin(), wires.end(), wire_uid) == wires.end()) {
                         wires.push_back(wire_uid);
                     }
                     // Build reverse lookup: wire → all its edges
-                    render_data.m_wireToEdgeUids[wire_uid].push_back(edge_entity->entityUID());
+                    render_data.m_pickData.m_wireToEdgeUids[wire_uid].push_back(
+                        edge_entity->entityUID());
                 }
             }
         }
@@ -120,7 +121,7 @@ bool GeometryRenderBuilder::build(RenderData& render_data, const GeometryRenderI
             for(const auto& wk : face_wire_keys) {
                 auto wire_entity = input.m_entityIndex.findByKey(wk);
                 if(wire_entity) {
-                    render_data.m_wireToFaceUid[wire_entity->entityUID()] =
+                    render_data.m_pickData.m_wireToFaceUid[wire_entity->entityUID()] =
                         face_entity->entityUID();
                 }
             }

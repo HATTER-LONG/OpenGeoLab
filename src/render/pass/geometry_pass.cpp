@@ -215,8 +215,8 @@ void GeometryPass::updateBuffers(const RenderData& data) {
 
     for(const auto& root : data.m_roots) {
         if(isGeometryDomain(root.m_key.m_type)) {
-            collectDrawRangesEx(root, 0, data.m_edgeToWireUids, m_triangleRanges, m_lineRanges,
-                                m_pointRanges);
+            collectDrawRangesEx(root, 0, data.m_pickData.m_edgeToWireUids, m_triangleRanges,
+                                m_lineRanges, m_pointRanges);
         }
     }
 }

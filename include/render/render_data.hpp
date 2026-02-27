@@ -224,21 +224,19 @@ struct RenderPassData {
 };
 
 // =============================================================================
-// RenderData — Top-level render data container
+// PickResolutionData — Lookup tables for pick/hover entity resolution
 // =============================================================================
 
 /**
- * @brief Complete render data snapshot combining semantic tree and flat GPU buffers.
+ * @brief Pick-specific lookup tables for resolving entity hierarchy during
+ *        hover and click picking.
  *
- * Produced by GeometryDocument and MeshDocument, consumed by the GL renderer.
+ * These maps are built by GeometryRenderBuilder and MeshRenderBuilder and
+ * consumed by RenderSceneImpl (processHover / processPicking) to resolve
+ * edges to wires, wires to faces, and mesh line IDs to node pairs.
+ * They are NOT used during normal rendering — only during pick resolution.
  */
-struct RenderData {
-    /// Semantic tree roots (one per top-level Part or mesh group)
-    std::vector<RenderNode> m_roots;
-
-    /// Per-pass flat GPU buffer data
-    std::unordered_map<RenderPassType, RenderPassData> m_passData;
-
+struct PickResolutionData {
     /// Edge uid → parent wire uid(s) lookup (built by GeometryRenderBuilder).
     /// An edge shared between two faces belongs to two different wires.
     std::unordered_map<uint64_t, std::vector<uint64_t>> m_edgeToWireUids;
@@ -253,6 +251,43 @@ struct RenderData {
     /// Built by MeshRenderBuilder; used to resolve mesh line picks back to node pairs.
     std::unordered_map<uint64_t, std::pair<Mesh::MeshNodeId, Mesh::MeshNodeId>> m_meshLineNodes;
 
+    void clear() {
+        m_edgeToWireUids.clear();
+        m_wireToEdgeUids.clear();
+        m_wireToFaceUid.clear();
+        m_meshLineNodes.clear();
+    }
+
+    void clearGeometry() {
+        m_edgeToWireUids.clear();
+        m_wireToEdgeUids.clear();
+        m_wireToFaceUid.clear();
+    }
+
+    void clearMesh() { m_meshLineNodes.clear(); }
+};
+
+// =============================================================================
+// RenderData — Top-level render data container
+// =============================================================================
+
+/**
+ * @brief Complete render data snapshot combining semantic tree and flat GPU buffers.
+ *
+ * Produced by GeometryDocument and MeshDocument, consumed by the GL renderer.
+ * Rendering data (roots, pass buffers, bounding box) and pick-specific lookup
+ * tables (m_pickData) are separated for clarity.
+ */
+struct RenderData {
+    /// Semantic tree roots (one per top-level Part or mesh group)
+    std::vector<RenderNode> m_roots;
+
+    /// Per-pass flat GPU buffer data
+    std::unordered_map<RenderPassType, RenderPassData> m_passData;
+
+    /// Pick-specific lookup tables for entity hierarchy resolution
+    PickResolutionData m_pickData;
+
     /// Scene-wide bounding box (union of all visible geometry)
     Geometry::BoundingBox3D m_sceneBBox;
 
@@ -266,10 +301,7 @@ struct RenderData {
     void clear() {
         m_roots.clear();
         m_passData.clear();
-        m_edgeToWireUids.clear();
-        m_wireToEdgeUids.clear();
-        m_wireToFaceUid.clear();
-        m_meshLineNodes.clear();
+        m_pickData.clear();
         m_sceneBBox = {};
         m_geometryDirty = true;
         m_meshDirty = true;
@@ -284,9 +316,7 @@ struct RenderData {
                       [](const RenderNode& n) { return isGeometryDomain(n.m_key.m_type); });
         // Clear geometry pass buffer
         m_passData.erase(RenderPassType::Geometry);
-        m_edgeToWireUids.clear();
-        m_wireToEdgeUids.clear();
-        m_wireToFaceUid.clear();
+        m_pickData.clearGeometry();
         m_geometryDirty = true;
     }
 
@@ -296,7 +326,7 @@ struct RenderData {
     void clearMesh() {
         std::erase_if(m_roots, [](const RenderNode& n) { return isMeshDomain(n.m_key.m_type); });
         m_passData.erase(RenderPassType::Mesh);
-        m_meshLineNodes.clear();
+        m_pickData.clearMesh();
         m_meshDirty = true;
     }
 };

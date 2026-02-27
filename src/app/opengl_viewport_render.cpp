@@ -3,9 +3,10 @@
  * @brief QQuickFramebufferObject::Renderer that drives rendering on
  *        Qt's dedicated render thread.
  *
- * synchronize() runs on the GUI thread (under Qt scene-graph lock),
- * while render() runs on the render thread — no shared mutable state
- * is accessed outside synchronize().
+ * synchronize() runs while the GUI thread is blocked (Qt scene-graph barrier).
+ * All GUI-thread state (render data, camera, display modes) is captured into
+ * a SceneFrameState and forwarded to IRenderScene::synchronize(). After that,
+ * render() uses only the cached state — no GUI-thread singletons are accessed.
  */
 
 #include "app/opengl_viewport_render.hpp"
@@ -47,6 +48,7 @@ void GLViewportRender::synchronize(QQuickFramebufferObject* item) {
     m_itemSize = viewport->size();
     m_devicePixelRatio = viewport->currentDevicePixelRatio();
 
+    // Capture pending pick action (cursor position only — matrices come from SceneFrameState)
     const auto action = viewport->consumePendingPickAction();
     if(action != Render::PickAction::None) {
         m_hasPendingPick = true;
@@ -54,18 +56,28 @@ void GLViewportRender::synchronize(QQuickFramebufferObject* item) {
         m_pendingPick.m_cursorPos = m_cursorPos;
         m_pendingPick.m_itemSize = m_itemSize;
         m_pendingPick.m_devicePixelRatio = m_devicePixelRatio;
-
-        auto& controller = Render::RenderSceneController::instance();
-        const auto& camera = controller.cameraState();
-        const float aspect = static_cast<float>(viewport->width()) /
-                             static_cast<float>(std::max(1.0, viewport->height()));
-        m_pendingPick.m_viewMatrix = camera.viewMatrix();
-        m_pendingPick.m_projectionMatrix = camera.projectionMatrix(aspect);
     }
+
+    // Build SceneFrameState from GUI-thread singletons (safe: GUI thread is blocked)
+    auto& controller = Render::RenderSceneController::instance();
+    const auto& camera = controller.cameraState();
+    const float aspect = static_cast<float>(viewport->width()) /
+                         static_cast<float>(std::max(1.0, viewport->height()));
+
+    Render::SceneFrameState state;
+    state.renderData = &controller.renderData();
+    state.cameraPos = camera.m_position;
+    state.viewMatrix = camera.viewMatrix();
+    state.projMatrix = camera.projectionMatrix(aspect);
+    state.xRayMode = controller.isXRayMode();
+    state.meshDisplayMode = controller.meshDisplayMode();
+
+    // Forward to scene — caches state, updates GPU buffers if dirty
+    m_renderScene->synchronize(state);
 }
 
 // =============================================================================
-// Render — called on the render thread
+// Render — called on the render thread (no GUI-thread singleton access)
 // =============================================================================
 
 void GLViewportRender::render() {
@@ -95,16 +107,8 @@ void GLViewportRender::render() {
 
     f->glViewport(0, 0, fboSize.width(), fboSize.height());
 
-    // Build camera matrices
-    auto& controller = Render::RenderSceneController::instance();
-    const auto& camera = controller.cameraState();
-    const float aspect =
-        static_cast<float>(fboSize.width()) / static_cast<float>(std::max(fboSize.height(), 1));
-    const QMatrix4x4 view = camera.viewMatrix();
-    const QMatrix4x4 proj = camera.projectionMatrix(aspect);
-
-    // Main scene render
-    m_renderScene->render(camera.m_position, view, proj);
+    // Main scene render (uses cached SceneFrameState — no controller access)
+    m_renderScene->render();
 
     // Process pending pick action (after rendering so GPU buffers are current)
     if(m_hasPendingPick) {
@@ -122,7 +126,7 @@ void GLViewportRender::render() {
         const int py =
             static_cast<int>((m_itemSize.height() - m_cursorPos.y()) * m_devicePixelRatio);
 
-        m_renderScene->processHover(px, py, view, proj);
+        m_renderScene->processHover(px, py);
 
         // Re-bind the viewport FBO after hover pick pass used its own FBO
         framebufferObject()->bind();
