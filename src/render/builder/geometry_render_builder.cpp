@@ -41,6 +41,53 @@ bool isIdentityTrsf(const gp_Trsf& trsf) {
            trsf.TranslationPart().SquareModulus() == 0.0;
 }
 
+bool isRenderableEntity(const Geometry::GeometryEntityImplPtr& entity) {
+    return entity && entity->hasShape();
+}
+
+void tessellatePartShape(const Geometry::GeometryEntityImplPtr& part,
+                         const TessellationOptions& options) {
+    if(!isRenderableEntity(part)) {
+        return;
+    }
+
+    BRepMesh_IncrementalMesh mesher(part->shape(), options.m_linearDeflection, Standard_False,
+                                    options.m_angularDeflection, Standard_True);
+    mesher.Perform();
+}
+
+void buildWireEdgeLookupsForPart(RenderData& render_data,
+                                 const GeometryRenderInput& input,
+                                 const Geometry::GeometryEntityImplPtr& part) {
+    const auto wire_keys =
+        input.m_relationshipIndex.findRelatedEntities(part->entityId(), Geometry::EntityType::Wire);
+    for(const auto& wk : wire_keys) {
+        auto wire_entity = input.m_entityIndex.findByKey(wk);
+        if(!wire_entity) {
+            continue;
+        }
+
+        const Geometry::EntityUID wire_uid = wire_entity->entityUID();
+        const auto wire_edge_keys = input.m_relationshipIndex.findRelatedEntities(
+            wire_entity->entityId(), Geometry::EntityType::Edge);
+
+        for(const auto& ek : wire_edge_keys) {
+            auto edge_entity = input.m_entityIndex.findByKey(ek);
+            if(!edge_entity) {
+                continue;
+            }
+
+            const Geometry::EntityUID edge_uid = edge_entity->entityUID();
+            auto& edge_wires = render_data.m_pickData.m_edgeToWireUids[edge_uid];
+            if(std::find(edge_wires.begin(), edge_wires.end(), wire_uid) == edge_wires.end()) {
+                edge_wires.push_back(wire_uid);
+            }
+
+            render_data.m_pickData.m_wireToEdgeUids[wire_uid].push_back(edge_uid);
+        }
+    }
+}
+
 } // namespace
 
 bool GeometryRenderBuilder::build(RenderData& render_data, const GeometryRenderInput& input) {
@@ -52,21 +99,14 @@ bool GeometryRenderBuilder::build(RenderData& render_data, const GeometryRenderI
         return true;
     }
 
-    // Run BRepMesh on each Part's shape for tessellation
     for(const auto& part : parts) {
-        if(!part || !part->hasShape()) {
-            continue;
-        }
-        BRepMesh_IncrementalMesh mesher(part->shape(), input.m_options.m_linearDeflection,
-                                        Standard_False, input.m_options.m_angularDeflection,
-                                        Standard_True);
-        mesher.Perform();
+        tessellatePartShape(part, input.m_options);
     }
 
     const auto& color_map = Util::ColorMap::instance();
 
     for(const auto& part : parts) {
-        if(!part || !part->hasShape()) {
+        if(!isRenderableEntity(part)) {
             continue;
         }
 
@@ -77,117 +117,11 @@ bool GeometryRenderBuilder::build(RenderData& render_data, const GeometryRenderI
         part_node.m_key = {RenderEntityType::Part, part_uid};
         part_node.m_color = part_color;
 
-        // Build edge-to-wire lookup for this Part
-        std::unordered_map<Geometry::EntityUID, Geometry::EntityUID> edgeToWire;
-        const auto wire_keys = input.m_relationshipIndex.findRelatedEntities(
-            part->entityId(), Geometry::EntityType::Wire);
-        for(const auto& wk : wire_keys) {
-            auto wire_entity = input.m_entityIndex.findByKey(wk);
-            if(!wire_entity) {
-                continue;
-            }
-            const Geometry::EntityUID wire_uid = wire_entity->entityUID();
-            // Find edges belonging to this wire
-            const auto wire_edge_keys = input.m_relationshipIndex.findRelatedEntities(
-                wire_entity->entityId(), Geometry::EntityType::Edge);
-            for(const auto& ek : wire_edge_keys) {
-                auto edge_entity = input.m_entityIndex.findByKey(ek);
-                if(edge_entity) {
-                    edgeToWire[edge_entity->entityUID()] = wire_uid;
-                    // Edge may belong to multiple wires (shared edges between faces)
-                    auto& wires = render_data.m_pickData.m_edgeToWireUids[edge_entity->entityUID()];
-                    if(std::find(wires.begin(), wires.end(), wire_uid) == wires.end()) {
-                        wires.push_back(wire_uid);
-                    }
-                    // Build reverse lookup: wire → all its edges
-                    render_data.m_pickData.m_wireToEdgeUids[wire_uid].push_back(
-                        edge_entity->entityUID());
-                }
-            }
-        }
-
-        // --- Faces (triangles for Geometry pass) ---
-        const auto face_keys = input.m_relationshipIndex.findRelatedEntities(
-            part->entityId(), Geometry::EntityType::Face);
-        for(const auto& fk : face_keys) {
-            auto face_entity = input.m_entityIndex.findByKey(fk);
-            if(!face_entity || !face_entity->hasShape()) {
-                continue;
-            }
-
-            // Build wire → face mapping: find wires that bound this face
-            const auto face_wire_keys = input.m_relationshipIndex.findRelatedEntities(
-                face_entity->entityId(), Geometry::EntityType::Wire);
-            for(const auto& wk : face_wire_keys) {
-                auto wire_entity = input.m_entityIndex.findByKey(wk);
-                if(wire_entity) {
-                    render_data.m_pickData.m_wireToFaceUid[wire_entity->entityUID()] =
-                        face_entity->entityUID();
-                }
-            }
-
-            DrawRange range = generateFaceMesh(render_data, face_entity, part_uid, input.m_options);
-            if(range.m_indexCount == 0 && range.m_vertexCount == 0) {
-                continue;
-            }
-
-            RenderNode face_node;
-            face_node.m_key = {RenderEntityType::Face, face_entity->entityUID()};
-            face_node.m_color = part_color;
-            face_node.m_bbox = face_entity->boundingBox();
-            face_node.m_drawRanges[RenderPassType::Geometry].push_back(range);
-
-            part_node.m_bbox.expand(face_node.m_bbox);
-            part_node.m_children.push_back(std::move(face_node));
-        }
-
-        // --- Edges (lines for Geometry pass) ---
-        const auto edge_keys = input.m_relationshipIndex.findRelatedEntities(
-            part->entityId(), Geometry::EntityType::Edge);
-        for(const auto& ek : edge_keys) {
-            auto edge_entity = input.m_entityIndex.findByKey(ek);
-            if(!edge_entity || !edge_entity->hasShape()) {
-                continue;
-            }
-
-            DrawRange range = generateEdgeMesh(render_data, edge_entity, input.m_options);
-            if(range.m_vertexCount == 0) {
-                continue;
-            }
-
-            RenderNode edge_node;
-            edge_node.m_key = {RenderEntityType::Edge, edge_entity->entityUID()};
-            edge_node.m_color = color_map.getEdgeColor();
-            edge_node.m_bbox = edge_entity->boundingBox();
-            edge_node.m_drawRanges[RenderPassType::Geometry].push_back(range);
-
-            part_node.m_bbox.expand(edge_node.m_bbox);
-            part_node.m_children.push_back(std::move(edge_node));
-        }
-
-        // --- Vertices (points for Geometry pass) ---
-        const auto vertex_keys = input.m_relationshipIndex.findRelatedEntities(
-            part->entityId(), Geometry::EntityType::Vertex);
-        for(const auto& vk : vertex_keys) {
-            auto vertex_entity = input.m_entityIndex.findByKey(vk);
-            if(!vertex_entity || !vertex_entity->hasShape()) {
-                continue;
-            }
-
-            DrawRange range = generateVertexMesh(render_data, vertex_entity);
-            if(range.m_vertexCount == 0) {
-                continue;
-            }
-
-            RenderNode vertex_node;
-            vertex_node.m_key = {RenderEntityType::Vertex, vertex_entity->entityUID()};
-            vertex_node.m_color = color_map.getVertexColor();
-            vertex_node.m_bbox = vertex_entity->boundingBox();
-            vertex_node.m_drawRanges[RenderPassType::Geometry].push_back(range);
-
-            part_node.m_bbox.expand(vertex_node.m_bbox);
-            part_node.m_children.push_back(std::move(vertex_node));
-        }
+        PartBuildContext context(render_data, input, part, part_uid, part_color, part_node);
+        buildWireEdgeLookupsForPart(render_data, input, part);
+        appendFaceNodes(context);
+        appendEdgeNodes(context);
+        appendVertexNodes(context);
 
         render_data.m_sceneBBox.expand(part_node.m_bbox);
         render_data.m_roots.push_back(std::move(part_node));
@@ -204,6 +138,116 @@ bool GeometryRenderBuilder::build(RenderData& render_data, const GeometryRenderI
                   ? render_data.m_passData[RenderPassType::Geometry].m_indices.size()
                   : 0);
     return true;
+}
+
+void GeometryRenderBuilder::appendFaceNodes(const PartBuildContext& context) {
+    const auto face_keys = context.m_input.m_relationshipIndex.findRelatedEntities(
+        context.m_part->entityId(), Geometry::EntityType::Face);
+    for(const auto& fk : face_keys) {
+        auto face_entity = context.m_input.m_entityIndex.findByKey(fk);
+        if(!isRenderableEntity(face_entity)) {
+            continue;
+        }
+        processFaceEntity(context, face_entity);
+    }
+}
+
+void GeometryRenderBuilder::processFaceEntity(const PartBuildContext& context,
+                                              const Geometry::GeometryEntityImplPtr& face_entity) {
+    mapFaceWireRelations(context, face_entity);
+    tryAppendFaceNode(context, face_entity);
+}
+
+void GeometryRenderBuilder::mapFaceWireRelations(
+    const PartBuildContext& context, const Geometry::GeometryEntityImplPtr& face_entity) {
+    const auto face_wire_keys = context.m_input.m_relationshipIndex.findRelatedEntities(
+        face_entity->entityId(), Geometry::EntityType::Wire);
+    for(const auto& wk : face_wire_keys) {
+        auto wire_entity = context.m_input.m_entityIndex.findByKey(wk);
+        if(wire_entity) {
+            context.m_renderData.m_pickData.m_wireToFaceUid[wire_entity->entityUID()] =
+                face_entity->entityUID();
+        }
+    }
+}
+
+bool GeometryRenderBuilder::tryAppendFaceNode(const PartBuildContext& context,
+                                              const Geometry::GeometryEntityImplPtr& face_entity) {
+    DrawRange range = generateFaceMesh(context.m_renderData, face_entity, context.m_partUid,
+                                       context.m_input.m_options);
+    if(range.m_indexCount == 0 && range.m_vertexCount == 0) {
+        return false;
+    }
+
+    appendFaceRenderNode(context, face_entity, range);
+    return true;
+}
+
+void GeometryRenderBuilder::appendFaceRenderNode(const PartBuildContext& context,
+                                                 const Geometry::GeometryEntityImplPtr& face_entity,
+                                                 const DrawRange& range) {
+
+    RenderNode face_node;
+    face_node.m_key = {RenderEntityType::Face, face_entity->entityUID()};
+    face_node.m_color = context.m_partColor;
+    face_node.m_bbox = face_entity->boundingBox();
+    face_node.m_drawRanges[RenderPassType::Geometry].push_back(range);
+
+    context.m_partNode.m_bbox.expand(face_node.m_bbox);
+    context.m_partNode.m_children.push_back(std::move(face_node));
+}
+
+void GeometryRenderBuilder::appendEdgeNodes(const PartBuildContext& context) {
+    const auto edge_keys = context.m_input.m_relationshipIndex.findRelatedEntities(
+        context.m_part->entityId(), Geometry::EntityType::Edge);
+    const auto& color_map = Util::ColorMap::instance();
+    for(const auto& ek : edge_keys) {
+        auto edge_entity = context.m_input.m_entityIndex.findByKey(ek);
+        if(!isRenderableEntity(edge_entity)) {
+            continue;
+        }
+
+        DrawRange range =
+            generateEdgeMesh(context.m_renderData, edge_entity, context.m_input.m_options);
+        if(range.m_vertexCount == 0) {
+            continue;
+        }
+
+        RenderNode edge_node;
+        edge_node.m_key = {RenderEntityType::Edge, edge_entity->entityUID()};
+        edge_node.m_color = color_map.getEdgeColor();
+        edge_node.m_bbox = edge_entity->boundingBox();
+        edge_node.m_drawRanges[RenderPassType::Geometry].push_back(range);
+
+        context.m_partNode.m_bbox.expand(edge_node.m_bbox);
+        context.m_partNode.m_children.push_back(std::move(edge_node));
+    }
+}
+
+void GeometryRenderBuilder::appendVertexNodes(const PartBuildContext& context) {
+    const auto vertex_keys = context.m_input.m_relationshipIndex.findRelatedEntities(
+        context.m_part->entityId(), Geometry::EntityType::Vertex);
+    const auto& color_map = Util::ColorMap::instance();
+    for(const auto& vk : vertex_keys) {
+        auto vertex_entity = context.m_input.m_entityIndex.findByKey(vk);
+        if(!isRenderableEntity(vertex_entity)) {
+            continue;
+        }
+
+        DrawRange range = generateVertexMesh(context.m_renderData, vertex_entity);
+        if(range.m_vertexCount == 0) {
+            continue;
+        }
+
+        RenderNode vertex_node;
+        vertex_node.m_key = {RenderEntityType::Vertex, vertex_entity->entityUID()};
+        vertex_node.m_color = color_map.getVertexColor();
+        vertex_node.m_bbox = vertex_entity->boundingBox();
+        vertex_node.m_drawRanges[RenderPassType::Geometry].push_back(range);
+
+        context.m_partNode.m_bbox.expand(vertex_node.m_bbox);
+        context.m_partNode.m_children.push_back(std::move(vertex_node));
+    }
 }
 
 DrawRange GeometryRenderBuilder::generateFaceMesh(RenderData& render_data,
