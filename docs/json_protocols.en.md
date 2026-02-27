@@ -6,7 +6,7 @@ This document describes the current JSON-based protocols between QML and C++ (vi
 
 ### 1.1 QML Entry Point
 - API: `BackendService.request(moduleName, jsonString)`
-- `moduleName`: service identifier (`RenderService` / `GeometryService` / `ReaderService`)
+- `moduleName`: service identifier (`RenderService` / `GeometryService` / `ReaderService` / `MeshService`)
 - `jsonString`: JSON string (recommended to always pass an object)
 
 ### 1.2 `action`
@@ -62,6 +62,28 @@ This document describes the current JSON-based protocols between QML and C++ (vi
 }
 ```
 
+#### Toggle X-ray mode
+Enable/disable X-ray mode (semi-transparent surfaces to reveal occluded edges). Applies to both GeometryPass and MeshPass.
+
+```json
+{
+  "action": "ViewPortControl",
+  "view_ctrl": { "toggle_xray": true },
+  "_meta": { "silent": true }
+}
+```
+
+#### Cycle mesh display mode
+Cycle through: wireframe+nodes -> surface+points -> surface+points+wireframe -> wireframe+nodes... (default: wireframe+nodes)
+
+```json
+{
+  "action": "ViewPortControl",
+  "view_ctrl": { "cycle_mesh_display": true },
+  "_meta": { "silent": true }
+}
+```
+
 ### 2.2 SelectControl
 - action: `"SelectControl"`
 - purpose: control viewport picking mode (enable + pick types) and query/clear current selections.
@@ -78,7 +100,9 @@ This document describes the current JSON-based protocols between QML and C++ (vi
 #### Set pick types
 Notes:
 - `vertex/edge/face` can be combined.
-- `solid/part` are exclusive (and also exclusive with `vertex/edge/face`).
+- `wire/solid/part` are exclusive (and also exclusive with `vertex/edge/face`).
+- `wire` mode: clicking an edge auto-resolves to the parent Wire and highlights all edges in the Wire.
+- `part` mode: clicking any sub-entity auto-resolves to the parent Part and highlights all entities under that Part.
 
 ```json
 {
@@ -87,6 +111,10 @@ Notes:
   "_meta": { "silent": true }
 }
 ```
+
+Supported pick type strings:
+- Geometry domain: `"vertex"`, `"edge"`, `"face"`, `"wire"`, `"solid"`, `"part"`
+- Mesh domain: `"mesh_node"`, `"mesh_line"`, `"mesh_triangle"`, `"mesh_quad4"`, `"mesh_tetra4"`, `"mesh_hexa8"`, `"mesh_prism6"`, `"mesh_pyramid5"`
 
 #### Get selections
 ```json
@@ -236,3 +264,104 @@ Failure:
 - thrown as an exception and reported via `operationFailed`.
 
 Note: ReaderService validates `action == "load_model"`; other actions are rejected.
+
+---
+
+## 5. MeshService
+
+### 5.1 generate_mesh
+- action: `"generate_mesh"`
+- purpose: generate FEM mesh from selected geometry entities (Part/Solid/Face) using Gmsh backend.
+
+Request:
+```json
+{
+  "action": "generate_mesh",
+  "entities": [
+    { "type": "Part", "uid": 1 }
+  ],
+  "elementSize": 1.0,
+  "meshDimension": 2,
+  "elementType": "triangle"
+}
+```
+
+Fields:
+- `entities`: array of `{uid, type}` entity handles (supports Part/Solid/Face types)
+- `elementSize`: target mesh element size (positive number, default `1.0`)
+- `meshDimension`: mesh dimension, `2` for surface mesh, `3` for volume mesh (default `2`)
+- `elementType`: element type, one of `"triangle"` / `"quad"` / `"auto"` (default `"triangle"`)
+
+Response:
+```json
+{
+  "success": true,
+  "nodeCount": 256,
+  "elementCount": 480
+}
+```
+
+Failure example:
+```json
+{ "success": false, "error": "No valid entities provided for meshing" }
+```
+
+### 5.2 query_mesh_info
+- action: `"query_mesh_info"`
+- purpose: query detailed information for mesh nodes/elements by UID (Mesh Query page).
+
+**MeshLine special handling**: MeshLine UIDs are composite node-pair encodings (`min(n0,n1)<<32 | max(n0,n1)`). When querying, if no matching Line element is found, the composite UID is automatically decoded into the two endpoint nodes, returning a `nodeIds` array and node coordinates.
+
+Request:
+```json
+{
+  "action": "query_mesh_info",
+  "entities": [
+    { "type": "Node", "uid": 42 },
+    { "type": "Triangle", "uid": 100 },
+    { "type": "Line", "uid": 4294967298 }
+  ]
+}
+```
+
+Response (example):
+```json
+{
+  "success": true,
+  "total": 3,
+  "entities": [
+    {
+      "type": "Node",
+      "uid": 42,
+      "position": { "x": 1.0, "y": 2.0, "z": 3.0 }
+    },
+    {
+      "type": "Triangle",
+      "uid": 100,
+      "elementId": 5,
+      "nodeCount": 3,
+      "nodeIds": [10, 11, 12],
+      "nodes": [
+        { "id": 10, "x": 0.0, "y": 0.0, "z": 0.0 },
+        { "id": 11, "x": 1.0, "y": 0.0, "z": 0.0 },
+        { "id": 12, "x": 0.5, "y": 1.0, "z": 0.0 }
+      ]
+    },
+    {
+      "type": "Line",
+      "uid": 4294967298,
+      "nodeIds": [1, 2],
+      "nodes": [
+        { "id": 1, "x": 0.0, "y": 0.0, "z": 0.0 },
+        { "id": 2, "x": 1.0, "y": 0.0, "z": 0.0 }
+      ]
+    }
+  ],
+  "not_found": []
+}
+```
+
+Failure example:
+```json
+{ "success": false, "error": "Missing or invalid 'entities' array" }
+```

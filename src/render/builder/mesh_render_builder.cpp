@@ -1,9 +1,22 @@
+/**
+ * @file mesh_render_builder.cpp
+ * @brief MeshRenderBuilder — converts FEM mesh nodes and elements into
+ *        RenderData for the Mesh render pass.
+ *
+ * The vertex buffer is laid out in three contiguous phases:
+ *   [0, surfaceCount)        — surface triangles  (GL_TRIANGLES)
+ *   [surfaceCount, +wireCount) — wireframe edges   (GL_LINES)
+ *   [wireStart, +nodeCount)   — node points        (GL_POINTS)
+ * MeshPass relies on this layout to issue separate draw calls per topology.
+ */
+
 #include "mesh_render_builder.hpp"
 
 #include "util/color_map.hpp"
 #include "util/logger.hpp"
 
 #include <cmath>
+#include <unordered_map>
 
 namespace OpenGeoLab::Render {
 
@@ -17,6 +30,14 @@ struct Vec3f {
 
 Vec3f toVec3f(const Util::Pt3d& p) {
     return {static_cast<float>(p.x), static_cast<float>(p.y), static_cast<float>(p.z)};
+}
+
+/// Generate a composite key from a sorted pair of node IDs for edge deduplication.
+/// Used only as hash-map key; the actual PickId UID is a sequential integer.
+uint64_t makeEdgeKey(Mesh::MeshNodeId a, Mesh::MeshNodeId b) {
+    const auto lo = std::min(a, b);
+    const auto hi = std::max(a, b);
+    return (lo << 32u) | (hi & 0xFFFFFFFFu);
 }
 
 Vec3f computeTriangleNormal(const Vec3f& a, const Vec3f& b, const Vec3f& c) {
@@ -80,6 +101,14 @@ void pushLine(RenderPassData& pass,
     pushVertex(pass, b, zero, color, pick_id);
 }
 
+void pushEdge(RenderPassData& pass,
+              const Vec3f& a,
+              const Vec3f& b,
+              const RenderColor& color,
+              uint64_t pick_id) {
+    pushLine(pass, a, b, color, pick_id);
+}
+
 // 3D element face table definitions
 constexpr int TETRA4_FACES[][3] = {{0, 1, 2}, {0, 3, 1}, {1, 3, 2}, {0, 2, 3}};
 
@@ -92,6 +121,17 @@ constexpr int PRISM6_QUAD_FACES[][4] = {{0, 3, 4, 1}, {1, 4, 5, 2}, {0, 2, 5, 3}
 constexpr int PYRAMID5_BASE[] = {0, 3, 2, 1};
 constexpr int PYRAMID5_TRI_FACES[][3] = {{0, 1, 4}, {1, 2, 4}, {2, 3, 4}, {0, 4, 3}};
 
+// Edge tables for wireframe rendering
+constexpr int TRIANGLE_EDGES[][2] = {{0, 1}, {1, 2}, {2, 0}};
+constexpr int QUAD4_EDGES[][2] = {{0, 1}, {1, 2}, {2, 3}, {3, 0}};
+constexpr int TETRA4_EDGES[][2] = {{0, 1}, {0, 2}, {0, 3}, {1, 2}, {1, 3}, {2, 3}};
+constexpr int HEXA8_EDGES[][2] = {{0, 1}, {1, 2}, {2, 3}, {3, 0}, {4, 5}, {5, 6},
+                                  {6, 7}, {7, 4}, {0, 4}, {1, 5}, {2, 6}, {3, 7}};
+constexpr int PRISM6_EDGES[][2] = {{0, 1}, {1, 2}, {2, 0}, {3, 4}, {4, 5},
+                                   {5, 3}, {0, 3}, {1, 4}, {2, 5}};
+constexpr int PYRAMID5_EDGES[][2] = {{0, 1}, {1, 2}, {2, 3}, {3, 0},
+                                     {0, 4}, {1, 4}, {2, 4}, {3, 4}};
+
 } // namespace
 
 bool MeshRenderBuilder::build(RenderData& render_data, const MeshRenderInput& input) {
@@ -103,7 +143,7 @@ bool MeshRenderBuilder::build(RenderData& render_data, const MeshRenderInput& in
 
     const auto& color_map = Util::ColorMap::instance();
 
-    auto& surface_pass = render_data.m_passData[RenderPassType::Mesh];
+    auto& mesh_pass = render_data.m_passData[RenderPassType::Mesh];
 
     auto nodePos = [&input](Mesh::MeshNodeId nid) -> Vec3f {
         if(nid == Mesh::INVALID_MESH_NODE_ID || nid > input.m_nodes.size()) {
@@ -112,12 +152,16 @@ bool MeshRenderBuilder::build(RenderData& render_data, const MeshRenderInput& in
         return toVec3f(input.m_nodes[static_cast<size_t>(nid - 1)].position());
     };
 
+    // ---------- Phase 1: Surface triangles ----------
+    // All triangle data comes first in the buffer so MeshPass can draw GL_TRIANGLES
+    // over the range [0, surfaceVertexCount).
+    const RenderColor surface_color = input.m_surfaceColor;
+
     for(const auto& elem : input.m_elements) {
         if(!elem.isValid()) {
             continue;
         }
 
-        const RenderColor elem_color = color_map.getColorForMeshElementId(elem.elementUID());
         const RenderEntityType render_type = toRenderEntityType(elem.elementType());
         const uint64_t pick_id = PickId::encode(render_type, elem.elementUID());
 
@@ -126,7 +170,7 @@ bool MeshRenderBuilder::build(RenderData& render_data, const MeshRenderInput& in
             const Vec3f p0 = nodePos(elem.nodeId(0));
             const Vec3f p1 = nodePos(elem.nodeId(1));
             const Vec3f p2 = nodePos(elem.nodeId(2));
-            pushTriangle(surface_pass, p0, p1, p2, elem_color, pick_id);
+            pushTriangle(mesh_pass, p0, p1, p2, surface_color, pick_id);
             break;
         }
         case Mesh::MeshElementType::Quad4: {
@@ -134,15 +178,8 @@ bool MeshRenderBuilder::build(RenderData& render_data, const MeshRenderInput& in
             const Vec3f p1 = nodePos(elem.nodeId(1));
             const Vec3f p2 = nodePos(elem.nodeId(2));
             const Vec3f p3 = nodePos(elem.nodeId(3));
-            pushTriangle(surface_pass, p0, p1, p2, elem_color, pick_id);
-            pushTriangle(surface_pass, p0, p2, p3, elem_color, pick_id);
-            break;
-        }
-        case Mesh::MeshElementType::Line: {
-            const RenderColor line_color = color_map.getMeshLineColor();
-            const Vec3f p0 = nodePos(elem.nodeId(0));
-            const Vec3f p1 = nodePos(elem.nodeId(1));
-            pushLine(surface_pass, p0, p1, line_color, pick_id);
+            pushTriangle(mesh_pass, p0, p1, p2, surface_color, pick_id);
+            pushTriangle(mesh_pass, p0, p2, p3, surface_color, pick_id);
             break;
         }
         case Mesh::MeshElementType::Tetra4: {
@@ -150,7 +187,7 @@ bool MeshRenderBuilder::build(RenderData& render_data, const MeshRenderInput& in
                 const Vec3f p0 = nodePos(elem.nodeId(face[0]));
                 const Vec3f p1 = nodePos(elem.nodeId(face[1]));
                 const Vec3f p2 = nodePos(elem.nodeId(face[2]));
-                pushTriangle(surface_pass, p0, p1, p2, elem_color, pick_id);
+                pushTriangle(mesh_pass, p0, p1, p2, surface_color, pick_id);
             }
             break;
         }
@@ -160,8 +197,8 @@ bool MeshRenderBuilder::build(RenderData& render_data, const MeshRenderInput& in
                 const Vec3f p1 = nodePos(elem.nodeId(face[1]));
                 const Vec3f p2 = nodePos(elem.nodeId(face[2]));
                 const Vec3f p3 = nodePos(elem.nodeId(face[3]));
-                pushTriangle(surface_pass, p0, p1, p2, elem_color, pick_id);
-                pushTriangle(surface_pass, p0, p2, p3, elem_color, pick_id);
+                pushTriangle(mesh_pass, p0, p1, p2, surface_color, pick_id);
+                pushTriangle(mesh_pass, p0, p2, p3, surface_color, pick_id);
             }
             break;
         }
@@ -170,15 +207,15 @@ bool MeshRenderBuilder::build(RenderData& render_data, const MeshRenderInput& in
                 const Vec3f p0 = nodePos(elem.nodeId(face[0]));
                 const Vec3f p1 = nodePos(elem.nodeId(face[1]));
                 const Vec3f p2 = nodePos(elem.nodeId(face[2]));
-                pushTriangle(surface_pass, p0, p1, p2, elem_color, pick_id);
+                pushTriangle(mesh_pass, p0, p1, p2, surface_color, pick_id);
             }
             for(const auto& face : PRISM6_QUAD_FACES) {
                 const Vec3f p0 = nodePos(elem.nodeId(face[0]));
                 const Vec3f p1 = nodePos(elem.nodeId(face[1]));
                 const Vec3f p2 = nodePos(elem.nodeId(face[2]));
                 const Vec3f p3 = nodePos(elem.nodeId(face[3]));
-                pushTriangle(surface_pass, p0, p1, p2, elem_color, pick_id);
-                pushTriangle(surface_pass, p0, p2, p3, elem_color, pick_id);
+                pushTriangle(mesh_pass, p0, p1, p2, surface_color, pick_id);
+                pushTriangle(mesh_pass, p0, p2, p3, surface_color, pick_id);
             }
             break;
         }
@@ -187,13 +224,13 @@ bool MeshRenderBuilder::build(RenderData& render_data, const MeshRenderInput& in
             const Vec3f b1 = nodePos(elem.nodeId(PYRAMID5_BASE[1]));
             const Vec3f b2 = nodePos(elem.nodeId(PYRAMID5_BASE[2]));
             const Vec3f b3 = nodePos(elem.nodeId(PYRAMID5_BASE[3]));
-            pushTriangle(surface_pass, b0, b1, b2, elem_color, pick_id);
-            pushTriangle(surface_pass, b0, b2, b3, elem_color, pick_id);
+            pushTriangle(mesh_pass, b0, b1, b2, surface_color, pick_id);
+            pushTriangle(mesh_pass, b0, b2, b3, surface_color, pick_id);
             for(const auto& face : PYRAMID5_TRI_FACES) {
                 const Vec3f p0 = nodePos(elem.nodeId(face[0]));
                 const Vec3f p1 = nodePos(elem.nodeId(face[1]));
                 const Vec3f p2 = nodePos(elem.nodeId(face[2]));
-                pushTriangle(surface_pass, p0, p1, p2, elem_color, pick_id);
+                pushTriangle(mesh_pass, p0, p1, p2, surface_color, pick_id);
             }
             break;
         }
@@ -202,7 +239,87 @@ bool MeshRenderBuilder::build(RenderData& render_data, const MeshRenderInput& in
         }
     }
 
-    // Mesh nodes as points
+    const uint32_t surfaceVertexCount = static_cast<uint32_t>(mesh_pass.m_vertices.size());
+
+    // ---------- Phase 2: Wireframe edges ----------
+    // Element outline edges appended after surface triangles.
+    // MeshPass draws these as GL_LINES over [surfaceVertexCount, surfaceVertexCount +
+    // wireframeCount).
+    // Each unique edge gets a small sequential ID (1, 2, 3…) for PickId encoding.
+    // Shared edges between elements produce the same ID via the edgeKey dedup map.
+    const RenderColor wire_color = color_map.getMeshLineColor();
+
+    // Map composite edge key → sequential ID for deduplication and small IDs.
+    std::unordered_map<uint64_t, uint64_t> edgeKeyToSeqId;
+    uint64_t nextEdgeId = 1;
+
+    auto getOrCreateEdgeId = [&](Mesh::MeshNodeId n0, Mesh::MeshNodeId n1) -> uint64_t {
+        const uint64_t key = makeEdgeKey(n0, n1);
+        auto it = edgeKeyToSeqId.find(key);
+        if(it != edgeKeyToSeqId.end()) {
+            return it->second;
+        }
+        const uint64_t id = nextEdgeId++;
+        edgeKeyToSeqId[key] = id;
+        render_data.m_meshLineNodes[id] = {std::min(n0, n1), std::max(n0, n1)};
+        return id;
+    };
+
+    auto emitEdge = [&](Mesh::MeshNodeId n0, Mesh::MeshNodeId n1) {
+        const uint64_t edge_id = getOrCreateEdgeId(n0, n1);
+        const uint64_t line_pick_id = PickId::encode(RenderEntityType::MeshLine, edge_id);
+        pushEdge(mesh_pass, nodePos(n0), nodePos(n1), wire_color, line_pick_id);
+    };
+
+    for(const auto& elem : input.m_elements) {
+        if(!elem.isValid()) {
+            continue;
+        }
+
+        switch(elem.elementType()) {
+        case Mesh::MeshElementType::Triangle:
+            for(const auto& edge : TRIANGLE_EDGES) {
+                emitEdge(elem.nodeId(edge[0]), elem.nodeId(edge[1]));
+            }
+            break;
+        case Mesh::MeshElementType::Quad4:
+            for(const auto& edge : QUAD4_EDGES) {
+                emitEdge(elem.nodeId(edge[0]), elem.nodeId(edge[1]));
+            }
+            break;
+        case Mesh::MeshElementType::Line:
+            emitEdge(elem.nodeId(0), elem.nodeId(1));
+            break;
+        case Mesh::MeshElementType::Tetra4:
+            for(const auto& edge : TETRA4_EDGES) {
+                emitEdge(elem.nodeId(edge[0]), elem.nodeId(edge[1]));
+            }
+            break;
+        case Mesh::MeshElementType::Hexa8:
+            for(const auto& edge : HEXA8_EDGES) {
+                emitEdge(elem.nodeId(edge[0]), elem.nodeId(edge[1]));
+            }
+            break;
+        case Mesh::MeshElementType::Prism6:
+            for(const auto& edge : PRISM6_EDGES) {
+                emitEdge(elem.nodeId(edge[0]), elem.nodeId(edge[1]));
+            }
+            break;
+        case Mesh::MeshElementType::Pyramid5:
+            for(const auto& edge : PYRAMID5_EDGES) {
+                emitEdge(elem.nodeId(edge[0]), elem.nodeId(edge[1]));
+            }
+            break;
+        default:
+            break;
+        }
+    }
+
+    const uint32_t wireframeVertexCount =
+        static_cast<uint32_t>(mesh_pass.m_vertices.size()) - surfaceVertexCount;
+
+    // ---------- Phase 3: Mesh nodes as points ----------
+    // Appended after wireframe data.
     const RenderColor node_color = color_map.getMeshNodeColor();
     const Vec3f zero_normal{0.0f, 0.0f, 0.0f};
     for(const auto& node : input.m_nodes) {
@@ -210,20 +327,44 @@ bool MeshRenderBuilder::build(RenderData& render_data, const MeshRenderInput& in
             continue;
         }
         const uint64_t node_pick_id = PickId::encode(RenderEntityType::MeshNode, node.nodeId());
-        pushVertex(surface_pass, toVec3f(node.position()), zero_normal, node_color, node_pick_id);
+        pushVertex(mesh_pass, toVec3f(node.position()), zero_normal, node_color, node_pick_id);
     }
 
-    // Build a single mesh root node
-    if(!surface_pass.m_vertices.empty()) {
+    const uint32_t nodeVertexCount = static_cast<uint32_t>(mesh_pass.m_vertices.size()) -
+                                     surfaceVertexCount - wireframeVertexCount;
+
+    // ---------- Build mesh root node ----------
+    if(!mesh_pass.m_vertices.empty()) {
         RenderNode mesh_root;
         mesh_root.m_key = {RenderEntityType::MeshTriangle, 0};
         mesh_root.m_visible = true;
 
-        DrawRange range;
-        range.m_vertexOffset = 0;
-        range.m_vertexCount = static_cast<uint32_t>(surface_pass.m_vertices.size());
-        range.m_topology = PrimitiveTopology::Triangles;
-        mesh_root.m_drawRanges[RenderPassType::Mesh].push_back(range);
+        // Surface draw range
+        if(surfaceVertexCount > 0) {
+            DrawRange surface_range;
+            surface_range.m_vertexOffset = 0;
+            surface_range.m_vertexCount = surfaceVertexCount;
+            surface_range.m_topology = PrimitiveTopology::Triangles;
+            mesh_root.m_drawRanges[RenderPassType::Mesh].push_back(surface_range);
+        }
+
+        // Wireframe draw range
+        if(wireframeVertexCount > 0) {
+            DrawRange wire_range;
+            wire_range.m_vertexOffset = surfaceVertexCount;
+            wire_range.m_vertexCount = wireframeVertexCount;
+            wire_range.m_topology = PrimitiveTopology::Lines;
+            mesh_root.m_drawRanges[RenderPassType::Mesh].push_back(wire_range);
+        }
+
+        // Node points draw range
+        if(nodeVertexCount > 0) {
+            DrawRange node_range;
+            node_range.m_vertexOffset = surfaceVertexCount + wireframeVertexCount;
+            node_range.m_vertexCount = nodeVertexCount;
+            node_range.m_topology = PrimitiveTopology::Points;
+            mesh_root.m_drawRanges[RenderPassType::Mesh].push_back(node_range);
+        }
 
         for(const auto& node : input.m_nodes) {
             if(node.nodeId() != Mesh::INVALID_MESH_NODE_ID) {
@@ -235,11 +376,11 @@ bool MeshRenderBuilder::build(RenderData& render_data, const MeshRenderInput& in
         render_data.m_roots.push_back(std::move(mesh_root));
     }
 
-    surface_pass.m_dirty = true;
+    mesh_pass.m_dirty = true;
     render_data.m_meshDirty = true;
 
-    LOG_DEBUG("MeshRenderBuilder::build: mesh vertices={}, elements={}",
-              surface_pass.m_vertices.size(), input.m_elements.size());
+    LOG_DEBUG("MeshRenderBuilder::build: surface={}, wireframe={}, nodes={}, elements={}",
+              surfaceVertexCount, wireframeVertexCount, nodeVertexCount, input.m_elements.size());
     return true;
 }
 

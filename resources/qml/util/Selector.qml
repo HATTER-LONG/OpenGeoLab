@@ -1,3 +1,10 @@
+/**
+ * @file Selector.qml
+ * @brief Entity type selection UI for pick-mode interactions.
+ *
+ * Provides type-filter buttons, pick-mode indicator, and selection chips.
+ * Parent pages set allowedTypes to restrict which buttons are visible.
+ */
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
@@ -21,35 +28,41 @@ Item {
     readonly property int compound_type: 1 << 7
     readonly property int part_type: 1 << 8
     readonly property int mesh_node_type: 1 << 9
-    readonly property int mesh_element_type: 1 << 10
-    readonly property int none_type: 1 << 11
+    readonly property int mesh_line_type: 1 << 10
+    readonly property int mesh_element_type: (1 << 11) | (1 << 12) | (1 << 13) | (1 << 14) | (1 << 15) | (1 << 16)
+    readonly property int none_type: 0
 
-    readonly property int all_types: vertex_type | edge_type | wire_type | face_type | shell_type | solid_type | comp_solid_type | compound_type | part_type | mesh_node_type | mesh_element_type
+    readonly property int all_types: vertex_type | edge_type | wire_type | face_type | shell_type | solid_type | comp_solid_type | compound_type | part_type | mesh_node_type | mesh_line_type | mesh_element_type
 
     /// Bitmask of entity types that are allowed to be picked in this selector.
     /// Parent pages can override this to restrict available buttons and pick types.
     property int allowedTypes: all_types
 
+    /// Bitmask of currently selected (active) entity types for pick filtering.
     property int selectedTypes: none_type
 
+    /// True when the pick system is actively listening for viewport clicks.
     property bool pickModeActive: false
 
+    /// Array of {uid, type} objects representing currently selected entities.
     property var selectedEntities: []
 
     /// Emitted whenever selectedEntities changes.
     signal selectedEntitiesUpdated(var entities)
 
+    /// Return the array of {uid, type} objects currently selected.
     function currentSelectedEntities() {
         return root.selectedEntities;
     }
 
     onSelectedEntitiesChanged: root.selectedEntitiesUpdated(root.selectedEntities)
 
+    /// Check if the given entity type bitmask is visible under current allowedTypes.
     function isEntityTypeVisible(type) {
         return (root.allowedTypes & type) !== 0;
     }
 
-    readonly property int visibleTypeButtonCount: (root.isEntityTypeVisible(root.vertex_type) ? 1 : 0) + (root.isEntityTypeVisible(root.edge_type) ? 1 : 0) + (root.isEntityTypeVisible(root.face_type) ? 1 : 0) + (root.isEntityTypeVisible(root.wire_type) ? 1 : 0) + (root.isEntityTypeVisible(root.solid_type) ? 1 : 0) + (root.isEntityTypeVisible(root.part_type) ? 1 : 0) + (root.isEntityTypeVisible(root.mesh_node_type) ? 1 : 0) + (root.isEntityTypeVisible(root.mesh_element_type) ? 1 : 0)
+    readonly property int visibleTypeButtonCount: (root.isEntityTypeVisible(root.vertex_type) ? 1 : 0) + (root.isEntityTypeVisible(root.edge_type) ? 1 : 0) + (root.isEntityTypeVisible(root.face_type) ? 1 : 0) + (root.isEntityTypeVisible(root.wire_type) ? 1 : 0) + (root.isEntityTypeVisible(root.solid_type) ? 1 : 0) + (root.isEntityTypeVisible(root.part_type) ? 1 : 0) + (root.isEntityTypeVisible(root.mesh_node_type) ? 1 : 0) + (root.isEntityTypeVisible(root.mesh_line_type) ? 1 : 0) + (root.isEntityTypeVisible(root.mesh_element_type) ? 1 : 0)
 
     function typeButtonWidth(barWidth, spacing) {
         var count = root.visibleTypeButtonCount;
@@ -90,6 +103,7 @@ Item {
             SelectManagerService.deactivateSelectMode();
         }
     }
+    /// Toggle an entity type in the selection bitmask; activates/deactivates pick mode.
     function onEntityTypeClicked(type) {
         if (!root.isEntityTypeVisible(type)) {
             return;
@@ -111,12 +125,15 @@ Item {
         }
     }
 
+    /// Refresh selectedEntities from the backend SelectManagerService.
     function updateSelectedEntities() {
         root.selectedEntities = SelectManagerService.currentSelections();
     }
+    /// Remove a single entity from the selection.
     function removeSelection(uid, type_str) {
         SelectManagerService.removeEntity(uid, type_str);
     }
+    /// Clear all selected entities.
     function clearSelection() {
         SelectManagerService.clearSelection();
     }
@@ -231,16 +248,25 @@ Item {
                     width: root.typeButtonWidth(typeButtonRow.width, typeButtonRow.spacing)
                     visible: root.isEntityTypeVisible(root.mesh_node_type)
                     entityType: "Node"
-                    iconSource: "qrc:/opengeolab/resources/icons/point.svg"
+                    iconSource: "qrc:/opengeolab/resources/icons/mesh_node.svg"
                     selected: ((root.selectedTypes & root.mesh_node_type) !== 0)
                     onClicked: root.onEntityTypeClicked(root.mesh_node_type)
                 }
 
                 EntityTypeButton {
                     width: root.typeButtonWidth(typeButtonRow.width, typeButtonRow.spacing)
+                    visible: root.isEntityTypeVisible(root.mesh_line_type)
+                    entityType: "Line"
+                    iconSource: "qrc:/opengeolab/resources/icons/mesh_line.svg"
+                    selected: ((root.selectedTypes & root.mesh_line_type) !== 0)
+                    onClicked: root.onEntityTypeClicked(root.mesh_line_type)
+                }
+
+                EntityTypeButton {
+                    width: root.typeButtonWidth(typeButtonRow.width, typeButtonRow.spacing)
                     visible: root.isEntityTypeVisible(root.mesh_element_type)
                     entityType: "Element"
-                    iconSource: "qrc:/opengeolab/resources/icons/mesh.svg"
+                    iconSource: "qrc:/opengeolab/resources/icons/mesh_element.svg"
                     selected: ((root.selectedTypes & root.mesh_element_type) !== 0)
                     onClicked: root.onEntityTypeClicked(root.mesh_element_type)
                 }

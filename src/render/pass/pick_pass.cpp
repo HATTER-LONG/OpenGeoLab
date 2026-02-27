@@ -26,9 +26,11 @@ layout(location = 0) in vec3 a_position;
 layout(location = 3) in uvec2 a_pickId;
 uniform mat4 u_viewMatrix;
 uniform mat4 u_projMatrix;
+uniform float u_pointSize;
 flat out uvec2 v_pickId;
 void main() {
     v_pickId = a_pickId;
+    gl_PointSize = u_pointSize;
     gl_Position = u_projMatrix * u_viewMatrix * vec4(a_position, 1.0);
 }
 )";
@@ -41,6 +43,19 @@ void main() {
     fragPickId = v_pickId;
 }
 )";
+
+[[nodiscard]] constexpr bool hasAny(RenderEntityTypeMask value, RenderEntityTypeMask mask) {
+    return static_cast<uint32_t>(value & mask) != 0u;
+}
+
+/// Triangle-based geometry types (drawn with GL_TRIANGLES via index buffer)
+constexpr auto TRIANGLE_PICK_TYPES = RenderEntityTypeMask::Face | RenderEntityTypeMask::Shell |
+                                     RenderEntityTypeMask::Solid | RenderEntityTypeMask::Part |
+                                     RenderEntityTypeMask::Wire;
+
+/// Mesh types that use the mesh buffer
+constexpr auto MESH_PICK_TYPES =
+    RenderEntityTypeMask::MeshNode | RenderEntityTypeMask::MeshLine | RENDER_MESH_ELEMENTS;
 
 } // anonymous namespace
 
@@ -79,74 +94,140 @@ void PickPass::cleanup() {
 }
 
 // =============================================================================
-// Execute picking
+// Render to FBO
 // =============================================================================
 
-uint64_t PickPass::execute(int pixel_x,
-                           int pixel_y,
-                           const QMatrix4x4& view,
+void PickPass::renderToFbo(const QMatrix4x4& view,
                            const QMatrix4x4& projection,
                            GpuBuffer& geom_buffer,
-                           GpuBuffer& mesh_buffer) {
+                           const std::vector<DrawRangeEx>& tri_ranges,
+                           const std::vector<DrawRangeEx>& line_ranges,
+                           const std::vector<DrawRangeEx>& point_ranges,
+                           GpuBuffer& mesh_buffer,
+                           uint32_t mesh_surface_count,
+                           uint32_t mesh_wireframe_count,
+                           uint32_t mesh_node_count,
+                           RenderEntityTypeMask pickMask) {
     if(!m_initialized) {
         LOG_ERROR("PickPass: Not initialized");
-        return 0;
+        return;
     }
 
     QOpenGLFunctions* f = QOpenGLContext::currentContext()->functions();
+    QOpenGLExtraFunctions* ef = QOpenGLContext::currentContext()->extraFunctions();
 
     // Bind offscreen FBO and clear
     m_fbo.bind();
 
-    // Clear with zero (background = no pick)
     const GLuint clearColor[4] = {0, 0, 0, 0};
-    QOpenGLExtraFunctions* ef = QOpenGLContext::currentContext()->extraFunctions();
     ef->glClearBufferuiv(GL_COLOR, 0, clearColor);
     f->glClear(GL_DEPTH_BUFFER_BIT);
-
     f->glEnable(GL_DEPTH_TEST);
 
     // Bind pick shader
     m_pickShader.bind();
     m_pickShader.setUniformMatrix4("u_viewMatrix", view);
     m_pickShader.setUniformMatrix4("u_projMatrix", projection);
+    m_pickShader.setUniformFloat("u_pointSize", 1.0f);
 
-    // --- Draw geometry buffer ---
+    // --- Draw geometry buffer (per-entity selective rendering) ---
     if(geom_buffer.vertexCount() > 0) {
         geom_buffer.bindForDraw();
 
-        if(geom_buffer.hasIndices()) {
-            f->glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(geom_buffer.indexCount()),
-                              GL_UNSIGNED_INT, nullptr);
-        } else {
-            f->glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(geom_buffer.vertexCount()));
+        // Triangles — draw only if any triangle-based type is in the mask
+        if(hasAny(pickMask, TRIANGLE_PICK_TYPES) && !tri_ranges.empty()) {
+            for(const auto& rangeEx : tri_ranges) {
+                if(!hasAny(pickMask, toMask(rangeEx.m_entityKey.m_type))) {
+                    continue;
+                }
+                const auto& range = rangeEx.m_range;
+                f->glDrawElements(
+                    GL_TRIANGLES, static_cast<GLsizei>(range.m_indexCount), GL_UNSIGNED_INT,
+                    reinterpret_cast<const void*>(static_cast<uintptr_t>(range.m_indexOffset) *
+                                                  sizeof(uint32_t)));
+            }
+        }
+
+        // Lines — draw only if Edge type is in the mask
+        if(hasAny(pickMask, RenderEntityTypeMask::Edge) && !line_ranges.empty()) {
+            f->glLineWidth(3.0f); // Thicker lines for easier picking
+            for(const auto& rangeEx : line_ranges) {
+                if(!hasAny(pickMask, toMask(rangeEx.m_entityKey.m_type))) {
+                    continue;
+                }
+                const auto& range = rangeEx.m_range;
+                f->glDrawElements(
+                    GL_LINES, static_cast<GLsizei>(range.m_indexCount), GL_UNSIGNED_INT,
+                    reinterpret_cast<const void*>(static_cast<uintptr_t>(range.m_indexOffset) *
+                                                  sizeof(uint32_t)));
+            }
+            f->glLineWidth(1.0f);
+        }
+
+        // Points — draw only if Vertex type is in the mask
+        if(hasAny(pickMask, RenderEntityTypeMask::Vertex) && !point_ranges.empty()) {
+            f->glEnable(GL_PROGRAM_POINT_SIZE);
+            m_pickShader.setUniformFloat("u_pointSize", 12.0f); // Enlarged for easier picking
+
+            for(const auto& rangeEx : point_ranges) {
+                if(!hasAny(pickMask, toMask(rangeEx.m_entityKey.m_type))) {
+                    continue;
+                }
+                const auto& range = rangeEx.m_range;
+                f->glDrawArrays(GL_POINTS, static_cast<GLint>(range.m_vertexOffset),
+                                static_cast<GLsizei>(range.m_vertexCount));
+            }
+
+            m_pickShader.setUniformFloat("u_pointSize", 1.0f);
         }
 
         geom_buffer.unbind();
     }
 
-    // --- Draw mesh buffer ---
-    if(mesh_buffer.vertexCount() > 0) {
+    // --- Draw mesh buffer (selective rendering per mesh topology) ---
+    if(hasAny(pickMask, MESH_PICK_TYPES) && mesh_buffer.vertexCount() > 0) {
         mesh_buffer.bindForDraw();
 
-        if(mesh_buffer.hasIndices()) {
-            f->glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(mesh_buffer.indexCount()),
-                              GL_UNSIGNED_INT, nullptr);
-        } else {
-            f->glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(mesh_buffer.vertexCount()));
+        // Surface triangles — for mesh element picking
+        if(hasAny(pickMask, RENDER_MESH_ELEMENTS) && mesh_surface_count > 0) {
+            f->glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(mesh_surface_count));
+        }
+
+        // Wireframe edges — for mesh line picking
+        if(hasAny(pickMask, RenderEntityTypeMask::MeshLine) && mesh_wireframe_count > 0) {
+            f->glLineWidth(3.0f); // Thicker lines for easier picking
+            f->glDrawArrays(GL_LINES, static_cast<GLint>(mesh_surface_count),
+                            static_cast<GLsizei>(mesh_wireframe_count));
+            f->glLineWidth(1.0f);
+        }
+
+        // Node points — for mesh node picking
+        if(hasAny(pickMask, RenderEntityTypeMask::MeshNode) && mesh_node_count > 0) {
+            f->glEnable(GL_PROGRAM_POINT_SIZE);
+            m_pickShader.setUniformFloat("u_pointSize", 12.0f); // Enlarged for easier picking
+            f->glDrawArrays(GL_POINTS,
+                            static_cast<GLint>(mesh_surface_count + mesh_wireframe_count),
+                            static_cast<GLsizei>(mesh_node_count));
+            m_pickShader.setUniformFloat("u_pointSize", 1.0f);
         }
 
         mesh_buffer.unbind();
     }
 
     m_pickShader.release();
-
-    // Read pick ID at the clicked pixel
-    uint64_t pickResult = m_fbo.readPickId(pixel_x, pixel_y);
-
     m_fbo.unbind();
+}
 
-    return pickResult;
+// =============================================================================
+// Pick-id readback
+// =============================================================================
+
+uint64_t PickPass::readPickId(int pixel_x, int pixel_y) const {
+    return m_fbo.readPickId(pixel_x, pixel_y);
+}
+
+std::vector<uint64_t> PickPass::readPickRegion(int cx, int cy, int radius) const {
+    return m_fbo.readPickRegion(cx, cy, radius);
 }
 
 } // namespace OpenGeoLab::Render

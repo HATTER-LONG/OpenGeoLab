@@ -20,6 +20,9 @@ Rectangle {
     border.width: 1
     border.color: Theme.border
 
+    /// Local toggle state tracking for X-ray mode
+    property bool xRayActive: false
+
     /**
      * @brief Send a render action request
      * @param actionName Render action id
@@ -127,6 +130,40 @@ Rectangle {
             onClicked: viewToolbar.send("ViewPortControl", {
                 view_ctrl: {
                     view: 3
+                }
+            })
+        }
+
+        // Separator
+        Rectangle {
+            width: 1
+            height: 20
+            color: Theme.border
+            Layout.alignment: Qt.AlignVCenter
+        }
+
+        // X-ray mode toggle (semi-transparent faces to see edges through surfaces)
+        ViewToolButton {
+            iconSource: "qrc:/opengeolab/resources/icons/view_xray.svg"
+            toolTipText: qsTr("Toggle X-ray mode")
+            toggled: viewToolbar.xRayActive
+            onClicked: {
+                viewToolbar.xRayActive = !viewToolbar.xRayActive;
+                viewToolbar.send("ViewPortControl", {
+                    view_ctrl: {
+                        toggle_xray: true
+                    }
+                });
+            }
+        }
+
+        // Mesh display mode cycle (wireframe / surface+points / surface+points+wireframe)
+        ViewToolButton {
+            iconSource: "qrc:/opengeolab/resources/icons/mesh_display.svg"
+            toolTipText: qsTr("Cycle mesh display mode")
+            onClicked: viewToolbar.send("ViewPortControl", {
+                view_ctrl: {
+                    cycle_mesh_display: true
                 }
             })
         }

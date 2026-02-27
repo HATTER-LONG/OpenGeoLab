@@ -1,3 +1,7 @@
+/**
+ * @file opengl_viewport.hpp
+ * @brief QML-exposed OpenGL viewport item with camera and input handling.
+ */
 
 #pragma once
 
@@ -13,6 +17,12 @@
 
 namespace OpenGeoLab::App {
 
+/**
+ * @brief QML viewport item providing 3D scene rendering via QQuickFramebufferObject.
+ *
+ * Handles mouse/keyboard input for camera manipulation and entity picking,
+ * and synchronizes camera and pick state with the render thread each frame.
+ */
 class GLViewport : public QQuickFramebufferObject {
     Q_OBJECT
     QML_ELEMENT
@@ -61,6 +71,7 @@ private:
     Util::ScopedConnection m_sceneNeedsUpdateConn;
     Util::ScopedConnection m_cameraChangedConn;
     Util::ScopedConnection m_selectionChangedConn;
+    Util::ScopedConnection m_hoverChangedConn;
 
     QPointF m_cursorPos;           ///< Latest cursor position (for hover picking)
     QPointF m_pressPos;            ///< Position at last mouse press (for click/drag detection)

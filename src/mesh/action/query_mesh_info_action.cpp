@@ -7,6 +7,7 @@
 
 #include "../mesh_documentImpl.hpp"
 #include "mesh/mesh_types.hpp"
+#include "render/render_scene_controller.hpp"
 #include "util/logger.hpp"
 
 namespace OpenGeoLab::Mesh {
@@ -83,6 +84,54 @@ queryElement(const MeshDocumentImpl& doc, MeshElementUID uid, MeshElementType ty
     }
 }
 
+/**
+ * @brief Query a mesh wireframe edge using its sequential edge ID.
+ *
+ * MeshLine pick IDs are sequential integers assigned during render building.
+ * The render data stores a lookup table mapping each edge ID to its two
+ * endpoint node IDs.
+ *
+ * @param doc Active mesh document.
+ * @param edgeId Sequential edge ID from the pick buffer.
+ * @return JSON with type, decoded node IDs, and positions; empty on failure.
+ */
+[[nodiscard]] nlohmann::json queryMeshLine(const MeshDocumentImpl& doc, uint64_t edgeId) {
+    const auto& renderData = Render::RenderSceneController::instance().renderData();
+    auto it = renderData.m_meshLineNodes.find(edgeId);
+    if(it == renderData.m_meshLineNodes.end()) {
+        return nlohmann::json{};
+    }
+
+    const auto nodeA = it->second.first;
+    const auto nodeB = it->second.second;
+
+    if(nodeA == INVALID_MESH_NODE_ID || nodeB == INVALID_MESH_NODE_ID) {
+        return nlohmann::json{};
+    }
+
+    nlohmann::json info;
+    info["type"] = "Line";
+    info["uid"] = edgeId;
+    info["nodeCount"] = 2;
+    info["nodeIds"] = nlohmann::json::array({nodeA, nodeB});
+
+    nlohmann::json nodes = nlohmann::json::array();
+    for(auto nid : {nodeA, nodeB}) {
+        try {
+            const auto node = doc.findNodeById(nid);
+            nodes.push_back(nlohmann::json{{"id", static_cast<uint64_t>(node.nodeId())},
+                                           {"x", node.x()},
+                                           {"y", node.y()},
+                                           {"z", node.z()}});
+        } catch(...) {
+            nodes.push_back(
+                nlohmann::json{{"id", static_cast<uint64_t>(nid)}, {"error", "node not found"}});
+        }
+    }
+    info["nodes"] = std::move(nodes);
+    return info;
+}
+
 } // namespace
 
 nlohmann::json QueryMeshInfoAction::execute(const nlohmann::json& params,
@@ -137,6 +186,13 @@ nlohmann::json QueryMeshInfoAction::execute(const nlohmann::json& params,
 
         if(type_str == "Node") {
             info = queryNode(*document, static_cast<MeshNodeId>(uid));
+        } else if(type_str == "Line") {
+            // MeshLine: first try as a regular Line element, then fall back
+            // to decoding the composite node-pair UID from wireframe picking.
+            info = queryElement(*document, static_cast<MeshElementUID>(uid), MeshElementType::Line);
+            if(info.empty()) {
+                info = queryMeshLine(*document, uid);
+            }
         } else {
             // Try to parse as mesh element type
             auto elem_type_opt = meshElementTypeFromString(type_str);

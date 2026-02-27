@@ -24,6 +24,14 @@ nlohmann::json ViewPortControl::execute(const nlohmann::json& params,
     } else if(view_ctrl.contains("fit") && view_ctrl["fit"].is_boolean() &&
               view_ctrl["fit"].get<bool>()) {
         RenderSceneController::instance().fitToScene();
+    } else if(view_ctrl.contains("toggle_xray") &&
+              view_ctrl["toggle_xray"].is_boolean() &&
+              view_ctrl["toggle_xray"].get<bool>()) {
+        RenderSceneController::instance().toggleXRayMode();
+    } else if(view_ctrl.contains("cycle_mesh_display") &&
+              view_ctrl["cycle_mesh_display"].is_boolean() &&
+              view_ctrl["cycle_mesh_display"].get<bool>()) {
+        RenderSceneController::instance().cycleMeshDisplayMode();
     } else {
         throw std::runtime_error("Unsupported or missing view control action.");
     }

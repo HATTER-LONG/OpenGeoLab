@@ -4,9 +4,14 @@ English docs: `README.en.md` and `docs/json_protocols.en.md`.
 
 OpenGeoLab 是一个基于 Qt Quick(QML) + OpenGL 的几何/模型可视化与编辑原型项目：
 - 读取 BREP / STEP(STP) 等模型文件
-- 基于 OpenCASCADE(OCC) 管理几何拓扑（点/边/面/Part）
-- OpenGL 渲染显示，并提供基础视口交互（旋转/平移/缩放、视图预设、Fit）
-- 后续将支持鼠标编辑（如 trim/offset）、网格剖分、以及 AI 辅助网格质量诊断与修复
+- 基于 OpenCASCADE(OCC) 管理几何拓扑（点/边/面/Wire/Part）
+- OpenGL 渲染显示，使用正交投影，默认不透明渲染（通过预乘 alpha 确保 Qt Quick 合成时完全不透明），支持 X-ray 模式（面片半透明以查看遮挡边线，同时作用于几何和网格；关闭时通过深度偏移正确遮蔽背面线框），并提供基础视口交互（旋转/平移/缩放、视图预设、Fit）
+- 支持多层级实体拾取（Vertex/Edge/Face/Wire/Part），Wire 和 Part 模式可自动解析子实体到父级；拾取高亮精准匹配当前拾取类型（如 Edge 模式下仅高亮选中的边，Wire 模式下不会错误高亮 Face）；Wire 高亮包含所有组成边（含多面共享边），呈完整闭环显示
+- 网格实体拾取（Node/Line/Element），支持 hover 高亮和选中高亮，基于 GPU 着色器的 pickId 比对实现；即使在线框模式下，被 hover/选中的网格元素也会通过 highlight-only 面片覆盖渲染显示高亮效果；MeshLine 使用排序节点对生成唯一 ID，共享边可稳定拾取
+- 网格剖分后可渲染为线框+节点、面片+点、面片+点+边三种显示模式轮询切换（默认：线框+节点）
+- 网格面片颜色继承自所属 Part 的颜色（调暗显示），与几何面颜色有明显区分
+- Wire 拾取在多面共享边时，自动优先选择光标所在面对应的 Wire（基于拾取区域中的 Face 上下文消歧义）
+- 后续将支持鼠标编辑（如 trim/offset）、网格质量诊断、以及 AI 辅助修复
 
 ## 目录结构（约定）
 - `include/`：对外接口头文件；不同模块应只通过此处暴露的接口互相调用
@@ -14,8 +19,9 @@ OpenGeoLab 是一个基于 Qt Quick(QML) + OpenGL 的几何/模型可视化与�
   - `src/app/`：应用入口、QML 单例后端（BackendService）、OpenGL 视口（GLViewport）
   - `src/geometry/`：几何文档/实体、OCC 形体构建与导出渲染数据
     - 实体标识：内部使用 `EntityKey = (EntityId + EntityUID + EntityType)` 作为可比较/可哈希的实体句柄
+  - `src/mesh/`：网格文档/节点/单元管理、FEM 数据存储
   - `src/io/`：模型文件读取服务（STEP/BREP）
-  - `src/render/`：渲染数据结构、SceneRenderer、RenderSceneController 等
+  - `src/render/`：渲染数据结构、SceneRenderer、RenderSceneController、GPU 拾取（PickPass）
 - `resources/qml/`：QML UI（主窗口、页面、工具条等）
 - `test/`：单元测试（默认关闭，见 CMake 选项）
 
@@ -77,6 +83,20 @@ cmake --build build
 
 近期新增：
 - Geo Query 页面通过 `GeometryService` 的 `query_entity_info` action，基于当前拾取到的实体 (type+uid) 查询实体详细信息并在页面下方列表展示。
+- Mesh Query 页面支持 Node/Line/Element 拾取查询，通过 GPU PickPass 实现 GL_POINTS/GL_LINES/GL_TRIANGLES 分别绘制到离屏 FBO 进行像素级拾取。
+- X-ray 模式同时作用于 GeometryPass 和 MeshPass，面片使用预乘 alpha 混合半透明渲染（`GL_ONE, GL_ONE_MINUS_SRC_ALPHA`），确保 Qt Quick 合成时颜色正确；关闭时通过 `GL_POLYGON_OFFSET_FILL` 确保面片略偏移，可见面边线通过深度测试、背面边线被正确遮挡。
+- 渲染前完整重置 GL 状态（glColorMask/glDepthMask/glBlendFunc 等），防止 Qt 场景图遗留状态导致半透明。
+- 正交投影使用对称近/远裁切平面（负近平面），避免模型缩放时被裁切。
+- Wire 高亮使用 wire→edges 逆向映射表，hover/选中时高亮组成 wire 的所有 edge（含多面共享边），呈完整闭环。
+- 网格线框 MeshLine 拾取使用排序节点对 UID（`min(n0,n1)<<32 | max(n0,n1)`），共享边在不同 element 中具有相同 pickId，确保稳定拾取。
+- 网格显示模式改为三档轮循：线框+节点 → 面片+点 → 面片+点+边（默认线框+节点）。
+- 网格面片颜色统一使用所属 Part 颜色（调暗 35%+偏移），与几何面颜色明显区分。
+- 新增网格 hover/选中高亮，通过着色器中的 pickId uniform 比对实现。
+- Wire 拾取增加 Face 上下文消歧义：多面共享边时，优先选择光标所在面对应的 Wire（pick region 中同时读取 Edge 和 Face，按 Face 归属确定 Wire）。
+- Wire 拾取模式下 hover/click 过滤：若最高优先级命中为 Face（而非 Edge），则清除 hover 或忽略 click，避免 Wire 模式误高亮整个面。
+- 网格元素 hover/选中高亮：即使显示模式为纯线框，也会渲染被高亮的网格元素面片（u_highlightOnly 模式丢弃非高亮片段）。
+- X-ray 切换按钮增加视觉状态指示（按下/激活态高亮显示）。
+- MeshLine 查询修复：MeshLine 使用复合节点对 UID（composite node-pair），查询时若未匹配到 Line 单元则自动解码为两个端点节点信息，MeshQueryPage 显示节点对而非原始大数值 UID。
 
 ## 后续开发任务（来自 plan.md，做了轻度工程化拆分）
 - 几何交互：选择（点/边/面/Part）、高亮、拾取、变换与编辑操作（trim/offset 等）

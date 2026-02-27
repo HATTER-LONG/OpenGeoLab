@@ -9,6 +9,7 @@
 
 #include <QMatrix4x4>
 #include <QOpenGLContext>
+#include <QOpenGLExtraFunctions>
 #include <QOpenGLFunctions>
 #include <QVector3D>
 
@@ -136,11 +137,36 @@ void ShaderProgram::setUniformVec3(const char* name, const QVector3D& vec) {
     }
 }
 
+void ShaderProgram::setUniformVec4(const char* name, float r, float g, float b, float a) {
+    QOpenGLFunctions* f = QOpenGLContext::currentContext()->functions();
+    GLint loc = f->glGetUniformLocation(m_program, name);
+    if(loc >= 0) {
+        f->glUniform4f(loc, r, g, b, a);
+    }
+}
+
 void ShaderProgram::setUniformFloat(const char* name, float val) {
     QOpenGLFunctions* f = QOpenGLContext::currentContext()->functions();
     GLint loc = f->glGetUniformLocation(m_program, name);
     if(loc >= 0) {
         f->glUniform1f(loc, val);
+    }
+}
+
+void ShaderProgram::setUniformInt(const char* name, int val) {
+    QOpenGLFunctions* f = QOpenGLContext::currentContext()->functions();
+    GLint loc = f->glGetUniformLocation(m_program, name);
+    if(loc >= 0) {
+        f->glUniform1i(loc, val);
+    }
+}
+
+void ShaderProgram::setUniformUvec2(const char* name, uint32_t x, uint32_t y) {
+    QOpenGLExtraFunctions* ef = QOpenGLContext::currentContext()->extraFunctions();
+    QOpenGLFunctions* f = QOpenGLContext::currentContext()->functions();
+    GLint loc = f->glGetUniformLocation(m_program, name);
+    if(loc >= 0) {
+        ef->glUniform2ui(loc, x, y);
     }
 }
 

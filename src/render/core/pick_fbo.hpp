@@ -7,6 +7,7 @@
 
 #include <QOpenGLFunctions>
 #include <cstdint>
+#include <vector>
 
 namespace OpenGeoLab::Render {
 
@@ -55,6 +56,19 @@ public:
      * @return Encoded pick id, or 0 if nothing was hit
      */
     [[nodiscard]] uint64_t readPickId(int x, int y) const;
+
+    /**
+     * @brief Read pick-ids in a square region around (cx, cy).
+     *
+     * Reads a (2*radius+1)^2 pixel region, reassembles each pixel into
+     * a uint64_t pick id, and returns all non-zero (hit) ids.
+     *
+     * @param cx Center x in framebuffer coordinates
+     * @param cy Center y in framebuffer coordinates
+     * @param radius Half-size of the region (e.g. 3 → 7x7 pixels)
+     * @return Vector of non-zero encoded pick ids
+     */
+    [[nodiscard]] std::vector<uint64_t> readPickRegion(int cx, int cy, int radius) const;
 
     // ── Accessors ────────────────────────────────────────────────────────
 

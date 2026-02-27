@@ -1,8 +1,23 @@
+/**
+ * @file mesh_documentImpl.hpp
+ * @brief Concrete MeshDocument implementation — singleton that owns all
+ *        mesh nodes/elements and provides thread-safe render data generation.
+ */
+
 #pragma once
 
 #include "mesh/mesh_document.hpp"
 
+#include <mutex>
+
 namespace OpenGeoLab::Mesh {
+
+/**
+ * @brief Singleton MeshDocument implementation.
+ *
+ * Stores mesh nodes and elements in flat vectors. Render data is generated
+ * on demand via MeshRenderBuilder and protected by a mutex for thread safety.
+ */
 class MeshDocumentImpl : public MeshDocument,
                          public std::enable_shared_from_this<MeshDocumentImpl> {
 
@@ -48,7 +63,9 @@ public:
     // Render Data
     // -------------------------------------------------------------------------
 
-    [[nodiscard]] bool getRenderData(Render::RenderData& render_data) override;
+    [[nodiscard]] bool getRenderData(Render::RenderData& render_data,
+                                     const Render::RenderColor& surface_color = {
+                                         0.65f, 0.75f, 0.85f, 1.0f}) override;
 
     // -------------------------------------------------------------------------
     // Change Notification

@@ -1,3 +1,7 @@
+/**
+ * @file MeshQueryPage.qml
+ * @brief Page for querying mesh entity information via the MeshService backend.
+ */
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
@@ -21,6 +25,8 @@ FunctionPageBase {
     /// Last query error message (if any)
     property string queryError: ""
 
+    /// Build the request parameters for the query_mesh_info backend action.
+    /// @return Object with action name and currently selected entity handles.
     function getParameters() {
         return {
             action: "query_mesh_info",
@@ -65,8 +71,8 @@ FunctionPageBase {
             width: parent.width
             visible: true
 
-            // Allow picking: mesh node and mesh element
-            allowedTypes: mesh_node_type | mesh_element_type
+            // Allow picking: mesh node, mesh line, and mesh element
+            allowedTypes: mesh_node_type | mesh_line_type | mesh_element_type
         }
 
         // Result header
@@ -127,7 +133,15 @@ FunctionPageBase {
                         spacing: 4
 
                         Label {
-                            text: (row.modelData.type || "") + ":" + (row.modelData.uid || "")
+                            text: {
+                                var t = row.modelData.type || "";
+                                var id = row.modelData.uid || "";
+                                // For Line entities, show node pair instead of composite UID
+                                if (t === "Line" && row.modelData.nodeIds && row.modelData.nodeIds.length === 2) {
+                                    return t + ": Node " + row.modelData.nodeIds[0] + " - Node " + row.modelData.nodeIds[1];
+                                }
+                                return t + ":" + id;
+                            }
                             font.pixelSize: 11
                             font.bold: true
                             color: Theme.textPrimary

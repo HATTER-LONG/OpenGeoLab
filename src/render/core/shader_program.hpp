@@ -42,7 +42,10 @@ public:
 
     void setUniformMatrix4(const char* name, const QMatrix4x4& mat);
     void setUniformVec3(const char* name, const QVector3D& vec);
+    void setUniformVec4(const char* name, float r, float g, float b, float a);
     void setUniformFloat(const char* name, float val);
+    void setUniformInt(const char* name, int val);
+    void setUniformUvec2(const char* name, uint32_t x, uint32_t y);
 
     // ── Accessors ────────────────────────────────────────────────────────
 

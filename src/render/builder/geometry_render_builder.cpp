@@ -1,3 +1,10 @@
+/**
+ * @file geometry_render_builder.cpp
+ * @brief GeometryRenderBuilder — tessellates OCCT BRep shapes (faces, edges,
+ *        vertices) into RenderData for the Geometry render pass, with per-entity
+ *        pick IDs and part/wire hierarchy lookups.
+ */
+
 #include "geometry_render_builder.hpp"
 
 #include "geometry/entity/entity_index.hpp"
@@ -22,6 +29,8 @@
 #include <gp_Dir.hxx>
 #include <gp_Pnt.hxx>
 #include <gp_Trsf.hxx>
+
+#include <algorithm>
 
 namespace OpenGeoLab::Render {
 
@@ -68,6 +77,34 @@ bool GeometryRenderBuilder::build(RenderData& render_data, const GeometryRenderI
         part_node.m_key = {RenderEntityType::Part, part_uid};
         part_node.m_color = part_color;
 
+        // Build edge-to-wire lookup for this Part
+        std::unordered_map<Geometry::EntityUID, Geometry::EntityUID> edgeToWire;
+        const auto wire_keys = input.m_relationshipIndex.findRelatedEntities(
+            part->entityId(), Geometry::EntityType::Wire);
+        for(const auto& wk : wire_keys) {
+            auto wire_entity = input.m_entityIndex.findByKey(wk);
+            if(!wire_entity) {
+                continue;
+            }
+            const Geometry::EntityUID wire_uid = wire_entity->entityUID();
+            // Find edges belonging to this wire
+            const auto wire_edge_keys = input.m_relationshipIndex.findRelatedEntities(
+                wire_entity->entityId(), Geometry::EntityType::Edge);
+            for(const auto& ek : wire_edge_keys) {
+                auto edge_entity = input.m_entityIndex.findByKey(ek);
+                if(edge_entity) {
+                    edgeToWire[edge_entity->entityUID()] = wire_uid;
+                    // Edge may belong to multiple wires (shared edges between faces)
+                    auto& wires = render_data.m_edgeToWireUids[edge_entity->entityUID()];
+                    if(std::find(wires.begin(), wires.end(), wire_uid) == wires.end()) {
+                        wires.push_back(wire_uid);
+                    }
+                    // Build reverse lookup: wire → all its edges
+                    render_data.m_wireToEdgeUids[wire_uid].push_back(edge_entity->entityUID());
+                }
+            }
+        }
+
         // --- Faces (triangles for Geometry pass) ---
         const auto face_keys = input.m_relationshipIndex.findRelatedEntities(
             part->entityId(), Geometry::EntityType::Face);
@@ -75,6 +112,17 @@ bool GeometryRenderBuilder::build(RenderData& render_data, const GeometryRenderI
             auto face_entity = input.m_entityIndex.findByKey(fk);
             if(!face_entity || !face_entity->hasShape()) {
                 continue;
+            }
+
+            // Build wire → face mapping: find wires that bound this face
+            const auto face_wire_keys = input.m_relationshipIndex.findRelatedEntities(
+                face_entity->entityId(), Geometry::EntityType::Wire);
+            for(const auto& wk : face_wire_keys) {
+                auto wire_entity = input.m_entityIndex.findByKey(wk);
+                if(wire_entity) {
+                    render_data.m_wireToFaceUid[wire_entity->entityUID()] =
+                        face_entity->entityUID();
+                }
             }
 
             DrawRange range = generateFaceMesh(render_data, face_entity, part_uid, input.m_options);
@@ -271,6 +319,8 @@ DrawRange GeometryRenderBuilder::generateEdgeMesh(RenderData& render_data,
     TopLoc_Location location;
     const auto polygon = BRep_Tool::Polygon3D(edge, location);
 
+    // Prefer the pre-computed polygon3D from BRepMesh; fall back to
+    // adaptive curve discretization when polygon data is unavailable.
     if(!polygon.IsNull() && polygon->NbNodes() >= 2) {
         const auto& nodes = polygon->Nodes();
         const gp_Trsf trsf = location.Transformation();

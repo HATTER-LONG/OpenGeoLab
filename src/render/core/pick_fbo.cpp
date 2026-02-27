@@ -150,4 +150,44 @@ uint64_t PickFbo::readPickId(int x, int y) const {
     return (high << 32u) | low;
 }
 
+std::vector<uint64_t> PickFbo::readPickRegion(int cx, int cy, int radius) const {
+    std::vector<uint64_t> result;
+    if(!m_initialized || radius < 0) {
+        return result;
+    }
+
+    // Clamp region to framebuffer bounds
+    const int x0 = std::max(0, cx - radius);
+    const int y0 = std::max(0, cy - radius);
+    const int x1 = std::min(m_width - 1, cx + radius);
+    const int y1 = std::min(m_height - 1, cy + radius);
+
+    const int w = x1 - x0 + 1;
+    const int h = y1 - y0 + 1;
+    if(w <= 0 || h <= 0) {
+        return result;
+    }
+
+    QOpenGLExtraFunctions* ef = QOpenGLContext::currentContext()->extraFunctions();
+    ef->glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
+
+    // Read the entire region in one call — 2 uint32 per pixel (RG32UI)
+    std::vector<uint32_t> pixels(static_cast<size_t>(w * h * 2), 0);
+    ef->glReadPixels(x0, y0, w, h, GL_RG_INTEGER, GL_UNSIGNED_INT, pixels.data());
+
+    ef->glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    // Reassemble pick ids
+    for(int i = 0; i < w * h; ++i) {
+        const uint64_t low = pixels[static_cast<size_t>(i * 2)];
+        const uint64_t high = pixels[static_cast<size_t>(i * 2 + 1)];
+        const uint64_t id = (high << 32u) | low;
+        if(id != 0) {
+            result.push_back(id);
+        }
+    }
+
+    return result;
+}
+
 } // namespace OpenGeoLab::Render

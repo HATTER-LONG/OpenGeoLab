@@ -1,3 +1,8 @@
+/**
+ * @file mesh_element.hpp
+ * @brief FEM mesh element with node connectivity and type information.
+ */
+
 #pragma once
 
 #include "mesh/mesh_types.hpp"
@@ -6,6 +11,7 @@
 
 namespace OpenGeoLab::Mesh {
 
+/** @brief A single FEM mesh element (line, triangle, quad, tetra, hexa, prism, pyramid). */
 class MeshElement {
 public:
     explicit MeshElement(MeshElementType type);
@@ -52,6 +58,8 @@ private:
             return 8;
         case MeshElementType::Prism6:
             return 6;
+        case MeshElementType::Pyramid5:
+            return 5;
         default:
             return 0;
         }

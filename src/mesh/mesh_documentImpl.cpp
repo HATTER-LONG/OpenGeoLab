@@ -1,3 +1,9 @@
+/**
+ * @file mesh_documentImpl.cpp
+ * @brief MeshDocumentImpl singleton — thread-safe mesh storage and render
+ *        data generation via MeshRenderBuilder.
+ */
+
 #include "mesh_documentImpl.hpp"
 #include "render/builder/mesh_render_builder.hpp"
 #include "util/logger.hpp"
@@ -103,9 +109,10 @@ void MeshDocumentImpl::notifyChanged() {
 // Render Data
 // =============================================================================
 
-bool MeshDocumentImpl::getRenderData(Render::RenderData& render_data) {
+bool MeshDocumentImpl::getRenderData(Render::RenderData& render_data,
+                                     const Render::RenderColor& surface_color) {
     std::lock_guard<std::mutex> lock(m_renderDataMutex);
-    Render::MeshRenderInput input{m_nodes, m_elements};
+    Render::MeshRenderInput input{m_nodes, m_elements, surface_color};
     return Render::MeshRenderBuilder::build(render_data, input);
 }
 

@@ -1,3 +1,8 @@
+/**
+ * @file core_identity.hpp
+ * @brief Generic identity types for entity identification with id, uid, and type fields.
+ */
+
 #pragma once
 #include <compare>
 #include <concepts>
@@ -5,6 +10,9 @@
 #include <type_traits>
 
 namespace OpenGeoLab::Util {
+/**
+ * @brief Full identity tuple (id + uid + type) with comparison and ordering.
+ */
 template <typename IdT,
           typename UidT,
           typename TypeT,
@@ -44,6 +52,7 @@ struct CoreIdentity {
     }
 };
 
+/** @brief Hash functor for CoreIdentity keys. */
 template <typename Key>
     requires requires(const Key& k) {
         { k.m_id };
@@ -64,9 +73,7 @@ struct CoreIdentityHash {
     }
 };
 /**
- * ============================================================
- * CoreUidIdentity (Lightweight Reference)
- * ============================================================
+ * @brief Lightweight identity reference (uid + type only, no id).
  */
 template <typename UidT, typename TypeT, UidT InvalidUid, TypeT InvalidType>
     requires std::is_enum_v<TypeT> && std::totally_ordered<UidT>
@@ -102,6 +109,7 @@ struct CoreUidIdentity {
     }
 };
 
+/** @brief Hash functor for CoreUidIdentity keys. */
 template <typename Key>
     requires requires(const Key& k) {
         { k.m_uid };

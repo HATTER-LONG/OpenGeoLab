@@ -102,7 +102,15 @@ public:
     // Render Data
     // -------------------------------------------------------------------------
 
-    [[nodiscard]] virtual bool getRenderData(Render::RenderData& render_data) = 0;
+    /**
+     * @brief Generate render data from current mesh state.
+     * @param render_data Output render data to populate.
+     * @param surface_color Surface triangle color (typically faded Part color).
+     * @return true on success.
+     */
+    [[nodiscard]] virtual bool getRenderData(Render::RenderData& render_data,
+                                             const Render::RenderColor& surface_color = {
+                                                 0.65f, 0.75f, 0.85f, 1.0f}) = 0;
 
     // -------------------------------------------------------------------------
     // Change Notification

@@ -1,3 +1,8 @@
+/**
+ * @file color_map.cpp
+ * @brief ColorMap implementation with a single color palette
+ */
+
 #include "util/color_map.hpp"
 
 #include <array>
@@ -7,99 +12,51 @@ namespace {
 
 using RenderColor = Render::RenderColor;
 
+/// @brief Construct an RGBA color from float components.
 constexpr RenderColor rgba(float r, float g, float b, float a = 1.0f) {
     return RenderColor{r, g, b, a};
 }
 
-constexpr float clamp01(float value) {
-    if(value < 0.0F) {
-        return 0.0F;
-    }
-    if(value > 1.0F) {
-        return 1.0F;
-    }
-    return value;
-}
+/// @brief Convert a hex (0-255) component to float [0, 1].
+constexpr float hex(int v) { return static_cast<float>(v) / 255.0F; }
 
-constexpr RenderColor shiftLuma(const RenderColor& c, float delta) {
-    return rgba(clamp01(c.m_r + delta), clamp01(c.m_g + delta), clamp01(c.m_b + delta), c.m_a);
-}
+/// Part color palette (15 distinctive colours for cyclic assignment).
+/// #abedd8 #46cdcf #fad2a3 #b2df8a #33a02c #1f78b4 #a6cee3 #fb9a99
+/// #cca8e9 #984ea3 #ffff33 #377eb8 #4daf4a #f781bf #999999
+constexpr size_t K_PART_PALETTE_SIZE = 15;
 
-constexpr RenderColor tuneSaturation(const RenderColor& c, float factor) {
-    const float luma = c.m_r * 0.299F + c.m_g * 0.587F + c.m_b * 0.114F;
-    return rgba(clamp01(luma + (c.m_r - luma) * factor), clamp01(luma + (c.m_g - luma) * factor),
-                clamp01(luma + (c.m_b - luma) * factor), c.m_a);
-}
-
-constexpr RenderColor emphasizeMesh(const RenderColor& base, bool dark_theme) {
-    const auto luma_shifted = dark_theme ? shiftLuma(base, 0.14F) : shiftLuma(base, -0.08F);
-    return tuneSaturation(luma_shifted, dark_theme ? 1.14F : 1.10F);
-}
-
-constexpr std::array<RenderColor, 32> K_PART_COLOR_PALETTE_LIGHT = {{
-    rgba(0.219F, 0.470F, 0.898F), rgba(0.950F, 0.432F, 0.314F), rgba(0.000F, 0.655F, 0.529F),
-    rgba(0.560F, 0.389F, 0.953F), rgba(0.961F, 0.673F, 0.208F), rgba(0.000F, 0.737F, 0.831F),
-    rgba(0.886F, 0.314F, 0.553F), rgba(0.376F, 0.647F, 0.980F), rgba(0.996F, 0.537F, 0.196F),
-    rgba(0.204F, 0.780F, 0.349F), rgba(0.427F, 0.376F, 0.941F), rgba(0.859F, 0.318F, 0.318F),
-    rgba(0.078F, 0.690F, 0.659F), rgba(0.694F, 0.451F, 0.902F), rgba(0.271F, 0.596F, 0.898F),
-    rgba(0.949F, 0.420F, 0.698F), rgba(0.150F, 0.741F, 0.611F), rgba(0.976F, 0.576F, 0.263F),
-    rgba(0.459F, 0.521F, 0.965F), rgba(0.925F, 0.361F, 0.388F), rgba(0.082F, 0.718F, 0.847F),
-    rgba(0.612F, 0.504F, 0.941F), rgba(0.992F, 0.635F, 0.251F), rgba(0.204F, 0.667F, 0.820F),
-    rgba(0.922F, 0.478F, 0.282F), rgba(0.337F, 0.698F, 0.522F), rgba(0.518F, 0.467F, 0.918F),
-    rgba(0.984F, 0.478F, 0.510F), rgba(0.173F, 0.655F, 0.741F), rgba(0.780F, 0.416F, 0.878F),
-    rgba(0.412F, 0.592F, 0.933F), rgba(0.941F, 0.565F, 0.337F),
+constexpr std::array<RenderColor, K_PART_PALETTE_SIZE> K_PART_COLOR_PALETTE = {{
+    rgba(hex(0xAB), hex(0xED), hex(0xD8)), // #abedd8
+    rgba(hex(0x46), hex(0xCD), hex(0xCF)), // #46cdcf
+    rgba(hex(0xFA), hex(0xD2), hex(0xA3)), // #fad2a3
+    rgba(hex(0xB2), hex(0xDF), hex(0x8A)), // #b2df8a
+    rgba(hex(0x33), hex(0xA0), hex(0x2C)), // #33a02c
+    rgba(hex(0x1F), hex(0x78), hex(0xB4)), // #1f78b4
+    rgba(hex(0xA6), hex(0xCE), hex(0xE3)), // #a6cee3
+    rgba(hex(0xFB), hex(0x9A), hex(0x99)), // #fb9a99
+    rgba(hex(0xCC), hex(0xA8), hex(0xE9)), // #cca8e9
+    rgba(hex(0x98), hex(0x4E), hex(0xA3)), // #984ea3
+    rgba(hex(0xFF), hex(0xFF), hex(0x33)), // #ffff33
+    rgba(hex(0x37), hex(0x7E), hex(0xB8)), // #377eb8
+    rgba(hex(0x4D), hex(0xAF), hex(0x4A)), // #4daf4a
+    rgba(hex(0xF7), hex(0x81), hex(0xBF)), // #f781bf
+    rgba(hex(0x99), hex(0x99), hex(0x99)), // #999999
 }};
 
-constexpr std::array<RenderColor, 32> makeDarkPartPalette() {
-    std::array<RenderColor, 32> palette{};
-    for(size_t i = 0; i < palette.size(); ++i) {
-        palette[i] = tuneSaturation(shiftLuma(K_PART_COLOR_PALETTE_LIGHT[i], 0.10F), 0.92F);
-    }
-    return palette;
-}
+/// Mesh element palette (reuses the part colour palette).
+constexpr auto& K_MESH_COLOR_PALETTE = K_PART_COLOR_PALETTE;
 
-constexpr std::array<RenderColor, 32> K_PART_COLOR_PALETTE_DARK = makeDarkPartPalette();
-
-constexpr std::array<RenderColor, 32>
-makeMeshPalette(const std::array<RenderColor, 32>& part_palette, bool dark_theme) {
-    std::array<RenderColor, 32> palette{};
-    for(size_t i = 0; i < palette.size(); ++i) {
-        palette[i] = emphasizeMesh(part_palette[i], dark_theme);
-    }
-    return palette;
-}
-
-constexpr std::array<RenderColor, 32> K_MESH_COLOR_PALETTE_LIGHT =
-    makeMeshPalette(K_PART_COLOR_PALETTE_LIGHT, false);
-constexpr std::array<RenderColor, 32> K_MESH_COLOR_PALETTE_DARK =
-    makeMeshPalette(K_PART_COLOR_PALETTE_DARK, true);
-
-struct ThemePalette {
-    const std::array<RenderColor, 32>& m_part;
-    const std::array<RenderColor, 32>& m_meshElement;
-    RenderColor m_hover;
-    RenderColor m_selection;
-    RenderColor m_edge;
-    RenderColor m_vertex;
-    RenderColor m_meshNode;
-    RenderColor m_meshLine;
-};
-
-constexpr ThemePalette K_THEME_PALETTES[2] = {
-    ThemePalette{K_PART_COLOR_PALETTE_LIGHT, K_MESH_COLOR_PALETTE_LIGHT,
-                 rgba(0.122F, 0.553F, 0.898F, 1.0F), rgba(0.988F, 0.576F, 0.090F, 1.0F),
-                 rgba(0.100F, 0.125F, 0.178F, 1.0F), rgba(0.074F, 0.368F, 0.690F, 1.0F),
-                 rgba(0.114F, 0.647F, 0.839F, 1.0F), rgba(0.039F, 0.235F, 0.412F, 1.0F)},
-    ThemePalette{K_PART_COLOR_PALETTE_DARK, K_MESH_COLOR_PALETTE_DARK,
-                 rgba(0.365F, 0.741F, 0.996F, 1.0F), rgba(1.000F, 0.741F, 0.243F, 1.0F),
-                 rgba(0.804F, 0.847F, 0.922F, 1.0F), rgba(0.639F, 0.784F, 0.996F, 1.0F),
-                 rgba(0.604F, 0.894F, 1.000F, 1.0F), rgba(0.749F, 0.859F, 0.961F, 1.0F)}};
-
-constexpr const ThemePalette& paletteForIndex(uint8_t index) {
-    return K_THEME_PALETTES[index == static_cast<uint8_t>(ColorTheme::Light) ? 0 : 1];
-}
-
-constexpr size_t K_PART_PALETTE_SIZE = K_PART_COLOR_PALETTE_LIGHT.size();
+/// Edge + vertex hover: #ff7f00, selection: #ff165d
+/// Face hover: #4b55e9, selection: #4116ff
+constexpr RenderColor K_EDGE_VERTEX_HOVER = rgba(hex(0xFF), hex(0x7F), hex(0x00));
+constexpr RenderColor K_EDGE_VERTEX_SELECTION = rgba(hex(0xFF), hex(0x16), hex(0x5D));
+constexpr RenderColor K_FACE_HOVER = rgba(hex(0x4B), hex(0x55), hex(0xE9));
+constexpr RenderColor K_FACE_SELECTION = rgba(hex(0x41), hex(0x16), hex(0xFF));
+constexpr RenderColor K_EDGE_COLOR = rgba(hex(0xFF), hex(0xD4), hex(0x60));
+constexpr RenderColor K_VERTEX_COLOR = rgba(hex(0x34), hex(0x90), hex(0xDE));
+constexpr RenderColor K_MESH_NODE_COLOR = rgba(0.114F, 0.647F, 0.839F, 1.0F);
+constexpr RenderColor K_MESH_LINE_COLOR = rgba(0.039F, 0.235F, 0.412F, 1.0F);
+constexpr RenderColor K_BACKGROUND_COLOR = rgba(0.15F, 0.15F, 0.17F, 1.0F);
 
 } // namespace
 
@@ -108,61 +65,37 @@ const ColorMap& ColorMap::instance() {
     return instance;
 }
 
-ColorMap& ColorMap::mutableInstance() {
-    static ColorMap instance;
-    return instance;
-}
-
-void ColorMap::setTheme(ColorTheme theme) noexcept {
-    m_themeIndex.store(static_cast<uint8_t>(theme), std::memory_order_release);
-}
-
-void ColorMap::setThemeMode(int mode) noexcept {
-    setTheme(mode == 0 ? ColorTheme::Light : ColorTheme::Dark);
-}
-
-ColorTheme ColorMap::theme() const noexcept {
-    return m_themeIndex.load(std::memory_order_acquire) == static_cast<uint8_t>(ColorTheme::Light)
-               ? ColorTheme::Light
-               : ColorTheme::Dark;
-}
-
 const RenderColor& ColorMap::getColorForPartId(Geometry::EntityUID part_uid) const noexcept {
-    const auto& palette = paletteForIndex(m_themeIndex.load(std::memory_order_relaxed)).m_part;
     const auto index = static_cast<size_t>(part_uid % K_PART_PALETTE_SIZE);
-    return palette[index];
+    return K_PART_COLOR_PALETTE[index];
 }
 
 const RenderColor&
 ColorMap::getColorForMeshElementId(Mesh::MeshElementUID element_uid) const noexcept {
-    const auto& palette =
-        paletteForIndex(m_themeIndex.load(std::memory_order_relaxed)).m_meshElement;
     const auto index = static_cast<size_t>(element_uid % K_PART_PALETTE_SIZE);
-    return palette[index];
+    return K_MESH_COLOR_PALETTE[index];
 }
 
-const RenderColor& ColorMap::getHoverColor() const noexcept {
-    return paletteForIndex(m_themeIndex.load(std::memory_order_relaxed)).m_hover;
+const RenderColor& ColorMap::getEdgeVertexHoverColor() const noexcept {
+    return K_EDGE_VERTEX_HOVER;
 }
 
-const RenderColor& ColorMap::getSelectionColor() const noexcept {
-    return paletteForIndex(m_themeIndex.load(std::memory_order_relaxed)).m_selection;
+const RenderColor& ColorMap::getEdgeVertexSelectionColor() const noexcept {
+    return K_EDGE_VERTEX_SELECTION;
 }
 
-const RenderColor& ColorMap::getEdgeColor() const noexcept {
-    return paletteForIndex(m_themeIndex.load(std::memory_order_relaxed)).m_edge;
-}
+const RenderColor& ColorMap::getFaceHoverColor() const noexcept { return K_FACE_HOVER; }
 
-const RenderColor& ColorMap::getVertexColor() const noexcept {
-    return paletteForIndex(m_themeIndex.load(std::memory_order_relaxed)).m_vertex;
-}
+const RenderColor& ColorMap::getFaceSelectionColor() const noexcept { return K_FACE_SELECTION; }
 
-const RenderColor& ColorMap::getMeshNodeColor() const noexcept {
-    return paletteForIndex(m_themeIndex.load(std::memory_order_relaxed)).m_meshNode;
-}
+const RenderColor& ColorMap::getEdgeColor() const noexcept { return K_EDGE_COLOR; }
 
-const RenderColor& ColorMap::getMeshLineColor() const noexcept {
-    return paletteForIndex(m_themeIndex.load(std::memory_order_relaxed)).m_meshLine;
-}
+const RenderColor& ColorMap::getVertexColor() const noexcept { return K_VERTEX_COLOR; }
+
+const RenderColor& ColorMap::getMeshNodeColor() const noexcept { return K_MESH_NODE_COLOR; }
+
+const RenderColor& ColorMap::getMeshLineColor() const noexcept { return K_MESH_LINE_COLOR; }
+
+const RenderColor& ColorMap::getBackgroundColor() const noexcept { return K_BACKGROUND_COLOR; }
 
 } // namespace OpenGeoLab::Util

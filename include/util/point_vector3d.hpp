@@ -1,3 +1,8 @@
+/**
+ * @file point_vector3d.hpp
+ * @brief 3D point and vector types with arithmetic operations and approximate comparison.
+ */
+
 #pragma once
 #include <algorithm>
 #include <cmath>
@@ -29,6 +34,7 @@ constexpr bool almostEqual(T a,
 // ------------------------------
 // Vector3D
 // ------------------------------
+/** @brief Generic 3D vector with dot/cross products, normalization, and arithmetic operators. */
 template <class T> struct Vector3D final {
     static_assert(std::is_arithmetic_v<T>, "Vector3D<T>: T must be arithmetic.");
 
@@ -160,6 +166,7 @@ template <class T> [[nodiscard]] constexpr Vector3D<T> operator/(Vector3D<T> v, 
 // ------------------------------
 // Point3D
 // ------------------------------
+/** @brief Generic 3D point with distance computation and approximate comparison. */
 template <class T> struct Point3D final {
     static_assert(std::is_arithmetic_v<T>, "Point3D<T>: T must be arithmetic.");
 

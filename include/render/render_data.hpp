@@ -1,9 +1,17 @@
+/**
+ * @file render_data.hpp
+ * @brief Render data structures: vertices, draw ranges, semantic tree, and GPU buffer containers.
+ */
+
 #pragma once
 
 #include "geometry/geometry_types.hpp"
 #include "render/render_types.hpp"
 
+#include <cmath>
 #include <cstdint>
+#include <cstdio>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -56,13 +64,24 @@ enum class RenderPassType : uint8_t {
     Post = 3,
 };
 
+/**
+ * @brief Bitmask controlling which display modes are active.
+ */
 enum class RenderDisplayModeMask : uint8_t {
     None = 0,
-    Surface = 1 << 0,
-    Wireframe = 1 << 1,
-    Points = 1 << 2,
-    Mesh = 1 << 3
+    Surface = 1 << 0,   ///< Shaded surface rendering
+    Wireframe = 1 << 1, ///< Wireframe overlay
+    Points = 1 << 2,    ///< Point cloud rendering
+    Mesh = 1 << 3       ///< Mesh element rendering
 };
+
+constexpr RenderDisplayModeMask operator|(RenderDisplayModeMask a, RenderDisplayModeMask b) {
+    return static_cast<RenderDisplayModeMask>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
+}
+
+constexpr RenderDisplayModeMask operator&(RenderDisplayModeMask a, RenderDisplayModeMask b) {
+    return static_cast<RenderDisplayModeMask>(static_cast<uint8_t>(a) & static_cast<uint8_t>(b));
+}
 
 // =============================================================================
 // PickId — Encoded entity identifier for GPU picking
@@ -88,9 +107,7 @@ struct PickId {
         return static_cast<RenderEntityType>(encoded & 0xFFu);
     }
 
-    [[nodiscard]] static constexpr uint64_t decodeUID(uint64_t encoded) {
-        return encoded >> 8u;
-    }
+    [[nodiscard]] static constexpr uint64_t decodeUID(uint64_t encoded) { return encoded >> 8u; }
 
     [[nodiscard]] constexpr bool isValid() const { return m_encoded != 0; }
 };
@@ -109,7 +126,7 @@ struct RenderVertex {
     float m_position[3]{0.0f, 0.0f, 0.0f};    ///< World-space position (12 bytes)
     float m_normal[3]{0.0f, 0.0f, 0.0f};      ///< Surface normal (12 bytes)
     float m_color[4]{0.8f, 0.8f, 0.8f, 1.0f}; ///< RGBA color (16 bytes)
-    uint64_t m_pickId{0};                      ///< Encoded pick ID (8 bytes)
+    uint64_t m_pickId{0};                     ///< Encoded pick ID (8 bytes)
 };
 
 // =============================================================================
@@ -142,12 +159,27 @@ struct RenderNodeKey {
     bool operator!=(const RenderNodeKey& o) const { return !(*this == o); }
 };
 
+/** @brief Hash functor for RenderNodeKey, suitable for unordered containers. */
 struct RenderNodeKeyHash {
     std::size_t operator()(const RenderNodeKey& k) const noexcept {
         std::size_t h = static_cast<std::size_t>(k.m_type);
         h ^= std::hash<uint64_t>{}(k.m_uid) + 0x9e3779b97f4a7c15ULL + (h << 6) + (h >> 2);
         return h;
     }
+};
+
+// =============================================================================
+// DrawRangeEx — Extended draw range with entity identity and part ownership
+// =============================================================================
+
+/**
+ * @brief DrawRange extended with entity identity for per-entity highlighting and picking.
+ */
+struct DrawRangeEx {
+    DrawRange m_range;
+    RenderNodeKey m_entityKey; ///< Entity identity (type + uid)
+    uint64_t m_partUid{0};     ///< Parent part uid for reverse lookup
+    uint64_t m_wireUid{0};     ///< Parent wire uid for edge-to-wire lookup
 };
 
 // =============================================================================
@@ -207,6 +239,20 @@ struct RenderData {
     /// Per-pass flat GPU buffer data
     std::unordered_map<RenderPassType, RenderPassData> m_passData;
 
+    /// Edge uid → parent wire uid(s) lookup (built by GeometryRenderBuilder).
+    /// An edge shared between two faces belongs to two different wires.
+    std::unordered_map<uint64_t, std::vector<uint64_t>> m_edgeToWireUids;
+
+    /// Wire uid → edge uids reverse lookup for complete wire highlighting
+    std::unordered_map<uint64_t, std::vector<uint64_t>> m_wireToEdgeUids;
+
+    /// Wire uid → parent face uid lookup (each wire belongs to exactly one face)
+    std::unordered_map<uint64_t, uint64_t> m_wireToFaceUid;
+
+    /// Mesh line sequential ID → (nodeA, nodeB) lookup.
+    /// Built by MeshRenderBuilder; used to resolve mesh line picks back to node pairs.
+    std::unordered_map<uint64_t, std::pair<Mesh::MeshNodeId, Mesh::MeshNodeId>> m_meshLineNodes;
+
     /// Scene-wide bounding box (union of all visible geometry)
     Geometry::BoundingBox3D m_sceneBBox;
 
@@ -220,6 +266,10 @@ struct RenderData {
     void clear() {
         m_roots.clear();
         m_passData.clear();
+        m_edgeToWireUids.clear();
+        m_wireToEdgeUids.clear();
+        m_wireToFaceUid.clear();
+        m_meshLineNodes.clear();
         m_sceneBBox = {};
         m_geometryDirty = true;
         m_meshDirty = true;
@@ -234,6 +284,9 @@ struct RenderData {
                       [](const RenderNode& n) { return isGeometryDomain(n.m_key.m_type); });
         // Clear geometry pass buffer
         m_passData.erase(RenderPassType::Geometry);
+        m_edgeToWireUids.clear();
+        m_wireToEdgeUids.clear();
+        m_wireToFaceUid.clear();
         m_geometryDirty = true;
     }
 
@@ -243,6 +296,7 @@ struct RenderData {
     void clearMesh() {
         std::erase_if(m_roots, [](const RenderNode& n) { return isMeshDomain(n.m_key.m_type); });
         m_passData.erase(RenderPassType::Mesh);
+        m_meshLineNodes.clear();
         m_meshDirty = true;
     }
 };
