@@ -1,3 +1,8 @@
+/**
+ * @file mesh_element.hpp
+ * @brief FEM mesh element with node connectivity and type information.
+ */
+
 #pragma once
 
 #include "mesh/mesh_types.hpp"
@@ -6,6 +11,7 @@
 
 namespace OpenGeoLab::Mesh {
 
+/** @brief A single FEM mesh element (line, triangle, quad, tetra, hexa, prism, pyramid). */
 class MeshElement {
 public:
     explicit MeshElement(MeshElementType type);
@@ -15,6 +21,9 @@ public:
     MeshElementId elementId() const { return m_id; }
     MeshElementUID elementUID() const { return m_uid; }
     MeshElementType elementType() const { return m_type; }
+
+    uint64_t partUid() const noexcept { return m_partUid; }
+    void setPartUid(uint64_t uid) noexcept { m_partUid = uid; }
 
     // -----------------------------
     // Node access
@@ -52,6 +61,8 @@ private:
             return 8;
         case MeshElementType::Prism6:
             return 6;
+        case MeshElementType::Pyramid5:
+            return 5;
         default:
             return 0;
         }
@@ -61,6 +72,7 @@ private:
     MeshElementId m_id{INVALID_MESH_ELEMENT_ID};
     MeshElementUID m_uid{INVALID_MESH_ELEMENT_UID};
     MeshElementType m_type{MeshElementType::None};
+    uint64_t m_partUid{0}; ///< Parent geometry Part UID (0 = unassigned)
 
     std::array<MeshNodeId, 8> m_nodeIds{};
 };

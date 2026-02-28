@@ -125,7 +125,6 @@ void RenderSceneController::updateMeshRenderData() {
     const bool ret = document->getRenderData(m_renderData);
     if(!ret) {
         LOG_ERROR("RenderSceneController: Failed to get mesh render data");
-        m_renderData.m_mesh.clear();
     }
 }
 
