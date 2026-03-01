@@ -1,4 +1,11 @@
+/**
+ * @file render_scene_controller.cpp
+ * @brief RenderSceneController — singleton that bridges document data
+ *        (geometry/mesh) with the render pipeline, camera state, and
+ *        per-part visibility.
+ */
 #include "render/render_scene_controller.hpp"
+#include "geometry/geometry_document.hpp"
 #include "mesh/mesh_document.hpp"
 #include "util/logger.hpp"
 
@@ -15,19 +22,25 @@ QMatrix4x4 CameraState::viewMatrix() const {
 
 QMatrix4x4 CameraState::projectionMatrix(float aspect_ratio) const {
     QMatrix4x4 projection;
-    projection.perspective(m_fov, aspect_ratio, m_nearPlane, m_farPlane);
+    const float distance = (m_position - m_target).length();
+
+    // Orthographic: visible half-height is proportional to camera distance
+    const float half_height = distance * 0.5f;
+    const float half_width = half_height * aspect_ratio;
+    projection.ortho(-half_width, half_width, -half_height, half_height, m_nearPlane, m_farPlane);
     return projection;
 }
 
 void CameraState::updateClipping(float distance) {
-    // Keep near plane proportional to distance, but allow very small values for tiny models.
-    // This avoids the "clipping/sinking" feeling when zooming close to small geometry.
+    // Orthographic projection: use a symmetric depth range centered at the
+    // camera so geometry that extends behind the camera (e.g. when zoomed in
+    // very close to the model) is not clipped. Linear depth distribution in
+    // orthographic projection preserves depth buffer precision even with a
+    // wide range.
     const float d = std::max(distance, 1e-4f);
-    m_nearPlane = std::max(1e-4f, d * 0.001f);
-
-    // Ensure far plane is sufficiently larger than distance to avoid cutting geometry,
-    // and keep a reasonable ratio to preserve depth precision.
-    m_farPlane = std::max(d * 20.0f, m_nearPlane * 1000.0f);
+    const float half_range = d * 10.0f;
+    m_nearPlane = -half_range;
+    m_farPlane = half_range;
 }
 
 void CameraState::reset() {
@@ -104,7 +117,16 @@ void RenderSceneController::updateGeometryRenderData() {
     auto ret = document->getRenderData(m_renderData, default_options);
     if(!ret) {
         LOG_ERROR("RenderSceneController: Failed to get geometry render data");
-        m_renderData.clear();
+    }
+    // Apply per-part visibility from controller state
+    std::lock_guard lock(m_visibilityMutex);
+    for(auto& root : m_renderData.m_roots) {
+        if(root.m_key.m_type == RenderEntityType::Part) {
+            auto it = m_partVisibility.find(root.m_key.m_uid);
+            if(it != m_partVisibility.end()) {
+                root.m_visible = it->second.m_geometryVisible;
+            }
+        }
     }
 }
 
@@ -145,6 +167,9 @@ void RenderSceneController::refreshScene(bool notify) {
 }
 
 void RenderSceneController::fitToScene(bool notify) {
+    if(m_renderData.m_sceneBBox.isValid()) {
+        m_cameraState.fitToBoundingBox(m_renderData.m_sceneBBox);
+    }
     if(notify) {
         m_sceneNeedsUpdate.emitSignal(SceneUpdateType::GeometryChanged);
     }
@@ -214,6 +239,58 @@ void RenderSceneController::setBottomView(bool notify) {
     if(notify) {
         m_sceneNeedsUpdate.emitSignal(SceneUpdateType::CameraChanged);
     }
+}
+void RenderSceneController::toggleXRayMode(bool notify) {
+    const bool next = !m_xRayMode.load(std::memory_order_relaxed);
+    m_xRayMode.store(next, std::memory_order_release);
+    LOG_DEBUG("RenderSceneController: X-ray mode {}", next ? "enabled" : "disabled");
+    if(notify) {
+        m_sceneNeedsUpdate.emitSignal(SceneUpdateType::GeometryChanged);
+    }
+}
+bool RenderSceneController::isXRayMode() const noexcept {
+    return m_xRayMode.load(std::memory_order_acquire);
+}
+void RenderSceneController::cycleMeshDisplayMode(bool notify) {
+    constexpr uint8_t wireframe_points =
+        static_cast<uint8_t>(RenderDisplayModeMask::Wireframe | RenderDisplayModeMask::Points);
+    constexpr uint8_t surface_points =
+        static_cast<uint8_t>(RenderDisplayModeMask::Surface | RenderDisplayModeMask::Points);
+    constexpr uint8_t surface_points_wire =
+        static_cast<uint8_t>(RenderDisplayModeMask::Surface | RenderDisplayModeMask::Points |
+                             RenderDisplayModeMask::Wireframe);
+
+    const uint8_t current = m_meshDisplayMode.load(std::memory_order_relaxed);
+    uint8_t next = wireframe_points;
+    if(current == wireframe_points) {
+        next = surface_points;
+    } else if(current == surface_points) {
+        next = surface_points_wire;
+    } else {
+        next = wireframe_points;
+    }
+    m_meshDisplayMode.store(next, std::memory_order_release);
+
+    LOG_DEBUG("RenderSceneController: Mesh display mode → {}",
+              next == wireframe_points ? "wireframe+points"
+              : next == surface_points ? "surface+points"
+                                       : "surface+points+wireframe");
+
+    if(notify) {
+        m_sceneNeedsUpdate.emitSignal(SceneUpdateType::MeshChanged);
+    }
+}
+RenderDisplayModeMask RenderSceneController::meshDisplayMode() const noexcept {
+    return static_cast<RenderDisplayModeMask>(m_meshDisplayMode.load(std::memory_order_acquire));
+}
+// =============================================================================
+// Render data access
+// =============================================================================
+
+const RenderData& RenderSceneController::renderData() const { return m_renderData; }
+
+Geometry::GeometryDocumentPtr RenderSceneController::currentGeometryDocument() const {
+    return GeoDocumentInstance;
 }
 // =============================================================================
 // Per-part visibility

@@ -335,8 +335,8 @@ bool MeshRenderBuilder::build(Render::RenderData& render_data, const MeshRenderI
     appendNodePoints(ctx);
     appendMeshRootNode(ctx);
 
-    mesh_pass.m_dirty = true;
-    render_data.m_meshDirty = true;
+    mesh_pass.markDataUpdated();
+    render_data.markMeshUpdated();
 
     LOG_DEBUG("MeshRenderBuilder::build: surface={}, wireframe={}, nodes={}, elements={}",
               ctx.m_surfaceVertexCount, ctx.m_wireframeVertexCount, ctx.m_nodeVertexCount,

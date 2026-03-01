@@ -108,7 +108,7 @@ bool GeometryRenderBuilder::build(Render::RenderData& render_data,
         render_data.m_sceneBBox.expand(part->boundingBox());
         render_data.m_roots.push_back(std::move(part_node));
     }
-    render_data.m_geometryDirty = true;
+    render_data.markGeometryUpdated();
 
     LOG_DEBUG("GeometryRenderBuilder::build: {} roots, geom vertices={}, indices={}",
               render_data.m_roots.size(),
@@ -318,7 +318,7 @@ GeometryRenderBuilder::generateFaceMesh(Render::RenderData& render_data,
     result.m_indexCount = static_cast<uint32_t>(nb_triangles) * 3;
     result.m_topology = Render::PrimitiveTopology::Triangles;
 
-    pass_data.m_dirty = true;
+    pass_data.markDataUpdated();
     return result;
 }
 
@@ -421,7 +421,7 @@ GeometryRenderBuilder::generateEdgeMesh(Render::RenderData& render_data,
     result.m_indexCount = (vertex_count - 1) * 2;
     result.m_topology = Render::PrimitiveTopology::Lines;
 
-    pass_data.m_dirty = true;
+    pass_data.markDataUpdated();
     return result;
 }
 
@@ -460,7 +460,7 @@ GeometryRenderBuilder::generateVertexMesh(Render::RenderData& render_data,
     result.m_indexCount = 0;
     result.m_topology = Render::PrimitiveTopology::Points;
 
-    pass_data.m_dirty = true;
+    pass_data.markDataUpdated();
     return result;
 }
 } // namespace OpenGeoLab::Geometry

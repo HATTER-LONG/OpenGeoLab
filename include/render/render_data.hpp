@@ -200,11 +200,31 @@ struct RenderNode {
  *
  * All geometry (or mesh) primitives of the same pass are packed into a
  * single contiguous buffer to minimize GPU state changes and draw calls.
+ *
+ * Uses a version-based tracking system: data is re-uploaded to GPU only when
+ * m_version differs from GpuBuffer's recorded upload version. This is more explicit
+ * and efficient than boolean dirty flags.
  */
 struct RenderPassData {
     std::vector<RenderVertex> m_vertices; ///< Flat vertex buffer
     std::vector<uint32_t> m_indices;      ///< Flat index buffer
-    bool m_dirty{true};                   ///< True when buffers need GPU re-upload
+    uint64_t m_version{0}; ///< Current data version number (incremented when data changes)
+
+    /**
+     * @brief Check if data needs to be uploaded to GPU.
+     * Should call GpuBuffer::needsUpload(data) instead of this method.
+     * @param uploaded_version Last version known to have been uploaded
+     * @return true if m_version differs from uploaded_version
+     */
+    [[nodiscard]] bool needsUpload(uint64_t uploaded_version) const {
+        return uploaded_version != m_version;
+    }
+
+    /**
+     * @brief Mark data as updated (increment version).
+     * Call this after modifying vertices or indices.
+     */
+    void markDataUpdated() { ++m_version; }
 };
 
 // =============================================================================
@@ -276,8 +296,11 @@ struct RenderData {
     Geometry::BoundingBox3D m_sceneBBox;
 
     /// Dirty flags per domain
-    bool m_geometryDirty{true};
-    bool m_meshDirty{true};
+    uint64_t m_geometryVersion{0};
+    uint64_t m_meshVersion{0};
+
+    void markGeometryUpdated() { ++m_geometryVersion; }
+    void markMeshUpdated() { ++m_meshVersion; }
 
     /**
      * @brief Clear all render data (geometry + mesh)
@@ -287,8 +310,8 @@ struct RenderData {
         m_passData.clear();
         m_pickData.clear();
         m_sceneBBox = {};
-        m_geometryDirty = true;
-        m_meshDirty = true;
+        markGeometryUpdated();
+        markMeshUpdated();
     }
 
     /**
@@ -301,7 +324,7 @@ struct RenderData {
         // Clear geometry pass buffer
         m_passData.erase(RenderPassType::Geometry);
         m_pickData.clearGeometry();
-        m_geometryDirty = true;
+        markGeometryUpdated();
     }
 
     /**
@@ -311,7 +334,7 @@ struct RenderData {
         std::erase_if(m_roots, [](const RenderNode& n) { return isMeshDomain(n.m_key.m_type); });
         m_passData.erase(RenderPassType::Mesh);
         m_pickData.clearMesh();
-        m_meshDirty = true;
+        markMeshUpdated();
     }
 };
 

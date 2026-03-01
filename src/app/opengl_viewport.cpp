@@ -1,3 +1,12 @@
+/**
+ * @file opengl_viewport.cpp
+ * @brief GLViewport input handling and GUI-thread scene update dispatch.
+ *
+ * Scene-update and selection-change signals are received via
+ * Qt::QueuedConnection to safely cross from background threads
+ * into the GUI thread.
+ */
+
 #include "app/opengl_viewport.hpp"
 #include "opengl_viewport_render.hpp"
 #include "render/render_scene_controller.hpp"
@@ -60,7 +69,7 @@ void GLViewport::onSceneNeedsUpdate(Render::SceneUpdateType type) {
 }
 
 QQuickFramebufferObject::Renderer* GLViewport::createRenderer() const {
-    return new GLViewportRender(this);
+    return new GLViewportRender();
 }
 
 void GLViewport::keyPressEvent(QKeyEvent* event) {
@@ -176,11 +185,14 @@ void GLViewport::wheelEvent(QWheelEvent* event) {
 
 void GLViewport::hoverMoveEvent(QHoverEvent* event) {
     if(Render::RenderSelectManager::instance().isPickEnabled()) {
-        m_cursorPos = event->position();
-        if(window()) {
-            m_devicePixelRatio = window()->devicePixelRatio();
+        const auto new_pos = event->position();
+        if((new_pos - m_cursorPos).manhattanLength() > 2) {
+            m_cursorPos = new_pos;
+            if(window()) {
+                m_devicePixelRatio = window()->devicePixelRatio();
+            }
+            update();
         }
-        update();
     }
     event->accept();
 }
