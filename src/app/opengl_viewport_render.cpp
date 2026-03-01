@@ -38,6 +38,13 @@ GLViewportRender::~GLViewportRender() {
     m_renderScene->cleanup();
     LOG_TRACE("GLViewportRenderer destroyed");
 }
+
+QOpenGLFramebufferObject* GLViewportRender::createFramebufferObject(const QSize& size) {
+    QOpenGLFramebufferObjectFormat format;
+    format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
+    format.setInternalTextureFormat(GL_RGBA8);
+    return new QOpenGLFramebufferObject(size, format);
+}
 // =============================================================================
 // Synchronize — transfer state from GUI thread (GLViewport) to render thread
 // =============================================================================

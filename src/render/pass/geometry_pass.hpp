@@ -58,5 +58,7 @@ private:
     std::vector<DrawRangeEx> m_triangleRanges; ///< Per-entity triangle draw ranges
     std::vector<DrawRangeEx> m_lineRanges;     ///< Per-entity line draw ranges
     std::vector<DrawRangeEx> m_pointRanges;    ///< Per-entity point draw ranges
+
+    uint64_t m_uploadedVertexVersion{0}; ///< Last RenderPassData vertex version uploaded to GPU
 };
 } // namespace OpenGeoLab::Render

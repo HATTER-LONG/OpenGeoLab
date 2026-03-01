@@ -163,7 +163,6 @@ struct DrawRangeEx {
     DrawRange m_range;
     RenderNodeKey m_entityKey; ///< Entity identity (type + uid)
     uint64_t m_partUid{0};     ///< Parent part uid for reverse lookup
-    uint64_t m_wireUid{0};     ///< Parent wire uid for edge-to-wire lookup
 };
 
 // =============================================================================

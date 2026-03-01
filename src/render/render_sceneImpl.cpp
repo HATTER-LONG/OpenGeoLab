@@ -1,4 +1,5 @@
 #include "render_sceneImpl.hpp"
+#include "util/color_map.hpp"
 #include "util/logger.hpp"
 
 namespace OpenGeoLab::Render {
@@ -12,6 +13,7 @@ void RenderSceneImpl::initialize() {
     }
 
     // TODO(layton) - Initialize rendering resources here (e.g., shaders, buffers, etc.)
+    m_geometryPass.initialize();
 
     m_initialized = true;
 
@@ -45,6 +47,7 @@ void RenderSceneImpl::synchronize(const SceneFrameState& state) {
 
     // TODO(layton) - Update rendering resources based on the new frame state (e.g., update buffers,
     // textures, etc.)
+    m_geometryPass.updateBuffers(render_data);
 
     // Rebuild pick resolver when geometry changes
     if(render_data.m_geometryVersion != m_geometryDataVersion) {
@@ -56,7 +59,27 @@ void RenderSceneImpl::synchronize(const SceneFrameState& state) {
     }
 }
 
-void RenderSceneImpl::render() { LOG_DEBUG("RenderSceneImpl: Rendering frame"); }
+void RenderSceneImpl::render() {
+    if(!m_initialized) {
+        return;
+    }
+
+    auto* f = QOpenGLContext::currentContext()->functions();
+
+    f->glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    f->glDepthMask(GL_TRUE);
+    f->glDisable(GL_BLEND);
+    f->glDisable(GL_CULL_FACE);
+    f->glEnable(GL_DEPTH_TEST);
+    f->glDepthFunc(GL_LESS);
+
+    const auto& bg = Util::ColorMap::instance().getBackgroundColor();
+    f->glClearColor(bg.m_r, bg.m_g, bg.m_b, 1.0f);
+    f->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    m_geometryPass.render(m_frameState.m_viewMatrix, m_frameState.m_projMatrix,
+                          m_frameState.m_cameraPos, m_frameState.m_xRayMode);
+}
 
 void RenderSceneImpl::processHover(int pixel_x, int pixel_y) {
     LOG_DEBUG("RenderSceneImpl: Processing hover at pixel position ({}, {})", pixel_x, pixel_y);

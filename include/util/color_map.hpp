@@ -72,14 +72,14 @@ public:
 struct RenderStyle {
     /// @name Edge line widths
     /// @{
-    static constexpr float EDGE_LINE_WIDTH = 1.0f;
-    static constexpr float EDGE_LINE_WIDTH_HOVER = 2.0f;
-    static constexpr float EDGE_LINE_WIDTH_SELECTED = 1.5f;
+    static constexpr float EDGE_LINE_WIDTH = 1.5f;
+    static constexpr float EDGE_LINE_WIDTH_HOVER = 2.5f;
+    static constexpr float EDGE_LINE_WIDTH_SELECTED = 2.0f;
     /// @}
 
     /// @name Vertex point sizes
     /// @{
-    static constexpr float VERTEX_POINT_SIZE = 5.0f;
+    static constexpr float VERTEX_POINT_SIZE = 8.0f;
     static constexpr float VERTEX_SCALE_HOVER = 2.0f;
     static constexpr float VERTEX_SCALE_SELECTED = 1.5f;
     /// @}

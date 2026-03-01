@@ -9,7 +9,7 @@
 #include "render/render_scene.hpp"
 
 // #include "render/pick_resolver.hpp"
-// #include "render/pass/geometry_pass.hpp"
+#include "pass/geometry_pass.hpp"
 // #include "render/pass/mesh_pass.hpp"
 // #include "render/pass/pick_pass.hpp"
 
@@ -55,7 +55,7 @@ public:
     void processHover(int pixel_x, int pixel_y) override;
 
 private:
-    // GeometryPass m_geometryPass;
+    GeometryPass m_geometryPass;
     // MeshPass m_meshPass;
     // PickPass m_pickPass;
 

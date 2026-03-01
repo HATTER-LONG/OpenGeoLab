@@ -22,6 +22,11 @@ public:
     ~GLViewportRender() override;
 
     /**
+     * @brief Create viewport FBO with depth-stencil attachment for correct depth testing.
+     */
+    QOpenGLFramebufferObject* createFramebufferObject(const QSize& size) override;
+
+    /**
      * @brief Copy GUI-thread state (camera, pick input, hover position) into
      *        render-thread locals. Called by Qt before each render().
      */
