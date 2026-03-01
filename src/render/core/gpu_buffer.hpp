@@ -16,11 +16,18 @@ struct RenderPassData; // forward declaration
  * @brief Manages a VAO + VBO + IBO triplet for uploading and drawing
  *        RenderPassData on the GPU.
  *
- * Vertex layout matches RenderVertex (48 bytes per vertex):
+ * Vertex layout matches RenderVertex (48 bytes per vertex, packed):
  *   location 0  — position  (vec3,  offset  0)
  *   location 1  — normal    (vec3,  offset 12)
  *   location 2  — color     (vec4,  offset 24)
  *   location 3  — pickId    (uvec2, offset 40)
+ *
+ * pickId (uint64_t on CPU) is split into two GL_UNSIGNED_INT components
+ * on the GPU. The encoding is: [56-bit UID | 8-bit type], treated as
+ * little-endian uint64_t.
+ *
+ * Thread-safety: GpuBuffer requires GL context and is NOT thread-safe.
+ * All operations must occur on the GL rendering thread.
  */
 class GpuBuffer {
 public:
@@ -39,10 +46,14 @@ public:
     /**
      * @brief Upload vertex and index data from a RenderPassData snapshot.
      *
-     * Binds the VAO, uploads buffer data via glBufferData, and configures
-     * vertex attribute pointers.
+     * Binds the VAO, uploads buffer data via glBufferData, configures
+     * vertex attribute pointers, and performs GL error checking.
+     * Tracks the uploaded version number internally for efficient re-upload detection.
+     *
+     * @param data RenderPassData to upload (const - version tracking done internally)
+     * @return true on successful upload, false if GL error occurred
      */
-    void upload(const RenderPassData& data);
+    [[nodiscard]] bool upload(const RenderPassData& data);
 
     /** @brief Bind the VAO for drawing */
     void bindForDraw();
@@ -62,6 +73,8 @@ private:
     GLuint m_ibo{0};
     uint32_t m_vertexCount{0};
     uint32_t m_indexCount{0};
+    uint32_t m_uploadedDataVersion{
+        0}; ///< Tracks the last uploaded data version for re-upload detection
     bool m_initialized{false};
 };
 

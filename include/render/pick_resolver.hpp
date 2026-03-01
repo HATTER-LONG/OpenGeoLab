@@ -9,7 +9,6 @@
 #include "render/render_types.hpp"
 
 #include <cstdint>
-#include <unordered_map>
 #include <vector>
 
 namespace OpenGeoLab::Render {
@@ -36,24 +35,21 @@ struct ResolvedPickResult {
  *   Vertex > MeshNode > Edge > MeshLine > Face > Shell > Wire > Solid > Part > ...
  *
  * This class has no OpenGL dependency and can be independently tested.
+ * It references PickResolutionData directly (no copies) for efficient
+ * hierarchy lookups. The PickResolutionData must outlive the PickResolver
+ * while the pointer is set.
  */
 class PickResolver {
 public:
     /**
-     * @brief Rebuild entity lookup tables from geometry DrawRangeEx lists
-     *        and pick resolution data.
+     * @brief Set reference to pick resolution data (no copy).
      *
-     * Call when geometry data changes (m_geometryDirty).
+     * Call when geometry data changes. The PickResolutionData must outlive
+     * this PickResolver while the pointer is active.
      *
-     * @param triangles Geometry pass triangle draw ranges.
-     * @param lines     Geometry pass line draw ranges.
-     * @param points    Geometry pass point draw ranges.
      * @param pickData  Pick-specific lookup tables from RenderData.
      */
-    void rebuild(const std::vector<DrawRangeEx>& triangles,
-                 const std::vector<DrawRangeEx>& lines,
-                 const std::vector<DrawRangeEx>& points,
-                 const PickResolutionData& pickData);
+    void setPickData(const PickResolutionData& pickData);
 
     /**
      * @brief Resolve raw pick IDs to the highest-priority entity with hierarchy context.
@@ -74,21 +70,15 @@ public:
      */
     [[nodiscard]] const std::vector<uint64_t>& wireEdges(uint64_t wireUid) const;
 
-    /** @brief Clear all lookup tables. */
+    /** @brief Clear the pick data reference. */
     void clear();
 
 private:
     [[nodiscard]] uint64_t resolvePartUid(uint64_t uid, RenderEntityType type) const;
     [[nodiscard]] uint64_t resolveWireUid(uint64_t edgeUid, uint64_t faceUid) const;
 
-    /// Entity uid → parent part uid (built from DrawRangeEx data)
-    std::unordered_map<uint64_t, uint64_t> m_entityToPartUid;
-    /// Edge uid → parent wire uid(s) (shared edges map to multiple wires)
-    std::unordered_map<uint64_t, std::vector<uint64_t>> m_edgeToWireUids;
-    /// Wire uid → edge uids reverse lookup for complete wire highlighting
-    std::unordered_map<uint64_t, std::vector<uint64_t>> m_wireToEdgeUids;
-    /// Wire uid → parent face uid (each wire belongs to one face)
-    std::unordered_map<uint64_t, uint64_t> m_wireToFaceUid;
+    /// Pointer to authoritative pick resolution data (owned by RenderData)
+    const PickResolutionData* m_pickData{nullptr};
 };
 
 } // namespace OpenGeoLab::Render

@@ -36,32 +36,10 @@ int typePriority(RenderEntityType type) {
 } // anonymous namespace
 
 // =============================================================================
-// Rebuild lookup tables
+// Set pick data reference
 // =============================================================================
 
-void PickResolver::rebuild(const std::vector<DrawRangeEx>& triangles,
-                           const std::vector<DrawRangeEx>& lines,
-                           const std::vector<DrawRangeEx>& points,
-                           const PickResolutionData& pickData) {
-    m_entityToPartUid.clear();
-
-    auto addRanges = [this](const std::vector<DrawRangeEx>& ranges) {
-        for(const auto& rangeEx : ranges) {
-            if(rangeEx.m_partUid != 0 && rangeEx.m_entityKey.m_type != RenderEntityType::Part) {
-                m_entityToPartUid[rangeEx.m_entityKey.m_uid] = rangeEx.m_partUid;
-            }
-        }
-    };
-
-    addRanges(triangles);
-    addRanges(lines);
-    addRanges(points);
-
-    // Copy authoritative mappings from PickResolutionData
-    m_edgeToWireUids = pickData.m_edgeToWireUids;
-    m_wireToEdgeUids = pickData.m_wireToEdgeUids;
-    m_wireToFaceUid = pickData.m_wireToFaceUid;
-}
+void PickResolver::setPickData(const PickResolutionData& pickData) { m_pickData = &pickData; }
 
 // =============================================================================
 // Priority-based entity resolution
@@ -110,16 +88,14 @@ ResolvedPickResult PickResolver::resolve(const std::vector<uint64_t>& pickIds) c
 
 const std::vector<uint64_t>& PickResolver::wireEdges(uint64_t wireUid) const {
     static const std::vector<uint64_t> empty;
-    auto it = m_wireToEdgeUids.find(wireUid);
-    return it != m_wireToEdgeUids.end() ? it->second : empty;
+    if(!m_pickData) {
+        return empty;
+    }
+    auto it = m_pickData->m_wireToEdgeUids.find(wireUid);
+    return it != m_pickData->m_wireToEdgeUids.end() ? it->second : empty;
 }
 
-void PickResolver::clear() {
-    m_entityToPartUid.clear();
-    m_edgeToWireUids.clear();
-    m_wireToEdgeUids.clear();
-    m_wireToFaceUid.clear();
-}
+void PickResolver::clear() { m_pickData = nullptr; }
 
 // =============================================================================
 // Private hierarchy resolution
@@ -129,13 +105,19 @@ uint64_t PickResolver::resolvePartUid(uint64_t uid, RenderEntityType type) const
     if(type == RenderEntityType::Part) {
         return uid;
     }
-    auto it = m_entityToPartUid.find(uid);
-    return it != m_entityToPartUid.end() ? it->second : 0;
+    if(!m_pickData) {
+        return 0;
+    }
+    auto it = m_pickData->m_entityToPartUid.find(uid);
+    return it != m_pickData->m_entityToPartUid.end() ? it->second : 0;
 }
 
 uint64_t PickResolver::resolveWireUid(uint64_t edgeUid, uint64_t faceUid) const {
-    auto it = m_edgeToWireUids.find(edgeUid);
-    if(it == m_edgeToWireUids.end() || it->second.empty()) {
+    if(!m_pickData) {
+        return 0;
+    }
+    auto it = m_pickData->m_edgeToWireUids.find(edgeUid);
+    if(it == m_pickData->m_edgeToWireUids.end() || it->second.empty()) {
         return 0;
     }
 
@@ -147,8 +129,8 @@ uint64_t PickResolver::resolveWireUid(uint64_t edgeUid, uint64_t faceUid) const 
     // Multiple wires share this edge — prefer the wire belonging to the given face
     if(faceUid != 0) {
         for(const auto wire_uid : it->second) {
-            auto fit = m_wireToFaceUid.find(wire_uid);
-            if(fit != m_wireToFaceUid.end() && fit->second == faceUid) {
+            auto fit = m_pickData->m_wireToFaceUid.find(wire_uid);
+            if(fit != m_pickData->m_wireToFaceUid.end() && fit->second == faceUid) {
                 return wire_uid;
             }
         }

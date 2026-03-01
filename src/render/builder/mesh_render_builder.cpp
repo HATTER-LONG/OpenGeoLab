@@ -376,8 +376,7 @@ bool MeshRenderBuilder::build(RenderData& render_data, const MeshRenderInput& in
         render_data.m_roots.push_back(std::move(mesh_root));
     }
 
-    mesh_pass.m_dirty = true;
-    render_data.m_meshDirty = true;
+    mesh_pass.markDataUpdated();
 
     LOG_DEBUG("MeshRenderBuilder::build: surface={}, wireframe={}, nodes={}, elements={}",
               surfaceVertexCount, wireframeVertexCount, nodeVertexCount, input.m_elements.size());
