@@ -2,70 +2,84 @@
  * @file render_sceneImpl.hpp
  * @brief Internal implementation of IRenderScene — owns the render passes
  *        and orchestrates per-frame rendering and GPU picking.
+ *
+ * Pass architecture:
+ *   OpaquePass      — opaque surfaces (geometry + mesh)
+ *   TransparentPass — transparent/X-ray surfaces
+ *   WireframePass   — edges and points
+ *   HighlightPass   — selected/hovered entity overdraw
+ *   SelectionPass   — offscreen FBO picking
+ *   PostProcessPass — future post-processing (stub)
+ *   UIPass          — future UI overlay (stub)
  */
 
 #pragma once
 
+#include "render/core/gpu_buffer.hpp"
 #include "render/pick_resolver.hpp"
 #include "render/render_scene.hpp"
 
-#include "render/pass/geometry_pass.hpp"
-#include "render/pass/mesh_pass.hpp"
-#include "render/pass/pick_pass.hpp"
+#include "render/pass/highlight_pass.hpp"
+#include "render/pass/opaque_pass.hpp"
+#include "render/pass/post_process_pass.hpp"
+#include "render/pass/selection_pass.hpp"
+#include "render/pass/transparent_pass.hpp"
+#include "render/pass/ui_pass.hpp"
+#include "render/pass/wireframe_pass.hpp"
 
 namespace OpenGeoLab::Render {
-/** @brief Concrete IRenderScene that composes GeometryPass, MeshPass, and PickPass. */
+
+/** @brief Concrete IRenderScene with modular render pass architecture. */
 class RenderSceneImpl : public IRenderScene {
 public:
     RenderSceneImpl();
     ~RenderSceneImpl() override;
 
-    /** @brief Initialise geometry, mesh, and pick passes. */
     void initialize() override;
     [[nodiscard]] bool isInitialized() const override;
-    /** @brief Resize the pick FBO to match the viewport.
-     *  @param size New viewport size in device pixels.
-     */
     void setViewportSize(const QSize& size) override;
-
-    /**
-     * @brief Synchronize GUI-thread state into the render scene.
-     *
-     * Caches render data, camera, and display mode. Updates GPU buffers
-     * and pick resolver when data is dirty.
-     */
     void synchronize(const SceneFrameState& state) override;
-
-    /** @brief Process a mouse-click pick action.
-     *  @param input Pick parameters (cursor position, action type).
-     */
     void processPicking(const PickingInput& input) override;
-    /** @brief Execute all render passes for the current frame using cached state. */
     void render() override;
-    /** @brief Release all GPU resources across all passes. */
     void cleanup() override;
-
-    /**
-     * @brief Process hover — render to pick FBO and update hover state.
-     *
-     * Call after main render with current cursor position. Uses region-based
-     * picking with priority selection (Vertex > Edge > Face > Part).
-     * Camera matrices are obtained from the cached SceneFrameState.
-     */
     void processHover(int pixel_x, int pixel_y) override;
 
 private:
-    GeometryPass m_geometryPass;
-    MeshPass m_meshPass;
-    PickPass m_pickPass;
+    // --- GPU Buffers (shared across passes) ---
+    GpuBuffer m_geometryBuffer; ///< Geometry (CAD) vertex/index data
+    GpuBuffer m_meshBuffer;     ///< Mesh (FEM) vertex data
 
-    PickResolver m_pickResolver; ///< GL-free entity hierarchy resolver
+    // --- Render Passes ---
+    OpaquePass m_opaquePass;
+    TransparentPass m_transparentPass;
+    WireframePass m_wireframePass;
+    SelectionPass m_selectionPass;
+    HighlightPass m_highlightPass;
+    PostProcessPass m_postProcessPass;
+    UIPass m_uiPass;
 
-    SceneFrameState m_frameState; ///< Cached per-frame state from GUI thread
+    // --- Pick Resolution ---
+    PickResolver m_pickResolver;
+
+    // --- Cached Frame State ---
+    SceneFrameState m_frameState;
+
+    // --- Pre-built draw ranges (copied from RenderData during synchronize) ---
+    std::vector<DrawRangeEx> m_geometryTriangleRanges;
+    std::vector<DrawRangeEx> m_geometryLineRanges;
+    std::vector<DrawRangeEx> m_geometryPointRanges;
+
+    // --- Mesh topology counts ---
+    uint32_t m_meshSurfaceCount{0};
+    uint32_t m_meshWireframeCount{0};
+    uint32_t m_meshNodeCount{0};
+
+    // --- Display state ---
+    RenderDisplayModeMask m_meshDisplayMode{RenderDisplayModeMask::None};
 
     QSize m_viewportSize;
     bool m_initialized{false};
-    bool m_pickPassInitialized{false};
+    bool m_selectionPassInitialized{false};
 };
 
 // =============================================================================

@@ -121,7 +121,7 @@ void RenderSceneController::updateGeometryRenderData() {
     }
 
     // Apply per-part visibility from controller state
-    for(auto& root : m_renderData.m_roots) {
+    for(auto& root : m_renderData.m_geometryRoots) {
         if(root.m_key.m_type == RenderEntityType::Part) {
             std::lock_guard lock(m_visibilityMutex);
             auto it = m_partVisibility.find(root.m_key.m_uid);
@@ -150,7 +150,7 @@ void RenderSceneController::updateMeshRenderData() {
     // Derive mesh surface color from the first Part's color but darker,
     // so mesh surfaces are visually distinguishable from geometry faces.
     RenderColor meshSurfaceColor{0.55f, 0.65f, 0.75f, 1.0f};
-    for(const auto& root : m_renderData.m_roots) {
+    for(const auto& root : m_renderData.m_geometryRoots) {
         if(root.m_key.m_type == RenderEntityType::Part) {
             const auto& c = root.m_color;
             // Pure multiplicative darkening — always produces a color darker

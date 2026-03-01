@@ -3,13 +3,10 @@
 
 # 软件架构
 - include 头文件包括对外接口，不同 src 下的目录为不同模块，只能通过 include 暴露的接口进行调用
-- 你作为一个 C++ CAE 软件相关的专家，负责整个软件的架构设计和核心功能实现，确保软件的高性能和稳定性。
-  - 功能要尽量模块化不要都堆在一起，后续维护和扩展都要基于模块化的设计来进行。
 
 # 计划任务
-
-1. 默认模型显示还是半透明状态，请修改为不透明的，只有当 xray 开启才是透视显示；
-2. mesh element 拾取高亮不对，鼠标 hover 没有效果 选中也没有，geometry face 拾取有的面也不对没有 hover 与选中效果，wire 拾取模式会 hover 高亮 face 也不对，请重新梳理所有拾取代码。
-3. 检查工程中所有的 qml cpp hpp 代码，完善或补充注释信息，当前注释不符合要求的也要进行修改。所有注释信息参考  doxygen_comment_style.md 文件中的要求进行编写。
-4. 注意更新 README.md 以及 docs/json_protocols.md 文件中的内容，确保与代码实现保持一致，以中文版本为准更新英文版本。
-5. 保证最终代码可以编译通过，并正确执行。
+1. 优化 GeometryRenderBuilder::build 方法，调整 render_data 结构，直接在 build 阶段生成按 topology 分类的 DrawRangeEx，避免每次渲染都要调用 collectDrawRangesEx 来重新计算一次 topology 的 draw range。
+2. 为 render select 增加计数，记录每个 entity type 的 uid 列表，在渲染时，先一次draw call 普通的 render data，再一次 draw call render select data over pass 高亮目标，也就是使用 hight pass。
+3. 优化拾取逻辑， m_pickResolver.rebuild 等没有必要 与 render data 里的 m_pickData 重复，尽量在 build 阶段就构建好拾取数据，减少每次拾取时的计算开销。select pass 首先只渲染当前拾取类型的对象，其次读取 pixel 后 直接分析出最佳拾取结果，避免每次拾取都要分析所有拾取数据。
+4. 将渲染模块分为 OpaquePass TransparentPass  WireframePass selectionPass（替换当前的 pick pass） HighlightPass PostProcessPass UIPass模块，分别处理不透明物体、透明物体、线框、选择高亮、后处理和 UI 渲染，优化渲染流程和性能。
+5. 使得修改后的代码通过编译，并更新 docs 下的相关文档。

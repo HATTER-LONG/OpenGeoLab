@@ -8,6 +8,9 @@
 #include "geometry/geometry_types.hpp"
 #include "render/render_types.hpp"
 
+#include <QMatrix4x4>
+#include <QVector3D>
+
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
@@ -200,8 +203,8 @@ struct RenderNode {
     bool m_visible{true};           ///< Visibility flag
     Geometry::BoundingBox3D m_bbox; ///< Axis-aligned bounding box
 
-    /// DrawRanges per pass (e.g., a Face node has Triangles in Geometry pass)
-    std::unordered_map<RenderPassType, std::vector<DrawRange>> m_drawRanges;
+    /// DrawRanges owned by this node (pass is implicit from domain root)
+    std::vector<DrawRange> m_drawRanges;
 
     /// Child nodes (Part -> Solid -> Face/Edge/Vertex hierarchy)
     std::vector<RenderNode> m_children;
@@ -216,11 +219,31 @@ struct RenderNode {
  *
  * All geometry (or mesh) primitives of the same pass are packed into a
  * single contiguous buffer to minimize GPU state changes and draw calls.
+ *
+ * Uses a version-based tracking system: data is re-uploaded to GPU only when
+ * m_version differs from GpuBuffer's recorded upload version. This is more explicit
+ * and efficient than boolean dirty flags.
  */
 struct RenderPassData {
     std::vector<RenderVertex> m_vertices; ///< Flat vertex buffer
     std::vector<uint32_t> m_indices;      ///< Flat index buffer
-    bool m_dirty{true};                   ///< True when buffers need GPU re-upload
+    uint32_t m_version{0}; ///< Current data version number (incremented when data changes)
+
+    /**
+     * @brief Check if data needs to be uploaded to GPU.
+     * Should call GpuBuffer::needsUpload(data) instead of this method.
+     * @param uploadedVersion Last version known to have been uploaded
+     * @return true if m_version differs from uploadedVersion
+     */
+    [[nodiscard]] bool needsUpload(uint32_t uploadedVersion) const {
+        return uploadedVersion != m_version;
+    }
+
+    /**
+     * @brief Mark data as updated (increment version).
+     * Call this after modifying vertices or indices.
+     */
+    void markDataUpdated() { ++m_version; }
 };
 
 // =============================================================================
@@ -247,6 +270,9 @@ struct PickResolutionData {
     /// Wire uid → parent face uid lookup (each wire belongs to exactly one face)
     std::unordered_map<uint64_t, uint64_t> m_wireToFaceUid;
 
+    /// Entity uid → parent part uid (built from DrawRangeEx data during build phase)
+    std::unordered_map<uint64_t, uint64_t> m_entityToPartUid;
+
     /// Mesh line sequential ID → (nodeA, nodeB) lookup.
     /// Built by MeshRenderBuilder; used to resolve mesh line picks back to node pairs.
     std::unordered_map<uint64_t, std::pair<Mesh::MeshNodeId, Mesh::MeshNodeId>> m_meshLineNodes;
@@ -255,6 +281,7 @@ struct PickResolutionData {
         m_edgeToWireUids.clear();
         m_wireToEdgeUids.clear();
         m_wireToFaceUid.clear();
+        m_entityToPartUid.clear();
         m_meshLineNodes.clear();
     }
 
@@ -262,6 +289,7 @@ struct PickResolutionData {
         m_edgeToWireUids.clear();
         m_wireToEdgeUids.clear();
         m_wireToFaceUid.clear();
+        m_entityToPartUid.clear();
     }
 
     void clearMesh() { m_meshLineNodes.clear(); }
@@ -279,8 +307,11 @@ struct PickResolutionData {
  * tables (m_pickData) are separated for clarity.
  */
 struct RenderData {
-    /// Semantic tree roots (one per top-level Part or mesh group)
-    std::vector<RenderNode> m_roots;
+    /// Geometry-domain semantic roots (typically top-level Part nodes)
+    std::vector<RenderNode> m_geometryRoots;
+
+    /// Mesh-domain semantic roots (typically one mesh root/group)
+    std::vector<RenderNode> m_meshRoots;
 
     /// Per-pass flat GPU buffer data
     std::unordered_map<RenderPassType, RenderPassData> m_passData;
@@ -288,46 +319,59 @@ struct RenderData {
     /// Pick-specific lookup tables for entity hierarchy resolution
     PickResolutionData m_pickData;
 
+    /// Pre-built geometry DrawRangeEx by topology (generated during build phase)
+    std::vector<DrawRangeEx> m_geometryTriangleRanges;
+    std::vector<DrawRangeEx> m_geometryLineRanges;
+    std::vector<DrawRangeEx> m_geometryPointRanges;
+
+    /// Pre-built mesh DrawRangeEx by topology (generated during build phase)
+    std::vector<DrawRangeEx> m_meshTriangleRanges;
+    std::vector<DrawRangeEx> m_meshLineRanges;
+    std::vector<DrawRangeEx> m_meshPointRanges;
+
     /// Scene-wide bounding box (union of all visible geometry)
     Geometry::BoundingBox3D m_sceneBBox;
-
-    /// Dirty flags per domain
-    bool m_geometryDirty{true};
-    bool m_meshDirty{true};
 
     /**
      * @brief Clear all render data (geometry + mesh)
      */
     void clear() {
-        m_roots.clear();
+        m_geometryRoots.clear();
+        m_meshRoots.clear();
         m_passData.clear();
         m_pickData.clear();
+        m_geometryTriangleRanges.clear();
+        m_geometryLineRanges.clear();
+        m_geometryPointRanges.clear();
+        m_meshTriangleRanges.clear();
+        m_meshLineRanges.clear();
+        m_meshPointRanges.clear();
         m_sceneBBox = {};
-        m_geometryDirty = true;
-        m_meshDirty = true;
     }
 
     /**
      * @brief Clear geometry-domain data only, preserving mesh data
      */
     void clearGeometry() {
-        // Remove geometry roots (RenderEntityType in geometry domain)
-        std::erase_if(m_roots,
-                      [](const RenderNode& n) { return isGeometryDomain(n.m_key.m_type); });
+        m_geometryRoots.clear();
         // Clear geometry pass buffer
         m_passData.erase(RenderPassType::Geometry);
         m_pickData.clearGeometry();
-        m_geometryDirty = true;
+        m_geometryTriangleRanges.clear();
+        m_geometryLineRanges.clear();
+        m_geometryPointRanges.clear();
     }
 
     /**
      * @brief Clear mesh-domain data only, preserving geometry data
      */
     void clearMesh() {
-        std::erase_if(m_roots, [](const RenderNode& n) { return isMeshDomain(n.m_key.m_type); });
+        m_meshRoots.clear();
         m_passData.erase(RenderPassType::Mesh);
         m_pickData.clearMesh();
-        m_meshDirty = true;
+        m_meshTriangleRanges.clear();
+        m_meshLineRanges.clear();
+        m_meshPointRanges.clear();
     }
 };
 
@@ -354,6 +398,20 @@ struct TessellationOptions {
     [[nodiscard]] static TessellationOptions fastPreview() {
         return TessellationOptions{0.1, 0.5, false};
     }
+};
+
+// =============================================================================
+// PassRenderParams — Shared rendering state passed to all render passes
+// =============================================================================
+
+/**
+ * @brief Common rendering parameters shared by all render passes.
+ */
+struct PassRenderParams {
+    QMatrix4x4 viewMatrix;
+    QMatrix4x4 projMatrix;
+    QVector3D cameraPos;
+    bool xRayMode{false};
 };
 
 } // namespace OpenGeoLab::Render

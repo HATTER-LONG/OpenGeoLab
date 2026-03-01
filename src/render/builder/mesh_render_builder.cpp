@@ -345,7 +345,12 @@ bool MeshRenderBuilder::build(RenderData& render_data, const MeshRenderInput& in
             surface_range.m_vertexOffset = 0;
             surface_range.m_vertexCount = surfaceVertexCount;
             surface_range.m_topology = PrimitiveTopology::Triangles;
-            mesh_root.m_drawRanges[RenderPassType::Mesh].push_back(surface_range);
+            mesh_root.m_drawRanges.push_back(surface_range);
+
+            DrawRangeEx surface_range_ex;
+            surface_range_ex.m_range = surface_range;
+            surface_range_ex.m_entityKey = {RenderEntityType::MeshTriangle, 0};
+            render_data.m_meshTriangleRanges.push_back(surface_range_ex);
         }
 
         // Wireframe draw range
@@ -354,7 +359,12 @@ bool MeshRenderBuilder::build(RenderData& render_data, const MeshRenderInput& in
             wire_range.m_vertexOffset = surfaceVertexCount;
             wire_range.m_vertexCount = wireframeVertexCount;
             wire_range.m_topology = PrimitiveTopology::Lines;
-            mesh_root.m_drawRanges[RenderPassType::Mesh].push_back(wire_range);
+            mesh_root.m_drawRanges.push_back(wire_range);
+
+            DrawRangeEx wire_range_ex;
+            wire_range_ex.m_range = wire_range;
+            wire_range_ex.m_entityKey = {RenderEntityType::MeshLine, 0};
+            render_data.m_meshLineRanges.push_back(wire_range_ex);
         }
 
         // Node points draw range
@@ -363,7 +373,12 @@ bool MeshRenderBuilder::build(RenderData& render_data, const MeshRenderInput& in
             node_range.m_vertexOffset = surfaceVertexCount + wireframeVertexCount;
             node_range.m_vertexCount = nodeVertexCount;
             node_range.m_topology = PrimitiveTopology::Points;
-            mesh_root.m_drawRanges[RenderPassType::Mesh].push_back(node_range);
+            mesh_root.m_drawRanges.push_back(node_range);
+
+            DrawRangeEx node_range_ex;
+            node_range_ex.m_range = node_range;
+            node_range_ex.m_entityKey = {RenderEntityType::MeshNode, 0};
+            render_data.m_meshPointRanges.push_back(node_range_ex);
         }
 
         for(const auto& node : input.m_nodes) {
@@ -373,11 +388,10 @@ bool MeshRenderBuilder::build(RenderData& render_data, const MeshRenderInput& in
         }
 
         render_data.m_sceneBBox.expand(mesh_root.m_bbox);
-        render_data.m_roots.push_back(std::move(mesh_root));
+        render_data.m_meshRoots.push_back(std::move(mesh_root));
     }
 
-    mesh_pass.m_dirty = true;
-    render_data.m_meshDirty = true;
+    mesh_pass.markDataUpdated();
 
     LOG_DEBUG("MeshRenderBuilder::build: surface={}, wireframe={}, nodes={}, elements={}",
               surfaceVertexCount, wireframeVertexCount, nodeVertexCount, input.m_elements.size());

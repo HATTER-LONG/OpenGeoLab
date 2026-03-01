@@ -124,13 +124,11 @@ bool GeometryRenderBuilder::build(RenderData& render_data, const GeometryRenderI
         appendVertexNodes(context);
 
         render_data.m_sceneBBox.expand(part_node.m_bbox);
-        render_data.m_roots.push_back(std::move(part_node));
+        render_data.m_geometryRoots.push_back(std::move(part_node));
     }
 
-    render_data.m_geometryDirty = true;
-
     LOG_DEBUG("GeometryRenderBuilder::build: {} roots, geom vertices={}, indices={}",
-              render_data.m_roots.size(),
+              render_data.m_geometryRoots.size(),
               render_data.m_passData.count(RenderPassType::Geometry)
                   ? render_data.m_passData[RenderPassType::Geometry].m_vertices.size()
                   : 0,
@@ -191,7 +189,17 @@ void GeometryRenderBuilder::appendFaceRenderNode(const PartBuildContext& context
     face_node.m_key = {RenderEntityType::Face, face_entity->entityUID()};
     face_node.m_color = context.m_partColor;
     face_node.m_bbox = face_entity->boundingBox();
-    face_node.m_drawRanges[RenderPassType::Geometry].push_back(range);
+    face_node.m_drawRanges.push_back(range);
+
+    // Pre-build DrawRangeEx for triangle topology
+    DrawRangeEx rangeEx;
+    rangeEx.m_range = range;
+    rangeEx.m_entityKey = face_node.m_key;
+    rangeEx.m_partUid = context.m_partUid;
+    context.m_renderData.m_geometryTriangleRanges.push_back(rangeEx);
+
+    // Build entity-to-part lookup for pick resolution
+    context.m_renderData.m_pickData.m_entityToPartUid[face_entity->entityUID()] = context.m_partUid;
 
     context.m_partNode.m_bbox.expand(face_node.m_bbox);
     context.m_partNode.m_children.push_back(std::move(face_node));
@@ -217,7 +225,23 @@ void GeometryRenderBuilder::appendEdgeNodes(const PartBuildContext& context) {
         edge_node.m_key = {RenderEntityType::Edge, edge_entity->entityUID()};
         edge_node.m_color = color_map.getEdgeColor();
         edge_node.m_bbox = edge_entity->boundingBox();
-        edge_node.m_drawRanges[RenderPassType::Geometry].push_back(range);
+        edge_node.m_drawRanges.push_back(range);
+
+        // Pre-build DrawRangeEx for line topology
+        DrawRangeEx rangeEx;
+        rangeEx.m_range = range;
+        rangeEx.m_entityKey = edge_node.m_key;
+        rangeEx.m_partUid = context.m_partUid;
+        // Resolve wire uid for edges (use first wire if multiple exist)
+        auto wit = context.m_renderData.m_pickData.m_edgeToWireUids.find(edge_entity->entityUID());
+        if(wit != context.m_renderData.m_pickData.m_edgeToWireUids.end() && !wit->second.empty()) {
+            rangeEx.m_wireUid = wit->second[0];
+        }
+        context.m_renderData.m_geometryLineRanges.push_back(rangeEx);
+
+        // Build entity-to-part lookup for pick resolution
+        context.m_renderData.m_pickData.m_entityToPartUid[edge_entity->entityUID()] =
+            context.m_partUid;
 
         context.m_partNode.m_bbox.expand(edge_node.m_bbox);
         context.m_partNode.m_children.push_back(std::move(edge_node));
@@ -243,7 +267,18 @@ void GeometryRenderBuilder::appendVertexNodes(const PartBuildContext& context) {
         vertex_node.m_key = {RenderEntityType::Vertex, vertex_entity->entityUID()};
         vertex_node.m_color = color_map.getVertexColor();
         vertex_node.m_bbox = vertex_entity->boundingBox();
-        vertex_node.m_drawRanges[RenderPassType::Geometry].push_back(range);
+        vertex_node.m_drawRanges.push_back(range);
+
+        // Pre-build DrawRangeEx for point topology
+        DrawRangeEx rangeEx;
+        rangeEx.m_range = range;
+        rangeEx.m_entityKey = vertex_node.m_key;
+        rangeEx.m_partUid = context.m_partUid;
+        context.m_renderData.m_geometryPointRanges.push_back(rangeEx);
+
+        // Build entity-to-part lookup for pick resolution
+        context.m_renderData.m_pickData.m_entityToPartUid[vertex_entity->entityUID()] =
+            context.m_partUid;
 
         context.m_partNode.m_bbox.expand(vertex_node.m_bbox);
         context.m_partNode.m_children.push_back(std::move(vertex_node));
@@ -337,7 +372,7 @@ DrawRange GeometryRenderBuilder::generateFaceMesh(RenderData& render_data,
     result.m_indexCount = static_cast<uint32_t>(nb_triangles) * 3;
     result.m_topology = PrimitiveTopology::Triangles;
 
-    pass_data.m_dirty = true;
+    pass_data.markDataUpdated();
     return result;
 }
 
@@ -438,7 +473,7 @@ DrawRange GeometryRenderBuilder::generateEdgeMesh(RenderData& render_data,
     result.m_indexCount = (vertex_count - 1) * 2;
     result.m_topology = PrimitiveTopology::Lines;
 
-    pass_data.m_dirty = true;
+    pass_data.markDataUpdated();
     return result;
 }
 
@@ -477,7 +512,7 @@ DrawRange GeometryRenderBuilder::generateVertexMesh(RenderData& render_data,
     result.m_indexCount = 0;
     result.m_topology = PrimitiveTopology::Points;
 
-    pass_data.m_dirty = true;
+    pass_data.markDataUpdated();
     return result;
 }
 

@@ -21,6 +21,10 @@ class GLViewportRender : public QQuickFramebufferObject::Renderer {
 public:
     explicit GLViewportRender(const GLViewport* viewport);
     ~GLViewportRender() override;
+    /**
+     * @brief Create viewport FBO with depth-stencil attachment for correct depth testing.
+     */
+    QOpenGLFramebufferObject* createFramebufferObject(const QSize& size) override;
 
     /**
      * @brief Copy GUI-thread state (camera, pick input, hover position) into
