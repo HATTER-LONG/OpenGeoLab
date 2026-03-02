@@ -1,4 +1,6 @@
 #include "render_sceneImpl.hpp"
+#include "render/render_select_manager.hpp"
+
 #include "util/color_map.hpp"
 #include "util/logger.hpp"
 
@@ -83,6 +85,21 @@ void RenderSceneImpl::render() {
 
 void RenderSceneImpl::processHover(int pixel_x, int pixel_y) {
     LOG_DEBUG("RenderSceneImpl: Processing hover at pixel position ({}, {})", pixel_x, pixel_y);
+    if(!m_initialized || !m_pickPassInitialized) {
+        return;
+    }
+
+    auto& select_mgr = RenderSelectManager::instance();
+    if(!select_mgr.isPickEnabled()) {
+        select_mgr.clearHover();
+        return;
+    }
+
+    const RenderEntityTypeMask pick_mask = select_mgr.getPickTypes();
+    if(pick_mask == RenderEntityTypeMask::None) {
+        select_mgr.clearHover();
+        return;
+    }
 }
 
 void RenderSceneImpl::processPicking(const PickingInput& input) {

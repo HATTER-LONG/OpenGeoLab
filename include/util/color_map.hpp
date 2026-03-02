@@ -79,7 +79,7 @@ struct RenderStyle {
 
     /// @name Vertex point sizes
     /// @{
-    static constexpr float VERTEX_POINT_SIZE = 8.0f;
+    static constexpr float VERTEX_POINT_SIZE = 6.0f;
     static constexpr float VERTEX_SCALE_HOVER = 2.0f;
     static constexpr float VERTEX_SCALE_SELECTED = 1.5f;
     /// @}

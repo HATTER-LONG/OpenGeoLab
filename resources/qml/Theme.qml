@@ -183,10 +183,17 @@ QtObject {
     // =========================================================
     // API
     // =========================================================
+    /**
+     * @brief Toggle between light and dark mode
+     */
     function toggleMode() {
         mode = isDark ? light : dark;
     }
 
+    /**
+     * @brief Set the theme mode explicitly
+     * @param nextMode Theme.light or Theme.dark; other values are ignored
+     */
     function setMode(nextMode) {
         if (nextMode === light || nextMode === dark)
             mode = nextMode;

@@ -38,6 +38,14 @@ public:
                 const QMatrix4x4& projection,
                 const QVector3D& camera_pos,
                 bool x_ray_mode);
+    // Rendering subroutines split out from `render()` for clarity and testability
+    void renderTriangles(QOpenGLFunctions* f,
+                         const QMatrix4x4& view,
+                         const QMatrix4x4& projection,
+                         const QVector3D& camera_pos,
+                         bool x_ray_mode);
+    void renderLines(QOpenGLFunctions* f, const QMatrix4x4& view, const QMatrix4x4& projection);
+    void renderPoints(QOpenGLFunctions* f, const QMatrix4x4& view, const QMatrix4x4& projection);
 
     /** @brief Read-only access to the GPU buffer used by this pass. */
     GpuBuffer& gpuBuffer() { return m_gpuBuffer; }
