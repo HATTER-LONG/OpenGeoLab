@@ -120,27 +120,6 @@ void RenderSceneController::updateGeometryRenderData() {
     if(!ret) {
         LOG_ERROR("RenderSceneController: Failed to get geometry render data");
     }
-    std::lock_guard lock(m_visibilityMutex);
-    if(m_partVisibility.empty()) {
-        return;
-    }
-
-    auto filter_hidden_geometry = [this](std::vector<Render::DrawRange>& ranges) {
-        ranges.erase(std::remove_if(ranges.begin(), ranges.end(),
-                                    [this](const Render::DrawRange& r) {
-                                        if(r.m_partUid == 0) {
-                                            return false;
-                                        }
-                                        auto it = m_partVisibility.find(r.m_partUid);
-                                        return it != m_partVisibility.end() &&
-                                               !it->second.m_geometryVisible;
-                                    }),
-                     ranges.end());
-    };
-
-    filter_hidden_geometry(m_renderData.m_geometryTriangleRanges);
-    filter_hidden_geometry(m_renderData.m_geometryLineRanges);
-    filter_hidden_geometry(m_renderData.m_geometryPointRanges);
 }
 
 void RenderSceneController::subscribeToMeshDocument() {

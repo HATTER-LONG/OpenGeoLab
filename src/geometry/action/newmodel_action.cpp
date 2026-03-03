@@ -5,7 +5,7 @@
 
 #include "newmodel_action.hpp"
 #include "../geometry_documentImpl.hpp"
-#include "mesh/mesh_service.hpp"
+#include "app/service.hpp"
 #include "util/logger.hpp"
 
 namespace OpenGeoLab::Geometry {
