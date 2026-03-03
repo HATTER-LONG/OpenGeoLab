@@ -9,7 +9,9 @@
 #include "util/progress_bridge.hpp"
 
 #include "action/generate_mesh_action.hpp"
+#include "action/newmodel_action.hpp"
 #include "action/query_mesh_info_action.hpp"
+
 
 #include "mesh_documentImpl.hpp"
 
@@ -57,6 +59,7 @@ void registerServices() {
         GenerateMeshAction::actionName());
     g_ComponentFactory.registFactoryWithID<QueryMeshInfoActionFactory>(
         QueryMeshInfoAction::actionName());
+    g_ComponentFactory.registFactoryWithID<NewModelActionFactory>(NewModelAction::actionName());
     g_ComponentFactory.registInstanceFactory<MeshDocumentImplSingletonFactory>();
 }
 

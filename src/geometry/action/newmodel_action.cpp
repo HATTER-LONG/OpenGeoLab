@@ -5,6 +5,7 @@
 
 #include "newmodel_action.hpp"
 #include "../geometry_documentImpl.hpp"
+#include "mesh/mesh_service.hpp"
 #include "util/logger.hpp"
 
 namespace OpenGeoLab::Geometry {
@@ -22,6 +23,24 @@ nlohmann::json NewModelAction::execute(const nlohmann::json& /*params*/,
     auto doc = GeometryDocumentImpl::instance();
     doc->clear();
     LOG_INFO("NewModelAction: Created new empty model");
+
+    // Also clear any existing mesh data via MeshService to ensure a clean state
+    try {
+        nlohmann::json mesh_req = {{"action", "new_mesh"}};
+        auto service = g_ComponentFactory.getInstanceObjectWithID<App::IServiceSingletonFactory>(
+            "MeshService");
+        auto mesh_res =
+            service->processRequest("MeshService", mesh_req, App::IProgressReporterPtr{});
+        if(mesh_res.value("success", false)) {
+            LOG_INFO("NewModelAction: Requested mesh clear via MeshService");
+        } else {
+            LOG_WARN("NewModelAction: MeshService returned failure: {}", mesh_res.dump());
+        }
+    } catch(const std::exception& e) {
+        LOG_WARN("NewModelAction: MeshService request failed: {}", e.what());
+    } catch(...) {
+        LOG_WARN("NewModelAction: MeshService request failed (unknown error)");
+    }
 
     if(progress_callback) {
         progress_callback(1.0, "New model created successfully.");

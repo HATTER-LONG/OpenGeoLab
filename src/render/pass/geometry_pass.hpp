@@ -51,11 +51,11 @@ public:
     GpuBuffer& gpuBuffer() { return m_gpuBuffer; }
 
     /** @brief Draw ranges for triangle (surface) primitives. */
-    const std::vector<DrawRangeEx>& triangleRanges() const { return m_triangleRanges; }
+    const std::vector<DrawRange>& triangleRanges() const { return m_triangleRanges; }
     /** @brief Draw ranges for line (edge/wireframe) primitives. */
-    const std::vector<DrawRangeEx>& lineRanges() const { return m_lineRanges; }
+    const std::vector<DrawRange>& lineRanges() const { return m_lineRanges; }
     /** @brief Draw ranges for point (vertex) primitives. */
-    const std::vector<DrawRangeEx>& pointRanges() const { return m_pointRanges; }
+    const std::vector<DrawRange>& pointRanges() const { return m_pointRanges; }
 
 private:
     ShaderProgram m_surfaceShader; ///< Lit shader for surface triangles
@@ -63,9 +63,9 @@ private:
     GpuBuffer m_gpuBuffer;         ///< Shared vertex/index GPU buffer
     bool m_initialized{false};     ///< True after initialize() succeeds
 
-    std::vector<DrawRangeEx> m_triangleRanges; ///< Per-entity triangle draw ranges
-    std::vector<DrawRangeEx> m_lineRanges;     ///< Per-entity line draw ranges
-    std::vector<DrawRangeEx> m_pointRanges;    ///< Per-entity point draw ranges
+    std::vector<DrawRange> m_triangleRanges; ///< Per-entity triangle draw ranges
+    std::vector<DrawRange> m_lineRanges;     ///< Per-entity line draw ranges
+    std::vector<DrawRange> m_pointRanges;    ///< Per-entity point draw ranges
 
     uint64_t m_uploadedVertexVersion{0}; ///< Last RenderPassData vertex version uploaded to GPU
 };

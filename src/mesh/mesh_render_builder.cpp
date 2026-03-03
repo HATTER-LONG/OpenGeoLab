@@ -54,6 +54,49 @@ struct BuildContext {
     }
 };
 
+void appendMeshRanges(BuildContext& ctx) {
+    ctx.m_renderData.m_meshTriangleRanges.clear();
+    ctx.m_renderData.m_meshLineRanges.clear();
+    ctx.m_renderData.m_meshPointRanges.clear();
+
+    if(ctx.m_surfaceVertexCount > 0) {
+        Render::DrawRange surface_range;
+        surface_range.m_entityKey = {Render::RenderEntityType::MeshTriangle, 0};
+        surface_range.m_vertexOffset = 0;
+        surface_range.m_vertexCount = ctx.m_surfaceVertexCount;
+        surface_range.m_topology = Render::PrimitiveTopology::Triangles;
+        ctx.m_renderData.m_meshTriangleRanges.push_back(surface_range);
+    }
+
+    if(ctx.m_wireframeVertexCount > 0) {
+        Render::DrawRange wire_range;
+        wire_range.m_entityKey = {Render::RenderEntityType::MeshLine, 0};
+        wire_range.m_vertexOffset = ctx.m_surfaceVertexCount;
+        wire_range.m_vertexCount = ctx.m_wireframeVertexCount;
+        wire_range.m_topology = Render::PrimitiveTopology::Lines;
+        ctx.m_renderData.m_meshLineRanges.push_back(wire_range);
+    }
+
+    if(ctx.m_nodeVertexCount > 0) {
+        Render::DrawRange node_range;
+        node_range.m_entityKey = {Render::RenderEntityType::MeshNode, 0};
+        node_range.m_vertexOffset = ctx.m_surfaceVertexCount + ctx.m_wireframeVertexCount;
+        node_range.m_vertexCount = ctx.m_nodeVertexCount;
+        node_range.m_topology = Render::PrimitiveTopology::Points;
+        ctx.m_renderData.m_meshPointRanges.push_back(node_range);
+    }
+}
+
+void expandSceneBounds(BuildContext& ctx) {
+    Geometry::BoundingBox3D mesh_bbox;
+    for(const auto& node : ctx.m_input.m_nodes) {
+        if(node.nodeId() != Mesh::INVALID_MESH_NODE_ID) {
+            mesh_bbox.expand(node.position());
+        }
+    }
+    ctx.m_renderData.m_sceneBBox.expand(mesh_bbox);
+}
+
 Vec3f toVec3f(const Util::Pt3d& p) {
     return {static_cast<float>(p.x), static_cast<float>(p.y), static_cast<float>(p.z)};
 }
@@ -145,6 +188,7 @@ void appendSurfaceTriangles(BuildContext& ctx) {
         }
 
         const Render::RenderEntityType render_type = Render::toRenderEntityType(elem.elementType());
+        ctx.m_renderData.m_pickData.m_entityToPartUid[elem.elementUID()] = elem.partUid();
 
         // Derive surface color from the element's parent Part color
         Render::RenderColor surface_color = fallback_color;
@@ -251,6 +295,9 @@ void appendWireframeEdges(BuildContext& ctx) {
         const PrimitiveStyle style{
             wire_color,
             Render::PickId::encode(Render::RenderEntityType::MeshLine, elem.elementUID())};
+        ctx.m_renderData.m_pickData.m_entityToPartUid[elem.elementUID()] = elem.partUid();
+        ctx.m_renderData.m_pickData.m_meshLineNodes[elem.elementUID()] = {elem.nodeId(0),
+                                                                          elem.nodeId(1)};
         pushEdge(ctx.m_meshPass, ctx.nodePos(elem.nodeId(0)), ctx.nodePos(elem.nodeId(1)), style);
     }
 
@@ -276,49 +323,6 @@ void appendNodePoints(BuildContext& ctx) {
                             ctx.m_surfaceVertexCount - ctx.m_wireframeVertexCount;
 }
 
-void appendMeshRootNode(BuildContext& ctx) {
-    if(ctx.m_meshPass.m_vertices.empty()) {
-        return;
-    }
-
-    Render::RenderNode mesh_root;
-    mesh_root.m_key = {Render::RenderEntityType::MeshTriangle, 0};
-    mesh_root.m_visible = true;
-
-    if(ctx.m_surfaceVertexCount > 0) {
-        Render::DrawRange surface_range;
-        surface_range.m_vertexOffset = 0;
-        surface_range.m_vertexCount = ctx.m_surfaceVertexCount;
-        surface_range.m_topology = Render::PrimitiveTopology::Triangles;
-        mesh_root.m_drawRanges[Render::RenderPassType::Mesh].push_back(surface_range);
-    }
-
-    if(ctx.m_wireframeVertexCount > 0) {
-        Render::DrawRange wire_range;
-        wire_range.m_vertexOffset = ctx.m_surfaceVertexCount;
-        wire_range.m_vertexCount = ctx.m_wireframeVertexCount;
-        wire_range.m_topology = Render::PrimitiveTopology::Lines;
-        mesh_root.m_drawRanges[Render::RenderPassType::Mesh].push_back(wire_range);
-    }
-
-    if(ctx.m_nodeVertexCount > 0) {
-        Render::DrawRange node_range;
-        node_range.m_vertexOffset = ctx.m_surfaceVertexCount + ctx.m_wireframeVertexCount;
-        node_range.m_vertexCount = ctx.m_nodeVertexCount;
-        node_range.m_topology = Render::PrimitiveTopology::Points;
-        mesh_root.m_drawRanges[Render::RenderPassType::Mesh].push_back(node_range);
-    }
-
-    for(const auto& node : ctx.m_input.m_nodes) {
-        if(node.nodeId() != Mesh::INVALID_MESH_NODE_ID) {
-            mesh_root.m_bbox.expand(node.position());
-        }
-    }
-
-    ctx.m_renderData.m_sceneBBox.expand(mesh_root.m_bbox);
-    ctx.m_renderData.m_roots.push_back(std::move(mesh_root));
-}
-
 } // namespace
 
 bool MeshRenderBuilder::build(Render::RenderData& render_data, const MeshRenderInput& input) {
@@ -333,7 +337,8 @@ bool MeshRenderBuilder::build(Render::RenderData& render_data, const MeshRenderI
     appendSurfaceTriangles(ctx);
     appendWireframeEdges(ctx);
     appendNodePoints(ctx);
-    appendMeshRootNode(ctx);
+    appendMeshRanges(ctx);
+    expandSceneBounds(ctx);
 
     mesh_pass.markDataUpdated();
     render_data.markMeshUpdated();

@@ -115,20 +115,6 @@ struct RenderVertex {
     uint64_t m_pickId{0};                     ///< Encoded pick ID (8 bytes)
 };
 // =============================================================================
-// DrawRange — Describes one draw call into the flat buffer
-// =============================================================================
-
-/**
- * @brief A contiguous range within a RenderPassData buffer for a single draw call.
- */
-struct DrawRange {
-    uint32_t m_vertexOffset{0}; ///< First vertex index in the pass vertex buffer
-    uint32_t m_vertexCount{0};  ///< Number of vertices
-    uint32_t m_indexOffset{0};  ///< First index in the pass index buffer (0 = non-indexed)
-    uint32_t m_indexCount{0};   ///< Number of indices (0 = non-indexed draw)
-    PrimitiveTopology m_topology{PrimitiveTopology::Triangles};
-};
-// =============================================================================
 // RenderNodeKey — Identity for a semantic tree node
 // =============================================================================
 
@@ -153,41 +139,22 @@ struct RenderNodeKeyHash {
 };
 
 // =============================================================================
-// DrawRangeEx — Extended draw range with entity identity and part ownership
+// DrawRange — Describes one draw call into the flat buffer
 // =============================================================================
 
 /**
- * @brief DrawRange extended with entity identity for per-entity highlighting and picking.
+ * @brief A contiguous range within a RenderPassData buffer for a single draw call.
  */
-struct DrawRangeEx {
-    DrawRange m_range;
+struct DrawRange {
     RenderNodeKey m_entityKey; ///< Entity identity (type + uid)
     uint64_t m_partUid{0};     ///< Parent part uid for reverse lookup
-};
+    uint64_t m_wireUid{0};     ///< Parent wire uid for edge-to-wire lookup
 
-// =============================================================================
-// RenderNode — Semantic tree node
-// =============================================================================
-
-/**
- * @brief A node in the render semantic tree.
- *
- * Mirrors the geometry/mesh entity hierarchy. Each node carries metadata
- * (key, visibility, color, bounding box) and references to DrawRanges in
- * flat GPU buffers. The tree is used for scene management, visibility
- * toggling, and picking resolution — it does NOT own vertex data.
- */
-struct RenderNode {
-    RenderNodeKey m_key;            ///< Entity identity (type + uid)
-    RenderColor m_color;            ///< Display color
-    bool m_visible{true};           ///< Visibility flag
-    Geometry::BoundingBox3D m_bbox; ///< Axis-aligned bounding box
-
-    /// DrawRanges per pass (e.g., a Face node has Triangles in Geometry pass)
-    std::unordered_map<RenderPassType, std::vector<DrawRange>> m_drawRanges;
-
-    /// Child nodes (Part -> Solid -> Face/Edge/Vertex hierarchy)
-    std::vector<RenderNode> m_children;
+    uint32_t m_vertexOffset{0}; ///< First vertex index in the pass vertex buffer
+    uint32_t m_vertexCount{0};  ///< Number of vertices
+    uint32_t m_indexOffset{0};  ///< First index in the pass index buffer (0 = non-indexed)
+    uint32_t m_indexCount{0};   ///< Number of indices (0 = non-indexed draw)
+    PrimitiveTopology m_topology{PrimitiveTopology::Triangles};
 };
 
 // =============================================================================
@@ -250,6 +217,9 @@ struct PickResolutionData {
     /// Wire uid → parent face uid lookup (each wire belongs to exactly one face)
     std::unordered_map<uint64_t, uint64_t> m_wireToFaceUid;
 
+    /// Entity uid → parent part uid (built from DrawRangeEx data during build phase)
+    std::unordered_map<uint64_t, uint64_t> m_entityToPartUid;
+
     /// Mesh line sequential ID → (nodeA, nodeB) lookup.
     /// Built by MeshRenderBuilder; used to resolve mesh line picks back to node pairs.
     std::unordered_map<uint64_t, std::pair<Mesh::MeshNodeId, Mesh::MeshNodeId>> m_meshLineNodes;
@@ -258,6 +228,7 @@ struct PickResolutionData {
         m_edgeToWireUids.clear();
         m_wireToEdgeUids.clear();
         m_wireToFaceUid.clear();
+        m_entityToPartUid.clear();
         m_meshLineNodes.clear();
     }
 
@@ -265,6 +236,7 @@ struct PickResolutionData {
         m_edgeToWireUids.clear();
         m_wireToEdgeUids.clear();
         m_wireToFaceUid.clear();
+        m_entityToPartUid.clear();
     }
 
     void clearMesh() { m_meshLineNodes.clear(); }
@@ -282,14 +254,21 @@ struct PickResolutionData {
  * tables (m_pickData) are separated for clarity.
  */
 struct RenderData {
-    /// Semantic tree roots (one per top-level Part or mesh group)
-    std::vector<RenderNode> m_roots;
-
     /// Per-pass flat GPU buffer data
     std::unordered_map<RenderPassType, RenderPassData> m_passData;
 
     /// Pick-specific lookup tables for entity hierarchy resolution
     PickResolutionData m_pickData;
+
+    /// Pre-built geometry DrawRangeEx by topology (generated during build phase)
+    std::vector<DrawRange> m_geometryTriangleRanges;
+    std::vector<DrawRange> m_geometryLineRanges;
+    std::vector<DrawRange> m_geometryPointRanges;
+
+    /// Pre-built mesh DrawRangeEx by topology (generated during build phase)
+    std::vector<DrawRange> m_meshTriangleRanges;
+    std::vector<DrawRange> m_meshLineRanges;
+    std::vector<DrawRange> m_meshPointRanges;
 
     /// Scene-wide bounding box (union of all visible geometry)
     Geometry::BoundingBox3D m_sceneBBox;
@@ -305,35 +284,38 @@ struct RenderData {
      * @brief Clear all render data (geometry + mesh)
      */
     void clear() {
-        m_roots.clear();
         m_passData.clear();
         m_pickData.clear();
+        m_geometryTriangleRanges.clear();
+        m_geometryLineRanges.clear();
+        m_geometryPointRanges.clear();
+        m_meshTriangleRanges.clear();
+        m_meshLineRanges.clear();
+        m_meshPointRanges.clear();
         m_sceneBBox = {};
-        markGeometryUpdated();
-        markMeshUpdated();
     }
 
     /**
      * @brief Clear geometry-domain data only, preserving mesh data
      */
     void clearGeometry() {
-        // Remove geometry roots (RenderEntityType in geometry domain)
-        std::erase_if(m_roots,
-                      [](const RenderNode& n) { return isGeometryDomain(n.m_key.m_type); });
         // Clear geometry pass buffer
         m_passData.erase(RenderPassType::Geometry);
         m_pickData.clearGeometry();
-        markGeometryUpdated();
+        m_geometryTriangleRanges.clear();
+        m_geometryLineRanges.clear();
+        m_geometryPointRanges.clear();
     }
 
     /**
      * @brief Clear mesh-domain data only, preserving geometry data
      */
     void clearMesh() {
-        std::erase_if(m_roots, [](const RenderNode& n) { return isMeshDomain(n.m_key.m_type); });
         m_passData.erase(RenderPassType::Mesh);
         m_pickData.clearMesh();
-        markMeshUpdated();
+        m_meshTriangleRanges.clear();
+        m_meshLineRanges.clear();
+        m_meshPointRanges.clear();
     }
 };
 

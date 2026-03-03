@@ -79,62 +79,6 @@ void main() {
     fragColor = vec4(color, v_color.a);
 }
 )";
-/**
- * @brief Recursively collect DrawRangeEx from a visible RenderNode tree
- *        for the Geometry pass, grouped by primitive topology.
- * @param edge_to_wires Edge UID → Wire UID(s) lookup for Wire picking support.
- *        An edge shared between two faces maps to multiple wires.
- */
-void collectDrawRangesEx(const RenderNode& node, // NOLINT
-                         uint64_t part_uid,
-                         const std::unordered_map<uint64_t, std::vector<uint64_t>>& edge_to_wires,
-                         std::vector<DrawRangeEx>& tris,
-                         std::vector<DrawRangeEx>& lines,
-                         std::vector<DrawRangeEx>& points) {
-    if(!node.m_visible) {
-        return;
-    }
-
-    // Track the current part uid
-    uint64_t current_part_uid = part_uid;
-    if(node.m_key.m_type == RenderEntityType::Part) {
-        current_part_uid = node.m_key.m_uid;
-    }
-
-    auto it = node.m_drawRanges.find(RenderPassType::Geometry);
-    if(it != node.m_drawRanges.end()) {
-        for(const auto& range : it->second) {
-            DrawRangeEx range_ex;
-            range_ex.m_range = range;
-            range_ex.m_entityKey = node.m_key;
-            range_ex.m_partUid = current_part_uid;
-
-            // Resolve wire uid for edges (use first wire if multiple exist)
-            // if(node.m_key.m_type == RenderEntityType::Edge) {
-            //     auto wit = edge_to_wires.find(node.m_key.m_uid);
-            //     if(wit != edge_to_wires.end() && !wit->second.empty()) {
-            //         range_ex.m_wireUid = wit->second[0];
-            //     }
-            // }
-
-            switch(range.m_topology) {
-            case PrimitiveTopology::Triangles:
-                tris.push_back(range_ex);
-                break;
-            case PrimitiveTopology::Lines:
-                lines.push_back(range_ex);
-                break;
-            case PrimitiveTopology::Points:
-                points.push_back(range_ex);
-                break;
-            }
-        }
-    }
-
-    for(const auto& child : node.m_children) {
-        collectDrawRangesEx(child, current_part_uid, edge_to_wires, tris, lines, points);
-    }
-}
 } // namespace
 
 void GeometryPass::initialize() {
@@ -190,17 +134,9 @@ void GeometryPass::updateBuffers(const RenderData& data) {
         return;
     }
 
-    // Rebuild draw range lists by walking the semantic tree
-    m_triangleRanges.clear();
-    m_lineRanges.clear();
-    m_pointRanges.clear();
-
-    for(const auto& root : data.m_roots) {
-        if(isGeometryDomain(root.m_key.m_type)) {
-            collectDrawRangesEx(root, 0, data.m_pickData.m_edgeToWireUids, m_triangleRanges,
-                                m_lineRanges, m_pointRanges);
-        }
-    }
+    m_triangleRanges = data.m_geometryTriangleRanges;
+    m_lineRanges = data.m_geometryLineRanges;
+    m_pointRanges = data.m_geometryPointRanges;
 
     m_uploadedVertexVersion = data.m_geometryVersion;
 }
@@ -234,20 +170,19 @@ void GeometryPass::renderTriangles(QOpenGLFunctions* f,
     m_surfaceShader.setUniformVec3("u_cameraPos", camera_pos);
     m_surfaceShader.setUniformFloat("u_alpha", surface_alpha);
 
-    for(const auto& range_ex : m_triangleRanges) {
-        if(select_mgr.isSelected(range_ex.m_entityKey) ||
-           (part_mode && select_mgr.isPartSelected(range_ex.m_partUid))) {
+    for(const auto& range : m_triangleRanges) {
+        if(select_mgr.isSelected(range.m_entityKey) ||
+           (part_mode && select_mgr.isPartSelected(range.m_partUid))) {
             m_surfaceShader.setUniformVec4("u_highlightColor", face_select.m_r, face_select.m_g,
                                            face_select.m_b, 0.5f);
-        } else if(select_mgr.isEntityHovered(range_ex.m_entityKey) ||
-                  (part_mode && select_mgr.isPartHovered(range_ex.m_partUid))) {
+        } else if(select_mgr.isEntityHovered(range.m_entityKey) ||
+                  (part_mode && select_mgr.isPartHovered(range.m_partUid))) {
             m_surfaceShader.setUniformVec4("u_highlightColor", face_hover.m_r, face_hover.m_g,
                                            face_hover.m_b, 0.4f);
         } else {
             m_surfaceShader.setUniformVec4("u_highlightColor", 0.0f, 0.0f, 0.0f, 0.0f);
         }
 
-        const auto& range = range_ex.m_range;
         f->glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(range.m_indexCount), GL_UNSIGNED_INT,
                           reinterpret_cast<const void*>(
                               static_cast<uintptr_t>(range.m_indexOffset) * sizeof(uint32_t)));
@@ -283,18 +218,18 @@ void GeometryPass::renderLines(QOpenGLFunctions* f,
     m_flatShader.setUniformMatrix4("u_viewMatrix", view);
     m_flatShader.setUniformMatrix4("u_projMatrix", projection);
 
-    for(const auto& range_ex : m_lineRanges) {
+    for(const auto& range : m_lineRanges) {
         float line_width = edge_width_default;
 
-        if(select_mgr.isSelected(range_ex.m_entityKey) ||
-           (part_mode && select_mgr.isPartSelected(range_ex.m_partUid)) ||
-           (wire_mode && select_mgr.isEdgeInSelectedWire(range_ex.m_entityKey.m_uid))) {
+        if(select_mgr.isSelected(range.m_entityKey) ||
+           (part_mode && select_mgr.isPartSelected(range.m_partUid)) ||
+           (wire_mode && select_mgr.isEdgeInSelectedWire(range.m_entityKey.m_uid))) {
             m_flatShader.setUniformVec4("u_highlightColor", ev_select.m_r, ev_select.m_g,
                                         ev_select.m_b, 1.0f);
             line_width = edge_width_selected;
-        } else if(select_mgr.isEntityHovered(range_ex.m_entityKey) ||
-                  (part_mode && select_mgr.isPartHovered(range_ex.m_partUid)) ||
-                  (wire_mode && select_mgr.isEdgeInHoveredWire(range_ex.m_entityKey.m_uid))) {
+        } else if(select_mgr.isEntityHovered(range.m_entityKey) ||
+                  (part_mode && select_mgr.isPartHovered(range.m_partUid)) ||
+                  (wire_mode && select_mgr.isEdgeInHoveredWire(range.m_entityKey.m_uid))) {
             m_flatShader.setUniformVec4("u_highlightColor", ev_hover.m_r, ev_hover.m_g,
                                         ev_hover.m_b, 1.0f);
             line_width = edge_width_hover;
@@ -303,7 +238,6 @@ void GeometryPass::renderLines(QOpenGLFunctions* f,
         }
 
         f->glLineWidth(line_width);
-        const auto& range = range_ex.m_range;
         f->glDrawElements(GL_LINES, static_cast<GLsizei>(range.m_indexCount), GL_UNSIGNED_INT,
                           reinterpret_cast<const void*>(
                               static_cast<uintptr_t>(range.m_indexOffset) * sizeof(uint32_t)));
@@ -335,16 +269,16 @@ void GeometryPass::renderPoints(QOpenGLFunctions* f,
     m_flatShader.setUniformMatrix4("u_projMatrix", projection);
     f->glEnable(GL_PROGRAM_POINT_SIZE);
 
-    for(const auto& range_ex : m_pointRanges) {
+    for(const auto& range : m_pointRanges) {
         float point_size = vtx_size_base;
 
-        if(select_mgr.isSelected(range_ex.m_entityKey) ||
-           (part_mode && select_mgr.isPartSelected(range_ex.m_partUid))) {
+        if(select_mgr.isSelected(range.m_entityKey) ||
+           (part_mode && select_mgr.isPartSelected(range.m_partUid))) {
             m_flatShader.setUniformVec4("u_highlightColor", ev_select.m_r, ev_select.m_g,
                                         ev_select.m_b, 1.0f);
             point_size = vtx_size_base * vtx_scale_selected;
-        } else if(select_mgr.isEntityHovered(range_ex.m_entityKey) ||
-                  (part_mode && select_mgr.isPartHovered(range_ex.m_partUid))) {
+        } else if(select_mgr.isEntityHovered(range.m_entityKey) ||
+                  (part_mode && select_mgr.isPartHovered(range.m_partUid))) {
             m_flatShader.setUniformVec4("u_highlightColor", ev_hover.m_r, ev_hover.m_g,
                                         ev_hover.m_b, 1.0f);
             point_size = vtx_size_base * vtx_scale_hover;
@@ -353,7 +287,6 @@ void GeometryPass::renderPoints(QOpenGLFunctions* f,
         }
 
         m_flatShader.setUniformFloat("u_pointSize", point_size);
-        const auto& range = range_ex.m_range;
         f->glDrawArrays(GL_POINTS, static_cast<GLint>(range.m_vertexOffset),
                         static_cast<GLsizei>(range.m_vertexCount));
     }

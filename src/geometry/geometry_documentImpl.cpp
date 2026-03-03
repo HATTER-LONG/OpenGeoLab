@@ -230,6 +230,7 @@ bool GeometryDocumentImpl::getRenderData(Render::RenderData& render_data,
                                          const Render::TessellationOptions& options) {
     std::lock_guard<std::mutex> lock(m_renderDataMutex);
     GeometryRenderInput input{m_entityIndex, m_relationshipIndex, options};
+    render_data.markGeometryUpdated();
     return GeometryRenderBuilder::build(render_data, input);
 }
 

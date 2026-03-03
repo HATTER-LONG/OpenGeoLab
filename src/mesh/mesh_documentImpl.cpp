@@ -297,6 +297,7 @@ void MeshDocumentImpl::notifyChanged() {
 bool MeshDocumentImpl::getRenderData(Render::RenderData& render_data) {
     std::lock_guard<std::mutex> lock(m_renderDataMutex);
     MeshRenderInput input{m_nodes, m_elements};
+    render_data.markMeshUpdated();
     return MeshRenderBuilder::build(render_data, input);
 }
 // =============================================================================

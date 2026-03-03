@@ -9,6 +9,8 @@
 #include "mesh/mesh_document.hpp"
 #include "util/logger.hpp"
 
+#include <algorithm>
+
 namespace OpenGeoLab::Render {
 // =============================================================================
 // CameraState
@@ -118,16 +120,27 @@ void RenderSceneController::updateGeometryRenderData() {
     if(!ret) {
         LOG_ERROR("RenderSceneController: Failed to get geometry render data");
     }
-    // Apply per-part visibility from controller state
     std::lock_guard lock(m_visibilityMutex);
-    for(auto& root : m_renderData.m_roots) {
-        if(root.m_key.m_type == RenderEntityType::Part) {
-            auto it = m_partVisibility.find(root.m_key.m_uid);
-            if(it != m_partVisibility.end()) {
-                root.m_visible = it->second.m_geometryVisible;
-            }
-        }
+    if(m_partVisibility.empty()) {
+        return;
     }
+
+    auto filter_hidden_geometry = [this](std::vector<Render::DrawRange>& ranges) {
+        ranges.erase(std::remove_if(ranges.begin(), ranges.end(),
+                                    [this](const Render::DrawRange& r) {
+                                        if(r.m_partUid == 0) {
+                                            return false;
+                                        }
+                                        auto it = m_partVisibility.find(r.m_partUid);
+                                        return it != m_partVisibility.end() &&
+                                               !it->second.m_geometryVisible;
+                                    }),
+                     ranges.end());
+    };
+
+    filter_hidden_geometry(m_renderData.m_geometryTriangleRanges);
+    filter_hidden_geometry(m_renderData.m_geometryLineRanges);
+    filter_hidden_geometry(m_renderData.m_geometryPointRanges);
 }
 
 void RenderSceneController::subscribeToMeshDocument() {

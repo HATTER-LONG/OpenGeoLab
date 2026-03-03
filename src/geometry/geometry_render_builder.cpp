@@ -19,6 +19,8 @@
 #include <gp_Pnt.hxx>
 #include <gp_Trsf.hxx>
 
+#include <algorithm>
+
 namespace OpenGeoLab::Geometry {
 namespace {
 bool isIdentityTrsf(const gp_Trsf& trsf) {
@@ -85,33 +87,27 @@ bool GeometryRenderBuilder::build(Render::RenderData& render_data,
         tessellatePartShape(part, input.m_options);
     }
 
-    const auto& color_map = Util::ColorMap::instance();
-
     for(const auto& part : parts) {
         if(!isRenderableEntity(part)) {
             continue;
         }
         const EntityUID part_uid = part->entityUID();
-        const auto part_color = color_map.getColorForPartId(part_uid);
+        render_data.m_pickData.m_entityToPartUid[part_uid] = part_uid;
 
-        Render::RenderNode part_node{
-            .m_key = {Render::RenderEntityType::Part, part_uid},
-            .m_color = part_color,
-        };
-
-        PartBuildContext context(render_data, input, part, part_uid, part_color, part_node);
+        PartBuildContext context(render_data, input, part, part_uid);
         buildWireEdgeLookupsForPart(render_data, input, part);
         appendFaceNodes(context);
         appendEdgeNodes(context);
         appendVertexNodes(context);
 
         render_data.m_sceneBBox.expand(part->boundingBox());
-        render_data.m_roots.push_back(std::move(part_node));
     }
     render_data.markGeometryUpdated();
 
-    LOG_DEBUG("GeometryRenderBuilder::build: {} roots, geom vertices={}, indices={}",
-              render_data.m_roots.size(),
+    LOG_DEBUG("GeometryRenderBuilder::build: geom tris={}, lines={}, points={}, vertices={}, "
+              "indices={}",
+              render_data.m_geometryTriangleRanges.size(), render_data.m_geometryLineRanges.size(),
+              render_data.m_geometryPointRanges.size(),
               render_data.m_passData.count(Render::RenderPassType::Geometry)
                   ? render_data.m_passData[Render::RenderPassType::Geometry].m_vertices.size()
                   : 0,
@@ -135,53 +131,40 @@ void GeometryRenderBuilder::appendFaceNodes(const PartBuildContext& context) {
 void GeometryRenderBuilder::appendEdgeNodes(const PartBuildContext& context) {
     const auto edge_keys = context.m_input.m_relationshipIndex.findRelatedEntities(
         context.m_part->entityId(), Geometry::EntityType::Edge);
-    const auto& color_map = Util::ColorMap::instance();
     for(const auto& ek : edge_keys) {
         auto edge_entity = context.m_input.m_entityIndex.findByKey(ek);
         if(!isRenderableEntity(edge_entity)) {
             continue;
         }
 
-        Render::DrawRange range =
-            generateEdgeMesh(context.m_renderData, edge_entity, context.m_input.m_options);
+        Render::DrawRange range = generateEdgeMesh(context.m_renderData, edge_entity,
+                                                   context.m_partUid, context.m_input.m_options);
         if(range.m_vertexCount == 0) {
             continue;
         }
-
-        Render::RenderNode edge_node;
-        edge_node.m_key = {Render::RenderEntityType::Edge, edge_entity->entityUID()};
-        edge_node.m_color = color_map.getEdgeColor();
-        edge_node.m_bbox = edge_entity->boundingBox();
-        edge_node.m_drawRanges[Render::RenderPassType::Geometry].push_back(range);
-
-        context.m_partNode.m_bbox.expand(edge_node.m_bbox);
-        context.m_partNode.m_children.push_back(std::move(edge_node));
+        context.m_renderData.m_pickData.m_entityToPartUid[edge_entity->entityUID()] =
+            context.m_partUid;
+        context.m_renderData.m_geometryLineRanges.push_back(std::move(range));
     }
 }
 
 void GeometryRenderBuilder::appendVertexNodes(const PartBuildContext& context) {
     const auto vertex_keys = context.m_input.m_relationshipIndex.findRelatedEntities(
         context.m_part->entityId(), Geometry::EntityType::Vertex);
-    const auto& color_map = Util::ColorMap::instance();
     for(const auto& vk : vertex_keys) {
         auto vertex_entity = context.m_input.m_entityIndex.findByKey(vk);
         if(!isRenderableEntity(vertex_entity)) {
             continue;
         }
 
-        Render::DrawRange range = generateVertexMesh(context.m_renderData, vertex_entity);
+        Render::DrawRange range =
+            generateVertexMesh(context.m_renderData, vertex_entity, context.m_partUid);
         if(range.m_vertexCount == 0) {
             continue;
         }
-
-        Render::RenderNode vertex_node;
-        vertex_node.m_key = {Render::RenderEntityType::Vertex, vertex_entity->entityUID()};
-        vertex_node.m_color = color_map.getVertexColor();
-        vertex_node.m_bbox = vertex_entity->boundingBox();
-        vertex_node.m_drawRanges[Render::RenderPassType::Geometry].push_back(range);
-
-        context.m_partNode.m_bbox.expand(vertex_node.m_bbox);
-        context.m_partNode.m_children.push_back(std::move(vertex_node));
+        context.m_renderData.m_pickData.m_entityToPartUid[vertex_entity->entityUID()] =
+            context.m_partUid;
+        context.m_renderData.m_geometryPointRanges.push_back(std::move(range));
     }
 }
 
@@ -211,22 +194,9 @@ bool GeometryRenderBuilder::tryAppendFaceNode(const PartBuildContext& context,
     if(range.m_indexCount == 0 && range.m_vertexCount == 0) {
         return false;
     }
-    appendFaceRenderNode(context, face_entity, range);
+    context.m_renderData.m_pickData.m_entityToPartUid[face_entity->entityUID()] = context.m_partUid;
+    context.m_renderData.m_geometryTriangleRanges.push_back(range);
     return true;
-}
-
-void GeometryRenderBuilder::appendFaceRenderNode(const PartBuildContext& context,
-                                                 const Geometry::GeometryEntityImplPtr& face_entity,
-                                                 const Render::DrawRange& range) {
-
-    Render::RenderNode face_node;
-    face_node.m_key = {Render::RenderEntityType::Face, face_entity->entityUID()};
-    face_node.m_color = context.m_partColor;
-    face_node.m_bbox = face_entity->boundingBox();
-    face_node.m_drawRanges[Render::RenderPassType::Geometry].push_back(range);
-
-    context.m_partNode.m_bbox.expand(face_node.m_bbox);
-    context.m_partNode.m_children.push_back(std::move(face_node));
 }
 
 Render::DrawRange
@@ -317,6 +287,8 @@ GeometryRenderBuilder::generateFaceMesh(Render::RenderData& render_data,
     result.m_indexOffset = base_index;
     result.m_indexCount = static_cast<uint32_t>(nb_triangles) * 3;
     result.m_topology = Render::PrimitiveTopology::Triangles;
+    result.m_entityKey = {Render::RenderEntityType::Face, entity->entityUID()};
+    result.m_partUid = owner_part_uid;
 
     pass_data.markDataUpdated();
     return result;
@@ -325,6 +297,7 @@ GeometryRenderBuilder::generateFaceMesh(Render::RenderData& render_data,
 Render::DrawRange
 GeometryRenderBuilder::generateEdgeMesh(Render::RenderData& render_data,
                                         const Geometry::GeometryEntityImplPtr& entity,
+                                        Geometry::EntityUID owner_part_uid,
                                         const Render::TessellationOptions& options) {
     Render::DrawRange result;
     if(!entity || !entity->hasShape()) {
@@ -420,6 +393,13 @@ GeometryRenderBuilder::generateEdgeMesh(Render::RenderData& render_data,
     result.m_indexOffset = base_index;
     result.m_indexCount = (vertex_count - 1) * 2;
     result.m_topology = Render::PrimitiveTopology::Lines;
+    result.m_entityKey = {Render::RenderEntityType::Edge, entity->entityUID()};
+    result.m_partUid = owner_part_uid;
+
+    auto wire_it = render_data.m_pickData.m_edgeToWireUids.find(entity->entityUID());
+    if(wire_it != render_data.m_pickData.m_edgeToWireUids.end() && !wire_it->second.empty()) {
+        result.m_wireUid = wire_it->second.front();
+    }
 
     pass_data.markDataUpdated();
     return result;
@@ -427,7 +407,8 @@ GeometryRenderBuilder::generateEdgeMesh(Render::RenderData& render_data,
 
 Render::DrawRange
 GeometryRenderBuilder::generateVertexMesh(Render::RenderData& render_data,
-                                          const Geometry::GeometryEntityImplPtr& entity) {
+                                          const Geometry::GeometryEntityImplPtr& entity,
+                                          Geometry::EntityUID owner_part_uid) {
     Render::DrawRange result;
     if(!entity || !entity->hasShape()) {
         return result;
@@ -459,6 +440,8 @@ GeometryRenderBuilder::generateVertexMesh(Render::RenderData& render_data,
     result.m_indexOffset = 0;
     result.m_indexCount = 0;
     result.m_topology = Render::PrimitiveTopology::Points;
+    result.m_entityKey = {Render::RenderEntityType::Vertex, entity->entityUID()};
+    result.m_partUid = owner_part_uid;
 
     pass_data.markDataUpdated();
     return result;

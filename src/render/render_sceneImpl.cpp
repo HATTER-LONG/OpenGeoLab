@@ -54,10 +54,12 @@ void RenderSceneImpl::synchronize(const SceneFrameState& state) {
     // Rebuild pick resolver when geometry changes
     if(render_data.m_geometryVersion != m_geometryDataVersion) {
         // TODO(layton) - Rebuild pick resolver resources here
+        m_geometryDataVersion = render_data.m_geometryVersion;
     }
 
     if(render_data.m_meshVersion != m_meshDataVersion) {
         // TODO(layton) - Rebuild mesh-related resources here
+        m_meshDataVersion = render_data.m_meshVersion;
     }
 }
 
@@ -107,6 +109,16 @@ void RenderSceneImpl::processPicking(const PickingInput& input) {
               input.m_cursorPos.x(), input.m_cursorPos.y(), static_cast<int>(input.m_action));
 }
 
-void RenderSceneImpl::cleanup() { LOG_DEBUG("RenderSceneImpl: Cleaning up render scene"); }
+void RenderSceneImpl::cleanup() {
+    if(!m_initialized) {
+        return;
+    }
+    m_geometryPass.cleanup();
+    m_initialized = false;
+    m_pickPassInitialized = false;
+    m_geometryDataVersion = 0;
+    m_meshDataVersion = 0;
+    LOG_DEBUG("RenderSceneImpl: Cleaning up render scene");
+}
 
 } // namespace OpenGeoLab::Render
