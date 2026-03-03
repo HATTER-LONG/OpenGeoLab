@@ -5,7 +5,7 @@
 - include 头文件包括对外接口，不同 src 下的目录为不同模块，只能通过 include 暴露的接口进行调用
 
 # 计划任务
-1. 优化 GeometryRenderBuilder::build 方法，调整 render_data 结构，直接在 build 阶段生成按 topology 分类的 DrawRangeEx，避免每次渲染都要调用 collectDrawRangesEx 来重新计算一次 topology 的 draw range。
-2. 为 render select 增加计数，记录每个 entity type 的 uid 列表，在渲染时，先一次draw call 普通的 render data，再一次 draw call render select data over pass 高亮目标，也就是增加一个 hight pass。
-3. 优化拾取逻辑， m_pickResolver.rebuild 等没有必要 与 render data 里的 m_pickData 重复，尽量在 build 阶段就构建好拾取数据，减少每次拾取时的计算开销。select pass 首先只渲染当前拾取类型的对象，其次读取 pixel 后 直接分析出最佳拾取结果，避免每次拾取都要分析所有拾取数据。
-4. 将渲染模块分为 OpaquePass TransparentPass  WireframePass selectionPass（替换当前的 pick pass） HighlightPass PostProcessPass UIPass模块，分别处理不透明物体、透明物体、线框、选择高亮、后处理和 UI 渲染，优化渲染流程和性能。
+1. 根据当前的 render_data 将渲染模块分为 OpaquePass TransparentPass  WireframePass selectionPass HighlightPass PostProcessPass UIPass模块，分别处理不透明物体、透明物体、线框、选择高亮、后处理和 UI 渲染，优化渲染流程和性能。
+2. select pass 首先只渲染当前拾取类型的对象，其次读取 pixel 直接分析出最佳拾取结果，避免每次拾取都要分析所有拾取数据。Vertex > Edge > Face , mesh node > mesh line > mesh element
+3. 渲染尽量使用  instancing 或 multi draw 来减少 draw call，尤其是对于大量重复的对象，例如几何面、顶点、网格元素、线段等。
+
