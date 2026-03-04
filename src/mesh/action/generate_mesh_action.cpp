@@ -18,6 +18,7 @@
 #include <gmsh.h>
 
 #include <kangaroo/util/component_factory.hpp>
+#include <unordered_map>
 
 namespace OpenGeoLab::Mesh {
 #define ERROR_AND_RETURN(msg)                                                                      \
@@ -54,8 +55,25 @@ MeshElementType gmshTypeToMeshElementType(int gmsh_type) {
     }
 }
 
+Geometry::EntityUID resolve_owner_part_uid(const Geometry::GeometryDocumentPtr& doc,
+                                           Geometry::EntityUID entity_uid,
+                                           Geometry::EntityType entity_type) {
+    if(entity_type == Geometry::EntityType::Part) {
+        return entity_uid;
+    }
+    const auto related_parts =
+        doc->findRelatedEntities(entity_uid, entity_type, Geometry::EntityType::Part);
+    if(related_parts.empty()) {
+        return Geometry::INVALID_ENTITY_UID;
+    }
+    return related_parts.front().m_uid;
+}
+
+uint64_t make_dim_tag_key(int dim, int tag) {
+    return (static_cast<uint64_t>(static_cast<uint32_t>(dim)) << 32u) | static_cast<uint32_t>(tag);
+}
+
 } // namespace
-using entity_pair = std::pair<Geometry::EntityUID, Geometry::EntityType>;
 nlohmann::json GenerateMeshAction::execute(const nlohmann::json& params,
                                            Util::ProgressCallback progress_callback) {
     nlohmann::json response;
@@ -103,7 +121,10 @@ nlohmann::json GenerateMeshAction::execute(const nlohmann::json& params,
         ERROR_AND_RETURN("No valid entities provided for meshing");
     }
 
-    auto shape = createShapeFromFaceEntities(entities);
+    auto part_shapes = createShapesByPartFromEntities(entities);
+    if(part_shapes.empty()) {
+        ERROR_AND_RETURN("No valid face geometry found for meshing");
+    }
 
     if(!progress_callback(0.2, "Starting mesh generation...")) {
         ERROR_AND_RETURN("Operation cancelled");
@@ -117,7 +138,7 @@ nlohmann::json GenerateMeshAction::execute(const nlohmann::json& params,
     gmsh::model::add("mesh_model");
 
     try {
-        importShapeToGmshAndMesh(shape, element_size, mesh_dimension, element_type,
+        importShapeToGmshAndMesh(part_shapes, element_size, mesh_dimension, element_type,
                                  progress_callback);
     } catch(const std::exception& e) {
         gmsh::finalize();
@@ -137,25 +158,40 @@ nlohmann::json GenerateMeshAction::execute(const nlohmann::json& params,
     return response;
 }
 
-TopoDS_Shape
-GenerateMeshAction::createShapeFromFaceEntities(const Geometry::EntityRefSet& entities) {
+std::vector<std::pair<Geometry::EntityUID, TopoDS_Shape>>
+GenerateMeshAction::createShapesByPartFromEntities(const Geometry::EntityRefSet& entities) {
 
     auto doc = GeoDocumentInstance;
-    std::vector<Geometry::GeometryEntityPtr> face_entity_ptrs;
+    std::unordered_map<Geometry::EntityUID, std::vector<TopoDS_Shape>> part_face_shapes;
+
+    auto add_face_to_part = [&](const Geometry::GeometryEntityPtr& face_entity,
+                                Geometry::EntityUID part_uid) {
+        if(!face_entity || face_entity->shape().IsNull()) {
+            return;
+        }
+        if(part_uid == Geometry::INVALID_ENTITY_UID) {
+            part_uid = 0;
+        }
+        part_face_shapes[part_uid].push_back(face_entity->shape());
+    };
+
     for(const auto& entity_ref : entities) {
         if(entity_ref.m_type == Geometry::EntityType::Part ||
            entity_ref.m_type == Geometry::EntityType::Solid) {
-            auto part_entity = doc->findByUIDAndType(entity_ref.m_uid, entity_ref.m_type);
-            if(!part_entity) {
+            auto source_entity = doc->findByUIDAndType(entity_ref.m_uid, entity_ref.m_type);
+            if(!source_entity) {
                 LOG_WARN("GenerateMeshAction: entity not found: uid={}", entity_ref.m_uid);
                 continue;
             }
+            const auto owner_part_uid =
+                resolve_owner_part_uid(doc, entity_ref.m_uid, entity_ref.m_type);
+
             auto related_faces = doc->findRelatedEntities(entity_ref.m_uid, entity_ref.m_type,
                                                           Geometry::EntityType::Face);
             for(const auto& face_key : related_faces) {
-                auto face_entity = doc->findByUIDAndType(face_key.m_id, Geometry::EntityType::Face);
-                if(face_entity) {
-                    face_entity_ptrs.push_back(face_entity);
+                auto face_entity = doc->findById(face_key.m_id);
+                if(face_entity && face_entity->entityType() == Geometry::EntityType::Face) {
+                    add_face_to_part(face_entity, owner_part_uid);
                 }
             }
         } else if(entity_ref.m_type == Geometry::EntityType::Face) {
@@ -165,36 +201,57 @@ GenerateMeshAction::createShapeFromFaceEntities(const Geometry::EntityRefSet& en
                          Geometry::entityTypeToString(entity_ref.m_type).value());
                 continue;
             }
-            face_entity_ptrs.push_back(entity_ptr);
+            const auto owner_part_uid =
+                resolve_owner_part_uid(doc, entity_ref.m_uid, Geometry::EntityType::Face);
+            add_face_to_part(entity_ptr, owner_part_uid);
         }
     }
 
-    LOG_INFO("GenerateMeshAction: Generating mesh for {} entities", face_entity_ptrs.size());
+    std::vector<std::pair<Geometry::EntityUID, TopoDS_Shape>> part_shapes;
+    part_shapes.reserve(part_face_shapes.size());
 
-    // Build a compound shape from all face shapes for gmsh import
-    BRep_Builder builder;
-    TopoDS_Compound compound;
-    builder.MakeCompound(compound);
-    for(const auto& face_entity : face_entity_ptrs) {
-        auto shape = face_entity->shape();
-        if(!shape.IsNull()) {
-            builder.Add(compound, shape);
+    for(auto& [part_uid, shapes] : part_face_shapes) {
+        BRep_Builder builder;
+        TopoDS_Compound compound;
+        builder.MakeCompound(compound);
+        for(const auto& shape : shapes) {
+            if(!shape.IsNull()) {
+                builder.Add(compound, shape);
+            }
+        }
+        if(!compound.IsNull()) {
+            part_shapes.emplace_back(part_uid, compound);
         }
     }
-    return compound;
+
+    LOG_INFO("GenerateMeshAction: Prepared {} part-shape groups for meshing", part_shapes.size());
+    return part_shapes;
 }
 
-void GenerateMeshAction::importShapeToGmshAndMesh(const TopoDS_Shape& shape,
-                                                  double element_size,
-                                                  int mesh_dimension,
-                                                  const std::string& element_type,
-                                                  Util::ProgressCallback progress_callback) {
-    // Import OCC shape into Gmsh
-    std::vector<std::pair<int, int>> out_dim_tags;
-    gmsh::model::occ::importShapesNativePointer(static_cast<const void*>(&shape), out_dim_tags);
+void GenerateMeshAction::importShapeToGmshAndMesh(
+    const std::vector<std::pair<Geometry::EntityUID, TopoDS_Shape>>& part_shapes,
+    double element_size,
+    int mesh_dimension,
+    const std::string& element_type,
+    Util::ProgressCallback progress_callback) {
+    std::unordered_map<uint64_t, Geometry::EntityUID> dim_tag_to_part_uid;
+    dim_tag_to_part_uid.reserve(part_shapes.size() * 4);
+
+    for(const auto& [part_uid, shape] : part_shapes) {
+        if(shape.IsNull()) {
+            continue;
+        }
+
+        std::vector<std::pair<int, int>> out_dim_tags;
+        gmsh::model::occ::importShapesNativePointer(static_cast<const void*>(&shape), out_dim_tags);
+        for(const auto& [dim, tag] : out_dim_tags) {
+            dim_tag_to_part_uid[make_dim_tag_key(dim, tag)] = part_uid;
+        }
+    }
+
     gmsh::model::occ::synchronize();
 
-    LOG_DEBUG("GenerateMeshAction: Imported {} dim-tags into gmsh", out_dim_tags.size());
+    LOG_DEBUG("GenerateMeshAction: Imported {} dim-tags into gmsh", dim_tag_to_part_uid.size());
 
     if(!progress_callback(0.3, "Configuring mesh parameters...")) {
         return;
@@ -261,51 +318,66 @@ void GenerateMeshAction::importShapeToGmshAndMesh(const TopoDS_Shape& shape,
     // -------------------------------------------------------------------------
     // Extract elements from Gmsh
     // -------------------------------------------------------------------------
-    std::vector<int> element_types;
-    std::vector<std::vector<size_t>> element_tags;
-    std::vector<std::vector<size_t>> element_node_tags;
-    gmsh::model::mesh::getElements(element_types, element_tags, element_node_tags);
-
-    for(size_t ti = 0; ti < element_types.size(); ++ti) {
-        const MeshElementType our_type = gmshTypeToMeshElementType(element_types[ti]);
-        if(our_type == MeshElementType::None) {
-            LOG_DEBUG("GenerateMeshAction: Skipping unsupported Gmsh element type {}",
-                      element_types[ti]);
-            continue;
+    auto append_elements = [&](Geometry::EntityUID owner_part_uid, int dim, int tag,
+                               bool use_dim_tag_filter) {
+        std::vector<int> element_types;
+        std::vector<std::vector<size_t>> element_tags;
+        std::vector<std::vector<size_t>> element_node_tags;
+        if(use_dim_tag_filter) {
+            gmsh::model::mesh::getElements(element_types, element_tags, element_node_tags, dim,
+                                           tag);
+        } else {
+            gmsh::model::mesh::getElements(element_types, element_tags, element_node_tags);
         }
-        const auto& tags = element_tags[ti];
-        const auto& nids = element_node_tags[ti];
 
-        // Query Gmsh for the number of nodes per element of this type.
-        // The stride through nids is num_nodes (which may exceed our first-order nodeCount
-        // if Gmsh generated higher-order elements).
-        std::string elem_name;
-        int dim = 0;
-        int order = 0;
-        int num_nodes = 0;
-        int num_primary = 0;
-        std::vector<double> param_coords;
-        gmsh::model::mesh::getElementProperties(element_types[ti], elem_name, dim, order, num_nodes,
-                                                param_coords, num_primary);
-
-        const auto stride = static_cast<size_t>(num_nodes);
-
-        for(size_t ei = 0; ei < tags.size(); ++ei) {
-            MeshElement elem(our_type);
-            const uint8_t nc = elem.nodeCount();
-            for(uint8_t ni = 0; ni < nc; ++ni) {
-                const size_t idx = ei * stride + ni;
-                if(idx >= nids.size()) {
-                    break;
-                }
-                const auto it = gmsh_to_local.find(nids[idx]);
-                if(it != gmsh_to_local.end()) {
-                    elem.setNodeId(ni, it->second);
-                }
+        for(size_t ti = 0; ti < element_types.size(); ++ti) {
+            const MeshElementType our_type = gmshTypeToMeshElementType(element_types[ti]);
+            if(our_type == MeshElementType::None) {
+                LOG_DEBUG("GenerateMeshAction: Skipping unsupported Gmsh element type {}",
+                          element_types[ti]);
+                continue;
             }
-            mesh_doc->addElement(std::move(elem));
+            const auto& tags = element_tags[ti];
+            const auto& nids = element_node_tags[ti];
+
+            std::string elem_name;
+            int elem_dim = 0;
+            int order = 0;
+            int num_nodes = 0;
+            int num_primary = 0;
+            std::vector<double> param_coords;
+            gmsh::model::mesh::getElementProperties(element_types[ti], elem_name, elem_dim, order,
+                                                    num_nodes, param_coords, num_primary);
+
+            const auto stride = static_cast<size_t>(num_nodes);
+            for(size_t ei = 0; ei < tags.size(); ++ei) {
+                MeshElement elem(our_type, owner_part_uid);
+                const uint8_t nc = elem.nodeCount();
+                for(uint8_t ni = 0; ni < nc; ++ni) {
+                    const size_t idx = ei * stride + ni;
+                    if(idx >= nids.size()) {
+                        break;
+                    }
+                    const auto it = gmsh_to_local.find(nids[idx]);
+                    if(it != gmsh_to_local.end()) {
+                        elem.setNodeId(ni, it->second);
+                    }
+                }
+                mesh_doc->addElement(std::move(elem));
+            }
+        }
+    };
+
+    if(dim_tag_to_part_uid.empty()) {
+        append_elements(0, 0, 0, false);
+    } else {
+        for(const auto& [dim_tag_key, owner_part_uid] : dim_tag_to_part_uid) {
+            const int dim = static_cast<int>(dim_tag_key >> 32u);
+            const int tag = static_cast<int>(dim_tag_key & 0xFFFFFFFFu);
+            append_elements(owner_part_uid, dim, tag, true);
         }
     }
+
     LOG_DEBUG("GenerateMeshAction: Extracted elements, total: {}", mesh_doc->elementCount());
     progress_callback(0.9, "Mesh extraction complete");
 

@@ -9,6 +9,7 @@
 #include "mesh/mesh_document.hpp"
 
 #include <mutex>
+#include <unordered_map>
 
 namespace OpenGeoLab::Mesh {
 
@@ -63,9 +64,11 @@ public:
     // Render Data
     // -------------------------------------------------------------------------
 
-    [[nodiscard]] bool getRenderData(Render::RenderData& render_data,
-                                     const Render::RenderColor& surface_color = {
-                                         0.65f, 0.75f, 0.85f, 1.0f}) override;
+    [[nodiscard]] bool
+    getRenderData(Render::RenderData& render_data,
+                  const Render::RenderColor& default_surface_color,
+                  const std::unordered_map<Geometry::EntityUID, Render::RenderColor>&
+                      part_surface_colors) override;
 
     // -------------------------------------------------------------------------
     // Change Notification

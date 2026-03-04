@@ -10,6 +10,8 @@
 #include "mesh/mesh_document.hpp"
 #include "util/logger.hpp"
 
+#include <algorithm>
+
 namespace OpenGeoLab::Render {
 // =============================================================================
 // CameraState
@@ -147,22 +149,70 @@ void RenderSceneController::handleDocumentMeshChanged() {
 void RenderSceneController::updateMeshRenderData() {
     auto document = MeshDocumentInstance;
 
-    // Derive mesh surface color from the first Part's color but darker,
-    // so mesh surfaces are visually distinguishable from geometry faces.
-    RenderColor meshSurfaceColor{0.55f, 0.65f, 0.75f, 1.0f};
+    std::unordered_map<Geometry::EntityUID, RenderColor> part_surface_colors;
+    RenderColor default_surface_color{0.55f, 0.65f, 0.75f, 1.0f};
+
     for(const auto& root : m_renderData.m_geometryRoots) {
         if(root.m_key.m_type == RenderEntityType::Part) {
-            const auto& c = root.m_color;
-            // Pure multiplicative darkening — always produces a color darker
-            // than the Part face, regardless of the original brightness.
-            meshSurfaceColor = {c.m_r * 0.7f, c.m_g * 0.7f, c.m_b * 0.7f, 1.0f};
-            break;
+            part_surface_colors[root.m_key.m_uid] = root.m_color;
         }
     }
 
-    const bool ret = document->getRenderData(m_renderData, meshSurfaceColor);
+    if(!part_surface_colors.empty()) {
+        default_surface_color = part_surface_colors.begin()->second;
+    }
+
+    const bool ret =
+        document->getRenderData(m_renderData, default_surface_color, part_surface_colors);
     if(!ret) {
         LOG_ERROR("RenderSceneController: Failed to get mesh render data");
+        return;
+    }
+
+    std::unordered_map<Geometry::EntityUID, bool> mesh_visibility;
+    {
+        std::lock_guard lock(m_visibilityMutex);
+        mesh_visibility.reserve(m_partVisibility.size());
+        for(const auto& [part_uid, vis] : m_partVisibility) {
+            mesh_visibility[part_uid] = vis.m_meshVisible;
+        }
+    }
+
+    auto is_mesh_range_visible = [&mesh_visibility](const DrawRangeEx& range_ex) {
+        if(range_ex.m_partUid == 0) {
+            return true;
+        }
+        auto it = mesh_visibility.find(range_ex.m_partUid);
+        return it == mesh_visibility.end() || it->second;
+    };
+
+    auto& tri = m_renderData.m_meshTriangleRanges;
+    tri.erase(std::remove_if(tri.begin(), tri.end(),
+                             [&is_mesh_range_visible](const DrawRangeEx& ex) {
+                                 return !is_mesh_range_visible(ex);
+                             }),
+              tri.end());
+
+    auto& line = m_renderData.m_meshLineRanges;
+    line.erase(std::remove_if(line.begin(), line.end(),
+                              [&is_mesh_range_visible](const DrawRangeEx& ex) {
+                                  return !is_mesh_range_visible(ex);
+                              }),
+               line.end());
+
+    auto& point = m_renderData.m_meshPointRanges;
+    point.erase(std::remove_if(point.begin(), point.end(),
+                               [&is_mesh_range_visible](const DrawRangeEx& ex) {
+                                   return !is_mesh_range_visible(ex);
+                               }),
+                point.end());
+
+    for(auto& root : m_renderData.m_meshRoots) {
+        if(root.m_key.m_type != RenderEntityType::Part) {
+            continue;
+        }
+        auto it = mesh_visibility.find(root.m_key.m_uid);
+        root.m_visible = (it == mesh_visibility.end()) ? true : it->second;
     }
 }
 

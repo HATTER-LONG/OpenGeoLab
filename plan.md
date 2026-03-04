@@ -5,8 +5,8 @@
 - include 头文件包括对外接口，不同 src 下的目录为不同模块，只能通过 include 暴露的接口进行调用
 
 # 计划任务
-1. 优化 GeometryRenderBuilder::build 方法，调整 render_data 结构，直接在 build 阶段生成按 topology 分类的 DrawRangeEx，避免每次渲染都要调用 collectDrawRangesEx 来重新计算一次 topology 的 draw range。
-2. 为 render select 增加计数，记录每个 entity type 的 uid 列表，在渲染时，先一次draw call 普通的 render data，再一次 draw call render select data over pass 高亮目标，也就是使用 hight pass。
-3. 优化拾取逻辑， m_pickResolver.rebuild 等没有必要 与 render data 里的 m_pickData 重复，尽量在 build 阶段就构建好拾取数据，减少每次拾取时的计算开销。select pass 首先只渲染当前拾取类型的对象，其次读取 pixel 后 直接分析出最佳拾取结果，避免每次拾取都要分析所有拾取数据。
-4. 将渲染模块分为 OpaquePass TransparentPass  WireframePass selectionPass（替换当前的 pick pass） HighlightPass PostProcessPass UIPass模块，分别处理不透明物体、透明物体、线框、选择高亮、后处理和 UI 渲染，优化渲染流程和性能。
-5. 使得修改后的代码通过编译，并更新 docs 下的相关文档。
+0. 我已经将 render_data 进行精简优化，请根据如下任务进行调整，不需要最小改动点，可以为了最佳实现改变已有代码、接口等；
+1. 更新下 mesh 渲染与 geometry 一致，分为已 part 为单位，并且每个 part mesh 的颜色要与当前 part 颜色一致（三角面片）稍微深一点；
+2. 梳理 render 相关代码，优化各个 render、pass 参数等，设计一个统一的 ctx 避免参数过多；
+3. 优化 render scene 的流程为更优实践，并审视 multiDrawArrays 相关是否是最佳实践，high light 相关for是否进行优化
+4. 使得修改后的代码通过编译，并更新 docs 下的相关文档，尤其是 render 设计文档。

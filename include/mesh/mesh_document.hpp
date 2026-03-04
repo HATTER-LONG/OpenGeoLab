@@ -17,6 +17,7 @@
 #include <kangaroo/util/component_factory.hpp>
 #include <kangaroo/util/noncopyable.hpp>
 #include <memory>
+#include <unordered_map>
 
 namespace OpenGeoLab::Mesh {
 
@@ -105,12 +106,15 @@ public:
     /**
      * @brief Generate render data from current mesh state.
      * @param render_data Output render data to populate.
-     * @param surface_color Surface triangle color (typically faded Part color).
+     * @param default_surface_color Fallback surface color when element has no part mapping.
+     * @param part_surface_colors Per-part base colors (before mesh darkening).
      * @return true on success.
      */
-    [[nodiscard]] virtual bool getRenderData(Render::RenderData& render_data,
-                                             const Render::RenderColor& surface_color = {
-                                                 0.65f, 0.75f, 0.85f, 1.0f}) = 0;
+    [[nodiscard]] virtual bool
+    getRenderData(Render::RenderData& render_data,
+                  const Render::RenderColor& default_surface_color,
+                  const std::unordered_map<Geometry::EntityUID, Render::RenderColor>&
+                      part_surface_colors) = 0;
 
     // -------------------------------------------------------------------------
     // Change Notification

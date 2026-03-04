@@ -11,14 +11,17 @@
 #include "mesh/mesh_node.hpp"
 
 #include <span>
+#include <unordered_map>
 
 namespace OpenGeoLab::Render {
 
 /** @brief Input parameters for mesh render data generation. */
 struct MeshRenderInput {
-    std::span<const Mesh::MeshNode> m_nodes;               ///< Mesh nodes with positions
-    std::span<const Mesh::MeshElement> m_elements;         ///< Mesh elements with connectivity
-    RenderColor m_surfaceColor{0.65f, 0.75f, 0.85f, 1.0f}; ///< Surface triangle color
+    std::span<const Mesh::MeshNode> m_nodes;       ///< Mesh nodes with positions
+    std::span<const Mesh::MeshElement> m_elements; ///< Mesh elements with connectivity
+    RenderColor m_defaultSurfaceColor{0.65f, 0.75f, 0.85f, 1.0f};
+    std::unordered_map<Geometry::EntityUID, RenderColor> m_partSurfaceColors;
+    float m_partDarkenFactor{0.85f};
 };
 
 /**

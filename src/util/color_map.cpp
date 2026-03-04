@@ -5,6 +5,7 @@
 
 #include "util/color_map.hpp"
 
+#include <algorithm>
 #include <array>
 
 namespace OpenGeoLab::Util {
@@ -74,6 +75,11 @@ const RenderColor&
 ColorMap::getColorForMeshElementId(Mesh::MeshElementUID element_uid) const noexcept {
     const auto index = static_cast<size_t>(element_uid % K_PART_PALETTE_SIZE);
     return K_MESH_COLOR_PALETTE[index];
+}
+
+RenderColor ColorMap::darkenColor(const RenderColor& color, float factor) noexcept {
+    const float clamped = std::clamp(factor, 0.0f, 1.0f);
+    return {color.m_r * clamped, color.m_g * clamped, color.m_b * clamped, color.m_a};
 }
 
 const RenderColor& ColorMap::getEdgeVertexHoverColor() const noexcept {

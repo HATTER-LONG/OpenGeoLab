@@ -7,8 +7,7 @@
 
 #include "render/core/shader_program.hpp"
 #include "render/pass/render_pass_base.hpp"
-#include "render/render_data.hpp"
-
+#include "render/pass/render_pass_context.hpp"
 
 #include <QMatrix4x4>
 #include <QVector3D>
@@ -30,26 +29,22 @@ class GpuBuffer;
  */
 class HighlightPass : public RenderPassBase {
 public:
-    /**
-     * @brief Render highlight overlay for geometry entities.
-     */
+    void render(const RenderPassContext& ctx);
+
+private:
     void renderGeometry(const PassRenderParams& params,
                         GpuBuffer& geomBuffer,
                         const std::vector<DrawRangeEx>& triangleRanges,
                         const std::vector<DrawRangeEx>& lineRanges,
                         const std::vector<DrawRangeEx>& pointRanges);
 
-    /**
-     * @brief Render highlight overlay for mesh entities.
-     */
     void renderMesh(const PassRenderParams& params,
                     GpuBuffer& meshBuffer,
-                    uint32_t meshSurfaceCount,
-                    uint32_t meshWireframeCount,
-                    uint32_t meshNodeCount,
+                    const std::vector<DrawRangeEx>& meshTriangleRanges,
+                    const std::vector<DrawRangeEx>& meshLineRanges,
+                    const std::vector<DrawRangeEx>& meshPointRanges,
                     RenderDisplayModeMask meshDisplayMode);
 
-private:
     bool onInitialize() override;
     void onCleanup() override;
 

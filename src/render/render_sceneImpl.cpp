@@ -118,20 +118,9 @@ void RenderSceneImpl::synchronize(const SceneFrameState& state) {
             }
         }
 
-        // Extract mesh topology counts from mesh root's DrawRanges
-        m_meshSurfaceCount = 0;
-        m_meshWireframeCount = 0;
-        m_meshNodeCount = 0;
-
-        for(const auto& range_ex : renderData.m_meshTriangleRanges) {
-            m_meshSurfaceCount += range_ex.m_range.m_vertexCount;
-        }
-        for(const auto& range_ex : renderData.m_meshLineRanges) {
-            m_meshWireframeCount += range_ex.m_range.m_vertexCount;
-        }
-        for(const auto& range_ex : renderData.m_meshPointRanges) {
-            m_meshNodeCount += range_ex.m_range.m_vertexCount;
-        }
+        m_meshTriangleRanges = renderData.m_meshTriangleRanges;
+        m_meshLineRanges = renderData.m_meshLineRanges;
+        m_meshPointRanges = renderData.m_meshPointRanges;
     }
 
     // Sync mesh display mode
@@ -165,29 +154,41 @@ void RenderSceneImpl::render() {
     f->glClearColor(bg.m_r, bg.m_g, bg.m_b, 1.0f);
     f->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // Build common render parameters
-    PassRenderParams params;
-    params.viewMatrix = m_frameState.viewMatrix;
-    params.projMatrix = m_frameState.projMatrix;
-    params.cameraPos = m_frameState.cameraPos;
-    params.xRayMode = m_frameState.xRayMode;
+    // Build unified render context
+    RenderPassContext pass_ctx;
+    pass_ctx.m_params.viewMatrix = m_frameState.viewMatrix;
+    pass_ctx.m_params.projMatrix = m_frameState.projMatrix;
+    pass_ctx.m_params.cameraPos = m_frameState.cameraPos;
+    pass_ctx.m_params.xRayMode = m_frameState.xRayMode;
+
+    pass_ctx.m_geometry.m_buffer = &m_geometryBuffer;
+    pass_ctx.m_geometry.m_triangleRanges = &m_geometryTriangleRanges;
+    pass_ctx.m_geometry.m_lineRanges = &m_geometryLineRanges;
+    pass_ctx.m_geometry.m_pointRanges = &m_geometryPointRanges;
+
+    pass_ctx.m_mesh.m_buffer = &m_meshBuffer;
+    pass_ctx.m_mesh.m_triangleRanges = &m_meshTriangleRanges;
+    pass_ctx.m_mesh.m_lineRanges = &m_meshLineRanges;
+    pass_ctx.m_mesh.m_pointRanges = &m_meshPointRanges;
+    pass_ctx.m_mesh.m_displayMode = m_meshDisplayMode;
 
     // --- Pass 1: Surfaces ---
-    m_opaquePass.render(params, m_geometryBuffer, m_geometryTriangleRanges, m_meshBuffer,
-                        m_meshSurfaceCount, m_meshDisplayMode);
-    m_transparentPass.render(params, m_geometryBuffer, m_geometryTriangleRanges, m_meshBuffer,
-                             m_meshSurfaceCount, m_meshDisplayMode);
+    if(m_frameState.xRayMode) {
+        m_transparentPass.render(pass_ctx);
+    } else {
+        m_opaquePass.render(pass_ctx);
+    }
 
     // --- Pass 2: Wireframe ---
-    m_wireframePass.render(params, m_geometryBuffer, m_geometryLineRanges, m_geometryPointRanges,
-                           m_meshBuffer, m_meshSurfaceCount, m_meshWireframeCount, m_meshNodeCount,
-                           m_meshDisplayMode);
+    m_wireframePass.render(pass_ctx);
 
     // --- Pass 3: Highlight (selected/hovered entity overdraw) ---
-    m_highlightPass.renderGeometry(params, m_geometryBuffer, m_geometryTriangleRanges,
-                                   m_geometryLineRanges, m_geometryPointRanges);
-    m_highlightPass.renderMesh(params, m_meshBuffer, m_meshSurfaceCount, m_meshWireframeCount,
-                               m_meshNodeCount, m_meshDisplayMode);
+    auto& selectMgr = RenderSelectManager::instance();
+    const bool has_hover = selectMgr.hoveredEntity().m_type != RenderEntityType::None;
+    const bool has_selection = !selectMgr.selections().empty();
+    if(has_hover || has_selection) {
+        m_highlightPass.render(pass_ctx);
+    }
 
     // --- Pass 4: Post-processing (stub) ---
     m_postProcessPass.render();
@@ -226,11 +227,20 @@ void RenderSceneImpl::processHover(int pixel_x, int pixel_y) {
         effectiveMask = effectiveMask | RenderEntityTypeMask::Face | RenderEntityTypeMask::Edge;
     }
 
+    RenderPassContext pick_ctx;
+    pick_ctx.m_params.viewMatrix = m_frameState.viewMatrix;
+    pick_ctx.m_params.projMatrix = m_frameState.projMatrix;
+    pick_ctx.m_geometry.m_buffer = &m_geometryBuffer;
+    pick_ctx.m_geometry.m_triangleRanges = &m_geometryTriangleRanges;
+    pick_ctx.m_geometry.m_lineRanges = &m_geometryLineRanges;
+    pick_ctx.m_geometry.m_pointRanges = &m_geometryPointRanges;
+    pick_ctx.m_mesh.m_buffer = &m_meshBuffer;
+    pick_ctx.m_mesh.m_triangleRanges = &m_meshTriangleRanges;
+    pick_ctx.m_mesh.m_lineRanges = &m_meshLineRanges;
+    pick_ctx.m_mesh.m_pointRanges = &m_meshPointRanges;
+
     // Render to pick FBO
-    m_selectionPass.renderToFbo(m_frameState.viewMatrix, m_frameState.projMatrix, m_geometryBuffer,
-                                m_geometryTriangleRanges, m_geometryLineRanges,
-                                m_geometryPointRanges, m_meshBuffer, m_meshSurfaceCount,
-                                m_meshWireframeCount, m_meshNodeCount, effectiveMask);
+    m_selectionPass.renderToFbo(pick_ctx, effectiveMask);
 
     // Restore main framebuffer viewport
     auto* f = QOpenGLContext::currentContext()->functions();
@@ -301,11 +311,20 @@ void RenderSceneImpl::processPicking(const PickingInput& input) {
         effectiveMask = effectiveMask | RenderEntityTypeMask::Face | RenderEntityTypeMask::Edge;
     }
 
+    RenderPassContext pick_ctx;
+    pick_ctx.m_params.viewMatrix = m_frameState.viewMatrix;
+    pick_ctx.m_params.projMatrix = m_frameState.projMatrix;
+    pick_ctx.m_geometry.m_buffer = &m_geometryBuffer;
+    pick_ctx.m_geometry.m_triangleRanges = &m_geometryTriangleRanges;
+    pick_ctx.m_geometry.m_lineRanges = &m_geometryLineRanges;
+    pick_ctx.m_geometry.m_pointRanges = &m_geometryPointRanges;
+    pick_ctx.m_mesh.m_buffer = &m_meshBuffer;
+    pick_ctx.m_mesh.m_triangleRanges = &m_meshTriangleRanges;
+    pick_ctx.m_mesh.m_lineRanges = &m_meshLineRanges;
+    pick_ctx.m_mesh.m_pointRanges = &m_meshPointRanges;
+
     // Render to pick FBO
-    m_selectionPass.renderToFbo(m_frameState.viewMatrix, m_frameState.projMatrix, m_geometryBuffer,
-                                m_geometryTriangleRanges, m_geometryLineRanges,
-                                m_geometryPointRanges, m_meshBuffer, m_meshSurfaceCount,
-                                m_meshWireframeCount, m_meshNodeCount, effectiveMask);
+    m_selectionPass.renderToFbo(pick_ctx, effectiveMask);
 
     // Restore main framebuffer viewport
     auto* f = QOpenGLContext::currentContext()->functions();
@@ -382,9 +401,9 @@ void RenderSceneImpl::cleanup() {
     m_geometryTriangleRanges.clear();
     m_geometryLineRanges.clear();
     m_geometryPointRanges.clear();
-    m_meshSurfaceCount = 0;
-    m_meshWireframeCount = 0;
-    m_meshNodeCount = 0;
+    m_meshTriangleRanges.clear();
+    m_meshLineRanges.clear();
+    m_meshPointRanges.clear();
     m_frameState = {};
     m_initialized = false;
     m_selectionPassInitialized = false;

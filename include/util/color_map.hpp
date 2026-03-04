@@ -8,8 +8,6 @@
 
 #include <kangaroo/util/noncopyable.hpp>
 
-#include <cstdint>
-
 namespace OpenGeoLab::Util {
 
 /**
@@ -37,6 +35,13 @@ public:
      */
     const Render::RenderColor&
     getColorForMeshElementId(Mesh::MeshElementUID element_uid) const noexcept;
+
+    /** @brief Darken a color by multiplicative factor.
+     *  @param color Source color.
+     *  @param factor Darkening factor in [0, 1].
+     *  @return Darkened color with original alpha.
+     */
+    static Render::RenderColor darkenColor(const Render::RenderColor& color, float factor) noexcept;
 
     /// @brief Hover color for edges and vertices (#ff7f00)
     const Render::RenderColor& getEdgeVertexHoverColor() const noexcept;

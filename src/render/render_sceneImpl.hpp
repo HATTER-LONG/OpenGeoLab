@@ -22,6 +22,7 @@
 #include "render/pass/highlight_pass.hpp"
 #include "render/pass/opaque_pass.hpp"
 #include "render/pass/post_process_pass.hpp"
+#include "render/pass/render_pass_context.hpp"
 #include "render/pass/selection_pass.hpp"
 #include "render/pass/transparent_pass.hpp"
 #include "render/pass/ui_pass.hpp"
@@ -69,10 +70,10 @@ private:
     std::vector<DrawRangeEx> m_geometryLineRanges;
     std::vector<DrawRangeEx> m_geometryPointRanges;
 
-    // --- Mesh topology counts ---
-    uint32_t m_meshSurfaceCount{0};
-    uint32_t m_meshWireframeCount{0};
-    uint32_t m_meshNodeCount{0};
+    // --- Pre-built mesh draw ranges (copied from RenderData during synchronize) ---
+    std::vector<DrawRangeEx> m_meshTriangleRanges;
+    std::vector<DrawRangeEx> m_meshLineRanges;
+    std::vector<DrawRangeEx> m_meshPointRanges;
 
     // --- Display state ---
     RenderDisplayModeMask m_meshDisplayMode{RenderDisplayModeMask::None};

@@ -108,7 +108,8 @@ uint64_t PickResolver::resolvePartUid(uint64_t uid, RenderEntityType type) const
     if(!m_pickData) {
         return 0;
     }
-    auto it = m_pickData->m_entityToPartUid.find(uid);
+    const uint64_t encoded = PickId::encode(type, uid);
+    auto it = m_pickData->m_entityToPartUid.find(encoded);
     return it != m_pickData->m_entityToPartUid.end() ? it->second : 0;
 }
 

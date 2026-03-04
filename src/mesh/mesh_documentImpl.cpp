@@ -109,10 +109,12 @@ void MeshDocumentImpl::notifyChanged() {
 // Render Data
 // =============================================================================
 
-bool MeshDocumentImpl::getRenderData(Render::RenderData& render_data,
-                                     const Render::RenderColor& surface_color) {
+bool MeshDocumentImpl::getRenderData(
+    Render::RenderData& render_data,
+    const Render::RenderColor& default_surface_color,
+    const std::unordered_map<Geometry::EntityUID, Render::RenderColor>& part_surface_colors) {
     std::lock_guard<std::mutex> lock(m_renderDataMutex);
-    Render::MeshRenderInput input{m_nodes, m_elements, surface_color};
+    Render::MeshRenderInput input{m_nodes, m_elements, default_surface_color, part_surface_colors};
     return Render::MeshRenderBuilder::build(render_data, input);
 }
 

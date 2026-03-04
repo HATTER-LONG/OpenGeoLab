@@ -199,7 +199,9 @@ void GeometryRenderBuilder::appendFaceRenderNode(const PartBuildContext& context
     context.m_renderData.m_geometryTriangleRanges.push_back(rangeEx);
 
     // Build entity-to-part lookup for pick resolution
-    context.m_renderData.m_pickData.m_entityToPartUid[face_entity->entityUID()] = context.m_partUid;
+    context.m_renderData.m_pickData
+        .m_entityToPartUid[PickId::encode(RenderEntityType::Face, face_entity->entityUID())] =
+        context.m_partUid;
 
     context.m_partNode.m_bbox.expand(face_node.m_bbox);
     context.m_partNode.m_children.push_back(std::move(face_node));
@@ -240,7 +242,8 @@ void GeometryRenderBuilder::appendEdgeNodes(const PartBuildContext& context) {
         context.m_renderData.m_geometryLineRanges.push_back(rangeEx);
 
         // Build entity-to-part lookup for pick resolution
-        context.m_renderData.m_pickData.m_entityToPartUid[edge_entity->entityUID()] =
+        context.m_renderData.m_pickData
+            .m_entityToPartUid[PickId::encode(RenderEntityType::Edge, edge_entity->entityUID())] =
             context.m_partUid;
 
         context.m_partNode.m_bbox.expand(edge_node.m_bbox);
@@ -277,8 +280,8 @@ void GeometryRenderBuilder::appendVertexNodes(const PartBuildContext& context) {
         context.m_renderData.m_geometryPointRanges.push_back(rangeEx);
 
         // Build entity-to-part lookup for pick resolution
-        context.m_renderData.m_pickData.m_entityToPartUid[vertex_entity->entityUID()] =
-            context.m_partUid;
+        context.m_renderData.m_pickData.m_entityToPartUid[PickId::encode(
+            RenderEntityType::Vertex, vertex_entity->entityUID())] = context.m_partUid;
 
         context.m_partNode.m_bbox.expand(vertex_node.m_bbox);
         context.m_partNode.m_children.push_back(std::move(vertex_node));

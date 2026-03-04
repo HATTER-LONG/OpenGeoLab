@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include "geometry/geometry_types.hpp"
 #include "mesh/mesh_types.hpp"
 
 #include <array>
@@ -14,13 +15,16 @@ namespace OpenGeoLab::Mesh {
 /** @brief A single FEM mesh element (line, triangle, quad, tetra, hexa, prism, pyramid). */
 class MeshElement {
 public:
-    explicit MeshElement(MeshElementType type);
+    explicit MeshElement(MeshElementType type,
+                         Geometry::EntityUID source_part_uid = Geometry::INVALID_ENTITY_UID);
 
     ~MeshElement() = default;
 
     MeshElementId elementId() const { return m_id; }
     MeshElementUID elementUID() const { return m_uid; }
     MeshElementType elementType() const { return m_type; }
+    Geometry::EntityUID sourcePartUid() const { return m_sourcePartUid; }
+    void setSourcePartUid(Geometry::EntityUID uid) { m_sourcePartUid = uid; }
 
     // -----------------------------
     // Node access
@@ -69,6 +73,7 @@ private:
     MeshElementId m_id{INVALID_MESH_ELEMENT_ID};
     MeshElementUID m_uid{INVALID_MESH_ELEMENT_UID};
     MeshElementType m_type{MeshElementType::None};
+    Geometry::EntityUID m_sourcePartUid{Geometry::INVALID_ENTITY_UID};
 
     std::array<MeshNodeId, 8> m_nodeIds{};
 };

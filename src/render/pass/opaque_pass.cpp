@@ -74,15 +74,23 @@ bool OpaquePass::onInitialize() {
 
 void OpaquePass::onCleanup() { LOG_DEBUG("OpaquePass: Cleaned up"); }
 
-void OpaquePass::render(const PassRenderParams& params,
-                        GpuBuffer& geomBuffer,
-                        const std::vector<DrawRangeEx>& triangleRanges,
-                        GpuBuffer& meshBuffer,
-                        uint32_t meshSurfaceCount,
-                        RenderDisplayModeMask meshDisplayMode) {
+void OpaquePass::render(const RenderPassContext& ctx_data) {
+    const auto& params = ctx_data.m_params;
     if(!isInitialized() || params.xRayMode) {
         return; // TransparentPass handles X-ray mode
     }
+
+    if(ctx_data.m_geometry.m_buffer == nullptr || ctx_data.m_mesh.m_buffer == nullptr ||
+       ctx_data.m_geometry.m_triangleRanges == nullptr ||
+       ctx_data.m_mesh.m_triangleRanges == nullptr) {
+        return;
+    }
+
+    auto& geomBuffer = *ctx_data.m_geometry.m_buffer;
+    auto& meshBuffer = *ctx_data.m_mesh.m_buffer;
+    const auto& triangleRanges = *ctx_data.m_geometry.m_triangleRanges;
+    const auto& meshTriangleRanges = *ctx_data.m_mesh.m_triangleRanges;
+    const auto meshDisplayMode = ctx_data.m_mesh.m_displayMode;
 
     QOpenGLFunctions* f = QOpenGLContext::currentContext()->functions();
     QOpenGLContext* ctx = QOpenGLContext::currentContext();
@@ -113,13 +121,17 @@ void OpaquePass::render(const PassRenderParams& params,
     }
 
     // --- Mesh surface triangles (array drawing) ---
-    if(hasMode(meshDisplayMode, RenderDisplayModeMask::Surface) && meshSurfaceCount > 0 &&
+    if(hasMode(meshDisplayMode, RenderDisplayModeMask::Surface) && !meshTriangleRanges.empty() &&
        meshBuffer.vertexCount() > 0) {
         meshBuffer.bindForDraw();
 
         f->glEnable(GL_POLYGON_OFFSET_FILL);
         f->glPolygonOffset(-1.0f, -1.0f);
-        f->glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(meshSurfaceCount));
+        std::vector<GLint> firsts;
+        std::vector<GLsizei> counts;
+        PassUtil::buildArrayBatch(
+            meshTriangleRanges, [](const DrawRangeEx&) { return true; }, firsts, counts);
+        PassUtil::multiDrawArrays(ctx, f, GL_TRIANGLES, firsts, counts);
         f->glDisable(GL_POLYGON_OFFSET_FILL);
 
         meshBuffer.unbind();

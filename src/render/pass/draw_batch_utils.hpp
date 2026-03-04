@@ -9,7 +9,7 @@
 
 #include <QOpenGLContext>
 #include <QOpenGLFunctions>
-#include <QOpenGLFunctions_1_4>
+#include <QOpenGLFunctions_3_3_Core>
 #include <QOpenGLVersionFunctionsFactory>
 
 #include <cstdint>
@@ -73,9 +73,9 @@ inline void multiDrawElements(QOpenGLContext* ctx,
         return;
     }
 
-    if(auto* f14 = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_1_4>(ctx);
-       f14 && f14->initializeOpenGLFunctions()) {
-        f14->glMultiDrawElements(mode, counts.data(), GL_UNSIGNED_INT,
+    if(auto* f33 = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_3_3_Core>(ctx);
+       f33 && f33->initializeOpenGLFunctions()) {
+        f33->glMultiDrawElements(mode, counts.data(), GL_UNSIGNED_INT,
                                  reinterpret_cast<const void* const*>(offsets.data()),
                                  static_cast<GLsizei>(counts.size()));
         return;
@@ -95,9 +95,9 @@ inline void multiDrawArrays(QOpenGLContext* ctx,
         return;
     }
 
-    if(auto* f14 = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_1_4>(ctx);
-       f14 && f14->initializeOpenGLFunctions()) {
-        f14->glMultiDrawArrays(mode, firsts.data(), counts.data(),
+    if(auto* f33 = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_3_3_Core>(ctx);
+       f33 && f33->initializeOpenGLFunctions()) {
+        f33->glMultiDrawArrays(mode, firsts.data(), counts.data(),
                                static_cast<GLsizei>(counts.size()));
         return;
     }

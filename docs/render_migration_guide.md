@@ -1,5 +1,7 @@
 # OpenGeoLab 渲染系统移植指南
 
+> 当前实现请优先参考：`docs/render_design.md`（统一 RenderPassContext、按 Part 的 Mesh DrawRange、multi-draw 批量渲染与拾取流程）。
+
 > 基于 commit `83797b5` (FBO GPU Picking) 和 `c02acda` (Render & Selection Enhancement) 的完整渲染架构分析与分模块移植方案。
 
 ---

@@ -7,7 +7,10 @@
 
 #include "geometry/geometry_types.hpp"
 #include "mesh/mesh_action.hpp"
+
 #include <TopoDS_Shape.hxx>
+#include <utility>
+#include <vector>
 
 namespace OpenGeoLab::Mesh {
 
@@ -33,13 +36,14 @@ public:
 
 private:
     /**
-     * @brief Build a compound TopoDS_Shape from the selected face/part/solid entities.
+     * @brief Build per-part compound shapes from selected face/part/solid entities.
      */
-    TopoDS_Shape createShapeFromFaceEntities(const Geometry::EntityRefSet& face_entities);
+    std::vector<std::pair<Geometry::EntityUID, TopoDS_Shape>>
+    createShapesByPartFromEntities(const Geometry::EntityRefSet& entities);
 
     /**
      * @brief Import shape into Gmsh, generate mesh, extract nodes/elements to MeshDocument.
-     * @param shape Compound shape to mesh
+     * @param part_shapes Per-part compound shapes to mesh
      * @param element_size Global element size
      * @param mesh_dimension 2 for surface mesh, 3 for volume mesh
      * @param element_type "triangle", "quad", or "auto"
@@ -47,11 +51,12 @@ private:
      *
      * Gmsh must already be initialized before calling this method.
      */
-    void importShapeToGmshAndMesh(const TopoDS_Shape& shape,
-                                  double element_size,
-                                  int mesh_dimension,
-                                  const std::string& element_type,
-                                  Util::ProgressCallback progress_callback);
+    void importShapeToGmshAndMesh(
+        const std::vector<std::pair<Geometry::EntityUID, TopoDS_Shape>>& part_shapes,
+        double element_size,
+        int mesh_dimension,
+        const std::string& element_type,
+        Util::ProgressCallback progress_callback);
 };
 
 class GenerateMeshActionFactory : public MeshActionFactory {

@@ -5,6 +5,7 @@
 
 #include "highlight_pass.hpp"
 
+#include "draw_batch_utils.hpp"
 #include "render/core/gpu_buffer.hpp"
 #include "render/render_select_manager.hpp"
 #include "util/color_map.hpp"
@@ -12,6 +13,9 @@
 
 #include <QOpenGLContext>
 #include <QOpenGLFunctions>
+
+#include <array>
+#include <unordered_set>
 
 namespace OpenGeoLab::Render {
 
@@ -253,6 +257,26 @@ bool HighlightPass::onInitialize() {
 
 void HighlightPass::onCleanup() { LOG_DEBUG("HighlightPass: Cleaned up"); }
 
+void HighlightPass::render(const RenderPassContext& ctx_data) {
+    if(!isInitialized()) {
+        return;
+    }
+    if(ctx_data.m_geometry.m_buffer != nullptr && ctx_data.m_geometry.m_triangleRanges != nullptr &&
+       ctx_data.m_geometry.m_lineRanges != nullptr &&
+       ctx_data.m_geometry.m_pointRanges != nullptr) {
+        renderGeometry(ctx_data.m_params, *ctx_data.m_geometry.m_buffer,
+                       *ctx_data.m_geometry.m_triangleRanges, *ctx_data.m_geometry.m_lineRanges,
+                       *ctx_data.m_geometry.m_pointRanges);
+    }
+
+    if(ctx_data.m_mesh.m_buffer != nullptr && ctx_data.m_mesh.m_triangleRanges != nullptr &&
+       ctx_data.m_mesh.m_lineRanges != nullptr && ctx_data.m_mesh.m_pointRanges != nullptr) {
+        renderMesh(ctx_data.m_params, *ctx_data.m_mesh.m_buffer, *ctx_data.m_mesh.m_triangleRanges,
+                   *ctx_data.m_mesh.m_lineRanges, *ctx_data.m_mesh.m_pointRanges,
+                   ctx_data.m_mesh.m_displayMode);
+    }
+}
+
 void HighlightPass::renderGeometry(const PassRenderParams& params,
                                    GpuBuffer& geomBuffer,
                                    const std::vector<DrawRangeEx>& triangleRanges,
@@ -432,9 +456,9 @@ void HighlightPass::renderGeometry(const PassRenderParams& params,
 
 void HighlightPass::renderMesh(const PassRenderParams& params,
                                GpuBuffer& meshBuffer,
-                               uint32_t meshSurfaceCount,
-                               uint32_t meshWireframeCount,
-                               uint32_t meshNodeCount,
+                               const std::vector<DrawRangeEx>& meshTriangleRanges,
+                               const std::vector<DrawRangeEx>& meshLineRanges,
+                               const std::vector<DrawRangeEx>& meshPointRanges,
                                RenderDisplayModeMask meshDisplayMode) {
     if(!isInitialized() || meshBuffer.vertexCount() == 0) {
         return;
@@ -453,27 +477,56 @@ void HighlightPass::renderMesh(const PassRenderParams& params,
         }
     }
 
-    // Build selected pick IDs for shader
+    // Build selected pick IDs for shader (split by topology to reduce shader loop work)
     constexpr int MAX_SELECTED = 32;
-    uint32_t selectLo[MAX_SELECTED] = {};
-    uint32_t selectHi[MAX_SELECTED] = {};
-    int selectCount = 0;
+    std::array<uint32_t, MAX_SELECTED> surface_select_lo{};
+    std::array<uint32_t, MAX_SELECTED> surface_select_hi{};
+    std::array<uint32_t, MAX_SELECTED> line_select_lo{};
+    std::array<uint32_t, MAX_SELECTED> line_select_hi{};
+    std::array<uint32_t, MAX_SELECTED> node_select_lo{};
+    std::array<uint32_t, MAX_SELECTED> node_select_hi{};
+    int surface_select_count = 0;
+    int line_select_count = 0;
+    int node_select_count = 0;
+
+    std::unordered_set<uint64_t> seen_surface;
+    std::unordered_set<uint64_t> seen_line;
+    std::unordered_set<uint64_t> seen_node;
+    seen_surface.reserve(MAX_SELECTED);
+    seen_line.reserve(MAX_SELECTED);
+    seen_node.reserve(MAX_SELECTED);
+
+    auto append_pick = [](uint64_t encoded, std::unordered_set<uint64_t>& seen,
+                          std::array<uint32_t, MAX_SELECTED>& lo,
+                          std::array<uint32_t, MAX_SELECTED>& hi, int& count) {
+        if(count >= MAX_SELECTED || !seen.insert(encoded).second) {
+            return;
+        }
+        toUvec2(encoded, lo[count], hi[count]);
+        ++count;
+    };
+
     {
         const auto selections = selectMgr.selections();
         for(const auto& sel : selections) {
-            if(selectCount >= MAX_SELECTED) {
-                break;
+            if(!isMeshDomain(sel.m_type)) {
+                continue;
             }
-            if(isMeshDomain(sel.m_type)) {
-                const uint64_t encoded = PickId::encode(sel.m_type, sel.m_uid);
-                toUvec2(encoded, selectLo[selectCount], selectHi[selectCount]);
-                ++selectCount;
+            const uint64_t encoded = PickId::encode(sel.m_type, sel.m_uid);
+            if(sel.m_type == RenderEntityType::MeshLine) {
+                append_pick(encoded, seen_line, line_select_lo, line_select_hi, line_select_count);
+            } else if(sel.m_type == RenderEntityType::MeshNode) {
+                append_pick(encoded, seen_node, node_select_lo, node_select_hi, node_select_count);
+            } else {
+                append_pick(encoded, seen_surface, surface_select_lo, surface_select_hi,
+                            surface_select_count);
             }
         }
     }
 
     // Skip if nothing to highlight
-    if(hoverLo == 0 && hoverHi == 0 && selectCount == 0) {
+    if(hoverLo == 0 && hoverHi == 0 && surface_select_count == 0 && line_select_count == 0 &&
+       node_select_count == 0) {
         return;
     }
 
@@ -493,11 +546,24 @@ void HighlightPass::renderMesh(const PassRenderParams& params,
         f->glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
     }
 
+    QOpenGLContext* ctx = QOpenGLContext::currentContext();
     meshBuffer.bindForDraw();
 
+    auto set_select_uniforms = [](ShaderProgram& shader,
+                                  const std::array<uint32_t, MAX_SELECTED>& lo,
+                                  const std::array<uint32_t, MAX_SELECTED>& hi, int count) {
+        shader.setUniformInt("u_selectCount", count);
+        for(int i = 0; i < count; ++i) {
+            const std::string name = "u_selectPickIds[" + std::to_string(i) + "]";
+            shader.setUniformUvec2(name.c_str(), lo[static_cast<size_t>(i)],
+                                   hi[static_cast<size_t>(i)]);
+        }
+    };
+
     // --- Mesh surface highlight ---
-    if(meshSurfaceCount > 0 && (hasMode(meshDisplayMode, RenderDisplayModeMask::Surface) ||
-                                selectCount > 0 || (hoverLo != 0 || hoverHi != 0))) {
+    if(!meshTriangleRanges.empty() &&
+       (hasMode(meshDisplayMode, RenderDisplayModeMask::Surface) || surface_select_count > 0 ||
+        (hoverLo != 0 || hoverHi != 0))) {
         f->glEnable(GL_POLYGON_OFFSET_FILL);
         f->glPolygonOffset(1.0f, 1.0f);
 
@@ -510,22 +576,23 @@ void HighlightPass::renderMesh(const PassRenderParams& params,
         m_meshSurfaceShader.setUniformUvec2("u_hoverPickId", hoverLo, hoverHi);
         m_meshSurfaceShader.setUniformVec4("u_hoverColor", faceHover.m_r, faceHover.m_g,
                                            faceHover.m_b, 0.4f);
-        m_meshSurfaceShader.setUniformInt("u_selectCount", selectCount);
+        set_select_uniforms(m_meshSurfaceShader, surface_select_lo, surface_select_hi,
+                            surface_select_count);
         m_meshSurfaceShader.setUniformVec4("u_selectColor", faceSelect.m_r, faceSelect.m_g,
                                            faceSelect.m_b, 0.5f);
-        for(int i = 0; i < selectCount; ++i) {
-            const std::string name = "u_selectPickIds[" + std::to_string(i) + "]";
-            m_meshSurfaceShader.setUniformUvec2(name.c_str(), selectLo[i], selectHi[i]);
-        }
 
-        f->glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(meshSurfaceCount));
+        std::vector<GLint> firsts;
+        std::vector<GLsizei> counts;
+        PassUtil::buildArrayBatch(
+            meshTriangleRanges, [](const DrawRangeEx&) { return true; }, firsts, counts);
+        PassUtil::multiDrawArrays(ctx, f, GL_TRIANGLES, firsts, counts);
 
         m_meshSurfaceShader.release();
         f->glDisable(GL_POLYGON_OFFSET_FILL);
     }
 
     // --- Mesh wireframe highlight ---
-    if(hasMode(meshDisplayMode, RenderDisplayModeMask::Wireframe) && meshWireframeCount > 0) {
+    if(hasMode(meshDisplayMode, RenderDisplayModeMask::Wireframe) && !meshLineRanges.empty()) {
         m_meshFlatShader.bind();
         m_meshFlatShader.setUniformMatrix4("u_viewMatrix", params.viewMatrix);
         m_meshFlatShader.setUniformMatrix4("u_projMatrix", params.projMatrix);
@@ -533,23 +600,22 @@ void HighlightPass::renderMesh(const PassRenderParams& params,
         m_meshFlatShader.setUniformUvec2("u_hoverPickId", hoverLo, hoverHi);
         m_meshFlatShader.setUniformVec4("u_hoverColor", evHover.m_r, evHover.m_g, evHover.m_b,
                                         1.0f);
-        m_meshFlatShader.setUniformInt("u_selectCount", selectCount);
+        set_select_uniforms(m_meshFlatShader, line_select_lo, line_select_hi, line_select_count);
         m_meshFlatShader.setUniformVec4("u_selectColor", evSelect.m_r, evSelect.m_g, evSelect.m_b,
                                         1.0f);
-        for(int i = 0; i < selectCount; ++i) {
-            const std::string name = "u_selectPickIds[" + std::to_string(i) + "]";
-            m_meshFlatShader.setUniformUvec2(name.c_str(), selectLo[i], selectHi[i]);
-        }
 
         f->glLineWidth(1.0f);
-        f->glDrawArrays(GL_LINES, static_cast<GLint>(meshSurfaceCount),
-                        static_cast<GLsizei>(meshWireframeCount));
+        std::vector<GLint> firsts;
+        std::vector<GLsizei> counts;
+        PassUtil::buildArrayBatch(
+            meshLineRanges, [](const DrawRangeEx&) { return true; }, firsts, counts);
+        PassUtil::multiDrawArrays(ctx, f, GL_LINES, firsts, counts);
 
         m_meshFlatShader.release();
     }
 
     // --- Mesh node points highlight ---
-    if(hasMode(meshDisplayMode, RenderDisplayModeMask::Points) && meshNodeCount > 0) {
+    if(hasMode(meshDisplayMode, RenderDisplayModeMask::Points) && !meshPointRanges.empty()) {
         m_meshFlatShader.bind();
         m_meshFlatShader.setUniformMatrix4("u_viewMatrix", params.viewMatrix);
         m_meshFlatShader.setUniformMatrix4("u_projMatrix", params.projMatrix);
@@ -558,17 +624,16 @@ void HighlightPass::renderMesh(const PassRenderParams& params,
         m_meshFlatShader.setUniformUvec2("u_hoverPickId", hoverLo, hoverHi);
         m_meshFlatShader.setUniformVec4("u_hoverColor", evHover.m_r, evHover.m_g, evHover.m_b,
                                         1.0f);
-        m_meshFlatShader.setUniformInt("u_selectCount", selectCount);
+        set_select_uniforms(m_meshFlatShader, node_select_lo, node_select_hi, node_select_count);
         m_meshFlatShader.setUniformVec4("u_selectColor", evSelect.m_r, evSelect.m_g, evSelect.m_b,
                                         1.0f);
-        for(int i = 0; i < selectCount; ++i) {
-            const std::string name = "u_selectPickIds[" + std::to_string(i) + "]";
-            m_meshFlatShader.setUniformUvec2(name.c_str(), selectLo[i], selectHi[i]);
-        }
 
         f->glEnable(GL_PROGRAM_POINT_SIZE);
-        f->glDrawArrays(GL_POINTS, static_cast<GLint>(meshSurfaceCount + meshWireframeCount),
-                        static_cast<GLsizei>(meshNodeCount));
+        std::vector<GLint> firsts;
+        std::vector<GLsizei> counts;
+        PassUtil::buildArrayBatch(
+            meshPointRanges, [](const DrawRangeEx&) { return true; }, firsts, counts);
+        PassUtil::multiDrawArrays(ctx, f, GL_POINTS, firsts, counts);
 
         m_meshFlatShader.release();
     }

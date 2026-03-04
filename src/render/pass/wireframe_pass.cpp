@@ -64,18 +64,26 @@ bool WireframePass::onInitialize() {
 
 void WireframePass::onCleanup() { LOG_DEBUG("WireframePass: Cleaned up"); }
 
-void WireframePass::render(const PassRenderParams& params,
-                           GpuBuffer& geomBuffer,
-                           const std::vector<DrawRangeEx>& lineRanges,
-                           const std::vector<DrawRangeEx>& pointRanges,
-                           GpuBuffer& meshBuffer,
-                           uint32_t meshSurfaceCount,
-                           uint32_t meshWireframeCount,
-                           uint32_t meshNodeCount,
-                           RenderDisplayModeMask meshDisplayMode) {
+void WireframePass::render(const RenderPassContext& ctx_data) {
+    const auto& params = ctx_data.m_params;
     if(!isInitialized()) {
         return;
     }
+
+    if(ctx_data.m_geometry.m_buffer == nullptr || ctx_data.m_mesh.m_buffer == nullptr ||
+       ctx_data.m_geometry.m_lineRanges == nullptr ||
+       ctx_data.m_geometry.m_pointRanges == nullptr || ctx_data.m_mesh.m_lineRanges == nullptr ||
+       ctx_data.m_mesh.m_pointRanges == nullptr) {
+        return;
+    }
+
+    auto& geomBuffer = *ctx_data.m_geometry.m_buffer;
+    auto& meshBuffer = *ctx_data.m_mesh.m_buffer;
+    const auto& lineRanges = *ctx_data.m_geometry.m_lineRanges;
+    const auto& pointRanges = *ctx_data.m_geometry.m_pointRanges;
+    const auto& meshLineRanges = *ctx_data.m_mesh.m_lineRanges;
+    const auto& meshPointRanges = *ctx_data.m_mesh.m_pointRanges;
+    const auto meshDisplayMode = ctx_data.m_mesh.m_displayMode;
 
     QOpenGLFunctions* f = QOpenGLContext::currentContext()->functions();
     QOpenGLContext* ctx = QOpenGLContext::currentContext();
@@ -119,29 +127,35 @@ void WireframePass::render(const PassRenderParams& params,
     }
 
     // --- Mesh wireframe edges (array GL_LINES) ---
-    if(hasMode(meshDisplayMode, RenderDisplayModeMask::Wireframe) && meshWireframeCount > 0 &&
+    if(hasMode(meshDisplayMode, RenderDisplayModeMask::Wireframe) && !meshLineRanges.empty() &&
        meshBuffer.vertexCount() > 0) {
         m_flatShader.setUniformFloat("u_viewOffset", kMeshViewOffset);
         meshBuffer.bindForDraw();
 
         f->glLineWidth(1.0f);
-        f->glDrawArrays(GL_LINES, static_cast<GLint>(meshSurfaceCount),
-                        static_cast<GLsizei>(meshWireframeCount));
+        std::vector<GLint> firsts;
+        std::vector<GLsizei> counts;
+        PassUtil::buildArrayBatch(
+            meshLineRanges, [](const DrawRangeEx&) { return true; }, firsts, counts);
+        PassUtil::multiDrawArrays(ctx, f, GL_LINES, firsts, counts);
 
         meshBuffer.unbind();
         m_flatShader.setUniformFloat("u_viewOffset", 0.0f);
     }
 
     // --- Mesh node points (array GL_POINTS) ---
-    if(hasMode(meshDisplayMode, RenderDisplayModeMask::Points) && meshNodeCount > 0 &&
+    if(hasMode(meshDisplayMode, RenderDisplayModeMask::Points) && !meshPointRanges.empty() &&
        meshBuffer.vertexCount() > 0) {
         m_flatShader.setUniformFloat("u_viewOffset", kMeshViewOffset);
         meshBuffer.bindForDraw();
 
         f->glEnable(GL_PROGRAM_POINT_SIZE);
         m_flatShader.setUniformFloat("u_pointSize", 3.0f);
-        f->glDrawArrays(GL_POINTS, static_cast<GLint>(meshSurfaceCount + meshWireframeCount),
-                        static_cast<GLsizei>(meshNodeCount));
+        std::vector<GLint> firsts;
+        std::vector<GLsizei> counts;
+        PassUtil::buildArrayBatch(
+            meshPointRanges, [](const DrawRangeEx&) { return true; }, firsts, counts);
+        PassUtil::multiDrawArrays(ctx, f, GL_POINTS, firsts, counts);
 
         meshBuffer.unbind();
         m_flatShader.setUniformFloat("u_viewOffset", 0.0f);

@@ -89,7 +89,6 @@ constexpr RenderDisplayModeMask operator&(RenderDisplayModeMask a, RenderDisplay
 // =============================================================================
 // PickId — Encoded entity identifier for GPU picking
 // =============================================================================
-
 /**
  * @brief Encodes (RenderEntityType, UID) into a single uint64_t for GPU picking.
  *
@@ -131,22 +130,6 @@ struct RenderVertex {
     float m_color[4]{0.8f, 0.8f, 0.8f, 1.0f}; ///< RGBA color (16 bytes)
     uint64_t m_pickId{0};                     ///< Encoded pick ID (8 bytes)
 };
-
-// =============================================================================
-// DrawRange — Describes one draw call into the flat buffer
-// =============================================================================
-
-/**
- * @brief A contiguous range within a RenderPassData buffer for a single draw call.
- */
-struct DrawRange {
-    uint32_t m_vertexOffset{0}; ///< First vertex index in the pass vertex buffer
-    uint32_t m_vertexCount{0};  ///< Number of vertices
-    uint32_t m_indexOffset{0};  ///< First index in the pass index buffer (0 = non-indexed)
-    uint32_t m_indexCount{0};   ///< Number of indices (0 = non-indexed draw)
-    PrimitiveTopology m_topology{PrimitiveTopology::Triangles};
-};
-
 // =============================================================================
 // RenderNodeKey — Identity for a semantic tree node
 // =============================================================================
@@ -172,42 +155,32 @@ struct RenderNodeKeyHash {
 };
 
 // =============================================================================
-// DrawRangeEx — Extended draw range with entity identity and part ownership
+// DrawRange — Describes one draw call into the flat buffer
 // =============================================================================
 
 /**
- * @brief DrawRange extended with entity identity for per-entity highlighting and picking.
+ * @brief A contiguous range within a RenderPassData buffer for a single draw call.
  */
-struct DrawRangeEx {
-    DrawRange m_range;
+struct DrawRange {
     RenderNodeKey m_entityKey; ///< Entity identity (type + uid)
     uint64_t m_partUid{0};     ///< Parent part uid for reverse lookup
     uint64_t m_wireUid{0};     ///< Parent wire uid for edge-to-wire lookup
+
+    uint32_t m_vertexOffset{0}; ///< First vertex index in the pass vertex buffer
+    uint32_t m_vertexCount{0};  ///< Number of vertices
+    uint32_t m_indexOffset{0};  ///< First index in the pass index buffer (0 = non-indexed)
+    uint32_t m_indexCount{0};   ///< Number of indices (0 = non-indexed draw)
+    PrimitiveTopology m_topology{PrimitiveTopology::Triangles};
 };
 
-// =============================================================================
-// RenderNode — Semantic tree node
-// =============================================================================
-
 /**
- * @brief A node in the render semantic tree.
- *
- * Mirrors the geometry/mesh entity hierarchy. Each node carries metadata
- * (key, visibility, color, bounding box) and references to DrawRanges in
- * flat GPU buffers. The tree is used for scene management, visibility
- * toggling, and picking resolution — it does NOT own vertex data.
+ * @brief Extended draw range with semantic metadata used by passes.
  */
-struct RenderNode {
-    RenderNodeKey m_key;            ///< Entity identity (type + uid)
-    RenderColor m_color;            ///< Display color
-    bool m_visible{true};           ///< Visibility flag
-    Geometry::BoundingBox3D m_bbox; ///< Axis-aligned bounding box
-
-    /// DrawRanges owned by this node (pass is implicit from domain root)
-    std::vector<DrawRange> m_drawRanges;
-
-    /// Child nodes (Part -> Solid -> Face/Edge/Vertex hierarchy)
-    std::vector<RenderNode> m_children;
+struct DrawRangeEx {
+    DrawRange m_range;
+    RenderNodeKey m_entityKey;
+    uint64_t m_partUid{0};
+    uint64_t m_wireUid{0};
 };
 
 // =============================================================================
@@ -227,16 +200,16 @@ struct RenderNode {
 struct RenderPassData {
     std::vector<RenderVertex> m_vertices; ///< Flat vertex buffer
     std::vector<uint32_t> m_indices;      ///< Flat index buffer
-    uint32_t m_version{0}; ///< Current data version number (incremented when data changes)
+    uint64_t m_version{0}; ///< Current data version number (incremented when data changes)
 
     /**
      * @brief Check if data needs to be uploaded to GPU.
      * Should call GpuBuffer::needsUpload(data) instead of this method.
-     * @param uploadedVersion Last version known to have been uploaded
-     * @return true if m_version differs from uploadedVersion
+     * @param uploaded_version Last version known to have been uploaded
+     * @return true if m_version differs from uploaded_version
      */
-    [[nodiscard]] bool needsUpload(uint32_t uploadedVersion) const {
-        return uploadedVersion != m_version;
+    [[nodiscard]] bool needsUpload(uint64_t uploaded_version) const {
+        return uploaded_version != m_version;
     }
 
     /**
@@ -244,6 +217,22 @@ struct RenderPassData {
      * Call this after modifying vertices or indices.
      */
     void markDataUpdated() { ++m_version; }
+};
+
+// =============================================================================
+// RenderNode — Semantic scene tree node
+// =============================================================================
+
+/**
+ * @brief Semantic render node (Part / Face / Edge / Vertex / Mesh root).
+ */
+struct RenderNode {
+    RenderNodeKey m_key;
+    RenderColor m_color;
+    bool m_visible{true};
+    Geometry::BoundingBox3D m_bbox;
+    std::vector<DrawRange> m_drawRanges;
+    std::vector<RenderNode> m_children;
 };
 
 // =============================================================================
@@ -270,7 +259,7 @@ struct PickResolutionData {
     /// Wire uid → parent face uid lookup (each wire belongs to exactly one face)
     std::unordered_map<uint64_t, uint64_t> m_wireToFaceUid;
 
-    /// Entity uid → parent part uid (built from DrawRangeEx data during build phase)
+    /// Encoded PickId (type+uid) → parent part uid
     std::unordered_map<uint64_t, uint64_t> m_entityToPartUid;
 
     /// Mesh line sequential ID → (nodeA, nodeB) lookup.
@@ -307,10 +296,10 @@ struct PickResolutionData {
  * tables (m_pickData) are separated for clarity.
  */
 struct RenderData {
-    /// Geometry-domain semantic roots (typically top-level Part nodes)
+    /// Semantic roots for geometry (typically Part nodes)
     std::vector<RenderNode> m_geometryRoots;
 
-    /// Mesh-domain semantic roots (typically one mesh root/group)
+    /// Semantic roots for mesh
     std::vector<RenderNode> m_meshRoots;
 
     /// Per-pass flat GPU buffer data
@@ -331,6 +320,13 @@ struct RenderData {
 
     /// Scene-wide bounding box (union of all visible geometry)
     Geometry::BoundingBox3D m_sceneBBox;
+
+    /// Dirty flags per domain
+    uint64_t m_geometryVersion{0};
+    uint64_t m_meshVersion{0};
+
+    void markGeometryUpdated() { ++m_geometryVersion; }
+    void markMeshUpdated() { ++m_meshVersion; }
 
     /**
      * @brief Clear all render data (geometry + mesh)
@@ -387,14 +383,26 @@ struct TessellationOptions {
     double m_angularDeflection{0.5}; ///< Angular deflection in radians
     bool m_computeNormals{true};     ///< Compute vertex normals
 
+    /**
+     * @brief Create default options suitable for visualization
+     * @return TessellationOptions with balanced quality/performance
+     */
     [[nodiscard]] static TessellationOptions defaultOptions() {
         return TessellationOptions{0.05, 0.25, true};
     }
 
+    /**
+     * @brief Create high-quality options for detailed rendering
+     * @return TessellationOptions with higher quality
+     */
     [[nodiscard]] static TessellationOptions highQuality() {
         return TessellationOptions{0.01, 0.1, true};
     }
 
+    /**
+     * @brief Create low-quality options for fast preview
+     * @return TessellationOptions with lower quality
+     */
     [[nodiscard]] static TessellationOptions fastPreview() {
         return TessellationOptions{0.1, 0.5, false};
     }

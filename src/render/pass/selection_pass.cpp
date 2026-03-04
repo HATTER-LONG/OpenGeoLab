@@ -93,21 +93,31 @@ void SelectionPass::cleanup() {
     LOG_DEBUG("SelectionPass: Cleaned up");
 }
 
-void SelectionPass::renderToFbo(const QMatrix4x4& view,
-                                const QMatrix4x4& projection,
-                                GpuBuffer& geomBuffer,
-                                const std::vector<DrawRangeEx>& triRanges,
-                                const std::vector<DrawRangeEx>& lineRanges,
-                                const std::vector<DrawRangeEx>& pointRanges,
-                                GpuBuffer& meshBuffer,
-                                uint32_t meshSurfaceCount,
-                                uint32_t meshWireframeCount,
-                                uint32_t meshNodeCount,
-                                RenderEntityTypeMask pickMask) {
+void SelectionPass::renderToFbo(const RenderPassContext& ctx_data, RenderEntityTypeMask pickMask) {
     if(!m_initialized) {
         LOG_ERROR("SelectionPass: Not initialized");
         return;
     }
+
+    if(ctx_data.m_geometry.m_buffer == nullptr || ctx_data.m_mesh.m_buffer == nullptr ||
+       ctx_data.m_geometry.m_triangleRanges == nullptr ||
+       ctx_data.m_geometry.m_lineRanges == nullptr ||
+       ctx_data.m_geometry.m_pointRanges == nullptr ||
+       ctx_data.m_mesh.m_triangleRanges == nullptr || ctx_data.m_mesh.m_lineRanges == nullptr ||
+       ctx_data.m_mesh.m_pointRanges == nullptr) {
+        return;
+    }
+
+    auto& geomBuffer = *ctx_data.m_geometry.m_buffer;
+    auto& meshBuffer = *ctx_data.m_mesh.m_buffer;
+    const auto& triRanges = *ctx_data.m_geometry.m_triangleRanges;
+    const auto& lineRanges = *ctx_data.m_geometry.m_lineRanges;
+    const auto& pointRanges = *ctx_data.m_geometry.m_pointRanges;
+    const auto& meshTriRanges = *ctx_data.m_mesh.m_triangleRanges;
+    const auto& meshLineRanges = *ctx_data.m_mesh.m_lineRanges;
+    const auto& meshPointRanges = *ctx_data.m_mesh.m_pointRanges;
+    const auto& view = ctx_data.m_params.viewMatrix;
+    const auto& projection = ctx_data.m_params.projMatrix;
 
     QOpenGLFunctions* f = QOpenGLContext::currentContext()->functions();
     QOpenGLExtraFunctions* ef = QOpenGLContext::currentContext()->extraFunctions();
@@ -184,22 +194,36 @@ void SelectionPass::renderToFbo(const QMatrix4x4& view,
         m_pickShader.setUniformFloat("u_viewOffset", kMeshViewOffset);
         meshBuffer.bindForDraw();
 
-        if(hasAny(pickMask, RENDER_MESH_ELEMENTS) && meshSurfaceCount > 0) {
-            f->glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(meshSurfaceCount));
+        if(hasAny(pickMask, RENDER_MESH_ELEMENTS) && !meshTriRanges.empty()) {
+            std::vector<GLint> firsts;
+            std::vector<GLsizei> counts;
+            PassUtil::buildArrayBatch(
+                meshTriRanges,
+                [&pickMask](const DrawRangeEx& rangeEx) {
+                    return hasAny(pickMask, toMask(rangeEx.m_entityKey.m_type));
+                },
+                firsts, counts);
+            PassUtil::multiDrawArrays(ctx, f, GL_TRIANGLES, firsts, counts);
         }
 
-        if(hasAny(pickMask, RenderEntityTypeMask::MeshLine) && meshWireframeCount > 0) {
+        if(hasAny(pickMask, RenderEntityTypeMask::MeshLine) && !meshLineRanges.empty()) {
             f->glLineWidth(3.0f);
-            f->glDrawArrays(GL_LINES, static_cast<GLint>(meshSurfaceCount),
-                            static_cast<GLsizei>(meshWireframeCount));
+            std::vector<GLint> firsts;
+            std::vector<GLsizei> counts;
+            PassUtil::buildArrayBatch(
+                meshLineRanges, [](const DrawRangeEx&) { return true; }, firsts, counts);
+            PassUtil::multiDrawArrays(ctx, f, GL_LINES, firsts, counts);
             f->glLineWidth(1.0f);
         }
 
-        if(hasAny(pickMask, RenderEntityTypeMask::MeshNode) && meshNodeCount > 0) {
+        if(hasAny(pickMask, RenderEntityTypeMask::MeshNode) && !meshPointRanges.empty()) {
             f->glEnable(GL_PROGRAM_POINT_SIZE);
             m_pickShader.setUniformFloat("u_pointSize", 12.0f);
-            f->glDrawArrays(GL_POINTS, static_cast<GLint>(meshSurfaceCount + meshWireframeCount),
-                            static_cast<GLsizei>(meshNodeCount));
+            std::vector<GLint> firsts;
+            std::vector<GLsizei> counts;
+            PassUtil::buildArrayBatch(
+                meshPointRanges, [](const DrawRangeEx&) { return true; }, firsts, counts);
+            PassUtil::multiDrawArrays(ctx, f, GL_POINTS, firsts, counts);
             m_pickShader.setUniformFloat("u_pointSize", 1.0f);
         }
 
