@@ -40,12 +40,15 @@ void GpuBuffer::initialize() {
     if(m_initialized) {
         return;
     }
+
     QOpenGLContext* ctx = QOpenGLContext::currentContext();
     if(!ctx) {
         LOG_ERROR("GpuBuffer: Cannot initialize — no current GL context");
         return;
     }
+
     QOpenGLExtraFunctions* f = ctx->extraFunctions();
+
     f->glGenVertexArrays(1, &m_vao);
     f->glGenBuffers(1, &m_vbo);
     f->glGenBuffers(1, &m_ibo);
@@ -95,6 +98,7 @@ bool GpuBuffer::upload(const RenderPassData& data) {
         LOG_ERROR("GpuBuffer: upload() called before initialize()");
         return false;
     }
+
     QOpenGLContext* ctx = QOpenGLContext::currentContext();
     if(!ctx) {
         LOG_ERROR("GpuBuffer: Cannot upload — no current GL context");
@@ -103,7 +107,7 @@ bool GpuBuffer::upload(const RenderPassData& data) {
 
     QOpenGLExtraFunctions* f = ctx->extraFunctions();
 
-    // Early return for empty data (common for skipped)
+    // Early return for empty data (common for skipped geometry)
     if(data.m_vertices.empty()) {
         LOG_DEBUG("GpuBuffer: Skipping upload of empty vertex data");
         m_vertexCount = 0;
@@ -165,6 +169,7 @@ bool GpuBuffer::upload(const RenderPassData& data) {
         f->glBindVertexArray(0);
         return false;
     }
+
     // ── IBO ──────────────────────────────────────────────────────────────
     //
     // When an IBO is bound to GL_ELEMENT_ARRAY_BUFFER while a VAO is active,
@@ -211,7 +216,7 @@ void GpuBuffer::bindForDraw() {
 void GpuBuffer::unbind() {
     QOpenGLContext* ctx = QOpenGLContext::currentContext();
     if(!ctx) {
-        LOG_ERROR("GpuBuffer: Cannot bindForDraw() — no current GL context");
+        LOG_ERROR("GpuBuffer: Cannot unbind() — no current GL context");
         return;
     }
     QOpenGLExtraFunctions* f = ctx->extraFunctions();

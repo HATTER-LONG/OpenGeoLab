@@ -1,10 +1,23 @@
 #include "render_sceneImpl.hpp"
+#include "pass/render_pass_context.hpp"
 #include "render/render_select_manager.hpp"
 
 #include "util/color_map.hpp"
 #include "util/logger.hpp"
 
 namespace OpenGeoLab::Render {
+namespace {
+
+constexpr int K_PICK_REGION_RADIUS = 4;
+
+template <typename... TPasses> void initializePasses(TPasses&... passes) {
+    (passes.initialize(), ...);
+}
+
+template <typename... TPasses> void cleanupPasses(TPasses&... passes) { (passes.cleanup(), ...); }
+
+} // anonymous namespace
+
 RenderSceneImpl::RenderSceneImpl() { LOG_DEBUG("RenderSceneImpl: Created"); }
 
 RenderSceneImpl::~RenderSceneImpl() { LOG_DEBUG("RenderSceneImpl: Destroyed"); }
@@ -15,8 +28,8 @@ void RenderSceneImpl::initialize() {
     }
 
     // TODO(layton) - Initialize rendering resources here (e.g., shaders, buffers, etc.)
-    m_geometryPass.initialize();
-
+    m_geometryBuffer.initialize();
+    initializePasses(m_opaquePass);
     m_initialized = true;
 
     LOG_DEBUG("RenderSceneImpl: Initializing render scene");
@@ -33,10 +46,6 @@ void RenderSceneImpl::setViewportSize(const QSize& size) {
     if(!m_initialized) {
         return;
     }
-
-    if(!m_pickPassInitialized) {
-        // TODO(layton) - Initialize picking pass resources here
-    }
 }
 
 void RenderSceneImpl::synchronize(const SceneFrameState& state) {
@@ -47,13 +56,16 @@ void RenderSceneImpl::synchronize(const SceneFrameState& state) {
 
     const auto& render_data = *state.m_renderData;
 
-    // TODO(layton) - Update rendering resources based on the new frame state (e.g., update buffers,
-    // textures, etc.)
-    m_geometryPass.updateBuffers(render_data);
-
-    // Rebuild pick resolver when geometry changes
     if(render_data.m_geometryVersion != m_geometryDataVersion) {
-        // TODO(layton) - Rebuild pick resolver resources here
+        auto pass_it = render_data.m_passData.find(RenderPassType::Geometry);
+        if(pass_it != render_data.m_passData.end()) {
+            if(!m_geometryBuffer.upload(pass_it->second)) {
+                LOG_ERROR("RenderSceneImpl: Failed to upload geometry GPU buffer");
+            }
+        }
+        m_geometryTriangleRanges = render_data.m_geometryTriangleRanges;
+        m_geometryLineRanges = render_data.m_geometryLineRanges;
+        m_geometryPointRanges = render_data.m_geometryPointRanges;
         m_geometryDataVersion = render_data.m_geometryVersion;
     }
 
@@ -81,9 +93,15 @@ void RenderSceneImpl::render() {
     f->glClearColor(bg.m_r, bg.m_g, bg.m_b, 1.0f);
     f->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    m_geometryPass.render(m_frameState.m_viewMatrix, m_frameState.m_projMatrix,
-                          m_frameState.m_cameraPos, m_frameState.m_xRayMode);
-}
+    RenderPassContext pass_context{
+        {m_frameState.m_viewMatrix, m_frameState.m_projMatrix, m_frameState.m_cameraPos,
+         m_frameState.m_xRayMode},
+        {m_geometryBuffer, m_geometryTriangleRanges, m_geometryLineRanges, m_geometryPointRanges},
+        {m_meshBuffer, m_meshTriangleRanges, m_meshLineRanges, m_meshPointRanges}};
+    if(m_frameState.m_xRayMode) {
+    }
+    m_opaquePass.render(pass_context);
+};
 
 void RenderSceneImpl::processHover(int pixel_x, int pixel_y) {
     LOG_DEBUG("RenderSceneImpl: Processing hover at pixel position ({}, {})", pixel_x, pixel_y);
@@ -113,7 +131,6 @@ void RenderSceneImpl::cleanup() {
     if(!m_initialized) {
         return;
     }
-    m_geometryPass.cleanup();
     m_initialized = false;
     m_pickPassInitialized = false;
     m_geometryDataVersion = 0;

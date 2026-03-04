@@ -6,10 +6,10 @@
 
 #pragma once
 
+#include "pass/opaque_pass.hpp"
 #include "render/render_scene.hpp"
 
 // #include "render/pick_resolver.hpp"
-#include "pass/geometry_pass.hpp"
 // #include "render/pass/mesh_pass.hpp"
 // #include "render/pass/pick_pass.hpp"
 
@@ -55,11 +55,21 @@ public:
     void processHover(int pixel_x, int pixel_y) override;
 
 private:
-    GeometryPass m_geometryPass;
-    // MeshPass m_meshPass;
-    // PickPass m_pickPass;
+    // --- GPU Buffers (shared across passes) ---
+    GpuBuffer m_geometryBuffer; ///< Geometry (CAD) vertex/index data
+    GpuBuffer m_meshBuffer;     ///< Mesh (FEM) vertex data
 
-    // PickResolver m_pickResolver; ///< GL-free entity hierarchy resolver
+    // --- Render Passes ---
+    OpaquePass m_opaquePass;
+
+    // --- Pre-built draw ranges (copied from RenderData during synchronize) ---
+    std::vector<DrawRange> m_geometryTriangleRanges;
+    std::vector<DrawRange> m_geometryLineRanges;
+    std::vector<DrawRange> m_geometryPointRanges;
+
+    std::vector<DrawRange> m_meshTriangleRanges;
+    std::vector<DrawRange> m_meshLineRanges;
+    std::vector<DrawRange> m_meshPointRanges;
 
     SceneFrameState m_frameState; ///< Cached per-frame state from GUI thread
 
