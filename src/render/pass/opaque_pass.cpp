@@ -87,11 +87,19 @@ void OpaquePass::render(RenderPassContext& ctx) {
     QOpenGLContext* ctx_gl = QOpenGLContext::currentContext();
     f->glEnable(GL_DEPTH_TEST);
 
+    float alpha = 1.0f;
+    if(ctx.m_params.m_xRayMode) {
+        alpha = 0.25f;
+        // Enable blending for transparency
+        f->glEnable(GL_BLEND);
+        f->glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+        f->glDepthMask(GL_FALSE);
+    }
     m_surfaceShader.bind();
     m_surfaceShader.setUniformMatrix4("u_viewMatrix", ctx.m_params.m_viewMatrix);
     m_surfaceShader.setUniformMatrix4("u_projMatrix", ctx.m_params.m_projMatrix);
     m_surfaceShader.setUniformVec3("u_cameraPos", ctx.m_params.m_cameraPos);
-    m_surfaceShader.setUniformFloat("u_alpha", 1.0f);
+    m_surfaceShader.setUniformFloat("u_alpha", alpha);
     if(ctx.m_geometry.hasGeometry()) {
         geo_buf.bindForDraw();
         // Push surfaces slightly back in depth so coplanar wireframe edges
@@ -117,6 +125,10 @@ void OpaquePass::render(RenderPassContext& ctx) {
         mesh_buf.unbind();
     }
 
+    if(ctx.m_params.m_xRayMode) {
+        f->glDisable(GL_BLEND);
+        f->glDepthMask(GL_TRUE);
+    }
     m_surfaceShader.release();
 }
 } // namespace OpenGeoLab::Render

@@ -7,6 +7,7 @@
 #pragma once
 
 #include "pass/opaque_pass.hpp"
+#include "pass/wireframe_pass.hpp"
 #include "render/render_scene.hpp"
 
 // #include "render/pick_resolver.hpp"
@@ -61,6 +62,7 @@ private:
 
     // --- Render Passes ---
     OpaquePass m_opaquePass;
+    WireframePass m_wireframePass;
 
     // --- Pre-built draw ranges (copied from RenderData during synchronize) ---
     std::vector<DrawRange> m_geometryTriangleRanges;

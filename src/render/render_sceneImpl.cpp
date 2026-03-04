@@ -29,7 +29,7 @@ void RenderSceneImpl::initialize() {
 
     // TODO(layton) - Initialize rendering resources here (e.g., shaders, buffers, etc.)
     m_geometryBuffer.initialize();
-    initializePasses(m_opaquePass);
+    initializePasses(m_opaquePass, m_wireframePass);
     m_initialized = true;
 
     LOG_DEBUG("RenderSceneImpl: Initializing render scene");
@@ -101,6 +101,7 @@ void RenderSceneImpl::render() {
     if(m_frameState.m_xRayMode) {
     }
     m_opaquePass.render(pass_context);
+    m_wireframePass.render(pass_context);
 };
 
 void RenderSceneImpl::processHover(int pixel_x, int pixel_y) {
