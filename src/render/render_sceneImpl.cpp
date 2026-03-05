@@ -1,6 +1,7 @@
 #include "render_sceneImpl.hpp"
 #include "pass/render_pass_context.hpp"
 #include "render/render_select_manager.hpp"
+#include "render/render_types.hpp"
 
 #include "util/color_map.hpp"
 #include "util/logger.hpp"
@@ -8,7 +9,7 @@
 namespace OpenGeoLab::Render {
 namespace {
 
-constexpr int K_PICK_REGION_RADIUS = 4;
+constexpr int K_PICK_REGION_RADIUS = 6;
 
 template <typename... TPasses> void initializePasses(TPasses&... passes) {
     (passes.initialize(), ...);
@@ -191,8 +192,85 @@ void RenderSceneImpl::processHover(int pixel_x, int pixel_y) {
 }
 
 void RenderSceneImpl::processPicking(const PickingInput& input) {
-    LOG_DEBUG("RenderSceneImpl: Processing picking at cursor position ({}, {}) with action {}",
-              input.m_cursorPos.x(), input.m_cursorPos.y(), static_cast<int>(input.m_action));
+    if(!m_initialized || !m_selectionPass.isInitialized()) {
+        return;
+    }
+
+    if(input.m_action == PickAction::None) {
+        return;
+    }
+
+    auto& select_mgr = RenderSelectManager::instance();
+    // Convert cursor position to framebuffer pixel coordinates (flip Y for OpenGL)
+    const int px = static_cast<int>(input.m_cursorPos.x() * input.m_devicePixelRatio);
+    const int py = static_cast<int>((input.m_itemSize.height() - input.m_cursorPos.y()) *
+                                    input.m_devicePixelRatio);
+
+    const RenderEntityTypeMask pick_mask = select_mgr.getPickTypes();
+
+    // Expand mask for Wire/Part mode
+    RenderEntityTypeMask effective_mask = pick_mask;
+    if(select_mgr.isTypePickable(RenderEntityType::Wire)) {
+        effective_mask = effective_mask | RenderEntityTypeMask::Edge | RenderEntityTypeMask::Face;
+    }
+    if(select_mgr.isTypePickable(RenderEntityType::Part)) {
+        effective_mask = effective_mask | RenderEntityTypeMask::Face | RenderEntityTypeMask::Edge;
+    }
+
+    RenderPassContext pass_context{
+        {m_frameState.m_viewMatrix, m_frameState.m_projMatrix, m_frameState.m_cameraPos,
+         m_frameState.m_xRayMode, effective_mask},
+        {m_geometryBuffer, m_geometryTriangleRanges, m_geometryLineRanges, m_geometryPointRanges},
+        {m_meshBuffer, m_meshTriangleRanges, m_meshLineRanges, m_meshPointRanges}};
+
+    m_selectionPass.render(pass_context);
+
+    // Restore main framebuffer viewport
+    auto* f = QOpenGLContext::currentContext()->functions();
+    f->glViewport(0, 0, m_viewportSize.width(), m_viewportSize.height());
+
+    // Read a small region for priority-based picking
+    const auto pick_ids = m_selectionPass.readPickRegion(px, py, K_PICK_REGION_RADIUS);
+
+    if(pick_ids.empty()) {
+        return;
+    }
+
+    auto resolved = m_pickResolver.resolve(pick_ids);
+    if(!resolved.isValid()) {
+        return;
+    }
+
+    if(select_mgr.isTypePickable(RenderEntityType::Wire)) {
+        if(resolved.m_type == RenderEntityType::Edge) {
+            if(resolved.m_wireUid != 0) {
+                resolved.m_uid = resolved.m_wireUid;
+                resolved.m_type = RenderEntityType::Wire;
+            }
+        } else if(resolved.m_type == RenderEntityType::Face) {
+            return;
+        }
+    }
+    if(select_mgr.isTypePickable(RenderEntityType::Part) &&
+       resolved.m_type != RenderEntityType::Part) {
+        if(resolved.m_partUid != 0) {
+            resolved.m_uid = resolved.m_partUid;
+            resolved.m_type = RenderEntityType::Part;
+        }
+    }
+
+    if(input.m_action == PickAction::Add) {
+        select_mgr.addSelection(resolved.m_uid, resolved.m_type);
+        if(resolved.m_type == RenderEntityType::Wire) {
+            const auto& wire_edges = m_pickResolver.wireEdges(resolved.m_uid);
+            select_mgr.addSelectedWireEdges(resolved.m_uid, wire_edges);
+        }
+    } else if(input.m_action == PickAction::Remove) {
+        select_mgr.removeSelection(resolved.m_uid, resolved.m_type);
+        if(resolved.m_type == RenderEntityType::Wire) {
+            select_mgr.removeSelectedWireEdges(resolved.m_uid);
+        }
+    }
 }
 
 void RenderSceneImpl::cleanup() {

@@ -145,7 +145,7 @@ void SelectionPass::render(RenderPassContext& ctx) {
         }
         // Lines
         if(hasAny(pick_mask, RenderEntityTypeMask::Edge) && !line_ranges.empty()) {
-            f->glLineWidth(3.0f);
+            f->glLineWidth(4.0f);
             std::vector<GLsizei> counts;
             std::vector<const void*> offsets;
             PassUtil::buildIndexedBatch(
