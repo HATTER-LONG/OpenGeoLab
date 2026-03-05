@@ -5,7 +5,9 @@
 - include 头文件包括对外接口，不同 src 下的目录为不同模块，只能通过 include 暴露的接口进行调用
 
 # 计划任务
-1. 优化 GeometryRenderBuilder::build 方法，调整 render_data 结构，直接在 build 阶段生成按 topology 分类的 DrawRangeEx，避免每次渲染都要调用 collectDrawRangesEx 来重新计算一次 topology 的 draw range。
-2. 为 render select 增加计数，记录每个 entity type 的 uid 列表，在渲染时，先一次draw call 普通的 render data，再一次 draw call render select data over pass 高亮目标，也就是增加一个 hight pass。
-3. 优化拾取逻辑， m_pickResolver.rebuild 等没有必要 与 render data 里的 m_pickData 重复，尽量在 build 阶段就构建好拾取数据，减少每次拾取时的计算开销。select pass 首先只渲染当前拾取类型的对象，其次读取 pixel 后 直接分析出最佳拾取结果，避免每次拾取都要分析所有拾取数据。
-4. 将渲染模块分为 OpaquePass TransparentPass  WireframePass selectionPass（替换当前的 pick pass） HighlightPass PostProcessPass UIPass模块，分别处理不透明物体、透明物体、线框、选择高亮、后处理和 UI 渲染，优化渲染流程和性能。
+1. 优化 mesh builder + render：
+    - highlight pass mesh 需要把选中 ID 上传到 GL_RG32UI 纹理，修改为只在选中状态改变时更新纹理，避免每帧都上传数据。
+    - 用 PBO/SSBO 做异步或更大规模的查找结构 或 采用“按 part 粗分 + GPU 精细识别”的混合方案，首先在 CPU 端根据 part 粗略判断可能被选中的对象列表，然后在 GPU 端通过 render select pass 精确识别最终选中对象，减少每次拾取时需要分析的对象数量，提高拾取效率。
+    - hightlight 与 opaque pass 中，mesh 的 range 重复循环构建 batch 数据，是否可以在 build 阶段就构建好 batch 数据，渲染时直接使用，减少每帧构建 batch 的开销。
+2. geo mesh 复用 batch 容器：把 firsts/counts（及索引偏移缓存）作为成员或传入的外部容器，clear() 后重用，避免每帧分配。
+5. 需要代码编译通过.

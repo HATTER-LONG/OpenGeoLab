@@ -6,12 +6,14 @@
 #pragma once
 #include "render_pass_context.hpp"
 
+#include <kangaroo/util/noncopyable.hpp>
+
 namespace OpenGeoLab::Render {
 
 /**
  * @brief Base class that unifies initialize/cleanup state handling.
  */
-class RenderPassBase {
+class RenderPassBase : public Kangaroo::Util::NonCopyMoveable {
 public:
     virtual ~RenderPassBase() = default;
 

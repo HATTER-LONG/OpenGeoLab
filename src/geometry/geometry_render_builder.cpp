@@ -92,7 +92,6 @@ bool GeometryRenderBuilder::build(Render::RenderData& render_data,
             continue;
         }
         const EntityUID part_uid = part->entityUID();
-        render_data.m_pickData.m_entityToPartUid[part_uid] = part_uid;
 
         PartBuildContext context(render_data, input, part, part_uid);
         buildWireEdgeLookupsForPart(render_data, input, part);
@@ -142,8 +141,8 @@ void GeometryRenderBuilder::appendEdgeNodes(const PartBuildContext& context) {
         if(range.m_vertexCount == 0) {
             continue;
         }
-        context.m_renderData.m_pickData.m_entityToPartUid[edge_entity->entityUID()] =
-            context.m_partUid;
+        context.m_renderData.m_pickData.m_entityToPartUid[Render::PickId::encode(
+            Render::RenderEntityType::Edge, edge_entity->entityUID())] = context.m_partUid;
         context.m_renderData.m_geometryLineRanges.push_back(std::move(range));
     }
 }
@@ -162,8 +161,11 @@ void GeometryRenderBuilder::appendVertexNodes(const PartBuildContext& context) {
         if(range.m_vertexCount == 0) {
             continue;
         }
-        context.m_renderData.m_pickData.m_entityToPartUid[vertex_entity->entityUID()] =
-            context.m_partUid;
+        // TODO(layton) - combine with edge/face part lookup or unify into single entity-level
+        // lookup
+
+        // context.m_renderData.m_pickData.m_entityToPartUid[vertex_entity->entityUID()] =
+        //     context.m_partUid;
         context.m_renderData.m_geometryPointRanges.push_back(std::move(range));
     }
 }
@@ -194,7 +196,8 @@ bool GeometryRenderBuilder::tryAppendFaceNode(const PartBuildContext& context,
     if(range.m_indexCount == 0 && range.m_vertexCount == 0) {
         return false;
     }
-    context.m_renderData.m_pickData.m_entityToPartUid[face_entity->entityUID()] = context.m_partUid;
+    context.m_renderData.m_pickData.m_entityToPartUid[Render::PickId::encode(
+        Render::RenderEntityType::Face, face_entity->entityUID())] = context.m_partUid;
     context.m_renderData.m_geometryTriangleRanges.push_back(range);
     return true;
 }

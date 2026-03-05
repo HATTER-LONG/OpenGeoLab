@@ -6,9 +6,13 @@
 
 #pragma once
 
+#include "pass/highlight_pass.hpp"
 #include "pass/opaque_pass.hpp"
+#include "pass/selection_pass.hpp"
 #include "pass/wireframe_pass.hpp"
 #include "render/render_scene.hpp"
+
+#include "render_pick_resolver.hpp"
 
 // #include "render/pick_resolver.hpp"
 // #include "render/pass/mesh_pass.hpp"
@@ -63,6 +67,11 @@ private:
     // --- Render Passes ---
     OpaquePass m_opaquePass;
     WireframePass m_wireframePass;
+    HighlightPass m_highlightPass;
+    SelectionPass m_selectionPass;
+
+    // --- Pick Resolution ---
+    PickResolver m_pickResolver;
 
     // --- Pre-built draw ranges (copied from RenderData during synchronize) ---
     std::vector<DrawRange> m_geometryTriangleRanges;
@@ -77,7 +86,6 @@ private:
 
     QSize m_viewportSize;
     bool m_initialized{false};
-    bool m_pickPassInitialized{false};
 
     uint64_t m_geometryDataVersion{0}; ///< Last geometry data version uploaded to GPU
     uint64_t m_meshDataVersion{0};     ///< Last mesh data version uploaded to GPU

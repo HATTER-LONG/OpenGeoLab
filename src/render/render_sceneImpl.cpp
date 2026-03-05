@@ -29,7 +29,7 @@ void RenderSceneImpl::initialize() {
 
     // TODO(layton) - Initialize rendering resources here (e.g., shaders, buffers, etc.)
     m_geometryBuffer.initialize();
-    initializePasses(m_opaquePass, m_wireframePass);
+    initializePasses(m_opaquePass, m_wireframePass, m_highlightPass);
     m_initialized = true;
 
     LOG_DEBUG("RenderSceneImpl: Initializing render scene");
@@ -46,6 +46,12 @@ void RenderSceneImpl::setViewportSize(const QSize& size) {
     if(!m_initialized) {
         return;
     }
+
+    if(!m_selectionPass.isInitialized()) {
+        m_selectionPass.initialize(size.width(), size.height());
+    } else {
+        m_selectionPass.resize(size.width(), size.height());
+    }
 }
 
 void RenderSceneImpl::synchronize(const SceneFrameState& state) {
@@ -55,7 +61,11 @@ void RenderSceneImpl::synchronize(const SceneFrameState& state) {
     }
 
     const auto& render_data = *state.m_renderData;
-
+    if(render_data.m_geometryVersion != m_geometryDataVersion ||
+       render_data.m_meshVersion != m_meshDataVersion) {
+        // Update pick resolver reference data for hierarchy lookups
+        m_pickResolver.setPickData(render_data.m_pickData);
+    }
     if(render_data.m_geometryVersion != m_geometryDataVersion) {
         auto pass_it = render_data.m_passData.find(RenderPassType::Geometry);
         if(pass_it != render_data.m_passData.end()) {
@@ -98,28 +108,85 @@ void RenderSceneImpl::render() {
          m_frameState.m_xRayMode},
         {m_geometryBuffer, m_geometryTriangleRanges, m_geometryLineRanges, m_geometryPointRanges},
         {m_meshBuffer, m_meshTriangleRanges, m_meshLineRanges, m_meshPointRanges}};
-    if(m_frameState.m_xRayMode) {
-    }
+
+    // --- Pass 1: Surfaces ---
     m_opaquePass.render(pass_context);
+
+    // --- Pass 2: Wireframe ---
     m_wireframePass.render(pass_context);
+
+    // --- Pass 3: Highlight (selected/hovered entity overdraw) ---
+    auto& select_mgr = RenderSelectManager::instance();
+    const bool has_hover = select_mgr.hoveredEntity().m_type != RenderEntityType::None;
+    const bool has_selection = !select_mgr.selections().empty();
+    if(has_hover || has_selection) {
+        m_highlightPass.render(pass_context);
+    }
 };
 
 void RenderSceneImpl::processHover(int pixel_x, int pixel_y) {
     LOG_DEBUG("RenderSceneImpl: Processing hover at pixel position ({}, {})", pixel_x, pixel_y);
-    if(!m_initialized || !m_pickPassInitialized) {
+    if(!m_initialized || !m_selectionPass.isInitialized()) {
         return;
     }
 
     auto& select_mgr = RenderSelectManager::instance();
-    if(!select_mgr.isPickEnabled()) {
+    const RenderEntityTypeMask pick_mask = select_mgr.getPickTypes();
+    if(!select_mgr.isPickEnabled() || pick_mask == RenderEntityTypeMask::None) {
+        select_mgr.clearHover();
+        return;
+    }
+    // For Wire/Part mode, render sub-entities so we can resolve to parent
+    RenderEntityTypeMask effective_mask = pick_mask;
+    if(select_mgr.isTypePickable(RenderEntityType::Wire)) {
+        effective_mask = effective_mask | RenderEntityTypeMask::Edge | RenderEntityTypeMask::Face;
+    }
+    if(select_mgr.isTypePickable(RenderEntityType::Part)) {
+        effective_mask = effective_mask | RenderEntityTypeMask::Face | RenderEntityTypeMask::Edge;
+    }
+
+    RenderPassContext pass_context{
+        {m_frameState.m_viewMatrix, m_frameState.m_projMatrix, m_frameState.m_cameraPos,
+         m_frameState.m_xRayMode, effective_mask},
+        {m_geometryBuffer, m_geometryTriangleRanges, m_geometryLineRanges, m_geometryPointRanges},
+        {m_meshBuffer, m_meshTriangleRanges, m_meshLineRanges, m_meshPointRanges}};
+    m_selectionPass.render(pass_context);
+
+    // Restore main framebuffer viewport
+    auto* f = QOpenGLContext::currentContext()->functions();
+    f->glViewport(0, 0, m_viewportSize.width(), m_viewportSize.height());
+
+    // Read 7x7 region around cursor for priority-based picking
+    const auto pick_ids = m_selectionPass.readPickRegion(pixel_x, pixel_y, K_PICK_REGION_RADIUS);
+
+    if(pick_ids.empty()) {
+        select_mgr.clearHover();
+        return;
+    }
+    // Resolve via PickResolver
+    const auto resolved = m_pickResolver.resolve(pick_ids);
+    if(!resolved.isValid()) {
         select_mgr.clearHover();
         return;
     }
 
-    const RenderEntityTypeMask pick_mask = select_mgr.getPickTypes();
-    if(pick_mask == RenderEntityTypeMask::None) {
+    // Filter hover entity for Wire/Part modes
+    const bool wire_mode = select_mgr.isTypePickable(RenderEntityType::Wire);
+    // const bool part_mode = select_mgr.isTypePickable(RenderEntityType::Part);
+    if(wire_mode && resolved.m_type == RenderEntityType::Face) {
         select_mgr.clearHover();
         return;
+    }
+
+    select_mgr.setHoverEntity(resolved.m_uid, resolved.m_type, resolved.m_partUid,
+                              resolved.m_wireUid);
+
+    // For wire mode: pass complete set of edge UIDs for wire loop highlighting
+    if(resolved.m_wireUid != 0 && wire_mode) {
+        const auto& wire_edges = m_pickResolver.wireEdges(resolved.m_wireUid);
+        select_mgr.setHoveredWireEdges(wire_edges);
+    } else {
+        select_mgr.setHoveredWireEdges({});
     }
 }
 
@@ -133,7 +200,7 @@ void RenderSceneImpl::cleanup() {
         return;
     }
     m_initialized = false;
-    m_pickPassInitialized = false;
+    m_selectionPass.cleanup();
     m_geometryDataVersion = 0;
     m_meshDataVersion = 0;
     LOG_DEBUG("RenderSceneImpl: Cleaning up render scene");
