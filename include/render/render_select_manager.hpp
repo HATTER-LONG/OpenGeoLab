@@ -106,6 +106,15 @@ public:
     /** @brief Snapshot of all currently selected entities. */
     [[nodiscard]] std::vector<PickResult> selections() const;
 
+    /** @brief Monotonically increasing version, bumped on every selection mutation. */
+    [[nodiscard]] uint64_t selectionVersion() const;
+
+    /** @brief Monotonically increasing version, bumped on every hover state change. */
+    [[nodiscard]] uint64_t hoverVersion() const;
+
+    /** @brief Check whether any entity of the given type is currently selected. */
+    [[nodiscard]] bool hasSelectionsOfType(RenderEntityType type) const;
+
     // ── Hover state ─────────────────────────────────────────────────────
     /**
      * @brief Set the currently hovered entity and its ownership context.
@@ -186,7 +195,8 @@ private:
     bool m_pickEnabled{false};  ///< Global pick enable flag
     RenderEntityTypeMask m_pickTypes{RenderEntityTypeMask::None}; ///< Active pick-type bitmask
 
-    PickResultSet m_currentSelections; ///< Set of currently selected entities
+    /// Per-type selection sets for O(1) type presence check
+    std::unordered_map<RenderEntityType, PickResultSet> m_selectionsByType;
 
     PickResult m_hoveredEntity{0, RenderEntityType::None}; ///< Entity under the cursor
     uint64_t m_hoveredPartUid{0};                          ///< Parent part uid of hovered entity

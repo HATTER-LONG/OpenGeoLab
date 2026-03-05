@@ -288,8 +288,10 @@ void HighlightPass::renderGeometry(const RenderPassContext& ctx) { // NOLINT
     const auto& line_ranges = ctx.m_geometry.m_lineRanges;
     const auto& point_ranges = ctx.m_geometry.m_pointRanges;
 
-    const bool part_mode = select_mgr.isTypePickable(RenderEntityType::Part);
-    const bool wire_mode = select_mgr.isTypePickable(RenderEntityType::Wire);
+    const bool part_mode = (select_mgr.isTypePickable(RenderEntityType::Part) ||
+                            select_mgr.hasSelectionsOfType(RenderEntityType::Part));
+    const bool wire_mode = (select_mgr.isTypePickable(RenderEntityType::Wire) ||
+                            select_mgr.hasSelectionsOfType(RenderEntityType::Wire));
 
     auto& geom_buf = ctx.m_geometry.m_buffer;
     const float surface_alpha = params.m_xRayMode ? 0.25f : 1.0f;

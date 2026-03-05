@@ -5,6 +5,7 @@
  */
 
 #include "render_pick_resolver.hpp"
+#include "render/render_select_manager.hpp"
 
 #include <climits>
 
@@ -45,17 +46,42 @@ void PickResolver::setPickData(const PickResolutionData& pick_data) { m_pickData
 // Priority-based entity resolution
 // =============================================================================
 
-ResolvedPickResult PickResolver::resolve(const std::vector<uint64_t>& pick_ids) const {
+ResolvedPickResult PickResolver::resolve(const std::vector<uint64_t>& pick_ids,
+                                         PickAction action) const {
     ResolvedPickResult result;
 
     uint64_t best_encoded = 0;
     int best_priority = INT_MAX;
     uint64_t best_face_encoded = 0;
 
+    const bool part_mode = RenderSelectManager::instance().isTypePickable(RenderEntityType::Part);
+    const bool wire_mode = RenderSelectManager::instance().isTypePickable(RenderEntityType::Wire);
+
     for(const auto encoded : pick_ids) {
         const RenderEntityType type = PickId::decodeType(encoded);
+        const auto uid = PickId::decodeUID(encoded);
+
+        const auto part_uid_it = m_pickData->m_entityToPartUid.find(encoded);
+        const bool has_part = (part_uid_it != m_pickData->m_entityToPartUid.end());
+        const auto part_uid = has_part ? part_uid_it->second : 0;
+
         const int priority = typePriority(type);
-        if(priority < best_priority) {
+        if(action == PickAction::Add) {
+            if(priority < best_priority &&
+               !(has_part && RenderSelectManager::instance().isPartSelected(part_uid) &&
+                 RenderSelectManager::instance().isSelected({type, uid}))) {
+                best_priority = priority;
+                best_encoded = encoded;
+            }
+        } else {
+            if(priority < best_priority &&
+               RenderSelectManager::instance().isSelected({type, uid})) {
+                best_priority = priority;
+                best_encoded = encoded;
+            }
+        }
+        if(priority < best_priority &&
+           !(has_part && RenderSelectManager::instance().isPartSelected(part_uid))) {
             best_priority = priority;
             best_encoded = encoded;
         }

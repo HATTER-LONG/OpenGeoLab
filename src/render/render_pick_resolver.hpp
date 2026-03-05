@@ -59,9 +59,11 @@ public:
      * disambiguate shared edges belonging to multiple wires.
      *
      * @param pickIds Encoded pick IDs read from the pick FBO region.
+     * @param action   The pick action type (Add/Remove) for selection-aware resolution.
      * @return Resolved pick result with entity identity and hierarchy context.
      */
-    [[nodiscard]] ResolvedPickResult resolve(const std::vector<uint64_t>& pick_ids) const;
+    [[nodiscard]] ResolvedPickResult resolve(const std::vector<uint64_t>& pick_ids,
+                                             PickAction action) const;
 
     /**
      * @brief Get all edge UIDs belonging to a wire.

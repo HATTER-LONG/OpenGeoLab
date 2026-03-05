@@ -165,7 +165,7 @@ void RenderSceneImpl::processHover(int pixel_x, int pixel_y) {
         return;
     }
     // Resolve via PickResolver
-    const auto resolved = m_pickResolver.resolve(pick_ids);
+    const auto resolved = m_pickResolver.resolve(pick_ids, PickAction::Add);
     if(!resolved.isValid()) {
         select_mgr.clearHover();
         return;
@@ -236,7 +236,7 @@ void RenderSceneImpl::processPicking(const PickingInput& input) {
         return;
     }
 
-    auto resolved = m_pickResolver.resolve(pick_ids);
+    auto resolved = m_pickResolver.resolve(pick_ids, input.m_action);
     if(!resolved.isValid()) {
         return;
     }

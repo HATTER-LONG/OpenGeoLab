@@ -140,10 +140,10 @@ bool RenderSelectManager::addSelection(uint64_t entity_uid, RenderEntityType typ
     PickResult pick_result{entity_uid, type};
     {
         std::lock_guard lock(m_mutex);
-        if(m_currentSelections.contains(pick_result)) {
+        if(m_selectionsByType[type].contains(pick_result)) {
             return false;
         }
-        m_currentSelections.emplace(pick_result);
+        m_selectionsByType[type].emplace(pick_result);
     }
 
     m_selectionChanged.emitSignal(pick_result, SelectionChangeAction::Added);
@@ -160,10 +160,10 @@ bool RenderSelectManager::removeSelection(uint64_t entity_uid, RenderEntityType 
     PickResult pick_result{entity_uid, type};
     {
         std::lock_guard lock(m_mutex);
-        if(!m_currentSelections.contains(pick_result)) {
+        if(!m_selectionsByType[type].contains(pick_result)) {
             return false;
         }
-        m_currentSelections.erase(pick_result);
+        m_selectionsByType[type].erase(pick_result);
     }
     m_selectionChanged.emitSignal(pick_result, SelectionChangeAction::Removed);
     return true;
@@ -172,7 +172,7 @@ bool RenderSelectManager::removeSelection(uint64_t entity_uid, RenderEntityType 
 void RenderSelectManager::clearSelection() {
     {
         std::lock_guard lock(m_mutex);
-        m_currentSelections.clear();
+        m_selectionsByType.clear();
         m_selectedWireEdges.clear();
     }
     m_selectionChanged.emitSignal(PickResult{}, SelectionChangeAction::Cleared);
@@ -182,11 +182,17 @@ std::vector<PickResult> RenderSelectManager::selections() const {
     std::vector<PickResult> out;
 
     std::lock_guard lock(m_mutex);
+    size_t total_size = 0;
+    for(const auto& [type, picks] : m_selectionsByType) {
+        total_size += picks.size();
+    }
 
-    out.reserve(m_currentSelections.size());
+    out.reserve(total_size);
 
-    for(const auto& s : m_currentSelections) {
-        out.push_back(s);
+    for(const auto& [type, picks] : m_selectionsByType) {
+        for(const auto& s : picks) {
+            out.push_back(s);
+        }
     }
 
     return out;
@@ -265,7 +271,11 @@ bool RenderSelectManager::isWireHovered(uint64_t wire_uid) const {
 
 bool RenderSelectManager::isSelected(const RenderNodeKey& key) const {
     std::lock_guard lock(m_mutex);
-    return m_currentSelections.contains(PickResult{key.m_uid, key.m_type});
+    auto it = m_selectionsByType.find(key.m_type);
+    if(it == m_selectionsByType.end()) {
+        return false;
+    }
+    return it->second.contains(PickResult{key.m_uid, key.m_type});
 }
 
 bool RenderSelectManager::isPartSelected(uint64_t part_uid) const {
@@ -273,7 +283,11 @@ bool RenderSelectManager::isPartSelected(uint64_t part_uid) const {
         return false;
     }
     std::lock_guard lock(m_mutex);
-    return m_currentSelections.contains(PickResult{part_uid, RenderEntityType::Part});
+    auto it = m_selectionsByType.find(RenderEntityType::Part);
+    if(it == m_selectionsByType.end()) {
+        return false;
+    }
+    return it->second.contains(PickResult{part_uid, RenderEntityType::Part});
 }
 
 bool RenderSelectManager::isWireSelected(uint64_t wire_uid) const {
@@ -281,7 +295,11 @@ bool RenderSelectManager::isWireSelected(uint64_t wire_uid) const {
         return false;
     }
     std::lock_guard lock(m_mutex);
-    return m_currentSelections.contains(PickResult{wire_uid, RenderEntityType::Wire});
+    auto it = m_selectionsByType.find(RenderEntityType::Wire);
+    if(it == m_selectionsByType.end()) {
+        return false;
+    }
+    return it->second.contains(PickResult{wire_uid, RenderEntityType::Wire});
 }
 
 // =============================================================================
@@ -324,5 +342,11 @@ bool RenderSelectManager::isEdgeInSelectedWire(uint64_t edge_uid) const {
         }
     }
     return false;
+}
+
+bool RenderSelectManager::hasSelectionsOfType(RenderEntityType type) const {
+    std::lock_guard lock(m_mutex);
+    auto it = m_selectionsByType.find(type);
+    return it != m_selectionsByType.end() && !it->second.empty();
 }
 } // namespace OpenGeoLab::Render

@@ -6,8 +6,10 @@
 
 # 计划任务
 1. 优化 mesh builder + render：
+    - 排查当前网格剖分完不显示网格；
     - highlight pass mesh 需要把选中 ID 上传到 GL_RG32UI 纹理，修改为只在选中状态改变时更新纹理，避免每帧都上传数据。
-    - 用 PBO/SSBO 做异步或更大规模的查找结构 或 采用“按 part 粗分 + GPU 精细识别”的混合方案，首先在 CPU 端根据 part 粗略判断可能被选中的对象列表，然后在 GPU 端通过 render select pass 精确识别最终选中对象，减少每次拾取时需要分析的对象数量，提高拾取效率。
+    - batch 的 firsts counts 也要做缓存优化，只有当数据变化后才更新，避免每帧都构建 batch 数据。
     - hightlight 与 opaque pass 中，mesh 的 range 重复循环构建 batch 数据，是否可以在 build 阶段就构建好 batch 数据，渲染时直接使用，减少每帧构建 batch 的开销。
 2. geo mesh 复用 batch 容器：把 firsts/counts（及索引偏移缓存）作为成员或传入的外部容器，clear() 后重用，避免每帧分配。
-5. 需要代码编译通过.
+    - 优化 render select  manager，将 current sel 按照 tpye 进行分类存储，支持判断当前是否存在某种类型的选中状态；
+3. 需要代码编译通过.
