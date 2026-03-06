@@ -23,6 +23,14 @@
 
 namespace OpenGeoLab::Geometry {
 namespace {
+template <typename TBatchCache>
+void appendRange(std::vector<Render::DrawRange>& ranges,
+                 TBatchCache& batches,
+                 Render::DrawRange&& range) {
+    batches.append(range);
+    ranges.push_back(std::move(range));
+}
+
 bool isIdentityTrsf(const gp_Trsf& trsf) {
     return trsf.IsNegative() == Standard_False && trsf.ScaleFactor() == 1.0 &&
            trsf.TranslationPart().SquareModulus() == 0.0;
@@ -143,7 +151,8 @@ void GeometryRenderBuilder::appendEdgeNodes(const PartBuildContext& context) {
         }
         context.m_renderData.m_pickData.m_entityToPartUid[Render::PickId::encode(
             Render::RenderEntityType::Edge, edge_entity->entityUID())] = context.m_partUid;
-        context.m_renderData.m_geometryLineRanges.push_back(std::move(range));
+        appendRange(context.m_renderData.m_geometryLineRanges,
+                    context.m_renderData.m_geometryBatches.m_lines, std::move(range));
     }
 }
 
@@ -166,7 +175,8 @@ void GeometryRenderBuilder::appendVertexNodes(const PartBuildContext& context) {
 
         // context.m_renderData.m_pickData.m_entityToPartUid[vertex_entity->entityUID()] =
         //     context.m_partUid;
-        context.m_renderData.m_geometryPointRanges.push_back(std::move(range));
+        appendRange(context.m_renderData.m_geometryPointRanges,
+                    context.m_renderData.m_geometryBatches.m_points, std::move(range));
     }
 }
 
@@ -191,14 +201,15 @@ void GeometryRenderBuilder::mapFaceWireRelations(
 
 bool GeometryRenderBuilder::tryAppendFaceNode(const PartBuildContext& context,
                                               const Geometry::GeometryEntityImplPtr& face_entity) {
-    const auto range = generateFaceMesh(context.m_renderData, face_entity, context.m_partUid,
-                                        context.m_input.m_options);
+    auto range = generateFaceMesh(context.m_renderData, face_entity, context.m_partUid,
+                                  context.m_input.m_options);
     if(range.m_indexCount == 0 && range.m_vertexCount == 0) {
         return false;
     }
     context.m_renderData.m_pickData.m_entityToPartUid[Render::PickId::encode(
         Render::RenderEntityType::Face, face_entity->entityUID())] = context.m_partUid;
-    context.m_renderData.m_geometryTriangleRanges.push_back(range);
+    appendRange(context.m_renderData.m_geometryTriangleRanges,
+                context.m_renderData.m_geometryBatches.m_triangles, std::move(range));
     return true;
 }
 

@@ -46,8 +46,6 @@ void main() {
 [[nodiscard]] constexpr bool hasMode(RenderDisplayModeMask value, RenderDisplayModeMask flag) {
     return (static_cast<uint8_t>(value) & static_cast<uint8_t>(flag)) != 0;
 }
-
-const float K_MESH_VIEW_OFFSET = -1.0f;
 } // namespace
 bool WireframePass::onInitialize() {
     if(!m_flatShader.compile(flat_vertex_shader, flat_fragment_shader)) {
@@ -68,15 +66,14 @@ void WireframePass::render(RenderPassContext& ctx) {
 
     auto& geo_buf = ctx.m_geometry.m_buffer;
     auto& mesh_buf = ctx.m_mesh.m_buffer;
-    const auto& line_ranges = ctx.m_geometry.m_lineRanges;
-    const auto& point_ranges = ctx.m_geometry.m_pointRanges;
-    const auto& mesh_line_ranges = ctx.m_mesh.m_lineRanges;
-    const auto& mesh_point_ranges = ctx.m_mesh.m_pointRanges;
+    const auto& geometry_batches = ctx.m_geometry.m_batches;
+    const auto& mesh_batches = ctx.m_mesh.m_batches;
     const auto mesh_display_mode = ctx.m_mesh.m_displayMode;
 
     QOpenGLFunctions* f = QOpenGLContext::currentContext()->functions();
     QOpenGLContext* ctx_gl = QOpenGLContext::currentContext();
     f->glEnable(GL_DEPTH_TEST);
+    f->glDepthFunc(GL_LEQUAL);
 
     m_flatShader.bind();
     m_flatShader.setUniformMatrix4("u_viewMatrix", params.m_viewMatrix);
@@ -84,66 +81,51 @@ void WireframePass::render(RenderPassContext& ctx) {
     m_flatShader.setUniformFloat("u_pointSize", Util::RenderStyle::VERTEX_POINT_SIZE);
     m_flatShader.setUniformFloat("u_viewOffset", 0.0f);
     // --- Geometry edges (indexed GL_LINES) ---
-    if(!line_ranges.empty() && geo_buf.vertexCount() > 0) {
+    if(!geometry_batches.m_lines.m_all.empty() && geo_buf.vertexCount() > 0) {
         geo_buf.bindForDraw();
         f->glLineWidth(Util::RenderStyle::EDGE_LINE_WIDTH);
-        std::vector<GLsizei> counts;
-        std::vector<const void*> offsets;
-        PassUtil::buildIndexedBatch(
-            line_ranges, [](const DrawRange&) { return true; }, counts, offsets);
-        PassUtil::multiDrawElements(ctx_gl, f, GL_LINES, counts, offsets);
+        PassUtil::multiDrawElements(ctx_gl, f, GL_LINES, geometry_batches.m_lines.m_all);
 
         f->glLineWidth(1.0f);
         geo_buf.unbind();
     }
     // --- Geometry points (GL_POINTS) ---
-    if(!point_ranges.empty() && geo_buf.vertexCount() > 0) {
+    if(!geometry_batches.m_points.m_all.empty() && geo_buf.vertexCount() > 0) {
         geo_buf.bindForDraw();
         f->glEnable(GL_PROGRAM_POINT_SIZE);
         m_flatShader.setUniformFloat("u_pointSize", Util::RenderStyle::VERTEX_POINT_SIZE);
 
-        std::vector<GLint> firsts;
-        std::vector<GLsizei> counts;
-        PassUtil::buildArrayBatch(
-            point_ranges, [](const DrawRange&) { return true; }, firsts, counts);
-        PassUtil::multiDrawArrays(ctx_gl, f, GL_POINTS, firsts, counts);
+        PassUtil::multiDrawArrays(ctx_gl, f, GL_POINTS, geometry_batches.m_points.m_all);
 
         geo_buf.unbind();
     }
     // --- Mesh wireframe edges (array GL_LINES) ---
-    if(hasMode(mesh_display_mode, RenderDisplayModeMask::Wireframe) && !mesh_line_ranges.empty() &&
-       mesh_buf.vertexCount() > 0) {
-        m_flatShader.setUniformFloat("u_viewOffset", K_MESH_VIEW_OFFSET);
+    if(hasMode(mesh_display_mode, RenderDisplayModeMask::Wireframe) &&
+       !mesh_batches.m_lines.m_all.empty() && mesh_buf.vertexCount() > 0) {
         mesh_buf.bindForDraw();
 
         f->glLineWidth(1.0f);
-        std::vector<GLint> firsts;
-        std::vector<GLsizei> counts;
-        PassUtil::buildArrayBatch(
-            mesh_line_ranges, [](const DrawRange&) { return true; }, firsts, counts);
-        PassUtil::multiDrawArrays(ctx_gl, f, GL_LINES, firsts, counts);
+        PassUtil::multiDrawArrays(ctx_gl, f, GL_LINES, mesh_batches.m_lines.m_all);
 
         mesh_buf.unbind();
-        m_flatShader.setUniformFloat("u_viewOffset", 0.0f);
     }
 
     // --- Mesh node points (array GL_POINTS) ---
-    if(hasMode(mesh_display_mode, RenderDisplayModeMask::Points) && !mesh_point_ranges.empty() &&
-       mesh_buf.vertexCount() > 0) {
-        m_flatShader.setUniformFloat("u_viewOffset", K_MESH_VIEW_OFFSET);
+    if(hasMode(mesh_display_mode, RenderDisplayModeMask::Points) &&
+       !mesh_batches.m_points.m_all.empty() && mesh_buf.vertexCount() > 0) {
         mesh_buf.bindForDraw();
 
         f->glEnable(GL_PROGRAM_POINT_SIZE);
         m_flatShader.setUniformFloat("u_pointSize", 3.0f);
-        std::vector<GLint> firsts;
-        std::vector<GLsizei> counts;
-        PassUtil::buildArrayBatch(
-            mesh_point_ranges, [](const DrawRange&) { return true; }, firsts, counts);
-        PassUtil::multiDrawArrays(ctx_gl, f, GL_POINTS, firsts, counts);
+        PassUtil::multiDrawArrays(ctx_gl, f, GL_POINTS, mesh_batches.m_points.m_all);
 
         mesh_buf.unbind();
-        m_flatShader.setUniformFloat("u_viewOffset", 0.0f);
     }
+
+    if(geo_buf.vertexCount() > 0 || mesh_buf.vertexCount() > 0) {
+        f->glDisable(GL_PROGRAM_POINT_SIZE);
+    }
+    f->glDepthFunc(GL_LESS);
 }
 
 } // namespace OpenGeoLab::Render

@@ -11,6 +11,7 @@
 #include "util/signal.hpp"
 
 #include <QMatrix4x4>
+#include <QMetaObject>
 #include <QQuickFramebufferObject>
 #include <QSizeF>
 #include <QtQml/qqml.h>
@@ -60,6 +61,7 @@ protected:
 
 private slots:
     void onSceneNeedsUpdate(Render::SceneUpdateType type = Render::SceneUpdateType::CameraChanged);
+    void onWindowMetricsChanged();
     // void onRenderNeedsUpdate();
 signals:
     void geometryChanged();
@@ -83,6 +85,10 @@ private:
     Qt::KeyboardModifiers m_pressedModifiers; ///< Currently pressed keyboard modifiers
     Render::PickAction m_pendingPickAction{
         Render::PickAction::None}; ///< Pending pick action on mouse releasek
+
+    QMetaObject::Connection m_windowWidthConn;
+    QMetaObject::Connection m_windowHeightConn;
+    QMetaObject::Connection m_windowScreenConn;
 };
 
 } // namespace OpenGeoLab::App

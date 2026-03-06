@@ -65,22 +65,72 @@ void buildArrayBatch(const std::vector<DrawRange>& ranges,
 inline void multiDrawElements(QOpenGLContext* ctx,
                               QOpenGLFunctions* f,
                               GLenum mode,
+                              const GLsizei* counts,
+                              GLenum index_type,
+                              const void* const* offsets,
+                              GLsizei draw_count) {
+    if(draw_count <= 0) {
+        return;
+    }
+
+    if(auto* f14 = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_3_3_Core>(ctx);
+       f14 && f14->initializeOpenGLFunctions()) {
+        f14->glMultiDrawElements(mode, counts, index_type, offsets, draw_count);
+        return;
+    }
+
+    for(GLsizei i = 0; i < draw_count; ++i) {
+        f->glDrawElements(mode, counts[i], index_type, offsets[i]);
+    }
+}
+
+inline void multiDrawElements(QOpenGLContext* ctx,
+                              QOpenGLFunctions* f,
+                              GLenum mode,
                               const std::vector<GLsizei>& counts,
                               const std::vector<const void*>& offsets) {
     if(counts.empty()) {
         return;
     }
 
-    if(auto* f14 = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_3_3_Core>(ctx);
-       f14 && f14->initializeOpenGLFunctions()) {
-        f14->glMultiDrawElements(mode, counts.data(), GL_UNSIGNED_INT,
-                                 reinterpret_cast<const void* const*>(offsets.data()),
-                                 static_cast<GLsizei>(counts.size()));
+    multiDrawElements(ctx, f, mode, counts.data(), GL_UNSIGNED_INT,
+                      reinterpret_cast<const void* const*>(offsets.data()),
+                      static_cast<GLsizei>(counts.size()));
+}
+
+inline void multiDrawElements(QOpenGLContext* ctx,
+                              QOpenGLFunctions* f,
+                              GLenum mode,
+                              const IndexedDrawBatch& batch) {
+    if(batch.empty()) {
         return;
     }
 
-    for(size_t i = 0; i < counts.size(); ++i) {
-        f->glDrawElements(mode, counts[i], GL_UNSIGNED_INT, offsets[i]);
+    static_assert(sizeof(GLsizei) == sizeof(int32_t));
+    multiDrawElements(ctx, f, mode, reinterpret_cast<const GLsizei*>(batch.m_counts.data()),
+                      GL_UNSIGNED_INT,
+                      reinterpret_cast<const void* const*>(batch.m_byteOffsets.data()),
+                      static_cast<GLsizei>(batch.m_counts.size()));
+}
+
+inline void multiDrawArrays(QOpenGLContext* ctx,
+                            QOpenGLFunctions* f,
+                            GLenum mode,
+                            const GLint* firsts,
+                            const GLsizei* counts,
+                            GLsizei draw_count) {
+    if(draw_count <= 0) {
+        return;
+    }
+
+    if(auto* f14 = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_3_3_Core>(ctx);
+       f14 && f14->initializeOpenGLFunctions()) {
+        f14->glMultiDrawArrays(mode, firsts, counts, draw_count);
+        return;
+    }
+
+    for(GLsizei i = 0; i < draw_count; ++i) {
+        f->glDrawArrays(mode, firsts[i], counts[i]);
     }
 }
 
@@ -93,16 +143,23 @@ inline void multiDrawArrays(QOpenGLContext* ctx,
         return;
     }
 
-    if(auto* f14 = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_3_3_Core>(ctx);
-       f14 && f14->initializeOpenGLFunctions()) {
-        f14->glMultiDrawArrays(mode, firsts.data(), counts.data(),
-                               static_cast<GLsizei>(counts.size()));
+    multiDrawArrays(ctx, f, mode, firsts.data(), counts.data(),
+                    static_cast<GLsizei>(counts.size()));
+}
+
+inline void multiDrawArrays(QOpenGLContext* ctx,
+                            QOpenGLFunctions* f,
+                            GLenum mode,
+                            const ArrayDrawBatch& batch) {
+    if(batch.empty()) {
         return;
     }
 
-    for(size_t i = 0; i < counts.size(); ++i) {
-        f->glDrawArrays(mode, firsts[i], counts[i]);
-    }
+    static_assert(sizeof(GLint) == sizeof(int32_t));
+    static_assert(sizeof(GLsizei) == sizeof(int32_t));
+    multiDrawArrays(ctx, f, mode, reinterpret_cast<const GLint*>(batch.m_firsts.data()),
+                    reinterpret_cast<const GLsizei*>(batch.m_counts.data()),
+                    static_cast<GLsizei>(batch.m_counts.size()));
 }
 
 } // namespace OpenGeoLab::Render::PassUtil

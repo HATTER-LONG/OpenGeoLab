@@ -45,5 +45,6 @@ private:
     QPointF m_cursorPos;           ///< Latest cursor position in item coordinates
     QSizeF m_itemSize;             ///< Item size in logical pixels
     qreal m_devicePixelRatio{1.0}; ///< Device pixel ratio
+    QSize m_lastFramebufferSize;   ///< Last framebuffer size rendered by the renderer
 };
 } // namespace OpenGeoLab::App

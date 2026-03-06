@@ -60,6 +60,11 @@ public:
     void processHover(int pixel_x, int pixel_y) override;
 
 private:
+    void synchronizeGeometry(const RenderData& render_data);
+    void synchronizeMesh(const RenderData& render_data);
+    [[nodiscard]] RenderPassContext buildRenderPassContext();
+    [[nodiscard]] RenderPassContext buildPickPassContext(RenderEntityTypeMask pick_mask);
+
     // --- GPU Buffers (shared across passes) ---
     GpuBuffer m_geometryBuffer; ///< Geometry (CAD) vertex/index data
     GpuBuffer m_meshBuffer;     ///< Mesh (FEM) vertex data
@@ -77,10 +82,12 @@ private:
     std::vector<DrawRange> m_geometryTriangleRanges;
     std::vector<DrawRange> m_geometryLineRanges;
     std::vector<DrawRange> m_geometryPointRanges;
+    GeometryDrawBatchCache m_geometryBatches;
 
     std::vector<DrawRange> m_meshTriangleRanges;
     std::vector<DrawRange> m_meshLineRanges;
     std::vector<DrawRange> m_meshPointRanges;
+    MeshDrawBatchCache m_meshBatches;
 
     SceneFrameState m_frameState; ///< Cached per-frame state from GUI thread
 

@@ -21,14 +21,12 @@ constexpr RenderColor rgba(float r, float g, float b, float a = 1.0f) {
 constexpr float hex(int v) { return static_cast<float>(v) / 255.0F; }
 
 /// Part color palette (15 distinctive colours for cyclic assignment).
-/// #abedd8 #46cdcf #fad2a3 #b2df8a #33a02c #1f78b4 #a6cee3 #fb9a99
-/// #cca8e9 #984ea3 #ffff33 #377eb8 #4daf4a #f781bf #999999
 constexpr size_t K_PART_PALETTE_SIZE = 15;
 
 constexpr std::array<RenderColor, K_PART_PALETTE_SIZE> K_PART_COLOR_PALETTE = {{
     rgba(hex(0xAB), hex(0xED), hex(0xD8)), // #abedd8
     rgba(hex(0x46), hex(0xCD), hex(0xCF)), // #46cdcf
-    rgba(hex(0xFA), hex(0xD2), hex(0xA3)), // #fad2a3
+    rgba(hex(0xB8), hex(0x89), hex(0x53)), // #b88953
     rgba(hex(0xB2), hex(0xDF), hex(0x8A)), // #b2df8a
     rgba(hex(0x33), hex(0xA0), hex(0x2C)), // #33a02c
     rgba(hex(0x1F), hex(0x78), hex(0xB4)), // #1f78b4
@@ -40,7 +38,7 @@ constexpr std::array<RenderColor, K_PART_PALETTE_SIZE> K_PART_COLOR_PALETTE = {{
     rgba(hex(0x37), hex(0x7E), hex(0xB8)), // #377eb8
     rgba(hex(0x4D), hex(0xAF), hex(0x4A)), // #4daf4a
     rgba(hex(0xF7), hex(0x81), hex(0xBF)), // #f781bf
-    rgba(hex(0x99), hex(0x99), hex(0x99)), // #999999
+    rgba(hex(0x74), hex(0x43), hex(0x43)), // #744343
 }};
 
 /// Mesh element palette (reuses the part colour palette).
@@ -54,9 +52,9 @@ constexpr RenderColor K_FACE_HOVER = rgba(hex(0x4B), hex(0x55), hex(0xE9));
 constexpr RenderColor K_FACE_SELECTION = rgba(hex(0x41), hex(0x16), hex(0xFF));
 constexpr RenderColor K_EDGE_COLOR = rgba(hex(0xFF), hex(0xD4), hex(0x60));
 constexpr RenderColor K_VERTEX_COLOR = rgba(hex(0x34), hex(0x90), hex(0xDE));
-constexpr RenderColor K_MESH_NODE_COLOR = rgba(0.114F, 0.647F, 0.839F, 1.0F);
-constexpr RenderColor K_MESH_LINE_COLOR = rgba(0.039F, 0.235F, 0.412F, 1.0F);
-constexpr RenderColor K_BACKGROUND_COLOR = rgba(0.15F, 0.15F, 0.17F, 1.0F);
+constexpr RenderColor K_MESH_NODE_COLOR = rgba(hex(0xF8), hex(0xE8), hex(0xE8)); // #f8e8e8
+constexpr RenderColor K_MESH_LINE_COLOR = rgba(hex(0x00), hex(0x00), hex(0x00)); // #000000
+constexpr RenderColor K_BACKGROUND_COLOR = rgba(hex(0x26), hex(0x26), hex(0x2B));
 
 } // namespace
 

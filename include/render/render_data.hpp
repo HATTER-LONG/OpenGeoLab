@@ -1,7 +1,14 @@
 #pragma once
 
 #include "render/render_types.hpp"
+
+#include <cmath>
 #include <cstdint>
+#include <cstdio>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 namespace OpenGeoLab::Render {
 
 // =============================================================================
@@ -158,6 +165,151 @@ struct DrawRange {
 };
 
 // =============================================================================
+// Multi-draw batch caches
+// =============================================================================
+
+/**
+ * @brief Indexed multi-draw batch built from DrawRange index spans.
+ *
+ * Stores byte offsets instead of raw pointers so batches remain CPU-side data
+ * that can be cached inside RenderData and later converted to GL pointers at
+ * draw time.
+ */
+struct IndexedDrawBatch {
+    std::vector<int32_t> m_counts;
+    std::vector<uintptr_t> m_byteOffsets;
+
+    [[nodiscard]] bool empty() const { return m_counts.empty(); }
+
+    void clear() {
+        m_counts.clear();
+        m_byteOffsets.clear();
+    }
+
+    void reserve(size_t size) {
+        m_counts.reserve(size);
+        m_byteOffsets.reserve(size);
+    }
+
+    void append(const DrawRange& range) {
+        if(range.m_indexCount == 0) {
+            return;
+        }
+        m_counts.push_back(static_cast<int32_t>(range.m_indexCount));
+        m_byteOffsets.push_back(static_cast<uintptr_t>(range.m_indexOffset) * sizeof(uint32_t));
+    }
+
+    void append(const IndexedDrawBatch& other) {
+        m_counts.insert(m_counts.end(), other.m_counts.begin(), other.m_counts.end());
+        m_byteOffsets.insert(m_byteOffsets.end(), other.m_byteOffsets.begin(),
+                             other.m_byteOffsets.end());
+    }
+};
+
+/**
+ * @brief Non-indexed multi-draw batch built from DrawRange vertex spans.
+ */
+struct ArrayDrawBatch {
+    std::vector<int32_t> m_firsts;
+    std::vector<int32_t> m_counts;
+
+    [[nodiscard]] bool empty() const { return m_counts.empty(); }
+
+    void clear() {
+        m_firsts.clear();
+        m_counts.clear();
+    }
+
+    void reserve(size_t size) {
+        m_firsts.reserve(size);
+        m_counts.reserve(size);
+    }
+
+    void append(const DrawRange& range) {
+        if(range.m_vertexCount == 0) {
+            return;
+        }
+        m_firsts.push_back(static_cast<int32_t>(range.m_vertexOffset));
+        m_counts.push_back(static_cast<int32_t>(range.m_vertexCount));
+    }
+
+    void append(const ArrayDrawBatch& other) {
+        m_firsts.insert(m_firsts.end(), other.m_firsts.begin(), other.m_firsts.end());
+        m_counts.insert(m_counts.end(), other.m_counts.begin(), other.m_counts.end());
+    }
+};
+
+/**
+ * @brief Cached indexed batches for a topology, both full-domain and per-entity-type.
+ */
+struct IndexedBatchCache {
+    IndexedDrawBatch m_all;
+    std::unordered_map<RenderEntityType, IndexedDrawBatch> m_byType;
+
+    void reserve(size_t size) { m_all.reserve(size); }
+
+    void append(const DrawRange& range) {
+        m_all.append(range);
+        m_byType[range.m_entityKey.m_type].append(range);
+    }
+
+    void clear() {
+        m_all.clear();
+        m_byType.clear();
+    }
+};
+
+/**
+ * @brief Cached array batches for a topology, both full-domain and per-entity-type.
+ */
+struct ArrayBatchCache {
+    ArrayDrawBatch m_all;
+    std::unordered_map<RenderEntityType, ArrayDrawBatch> m_byType;
+
+    void reserve(size_t size) { m_all.reserve(size); }
+
+    void append(const DrawRange& range) {
+        m_all.append(range);
+        m_byType[range.m_entityKey.m_type].append(range);
+    }
+
+    void clear() {
+        m_all.clear();
+        m_byType.clear();
+    }
+};
+
+/**
+ * @brief Cached multi-draw batches for CAD geometry ranges.
+ */
+struct GeometryDrawBatchCache {
+    IndexedBatchCache m_triangles;
+    IndexedBatchCache m_lines;
+    ArrayBatchCache m_points;
+
+    void clear() {
+        m_triangles.clear();
+        m_lines.clear();
+        m_points.clear();
+    }
+};
+
+/**
+ * @brief Cached multi-draw batches for mesh ranges.
+ */
+struct MeshDrawBatchCache {
+    ArrayBatchCache m_triangles;
+    ArrayBatchCache m_lines;
+    ArrayBatchCache m_points;
+
+    void clear() {
+        m_triangles.clear();
+        m_lines.clear();
+        m_points.clear();
+    }
+};
+
+// =============================================================================
 // RenderPassData — Flat GPU buffer for a single render pass
 // =============================================================================
 
@@ -270,6 +422,10 @@ struct RenderData {
     std::vector<DrawRange> m_meshLineRanges;
     std::vector<DrawRange> m_meshPointRanges;
 
+    /// Cached multi-draw batches for geometry and mesh topologies
+    GeometryDrawBatchCache m_geometryBatches;
+    MeshDrawBatchCache m_meshBatches;
+
     /// Scene-wide bounding box (union of all visible geometry)
     Geometry::BoundingBox3D m_sceneBBox;
 
@@ -292,6 +448,8 @@ struct RenderData {
         m_meshTriangleRanges.clear();
         m_meshLineRanges.clear();
         m_meshPointRanges.clear();
+        m_geometryBatches.clear();
+        m_meshBatches.clear();
         m_sceneBBox = {};
     }
 
@@ -305,6 +463,7 @@ struct RenderData {
         m_geometryTriangleRanges.clear();
         m_geometryLineRanges.clear();
         m_geometryPointRanges.clear();
+        m_geometryBatches.clear();
     }
 
     /**
@@ -316,6 +475,7 @@ struct RenderData {
         m_meshTriangleRanges.clear();
         m_meshLineRanges.clear();
         m_meshPointRanges.clear();
+        m_meshBatches.clear();
     }
 };
 

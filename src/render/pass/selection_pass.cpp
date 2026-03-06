@@ -51,8 +51,6 @@ void main() {
     return static_cast<uint32_t>(value & mask) != 0u;
 }
 
-const float K_MESH_VIEW_OFFSET = -1.0f;
-
 /// Triangle-based geometry types
 constexpr auto TRIANGLE_PICK_TYPES = RenderEntityTypeMask::Face | RenderEntityTypeMask::Shell |
                                      RenderEntityTypeMask::Solid | RenderEntityTypeMask::Part |
@@ -61,6 +59,26 @@ constexpr auto TRIANGLE_PICK_TYPES = RenderEntityTypeMask::Face | RenderEntityTy
 /// Mesh types that use the mesh buffer
 constexpr auto MESH_PICK_TYPES =
     RenderEntityTypeMask::MeshNode | RenderEntityTypeMask::MeshLine | RENDER_MESH_ELEMENTS;
+
+IndexedDrawBatch collectIndexedBatches(const IndexedBatchCache& cache, RenderEntityTypeMask mask) {
+    IndexedDrawBatch result;
+    for(const auto& [type, batch] : cache.m_byType) {
+        if(hasAny(mask, toMask(type))) {
+            result.append(batch);
+        }
+    }
+    return result;
+}
+
+ArrayDrawBatch collectArrayBatches(const ArrayBatchCache& cache, RenderEntityTypeMask mask) {
+    ArrayDrawBatch result;
+    for(const auto& [type, batch] : cache.m_byType) {
+        if(hasAny(mask, toMask(type))) {
+            result.append(batch);
+        }
+    }
+    return result;
+}
 
 } // namespace
 
@@ -99,13 +117,8 @@ void SelectionPass::render(RenderPassContext& ctx) {
 
     auto& geom_buffer = ctx.m_geometry.m_buffer;
     auto& mesh_buffer = ctx.m_mesh.m_buffer;
-    const auto& tri_ranges = ctx.m_geometry.m_triangleRanges;
-    const auto& line_ranges = ctx.m_geometry.m_lineRanges;
-    const auto& point_ranges = ctx.m_geometry.m_pointRanges;
-
-    const auto& mesh_tri_ranges = ctx.m_mesh.m_triangleRanges;
-    const auto& mesh_line_ranges = ctx.m_mesh.m_lineRanges;
-    const auto& mesh_point_ranges = ctx.m_mesh.m_pointRanges;
+    const auto& geometry_batches = ctx.m_geometry.m_batches;
+    const auto& mesh_batches = ctx.m_mesh.m_batches;
 
     const auto& view_matrix = ctx.m_params.m_viewMatrix;
     const auto& proj_matrix = ctx.m_params.m_projMatrix;
@@ -121,6 +134,7 @@ void SelectionPass::render(RenderPassContext& ctx) {
     ef->glClearBufferuiv(GL_COLOR, 0, clear_color);
     f->glClear(GL_DEPTH_BUFFER_BIT);
     f->glEnable(GL_DEPTH_TEST);
+    f->glDepthFunc(GL_LEQUAL);
 
     m_pickShader.bind();
     m_pickShader.setUniformMatrix4("u_viewMatrix", view_matrix);
@@ -132,46 +146,28 @@ void SelectionPass::render(RenderPassContext& ctx) {
         geom_buffer.bindForDraw();
 
         // Triangles
-        if(hasAny(pick_mask, TRIANGLE_PICK_TYPES) && !tri_ranges.empty()) {
-            std::vector<GLsizei> counts;
-            std::vector<const void*> offsets;
-            PassUtil::buildIndexedBatch(
-                tri_ranges,
-                [&pick_mask](const DrawRange& range) {
-                    return hasAny(pick_mask, toMask(range.m_entityKey.m_type));
-                },
-                counts, offsets);
-            PassUtil::multiDrawElements(ctx_gl, f, GL_TRIANGLES, counts, offsets);
+        if(hasAny(pick_mask, TRIANGLE_PICK_TYPES) && !geometry_batches.m_triangles.m_all.empty()) {
+            const auto triangle_batch =
+                collectIndexedBatches(geometry_batches.m_triangles, pick_mask);
+            PassUtil::multiDrawElements(ctx_gl, f, GL_TRIANGLES, triangle_batch);
         }
         // Lines
-        if(hasAny(pick_mask, RenderEntityTypeMask::Edge) && !line_ranges.empty()) {
+        if(hasAny(pick_mask, RenderEntityTypeMask::Edge) &&
+           !geometry_batches.m_lines.m_all.empty()) {
             f->glLineWidth(4.0f);
-            std::vector<GLsizei> counts;
-            std::vector<const void*> offsets;
-            PassUtil::buildIndexedBatch(
-                line_ranges,
-                [&pick_mask](const DrawRange& range) {
-                    return hasAny(pick_mask, toMask(range.m_entityKey.m_type));
-                },
-                counts, offsets);
-            PassUtil::multiDrawElements(ctx_gl, f, GL_LINES, counts, offsets);
+            const auto line_batch = collectIndexedBatches(geometry_batches.m_lines, pick_mask);
+            PassUtil::multiDrawElements(ctx_gl, f, GL_LINES, line_batch);
             f->glLineWidth(1.0f);
         }
 
         // Points
-        if(hasAny(pick_mask, RenderEntityTypeMask::Vertex) && !point_ranges.empty()) {
+        if(hasAny(pick_mask, RenderEntityTypeMask::Vertex) &&
+           !geometry_batches.m_points.m_all.empty()) {
             f->glEnable(GL_PROGRAM_POINT_SIZE);
             m_pickShader.setUniformFloat("u_pointSize", 12.0f);
 
-            std::vector<GLint> firsts;
-            std::vector<GLsizei> counts;
-            PassUtil::buildArrayBatch(
-                point_ranges,
-                [&pick_mask](const DrawRange& range) {
-                    return hasAny(pick_mask, toMask(range.m_entityKey.m_type));
-                },
-                firsts, counts);
-            PassUtil::multiDrawArrays(ctx_gl, f, GL_POINTS, firsts, counts);
+            const auto point_batch = collectArrayBatches(geometry_batches.m_points, pick_mask);
+            PassUtil::multiDrawArrays(ctx_gl, f, GL_POINTS, point_batch);
             m_pickShader.setUniformFloat("u_pointSize", 1.0f);
         }
 
@@ -179,45 +175,33 @@ void SelectionPass::render(RenderPassContext& ctx) {
     }
 
     if(mesh_buffer.vertexCount() > 0 && hasAny(pick_mask, MESH_PICK_TYPES)) {
-        m_pickShader.setUniformFloat("u_viewOffset", K_MESH_VIEW_OFFSET);
         mesh_buffer.bindForDraw();
 
-        if(hasAny(pick_mask, RENDER_MESH_ELEMENTS) && !mesh_tri_ranges.empty()) {
-            std::vector<GLint> firsts;
-            std::vector<GLsizei> counts;
-            PassUtil::buildArrayBatch(
-                mesh_tri_ranges,
-                [&pick_mask](const DrawRange& range) {
-                    return hasAny(pick_mask, toMask(range.m_entityKey.m_type));
-                },
-                firsts, counts);
-            PassUtil::multiDrawArrays(ctx_gl, f, GL_TRIANGLES, firsts, counts);
+        if(hasAny(pick_mask, RENDER_MESH_ELEMENTS) && !mesh_batches.m_triangles.m_all.empty()) {
+            const auto triangle_batch = collectArrayBatches(mesh_batches.m_triangles, pick_mask);
+            PassUtil::multiDrawArrays(ctx_gl, f, GL_TRIANGLES, triangle_batch);
         }
 
-        if(hasAny(pick_mask, RenderEntityTypeMask::MeshLine) && !mesh_line_ranges.empty()) {
+        if(hasAny(pick_mask, RenderEntityTypeMask::MeshLine) &&
+           !mesh_batches.m_lines.m_all.empty()) {
             f->glLineWidth(3.0f);
-            std::vector<GLint> firsts;
-            std::vector<GLsizei> counts;
-            PassUtil::buildArrayBatch(
-                mesh_line_ranges, [](const DrawRange&) { return true; }, firsts, counts);
-            PassUtil::multiDrawArrays(ctx_gl, f, GL_LINES, firsts, counts);
+            const auto line_batch = collectArrayBatches(mesh_batches.m_lines, pick_mask);
+            PassUtil::multiDrawArrays(ctx_gl, f, GL_LINES, line_batch);
             f->glLineWidth(1.0f);
         }
-        if(hasAny(pick_mask, RenderEntityTypeMask::MeshNode) && !mesh_point_ranges.empty()) {
+        if(hasAny(pick_mask, RenderEntityTypeMask::MeshNode) &&
+           !mesh_batches.m_points.m_all.empty()) {
             f->glEnable(GL_PROGRAM_POINT_SIZE);
             m_pickShader.setUniformFloat("u_pointSize", 12.0f);
-            std::vector<GLint> firsts;
-            std::vector<GLsizei> counts;
-            PassUtil::buildArrayBatch(
-                mesh_point_ranges, [](const DrawRange&) { return true; }, firsts, counts);
-            PassUtil::multiDrawArrays(ctx_gl, f, GL_POINTS, firsts, counts);
+            const auto point_batch = collectArrayBatches(mesh_batches.m_points, pick_mask);
+            PassUtil::multiDrawArrays(ctx_gl, f, GL_POINTS, point_batch);
             m_pickShader.setUniformFloat("u_pointSize", 1.0f);
         }
         mesh_buffer.unbind();
-        m_pickShader.setUniformFloat("u_viewOffset", 0.0f);
     }
     m_pickShader.release();
     m_fbo.unbind();
+    f->glDepthFunc(GL_LESS);
 }
 
 uint64_t SelectionPass::readPickId(int pixel_x, int pixel_y) const {

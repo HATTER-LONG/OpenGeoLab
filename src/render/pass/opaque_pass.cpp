@@ -14,6 +14,11 @@
 
 namespace OpenGeoLab::Render {
 namespace {
+constexpr float K_GEOMETRY_SURFACE_OFFSET_FACTOR = 2.0f;
+constexpr float K_GEOMETRY_SURFACE_OFFSET_UNITS = 2.0f;
+constexpr float K_MESH_SURFACE_OFFSET_FACTOR = 1.0f;
+constexpr float K_MESH_SURFACE_OFFSET_UNITS = 1.0f;
+
 const char* surface_vertex_shader = R"(
 #version 330 core
 layout(location = 0) in vec3 a_position;
@@ -78,10 +83,10 @@ void OpaquePass::render(RenderPassContext& ctx) {
     }
 
     auto& geo_buf = ctx.m_geometry.m_buffer;
-    const auto& tri_ranges = ctx.m_geometry.m_triangleRanges;
+    const auto& geometry_batches = ctx.m_geometry.m_batches;
 
     auto& mesh_buf = ctx.m_mesh.m_buffer;
-    const auto& mesh_tri_ranges = ctx.m_mesh.m_triangleRanges;
+    const auto& mesh_batches = ctx.m_mesh.m_batches;
 
     QOpenGLFunctions* f = QOpenGLContext::currentContext()->functions();
     QOpenGLContext* ctx_gl = QOpenGLContext::currentContext();
@@ -102,26 +107,20 @@ void OpaquePass::render(RenderPassContext& ctx) {
     m_surfaceShader.setUniformFloat("u_alpha", alpha);
     if(ctx.m_geometry.hasGeometry()) {
         geo_buf.bindForDraw();
-        // Push surfaces slightly back in depth so coplanar wireframe edges
-        // on visible faces pass the depth test
+        // Geometry surfaces are the base layer when mesh overlays are present.
         f->glEnable(GL_POLYGON_OFFSET_FILL);
-        f->glPolygonOffset(1.0f, 1.0f);
-        std::vector<GLsizei> counts;
-        std::vector<const void*> offsets;
-        PassUtil::buildIndexedBatch(
-            tri_ranges, [](const DrawRange&) { return true; }, counts, offsets);
-        PassUtil::multiDrawElements(ctx_gl, f, GL_TRIANGLES, counts, offsets);
+        f->glPolygonOffset(K_GEOMETRY_SURFACE_OFFSET_FACTOR, K_GEOMETRY_SURFACE_OFFSET_UNITS);
+        PassUtil::multiDrawElements(ctx_gl, f, GL_TRIANGLES, geometry_batches.m_triangles.m_all);
 
         f->glDisable(GL_POLYGON_OFFSET_FILL);
         geo_buf.unbind();
     }
-    if(ctx.m_mesh.hasMesh()) {
+    if(ctx.m_mesh.hasMesh() && hasMode(ctx.m_mesh.m_displayMode, RenderDisplayModeMask::Surface)) {
         mesh_buf.bindForDraw();
-        std::vector<GLint> firsts;
-        std::vector<GLsizei> counts;
-        PassUtil::buildArrayBatch(
-            mesh_tri_ranges, [](const DrawRange&) { return true; }, firsts, counts);
-        PassUtil::multiDrawArrays(ctx_gl, f, GL_TRIANGLES, firsts, counts);
+        f->glEnable(GL_POLYGON_OFFSET_FILL);
+        f->glPolygonOffset(K_MESH_SURFACE_OFFSET_FACTOR, K_MESH_SURFACE_OFFSET_UNITS);
+        PassUtil::multiDrawArrays(ctx_gl, f, GL_TRIANGLES, mesh_batches.m_triangles.m_all);
+        f->glDisable(GL_POLYGON_OFFSET_FILL);
         mesh_buf.unbind();
     }
 

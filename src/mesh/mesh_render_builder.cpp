@@ -54,37 +54,38 @@ struct BuildContext {
     }
 };
 
-void appendMeshRanges(BuildContext& ctx) {
-    ctx.m_renderData.m_meshTriangleRanges.clear();
-    ctx.m_renderData.m_meshLineRanges.clear();
-    ctx.m_renderData.m_meshPointRanges.clear();
-
-    if(ctx.m_surfaceVertexCount > 0) {
-        Render::DrawRange surface_range;
-        surface_range.m_entityKey = {Render::RenderEntityType::MeshTriangle, 0};
-        surface_range.m_vertexOffset = 0;
-        surface_range.m_vertexCount = ctx.m_surfaceVertexCount;
-        surface_range.m_topology = Render::PrimitiveTopology::Triangles;
-        ctx.m_renderData.m_meshTriangleRanges.push_back(surface_range);
+void appendMeshRange(std::vector<Render::DrawRange>& ranges,
+                     Render::ArrayBatchCache& batches,
+                     Render::RenderEntityType type,
+                     uint32_t vertex_offset,
+                     uint32_t vertex_count,
+                     Render::PrimitiveTopology topology) {
+    if(vertex_count == 0) {
+        return;
     }
 
-    if(ctx.m_wireframeVertexCount > 0) {
-        Render::DrawRange wire_range;
-        wire_range.m_entityKey = {Render::RenderEntityType::MeshLine, 0};
-        wire_range.m_vertexOffset = ctx.m_surfaceVertexCount;
-        wire_range.m_vertexCount = ctx.m_wireframeVertexCount;
-        wire_range.m_topology = Render::PrimitiveTopology::Lines;
-        ctx.m_renderData.m_meshLineRanges.push_back(wire_range);
-    }
+    Render::DrawRange range;
+    range.m_entityKey = {type, 0};
+    range.m_vertexOffset = vertex_offset;
+    range.m_vertexCount = vertex_count;
+    range.m_topology = topology;
 
-    if(ctx.m_nodeVertexCount > 0) {
-        Render::DrawRange node_range;
-        node_range.m_entityKey = {Render::RenderEntityType::MeshNode, 0};
-        node_range.m_vertexOffset = ctx.m_surfaceVertexCount + ctx.m_wireframeVertexCount;
-        node_range.m_vertexCount = ctx.m_nodeVertexCount;
-        node_range.m_topology = Render::PrimitiveTopology::Points;
-        ctx.m_renderData.m_meshPointRanges.push_back(node_range);
-    }
+    batches.append(range);
+    ranges.push_back(std::move(range));
+}
+
+void finalizeMeshRanges(BuildContext& ctx) {
+    appendMeshRange(ctx.m_renderData.m_meshTriangleRanges,
+                    ctx.m_renderData.m_meshBatches.m_triangles,
+                    Render::RenderEntityType::MeshTriangle, 0, ctx.m_surfaceVertexCount,
+                    Render::PrimitiveTopology::Triangles);
+    appendMeshRange(ctx.m_renderData.m_meshLineRanges, ctx.m_renderData.m_meshBatches.m_lines,
+                    Render::RenderEntityType::MeshLine, ctx.m_surfaceVertexCount,
+                    ctx.m_wireframeVertexCount, Render::PrimitiveTopology::Lines);
+    appendMeshRange(ctx.m_renderData.m_meshPointRanges, ctx.m_renderData.m_meshBatches.m_points,
+                    Render::RenderEntityType::MeshNode,
+                    ctx.m_surfaceVertexCount + ctx.m_wireframeVertexCount, ctx.m_nodeVertexCount,
+                    Render::PrimitiveTopology::Points);
 }
 
 void expandSceneBounds(BuildContext& ctx) {
@@ -337,7 +338,7 @@ bool MeshRenderBuilder::build(Render::RenderData& render_data, const MeshRenderI
     appendSurfaceTriangles(ctx);
     appendWireframeEdges(ctx);
     appendNodePoints(ctx);
-    appendMeshRanges(ctx);
+    finalizeMeshRanges(ctx);
     expandSceneBounds(ctx);
 
     mesh_pass.markDataUpdated();

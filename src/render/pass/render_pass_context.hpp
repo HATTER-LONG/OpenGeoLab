@@ -31,6 +31,7 @@ struct GeometryPassInput {
     const std::vector<DrawRange>& m_triangleRanges;
     const std::vector<DrawRange>& m_lineRanges;
     const std::vector<DrawRange>& m_pointRanges;
+    const GeometryDrawBatchCache& m_batches;
     bool hasGeometry() const {
         return !m_triangleRanges.empty() || !m_lineRanges.empty() || !m_pointRanges.empty();
     }
@@ -41,6 +42,7 @@ struct MeshPassInput {
     const std::vector<DrawRange>& m_triangleRanges;
     const std::vector<DrawRange>& m_lineRanges;
     const std::vector<DrawRange>& m_pointRanges;
+    const MeshDrawBatchCache& m_batches;
     RenderDisplayModeMask m_displayMode{RenderDisplayModeMask::None};
     bool hasMesh() const {
         return !m_triangleRanges.empty() || !m_lineRanges.empty() || !m_pointRanges.empty();

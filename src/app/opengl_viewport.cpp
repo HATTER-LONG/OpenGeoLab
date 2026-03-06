@@ -39,6 +39,7 @@ GLViewport::GLViewport(QQuickItem* parent) : QQuickFramebufferObject(parent) {
     setAcceptedMouseButtons(Qt::AllButtons);
     setFlag(ItemHasContents, true);
     setMirrorVertically(true);
+    setTextureFollowsItemSize(true);
     setAcceptHoverEvents(true);
 
     auto& scene_controller = Render::RenderSceneController::instance();
@@ -53,6 +54,24 @@ GLViewport::GLViewport(QQuickItem* parent) : QQuickFramebufferObject(parent) {
             QMetaObject::invokeMethod(this, &GLViewport::onSceneNeedsUpdate, Qt::QueuedConnection,
                                       Render::SceneUpdateType::CameraChanged);
         });
+
+    connect(this, &QQuickItem::windowChanged, this, [this](QQuickWindow* win) {
+        QObject::disconnect(m_windowWidthConn);
+        QObject::disconnect(m_windowHeightConn);
+        QObject::disconnect(m_windowScreenConn);
+
+        if(!win) {
+            return;
+        }
+
+        m_windowWidthConn =
+            connect(win, &QQuickWindow::widthChanged, this, &GLViewport::onWindowMetricsChanged);
+        m_windowHeightConn =
+            connect(win, &QQuickWindow::heightChanged, this, &GLViewport::onWindowMetricsChanged);
+        m_windowScreenConn =
+            connect(win, &QQuickWindow::screenChanged, this, &GLViewport::onWindowMetricsChanged);
+        onWindowMetricsChanged();
+    });
 }
 
 GLViewport::~GLViewport() = default;
@@ -64,6 +83,15 @@ void GLViewport::onSceneNeedsUpdate(Render::SceneUpdateType type) {
     m_cameraState = Render::RenderSceneController::instance().cameraState();
     if(!m_trackballController.isActive()) {
         m_trackballController.syncFromCamera(m_cameraState);
+    }
+    update();
+}
+
+void GLViewport::onWindowMetricsChanged() {
+    m_trackballController.setViewportSize(size());
+    if(window()) {
+        m_devicePixelRatio = window()->devicePixelRatio();
+        window()->update();
     }
     update();
 }

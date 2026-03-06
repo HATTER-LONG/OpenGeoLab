@@ -23,7 +23,8 @@
 #include <QQuickWindow>
 #include <QWheelEvent>
 #include <QtCore/QMetaObject>
-#include <QtMath>
+
+#include <algorithm>
 
 namespace OpenGeoLab::App {
 GLViewportRender::GLViewportRender()
@@ -112,6 +113,11 @@ void GLViewportRender::render() {
 
     const QSize fbo_size = framebufferObject()->size();
     m_renderScene->setViewportSize(fbo_size);
+
+    if(fbo_size != m_lastFramebufferSize) {
+        m_lastFramebufferSize = fbo_size;
+        update();
+    }
 
     f->glViewport(0, 0, fbo_size.width(), fbo_size.height());
 
