@@ -1,0 +1,36 @@
+/**
+ * @file mesh_node.hpp
+ * @brief FEM mesh node with 3D position and unique node identifier.
+ */
+
+#pragma once
+
+#include "mesh/mesh_types.hpp"
+#include "util/point_vector3d.hpp"
+#include <kangaroo/util/noncopyable.hpp>
+
+namespace OpenGeoLab::Mesh {
+
+/** @brief A single FEM mesh node with position and unique identifier. */
+class MeshNode {
+public:
+    MeshNode(double x, double y, double z);
+
+    ~MeshNode() = default;
+
+    [[nodiscard]] MeshNodeId nodeId() const { return m_uid; }
+
+    [[nodiscard]] double x() const { return m_position.x; }
+    [[nodiscard]] double y() const { return m_position.y; }
+    [[nodiscard]] double z() const { return m_position.z; }
+
+    [[nodiscard]] const Util::Pt3d& position() const { return m_position; }
+
+    void setPosition(double x, double y, double z) { m_position = Util::Pt3d{x, y, z}; }
+    void setPosition(const Util::Pt3d& pos) { m_position = pos; }
+
+private:
+    MeshNodeId m_uid{INVALID_MESH_NODE_ID};
+    Util::Pt3d m_position;
+};
+} // namespace OpenGeoLab::Mesh

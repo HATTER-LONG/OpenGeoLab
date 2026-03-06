@@ -9,8 +9,8 @@
 
 #pragma once
 
+#include "geometry/geometry_entity.hpp"
 #include "geometry/geometry_types.hpp"
-
 #include <kangaroo/util/noncopyable.hpp>
 
 #include <memory>
@@ -19,20 +19,20 @@
 class TopoDS_Shape;
 
 namespace OpenGeoLab::Geometry {
-class GeometryEntity;
+class GeometryEntityImpl;
 class GeometryManager;
 class GeometryDocumentImpl;
 
-using GeometryEntityPtr = std::shared_ptr<GeometryEntity>;
-using GeometryEntityWeakPtr = std::weak_ptr<GeometryEntity>;
+using GeometryEntityImplPtr = std::shared_ptr<GeometryEntityImpl>;
+using GeometryEntityImplWeakPtr = std::weak_ptr<GeometryEntityImpl>;
 
 // =============================================================================
-// GeometryEntity
+// GeometryEntityImpl
 // =============================================================================
 /**
  * @brief Base class for all geometry entities wrapping OCC shapes
  *
- * GeometryEntity provides:
+ * GeometryEntityImpl provides:
  * - Dual ID system (EntityId for global, EntityUID for type-scoped)
  * - OCC TopoDS_Shape storage and access
  * - Bounding box computation
@@ -41,8 +41,8 @@ using GeometryEntityWeakPtr = std::weak_ptr<GeometryEntity>;
  * Thread-safety: Read operations are thread-safe. Modifications should be
  * synchronized externally.
  */
-class GeometryEntity : public std::enable_shared_from_this<GeometryEntity>,
-                       public Kangaroo::Util::NonCopyMoveable {
+class GeometryEntityImpl : public std::enable_shared_from_this<GeometryEntityImpl>,
+                           public GeometryEntity {
 public:
     /**
      * @brief Destructor.
@@ -54,7 +54,7 @@ public:
      *       for cases where an entity outlives its document via external
      *       shared ownership.
      */
-    virtual ~GeometryEntity();
+    virtual ~GeometryEntityImpl();
     // -------------------------------------------------------------------------
     // Type Information
     // -------------------------------------------------------------------------
@@ -63,7 +63,7 @@ public:
      * @brief Get the entity type
      * @return EntityType enumeration value
      */
-    [[nodiscard]] EntityType entityType() const { return m_entityType; };
+    [[nodiscard]] virtual EntityType entityType() const override { return m_entityType; };
 
     // -------------------------------------------------------------------------
     // ID Accessors
@@ -73,37 +73,21 @@ public:
      * @brief Get the global unique entity ID
      * @return Globally unique EntityId
      */
-    [[nodiscard]] EntityId entityId() const { return m_entityId; }
+    [[nodiscard]] virtual EntityId entityId() const override { return m_entityId; }
 
     /**
      * @brief Get the type-scoped unique ID
      * @return EntityUID unique within this entity type
      */
-    [[nodiscard]] EntityUID entityUID() const { return m_entityUID; }
+    [[nodiscard]] virtual EntityUID entityUID() const override { return m_entityUID; }
 
     /**
      * @brief Get an EntityKey handle for this entity
      * @return EntityKey consisting of (EntityId, EntityUID, EntityType)
      */
-    [[nodiscard]] EntityKey entityKey() const {
+    [[nodiscard]] virtual EntityKey entityKey() const override {
         return EntityKey(entityId(), entityUID(), entityType());
     }
-
-    // -------------------------------------------------------------------------
-    // Shape Accessors
-    // -------------------------------------------------------------------------
-
-    /**
-     * @brief Get the underlying OCC shape
-     * @return Const reference to TopoDS_Shape
-     */
-    [[nodiscard]] virtual const TopoDS_Shape& shape() const = 0;
-
-    /**
-     * @brief Check if entity has a valid shape
-     * @return true if shape is not null
-     */
-    [[nodiscard]] bool hasShape() const;
 
     // -------------------------------------------------------------------------
     // Geometry Properties
@@ -167,7 +151,7 @@ protected:
      * @brief Protected constructor for derived classes
      * @param type Entity type for UID generation
      */
-    explicit GeometryEntity(EntityType type);
+    explicit GeometryEntityImpl(EntityType type);
 
     /**
      * @brief Compute bounding box from OCC shape

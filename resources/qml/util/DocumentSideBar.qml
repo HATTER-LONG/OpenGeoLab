@@ -30,6 +30,10 @@ Rectangle {
     /// Whether data is being loaded
     property bool isLoading: false
 
+    readonly property bool hasParts: sidebar.partListModel.length > 0
+    readonly property bool allGeometryVisible: sidebar.hasParts && sidebar.partListModel.every(part => part.geometry_visible !== false)
+    readonly property bool allMeshVisible: sidebar.hasParts && sidebar.partListModel.every(part => part.mesh_visible !== false)
+
     width: sidebar.expanded ? sidebar.expandedWidth : sidebar.collapsedWidth
     color: Theme.surfaceAlt
 
@@ -48,9 +52,73 @@ Rectangle {
         BackendService.request("GeometryService", JSON.stringify({
             action: "get_part_list",
             _meta: {
-                silent: true
+                silent: true,
+                defer_if_busy: true
             }
         }));
+    }
+
+    function applyVisibilityPatch(partUids, patch) {
+        const uidSet = new Set(partUids);
+        const updated = sidebar.partListModel.slice();
+        let changed = false;
+
+        for (let i = 0; i < updated.length; ++i) {
+            const part = updated[i];
+            if (!uidSet.has(part.uid))
+                continue;
+
+            updated[i] = Object.assign({}, part, patch);
+            changed = true;
+        }
+
+        if (changed)
+            sidebar.partListModel = updated;
+    }
+
+    function requestPartVisibility(partUids, patch) {
+        const uidArray = Array.isArray(partUids) ? partUids.slice() : [partUids];
+        sidebar.applyVisibilityPatch(uidArray, patch);
+
+        const request = {
+            action: "PartVisibilityControl",
+            part_visibility: Object.assign({
+                part_uids: uidArray
+            }, patch),
+            _meta: {
+                silent: true
+            }
+        };
+        BackendService.request("RenderService", JSON.stringify(request));
+    }
+
+    function updatePartVisibility(partUids, geometryVisible, meshVisible) {
+        const patch = {};
+        if (geometryVisible !== undefined)
+            patch.geometry_visible = geometryVisible;
+        if (meshVisible !== undefined)
+            patch.mesh_visible = meshVisible;
+        sidebar.applyVisibilityPatch(partUids, patch);
+    }
+
+    function allPartUids() {
+        return sidebar.partListModel.map(part => part.uid);
+    }
+
+    function toggleAllGeometry() {
+        if (!sidebar.hasParts)
+            return;
+        sidebar.requestPartVisibility(sidebar.allPartUids(), {
+            geometry_visible: !sidebar.allGeometryVisible
+        });
+    }
+
+    function toggleAllMesh() {
+        if (!sidebar.hasParts)
+            return;
+        sidebar.requestPartVisibility(sidebar.allPartUids(), {
+            mesh_visible: !sidebar.allMeshVisible
+        });
     }
 
     // Listen for BackendService operation results
@@ -58,6 +126,24 @@ Rectangle {
         target: BackendService
         function onOperationFinished(moduleName, actionName, result) {
             console.log("[DocumentSideBar] Operation finished:", moduleName, actionName);
+            if (moduleName === "RenderService" && actionName === "PartVisibilityControl") {
+                try {
+                    const data = JSON.parse(result);
+                    if (data.success === false) {
+                        console.warn("[DocumentSideBar] Visibility request failed:", data.error);
+                        sidebar.refreshPartList();
+                        return;
+                    }
+
+                    const partUids = data.part_uids || (data.part_uid !== undefined ? [data.part_uid] : []);
+                    sidebar.updatePartVisibility(partUids, data.geometry_visible, data.mesh_visible);
+                } catch (e) {
+                    console.warn("[DocumentSideBar] Failed to parse visibility result:", e);
+                    sidebar.refreshPartList();
+                }
+                return;
+            }
+
             if (moduleName !== "GeometryService")
                 return;
             if (actionName !== "get_part_list")
@@ -65,6 +151,7 @@ Rectangle {
 
             try {
                 const data = JSON.parse(result);
+                console.log("[DocumentSideBar] Received part list:", data.parts);
                 sidebar.partListModel = data.parts || [];
                 sidebar.isLoading = false;
             } catch (e) {
@@ -74,6 +161,11 @@ Rectangle {
         }
 
         function onOperationFailed(moduleName, actionName, error) {
+            if (moduleName === "RenderService" && actionName === "PartVisibilityControl") {
+                console.warn("[DocumentSideBar] Failed to update part visibility:", error);
+                sidebar.refreshPartList();
+                return;
+            }
             if (moduleName !== "GeometryService")
                 return;
             if (actionName !== "get_part_list")
@@ -84,20 +176,18 @@ Rectangle {
     }
 
     // Initial load on component completion
-    Component.onCompleted: {
-        refreshPartList();
-    }
+    Component.onCompleted: {}
 
     // Toggle button
     Rectangle {
         id: toggleButton
         anchors.top: parent.top
         anchors.right: parent.right
-        anchors.margins: 4
-        width: 24
-        height: 24
-        radius: 4
-        color: toggleArea.containsMouse ? Theme.hovered : "transparent"
+        // anchors.margins: 4
+        width: 32
+        height: 32
+        // radius: 4
+        color: toggleArea.containsMouse ? Theme.hovered : Theme.surfaceHighLight
 
         ThemedIcon {
             anchors.centerIn: parent
@@ -124,7 +214,7 @@ Rectangle {
         anchors.left: parent.left
         anchors.right: toggleButton.left
         height: 32
-        color: "transparent"
+        color: Theme.surfaceHighLight
         visible: sidebar.expanded
 
         RowLayout {
@@ -141,41 +231,41 @@ Rectangle {
                 Layout.fillWidth: true
             }
 
-            // Refresh button
-            Rectangle {
-                width: 20
-                height: 20
-                radius: 4
-                color: refreshArea.containsMouse ? Theme.hovered : "transparent"
+            // // Refresh button
+            // Rectangle {
+            //     width: 24
+            //     height: 24
+            //     radius: 4
+            //     color: refreshArea.containsMouse ? Theme.hovered : "transparent"
 
-                ThemedIcon {
-                    anchors.centerIn: parent
-                    source: "qrc:/opengeolab/resources/icons/refresh.svg"
-                    size: 14
-                    rotation: sidebar.isLoading ? refreshAnimation.angle : 0
-                }
+            //     ThemedIcon {
+            //         anchors.centerIn: parent
+            //         source: "qrc:/opengeolab/resources/icons/refresh.svg"
+            //         size: 14
+            //         rotation: sidebar.isLoading ? refreshAnimation.angle : 0
+            //     }
 
-                NumberAnimation on rotation {
-                    id: refreshAnimation
-                    property real angle: 0
-                    running: sidebar.isLoading
-                    from: 0
-                    to: 360
-                    duration: 1000
-                    loops: Animation.Infinite
-                }
+            //     NumberAnimation on rotation {
+            //         id: refreshAnimation
+            //         property real angle: 0
+            //         running: sidebar.isLoading
+            //         from: 0
+            //         to: 360
+            //         duration: 1000
+            //         loops: Animation.Infinite
+            //     }
 
-                MouseArea {
-                    id: refreshArea
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    onClicked: sidebar.refreshPartList()
-                }
+            //     MouseArea {
+            //         id: refreshArea
+            //         anchors.fill: parent
+            //         hoverEnabled: true
+            //         onClicked: sidebar.refreshPartList()
+            //     }
 
-                ToolTip.visible: refreshArea.containsMouse
-                ToolTip.text: qsTr("Refresh part list")
-                ToolTip.delay: 500
-            }
+            //     ToolTip.visible: refreshArea.containsMouse
+            //     ToolTip.text: qsTr("Refresh part list")
+            //     ToolTip.delay: 500
+            // }
         }
     }
 
@@ -208,6 +298,91 @@ Rectangle {
             font.pixelSize: 11
             color: Theme.textSecondary
         }
+
+        RowLayout {
+            anchors.right: parent.right
+            anchors.rightMargin: 8
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 4
+
+            Rectangle {
+                width: 22
+                height: 22
+                radius: 6
+                border.width: 1
+                border.color: sidebar.allGeometryVisible ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, Theme.isDark ? 0.9 : 0.55) : Theme.border
+                color: geometrySummaryArea.pressed ? (sidebar.allGeometryVisible ? Qt.darker(Theme.surfaceHighLight, 1.08) : Theme.clicked) : (geometrySummaryArea.containsMouse ? Theme.hovered : (sidebar.allGeometryVisible ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, Theme.isDark ? 0.20 : 0.12) : "transparent"))
+                opacity: sidebar.hasParts ? 1.0 : 0.45
+
+                ThemedIcon {
+                    anchors.centerIn: parent
+                    source: "qrc:/opengeolab/resources/icons/face.svg"
+                    size: 13
+                    color: sidebar.allGeometryVisible ? Theme.accent : Theme.textSecondary
+                }
+
+                Rectangle {
+                    anchors.centerIn: parent
+                    width: 2
+                    height: 13
+                    radius: 1
+                    rotation: 45
+                    color: Theme.danger
+                    opacity: sidebar.allGeometryVisible ? 0.0 : 0.88
+                }
+
+                MouseArea {
+                    id: geometrySummaryArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    enabled: sidebar.hasParts
+                    onClicked: sidebar.toggleAllGeometry()
+                }
+
+                ToolTip.visible: geometrySummaryArea.containsMouse
+                ToolTip.text: sidebar.allGeometryVisible ? qsTr("Hide all geometry") : qsTr("Show all geometry")
+                ToolTip.delay: 400
+            }
+
+            Rectangle {
+                width: 22
+                height: 22
+                radius: 6
+                border.width: 1
+                border.color: sidebar.allMeshVisible ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, Theme.isDark ? 0.9 : 0.55) : Theme.border
+                color: meshSummaryArea.pressed ? (sidebar.allMeshVisible ? Qt.darker(Theme.surfaceHighLight, 1.08) : Theme.clicked) : (meshSummaryArea.containsMouse ? Theme.hovered : (sidebar.allMeshVisible ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, Theme.isDark ? 0.20 : 0.12) : "transparent"))
+                opacity: sidebar.hasParts ? 1.0 : 0.45
+
+                ThemedIcon {
+                    anchors.centerIn: parent
+                    source: "qrc:/opengeolab/resources/icons/mesh.svg"
+                    size: 13
+                    color: sidebar.allMeshVisible ? Theme.accent : Theme.textSecondary
+                }
+
+                Rectangle {
+                    anchors.centerIn: parent
+                    width: 2
+                    height: 13
+                    radius: 1
+                    rotation: 45
+                    color: Theme.danger
+                    opacity: sidebar.allMeshVisible ? 0.0 : 0.88
+                }
+
+                MouseArea {
+                    id: meshSummaryArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    enabled: sidebar.hasParts
+                    onClicked: sidebar.toggleAllMesh()
+                }
+
+                ToolTip.visible: meshSummaryArea.containsMouse
+                ToolTip.text: sidebar.allMeshVisible ? qsTr("Hide all mesh") : qsTr("Show all mesh")
+                ToolTip.delay: 400
+            }
+        }
     }
 
     // Part list
@@ -231,6 +406,18 @@ Rectangle {
             width: partListView.width
             partData: modelData
             partIndex: index
+            onToggleGeometryRequested: function (partUid, visible) {
+                console.log("Requesting geometry visibility change for part", partUid, "visible:", visible);
+                sidebar.requestPartVisibility(partUid, {
+                    geometry_visible: visible
+                });
+            }
+            onToggleMeshRequested: function (partUid, visible) {
+                console.log("Requesting mesh visibility change for part", partUid, "visible:", visible);
+                sidebar.requestPartVisibility(partUid, {
+                    mesh_visible: visible
+                });
+            }
         }
 
         // Empty state

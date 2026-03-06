@@ -1,11 +1,11 @@
 /**
  * @file geometry_entity.cpp
- * @brief Implementation of GeometryEntity and GeometryManager
+ * @brief Implementation of GeometryEntityImpl and GeometryManager
  */
 
-#include "geometry_entity.hpp"
-
+#include "geometry_entityImpl.hpp"
 #include "../geometry_documentImpl.hpp"
+#include "util/point_vector3d.hpp"
 
 #include <BRepBndLib.hxx>
 #include <Bnd_Box.hxx>
@@ -17,15 +17,15 @@
 namespace OpenGeoLab::Geometry {
 
 // =============================================================================
-// GeometryEntity Implementation
+// GeometryEntityImpl Implementation
 // =============================================================================
 
-GeometryEntity::~GeometryEntity() { detachAllRelations(); }
+GeometryEntityImpl::~GeometryEntityImpl() { detachAllRelations(); }
 
-GeometryEntity::GeometryEntity(EntityType type)
+GeometryEntityImpl::GeometryEntityImpl(EntityType type)
     : m_entityId(generateEntityId()), m_entityUID(generateEntityUID(type)), m_entityType(type) {}
 
-EntityType GeometryEntity::detectEntityType(const TopoDS_Shape& shape) {
+EntityType GeometryEntityImpl::detectEntityType(const TopoDS_Shape& shape) {
     if(shape.IsNull()) {
         return EntityType::None;
     }
@@ -52,14 +52,14 @@ EntityType GeometryEntity::detectEntityType(const TopoDS_Shape& shape) {
     }
 }
 
-BoundingBox3D GeometryEntity::boundingBox() const {
+BoundingBox3D GeometryEntityImpl::boundingBox() const {
     if(!m_boundingBoxValid) {
         computeBoundingBox();
     }
     return m_boundingBox;
 }
 
-void GeometryEntity::computeBoundingBox() const {
+void GeometryEntityImpl::computeBoundingBox() const {
     if(shape().IsNull()) {
         m_boundingBox = BoundingBox3D();
         m_boundingBoxValid = false;
@@ -78,13 +78,13 @@ void GeometryEntity::computeBoundingBox() const {
     double xmin, ymin, zmin, xmax, ymax, zmax;
     occ_box.Get(xmin, ymin, zmin, xmax, ymax, zmax);
 
-    m_boundingBox = BoundingBox3D(Point3D(xmin, ymin, zmin), Point3D(xmax, ymax, zmax));
+    m_boundingBox = BoundingBox3D(Util::Pt3d(xmin, ymin, zmin), Util::Pt3d(xmax, ymax, zmax));
     m_boundingBoxValid = true;
 }
 
-void GeometryEntity::invalidateBoundingBox() { m_boundingBoxValid = false; }
+void GeometryEntityImpl::invalidateBoundingBox() { m_boundingBoxValid = false; }
 
-void GeometryEntity::detachAllRelations() {
+void GeometryEntityImpl::detachAllRelations() {
     const auto doc = document();
     if(!doc) {
         return;

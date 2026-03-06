@@ -68,7 +68,10 @@ QtObject {
                 path: "Pages/SmoothMeshPage.qml",
                 floating: true
             },
-
+            "meshQuery": {
+                path: "Pages/MeshQueryPage.qml",
+                floating: true
+            },
             // AI
             "aiSuggest": {
                 path: "Pages/AISuggestPage.qml",
@@ -127,10 +130,11 @@ QtObject {
 
         const page = getPage(actionId);
         if (page && typeof page.open === "function") {
-            page.open(payload);
-            // Track the currently open floating page
             if (config && config.floating) {
+                page.open(payload);
                 currentOpenPage = actionId;
+            } else {
+                page.open();
             }
         } else if (!page) {
             console.warn("[MainPages] No page handler for action:", actionId);

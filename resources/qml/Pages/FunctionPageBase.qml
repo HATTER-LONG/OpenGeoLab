@@ -169,15 +169,15 @@ Item {
     Rectangle {
         id: shadow
         anchors.fill: panel
-        anchors.margins: -2
-        radius: panel.radius + 2
+        anchors.margins: -1
+        radius: panel.radius + 1
         color: "transparent"
         border.width: 0
 
         Rectangle {
             anchors.fill: parent
-            anchors.margins: -4
-            radius: parent.radius + 4
+            anchors.margins: -2
+            radius: parent.radius + 2
             color: Theme.isDark ? Qt.rgba(0, 0, 0, 0.4) : Qt.rgba(0, 0, 0, 0.15)
             z: -1
         }

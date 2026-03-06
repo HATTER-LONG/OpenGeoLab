@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "geometry_entity.hpp"
+#include "geometry_entityImpl.hpp"
 
 #include <TopoDS_Shape.hxx>
 
@@ -25,7 +25,7 @@ using PartEntityPtr = std::shared_ptr<PartEntity>;
  * of the entity hierarchy for that component. Parts can contain multiple
  * sub-shapes (solids, faces, edges, etc.) organized in a parent-child tree.
  */
-class PartEntity : public GeometryEntity {
+class PartEntity : public GeometryEntityImpl {
 public:
     explicit PartEntity(const TopoDS_Shape& shape);
     ~PartEntity() override = default;
@@ -39,6 +39,8 @@ public:
     [[nodiscard]] bool canAddParentType(EntityType /*parent_type*/) const override { return false; }
 
     [[nodiscard]] const TopoDS_Shape& shape() const override { return m_shape; }
+
+    [[nodiscard]] bool hasShape() const override { return !m_shape.IsNull(); }
 
     [[nodiscard]] const TopoDS_Shape& partShape() const { return m_shape; }
 

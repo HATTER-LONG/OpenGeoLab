@@ -10,12 +10,12 @@
 #pragma once
 
 #include "entity/entity_index.hpp"
-#include "entity/geometry_entity.hpp"
+#include "entity/geometry_entityImpl.hpp"
 #include "entity/relationship_index.hpp"
 #include "geometry/geometry_document.hpp"
 
 #include <memory>
-#include <mutex>
+#include <shared_mutex>
 #include <vector>
 
 namespace OpenGeoLab::Geometry {
@@ -31,6 +31,11 @@ using GeometryDocumentImplPtr = std::shared_ptr<GeometryDocumentImpl>;
 class GeometryDocumentImpl : public GeometryDocument,
                              public std::enable_shared_from_this<GeometryDocumentImpl> {
 public:
+    /**
+     * @brief Get the singleton instance of the document
+     * @return Shared pointer to the document instance
+     */
+    static std::shared_ptr<GeometryDocumentImpl> instance();
     GeometryDocumentImpl();
     virtual ~GeometryDocumentImpl() = default;
 
@@ -56,7 +61,7 @@ public:
      * @return true if added; false if null or duplicates exist.
      * @note On success, the entity receives a weak back-reference to this document.
      */
-    [[nodiscard]] bool addEntity(const GeometryEntityPtr& entity);
+    [[nodiscard]] bool addEntity(const GeometryEntityImplPtr& entity);
 
     /**
      * @brief Remove an entity from the document by id.
@@ -90,12 +95,17 @@ public:
     // Entity Lookup
     // -------------------------------------------------------------------------
 
-    [[nodiscard]] GeometryEntityPtr findById(EntityId entity_id) const;
+    [[nodiscard]] virtual GeometryEntityPtr findById(EntityId entity_id) const override;
 
-    [[nodiscard]] GeometryEntityPtr findByUIDAndType(EntityUID entity_uid,
-                                                     EntityType entity_type) const;
+    [[nodiscard]] virtual GeometryEntityPtr findByUIDAndType(EntityUID entity_uid,
+                                                             EntityType entity_type) const override;
 
-    [[nodiscard]] GeometryEntityPtr findByShape(const TopoDS_Shape& shape) const;
+    [[nodiscard]] GeometryEntityImplPtr findImplById(EntityId entity_id) const;
+
+    [[nodiscard]] GeometryEntityImplPtr findImplByUIDAndType(EntityUID entity_uid,
+                                                             EntityType entity_type) const;
+
+    [[nodiscard]] GeometryEntityPtr findByShape(const TopoDS_Shape& shape) const override;
 
     [[nodiscard]] size_t entityCount() const;
 
@@ -106,13 +116,13 @@ public:
      * @param entity_type Type to filter by.
      * @return Vector of entities matching the type.
      */
-    [[nodiscard]] std::vector<GeometryEntityPtr> entitiesByType(EntityType entity_type) const;
+    [[nodiscard]] std::vector<GeometryEntityImplPtr> entitiesByType(EntityType entity_type) const;
 
     /**
      * @brief Get a snapshot of all entities in the document.
      * @return Vector of all entities.
      */
-    [[nodiscard]] std::vector<GeometryEntityPtr> allEntities() const;
+    [[nodiscard]] std::vector<GeometryEntityImplPtr> allEntities() const;
 
     // -------------------------------------------------------------------------
     // Entity Relationship Queries
@@ -135,16 +145,15 @@ public:
      * @return true if the edge is added; false if ids are invalid, entities are missing,
      *         or the edge would create a cycle.
      */
-    [[nodiscard]] bool addChildEdge(const GeometryEntity& parent, const GeometryEntity& child);
+    [[nodiscard]] bool addChildEdge(const GeometryEntityImpl& parent,
+                                    const GeometryEntityImpl& child);
 
     // =========================================================================
     // Render Data Access (GeometryDocument interface)
     // =========================================================================
 
-    [[nodiscard]] Render::DocumentRenderData
-    getRenderData(const Render::TessellationOptions& options) override;
-
-    void invalidateRenderData() override;
+    [[nodiscard]] bool getRenderData(Render::RenderData& render_data,
+                                     const Render::TessellationOptions& options) override;
 
     // =========================================================================
     // Change Notification (GeometryDocument interface)
@@ -163,42 +172,43 @@ public:
     }
 
 private:
-    /**
-     * @brief Helper for recursive entity removal.
-     * @param entity_id Entity to remove.
-     * @param removed_count Counter for removed entities.
-     */
+    // Internal helpers below assume the caller already holds m_documentMutex.
+    [[nodiscard]] bool addEntityUnlocked(const GeometryEntityImplPtr& entity);
+    [[nodiscard]] bool removeEntityUnlocked(EntityId entity_id);
+    void clearUnlocked();
+    [[nodiscard]] GeometryEntityImplPtr findImplByIdUnlocked(EntityId entity_id) const;
+    [[nodiscard]] GeometryEntityImplPtr findImplByUIDAndTypeUnlocked(EntityUID entity_uid,
+                                                                     EntityType entity_type) const;
+    [[nodiscard]] GeometryEntityPtr findByShapeUnlocked(const TopoDS_Shape& shape) const;
+    [[nodiscard]] size_t entityCountUnlocked() const;
+    [[nodiscard]] size_t entityCountByTypeUnlocked(EntityType entity_type) const;
+    [[nodiscard]] std::vector<GeometryEntityImplPtr>
+    entitiesByTypeUnlocked(EntityType entity_type) const;
+    [[nodiscard]] std::vector<GeometryEntityImplPtr> allEntitiesUnlocked() const;
+    [[nodiscard]] std::vector<EntityKey> findRelatedEntitiesUnlocked(EntityId entity_id,
+                                                                     EntityType related_type) const;
+    [[nodiscard]] std::vector<EntityKey> findRelatedEntitiesUnlocked(EntityUID entity_uid,
+                                                                     EntityType entity_type,
+                                                                     EntityType related_type) const;
+    [[nodiscard]] bool addChildEdgeUnlocked(const GeometryEntityImpl& parent,
+                                            const GeometryEntityImpl& child);
+    [[nodiscard]] bool getRenderDataUnlocked(Render::RenderData& render_data,
+                                             const Render::TessellationOptions& options);
+
     void removeEntityRecursive(EntityId entity_id, size_t& removed_count);
 
-    /**
-     * @brief Generate render mesh for a face entity
-     * @param entity Face entity
-     * @param options Tessellation options
-     * @return Render mesh for the face
-     */
-    [[nodiscard]] Render::RenderMesh generateFaceMesh(const GeometryEntityPtr& entity,
-                                                      const Render::TessellationOptions& options);
+    void generateFaceMesh(Render::RenderData& render_data,
+                          const GeometryEntityImplPtr& entity,
+                          const Render::TessellationOptions& options);
 
-    /**
-     * @brief Generate render mesh for an edge entity
-     * @param entity Edge entity
-     * @param options Tessellation options
-     * @return Render mesh for the edge
-     */
-    [[nodiscard]] Render::RenderMesh generateEdgeMesh(const GeometryEntityPtr& entity,
-                                                      const Render::TessellationOptions& options);
+    void generateEdgeMesh(Render::RenderData& render_data,
+                          const GeometryEntityImplPtr& entity,
+                          const Render::TessellationOptions& options);
 
-    /**
-     * @brief Generate render mesh for a vertex entity
-     * @param entity Vertex entity
-     * @return Render mesh for the vertex
-     */
-    [[nodiscard]] Render::RenderMesh generateVertexMesh(const GeometryEntityPtr& entity);
+    void generateVertexMesh(Render::RenderData& render_data,
+                            const GeometryEntityImplPtr& entity,
+                            const Render::TessellationOptions& options);
 
-    /**
-     * @brief Emit a change notification to all subscribers
-     * @param event Change event to emit
-     */
     void emitChangeEvent(const GeometryChangeEvent& event);
 
 private:
@@ -209,10 +219,19 @@ private:
     /// Signal for geometry change notifications
     Util::Signal<const GeometryChangeEvent&> m_changeSignal;
 
-    /// Cached render data
-    mutable Render::DocumentRenderData m_cachedRenderData;
-    mutable bool m_renderDataValid{false};
-    mutable std::mutex m_renderDataMutex;
+    mutable std::shared_mutex m_documentMutex;
+    // /// Cached render data
+    // mutable Render::RenderData m_cachedRenderData;
+    // mutable bool m_renderDataValid{false};
 };
+/**
+ * @brief Singleton factory for GeometryDocumentImpl
+ */
+class GeometryDocumentImplSingletonFactory : public GeometryDocumentSingletonFactory {
+public:
+    GeometryDocumentImplSingletonFactory() = default;
+    ~GeometryDocumentImplSingletonFactory() override = default;
 
+    tObjectSharedPtr instance() const override;
+};
 } // namespace OpenGeoLab::Geometry

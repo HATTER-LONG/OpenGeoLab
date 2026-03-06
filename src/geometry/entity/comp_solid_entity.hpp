@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "geometry_entity.hpp"
+#include "geometry_entityImpl.hpp"
 #include <TopoDS_CompSolid.hxx>
 
 namespace OpenGeoLab::Geometry {
@@ -22,7 +22,7 @@ using CompSolidEntityPtr = std::shared_ptr<CompSolidEntity>;
  * CompSolidEntity represents a set of solids that share common faces.
  * This is used for multi-body configurations where solids are connected.
  */
-class CompSolidEntity : public GeometryEntity {
+class CompSolidEntity : public GeometryEntityImpl {
 public:
     explicit CompSolidEntity(const TopoDS_CompSolid& compsolid);
     ~CompSolidEntity() override = default;
@@ -37,6 +37,7 @@ public:
 
     [[nodiscard]] const TopoDS_Shape& shape() const override { return m_compsolid; }
 
+    [[nodiscard]] bool hasShape() const override { return !m_compsolid.IsNull(); }
     /**
      * @brief Get the typed OCC compsolid
      * @return Const reference to TopoDS_CompSolid

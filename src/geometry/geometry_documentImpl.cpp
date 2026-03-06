@@ -4,88 +4,32 @@
  */
 
 #include "geometry_documentImpl.hpp"
-#include "entity/geometry_entity.hpp"
-#include "geometry/part_color.hpp"
+#include "entity/geometry_entityImpl.hpp"
+#include "geometry_render_builder.hpp"
 #include "shape_builder.hpp"
 #include "util/logger.hpp"
 #include "util/progress_callback.hpp"
 
-#include <BRepMesh_IncrementalMesh.hxx>
-#include <BRep_Tool.hxx>
-#include <GCPnts_UniformDeflection.hxx>
-#include <GeomAdaptor_Curve.hxx>
-#include <Poly_Polygon3D.hxx>
-#include <Poly_Triangle.hxx>
-#include <Poly_Triangulation.hxx>
-#include <TColgp_Array1OfPnt.hxx>
-#include <TopAbs_Orientation.hxx>
-#include <TopLoc_Location.hxx>
-#include <TopoDS.hxx>
-#include <gp_Dir.hxx>
-#include <gp_Pnt.hxx>
-#include <gp_Trsf.hxx>
-
-#include <queue>
-#include <unordered_set>
-
 namespace OpenGeoLab::Geometry {
+
+std::shared_ptr<GeometryDocumentImpl> GeometryDocumentImpl::instance() {
+    static auto instance = std::make_shared<GeometryDocumentImpl>();
+    return instance;
+}
+
+GeometryDocumentImplSingletonFactory::tObjectSharedPtr
+GeometryDocumentImplSingletonFactory::instance() const {
+    return GeometryDocumentImpl::instance();
+}
 
 GeometryDocumentImpl::GeometryDocumentImpl() : m_relationshipIndex(m_entityIndex) {}
 
-namespace {
-/**
- * @brief Check if transformation is identity
- * @param trsf Transformation to check
- * @return true if transformation is identity
- */
-bool isIdentityTrsf(const gp_Trsf& trsf) {
-    return trsf.IsNegative() == Standard_False && trsf.ScaleFactor() == 1.0 &&
-           trsf.TranslationPart().SquareModulus() == 0.0;
+bool GeometryDocumentImpl::addEntity(const GeometryEntityImplPtr& entity) {
+    std::unique_lock<std::shared_mutex> lock(m_documentMutex);
+    return addEntityUnlocked(entity);
 }
 
-void computeSmoothVertexNormals(Render::RenderMesh& mesh) {
-    if(mesh.m_vertices.empty() || mesh.m_indices.size() < 3) {
-        return;
-    }
-
-    std::vector<Vector3D> accum(mesh.m_vertices.size());
-    for(size_t i = 0; i + 2 < mesh.m_indices.size(); i += 3) {
-        const uint32_t i0 = mesh.m_indices[i + 0];
-        const uint32_t i1 = mesh.m_indices[i + 1];
-        const uint32_t i2 = mesh.m_indices[i + 2];
-        if(i0 >= mesh.m_vertices.size() || i1 >= mesh.m_vertices.size() ||
-           i2 >= mesh.m_vertices.size()) {
-            continue;
-        }
-
-        const auto& v0 = mesh.m_vertices[i0];
-        const auto& v1 = mesh.m_vertices[i1];
-        const auto& v2 = mesh.m_vertices[i2];
-
-        const Vector3D p0{v0.m_position[0], v0.m_position[1], v0.m_position[2]};
-        const Vector3D p1{v1.m_position[0], v1.m_position[1], v1.m_position[2]};
-        const Vector3D p2{v2.m_position[0], v2.m_position[1], v2.m_position[2]};
-
-        const Vector3D n = (p1 - p0).cross(p2 - p0);
-        accum[i0] += n;
-        accum[i1] += n;
-        accum[i2] += n;
-    }
-
-    for(size_t i = 0; i < mesh.m_vertices.size(); ++i) {
-        const auto lsq = accum[i].squaredLength();
-        if(lsq < 1e-24) {
-            continue;
-        }
-        const double inv_len = 1.0 / std::sqrt(lsq);
-        mesh.m_vertices[i].m_normal[0] = static_cast<float>(accum[i].m_x * inv_len);
-        mesh.m_vertices[i].m_normal[1] = static_cast<float>(accum[i].m_y * inv_len);
-        mesh.m_vertices[i].m_normal[2] = static_cast<float>(accum[i].m_z * inv_len);
-    }
-}
-} // namespace
-
-bool GeometryDocumentImpl::addEntity(const GeometryEntityPtr& entity) {
+bool GeometryDocumentImpl::addEntityUnlocked(const GeometryEntityImplPtr& entity) {
     if(!m_entityIndex.addEntity(entity)) {
         LOG_WARN("GeometryDocument: Failed to add entity id={}", entity ? entity->entityId() : 0);
         return false;
@@ -97,7 +41,12 @@ bool GeometryDocumentImpl::addEntity(const GeometryEntityPtr& entity) {
 }
 
 bool GeometryDocumentImpl::removeEntity(EntityId entity_id) {
-    const auto entity = m_entityIndex.findById(entity_id);
+    std::unique_lock<std::shared_mutex> lock(m_documentMutex);
+    return removeEntityUnlocked(entity_id);
+}
+
+bool GeometryDocumentImpl::removeEntityUnlocked(EntityId entity_id) {
+    const auto entity = findImplByIdUnlocked(entity_id);
     if(!entity) {
         LOG_DEBUG("GeometryDocument: Entity not found for removal, id={}", entity_id);
         return false;
@@ -116,7 +65,10 @@ bool GeometryDocumentImpl::removeEntity(EntityId entity_id) {
 size_t GeometryDocumentImpl::removeEntityWithChildren(EntityId entity_id) {
     LOG_DEBUG("GeometryDocument: Removing entity and children, rootId={}", entity_id);
     size_t removed_count = 0;
-    removeEntityRecursive(entity_id, removed_count);
+    {
+        std::unique_lock<std::shared_mutex> lock(m_documentMutex);
+        removeEntityRecursive(entity_id, removed_count);
+    }
     LOG_DEBUG("GeometryDocument: Removed {} entities", removed_count);
     return removed_count;
 }
@@ -135,49 +87,120 @@ void GeometryDocumentImpl::removeEntityRecursive(EntityId entity_id, // NOLINT
     }
 
     // Then remove this entity
-    if(removeEntity(entity_id)) {
+    if(!m_entityIndex.removeEntity(entity_id)) {
+        return;
+    }
+
+    entity->setDocument({});
+    LOG_TRACE("GeometryDocument: Removed entity id={}", entity_id);
+    {
         ++removed_count;
     }
 }
 
 void GeometryDocumentImpl::clear() {
-    const size_t count = m_entityIndex.entityCount();
-    m_relationshipIndex.clear();
-    m_entityIndex.clear();
+    size_t count = 0;
+    {
+        std::unique_lock<std::shared_mutex> lock(m_documentMutex);
+        count = entityCountUnlocked();
+        clearUnlocked();
+    }
     LOG_INFO("GeometryDocument: Cleared document, removed {} entities", count);
     emitChangeEvent(GeometryChangeEvent(GeometryChangeType::EntityRemoved, INVALID_ENTITY_ID));
 }
 
+void GeometryDocumentImpl::clearUnlocked() {
+    m_relationshipIndex.clear();
+    m_entityIndex.clear();
+    resetEntityIdGenerator();
+    resetAllEntityUIDGenerators();
+}
+
 GeometryEntityPtr GeometryDocumentImpl::findById(EntityId entity_id) const {
-    return m_entityIndex.findById(entity_id);
+    std::shared_lock<std::shared_mutex> lock(m_documentMutex);
+    return findImplByIdUnlocked(entity_id);
 }
 
 GeometryEntityPtr GeometryDocumentImpl::findByUIDAndType(EntityUID entity_uid,
                                                          EntityType entity_type) const {
+    std::shared_lock<std::shared_mutex> lock(m_documentMutex);
+    return findImplByUIDAndTypeUnlocked(entity_uid, entity_type);
+}
+
+GeometryEntityImplPtr GeometryDocumentImpl::findImplById(EntityId entity_id) const {
+    std::shared_lock<std::shared_mutex> lock(m_documentMutex);
+    return findImplByIdUnlocked(entity_id);
+}
+
+GeometryEntityImplPtr GeometryDocumentImpl::findImplByIdUnlocked(EntityId entity_id) const {
+    return m_entityIndex.findById(entity_id);
+}
+
+GeometryEntityImplPtr GeometryDocumentImpl::findImplByUIDAndType(EntityUID entity_uid,
+                                                                 EntityType entity_type) const {
+    std::shared_lock<std::shared_mutex> lock(m_documentMutex);
+    return findImplByUIDAndTypeUnlocked(entity_uid, entity_type);
+}
+
+GeometryEntityImplPtr
+GeometryDocumentImpl::findImplByUIDAndTypeUnlocked(EntityUID entity_uid,
+                                                   EntityType entity_type) const {
     return m_entityIndex.findByUIDAndType(entity_uid, entity_type);
 }
 
 GeometryEntityPtr GeometryDocumentImpl::findByShape(const TopoDS_Shape& shape) const {
+    std::shared_lock<std::shared_mutex> lock(m_documentMutex);
+    return findByShapeUnlocked(shape);
+}
+
+GeometryEntityPtr GeometryDocumentImpl::findByShapeUnlocked(const TopoDS_Shape& shape) const {
     return m_entityIndex.findByShape(shape);
 }
 
 [[nodiscard]] size_t GeometryDocumentImpl::entityCount() const {
-    return m_entityIndex.entityCount();
+    std::shared_lock<std::shared_mutex> lock(m_documentMutex);
+    return entityCountUnlocked();
 }
 
+size_t GeometryDocumentImpl::entityCountUnlocked() const { return m_entityIndex.entityCount(); }
+
 [[nodiscard]] size_t GeometryDocumentImpl::entityCountByType(EntityType entity_type) const {
+    std::shared_lock<std::shared_mutex> lock(m_documentMutex);
+    return entityCountByTypeUnlocked(entity_type);
+}
+
+size_t GeometryDocumentImpl::entityCountByTypeUnlocked(EntityType entity_type) const {
     return m_entityIndex.entityCountByType(entity_type);
 }
 
-std::vector<GeometryEntityPtr> GeometryDocumentImpl::entitiesByType(EntityType entity_type) const {
+std::vector<GeometryEntityImplPtr>
+GeometryDocumentImpl::entitiesByType(EntityType entity_type) const {
+    std::shared_lock<std::shared_mutex> lock(m_documentMutex);
+    return entitiesByTypeUnlocked(entity_type);
+}
+
+std::vector<GeometryEntityImplPtr>
+GeometryDocumentImpl::entitiesByTypeUnlocked(EntityType entity_type) const {
     return m_entityIndex.entitiesByType(entity_type);
 }
 
-std::vector<GeometryEntityPtr> GeometryDocumentImpl::allEntities() const {
+std::vector<GeometryEntityImplPtr> GeometryDocumentImpl::allEntities() const {
+    std::shared_lock<std::shared_mutex> lock(m_documentMutex);
+    return allEntitiesUnlocked();
+}
+
+std::vector<GeometryEntityImplPtr> GeometryDocumentImpl::allEntitiesUnlocked() const {
     return m_entityIndex.snapshotEntities();
 }
 
-bool GeometryDocumentImpl::addChildEdge(const GeometryEntity& parent, const GeometryEntity& child) {
+bool GeometryDocumentImpl::addChildEdge(const GeometryEntityImpl& parent,
+                                        const GeometryEntityImpl& child) {
+    std::unique_lock<std::shared_mutex> lock(m_documentMutex);
+    return addChildEdgeUnlocked(parent, child);
+}
+
+bool GeometryDocumentImpl::addChildEdgeUnlocked(const GeometryEntityImpl& parent,
+                                                const GeometryEntityImpl& child) {
     if(parent.entityId() == child.entityId()) {
         return false;
     }
@@ -231,7 +254,7 @@ LoadResult GeometryDocumentImpl::appendShape(const TopoDS_Shape& shape,
     try {
         ShapeBuilder builder(shared_from_this());
 
-        auto subcallback = Util::makeScaledProgressCallback(progress, 0.1, 0.9);
+        auto subcallback = Util::makeScaledProgressCallback(progress, 0.1, 0.8);
 
         auto build_result = builder.buildFromShape(shape, name, subcallback);
 
@@ -240,7 +263,7 @@ LoadResult GeometryDocumentImpl::appendShape(const TopoDS_Shape& shape,
             return LoadResult::failure(build_result.m_errorMessage);
         }
 
-        if(!progress(0.95, "Finalizing...")) {
+        if(!progress(0.80, "Update geometry view data...")) {
             return LoadResult::failure("Operation cancelled");
         }
 
@@ -260,330 +283,44 @@ LoadResult GeometryDocumentImpl::appendShape(const TopoDS_Shape& shape,
     }
 }
 
-// =============================================================================
-// Render Data Implementation
-// =============================================================================
-
-Render::DocumentRenderData
-GeometryDocumentImpl::getRenderData(const Render::TessellationOptions& options) {
-    std::lock_guard<std::mutex> lock(m_renderDataMutex);
-
-    if(m_renderDataValid) {
-        return m_cachedRenderData;
-    }
-
-    m_cachedRenderData.clear();
-
-    // Generate face meshes
-    auto faces = entitiesByType(EntityType::Face);
-    LOG_DEBUG("getRenderData: Found {} faces in document", faces.size());
-    for(const auto& face : faces) {
-        auto mesh = generateFaceMesh(face, options);
-        if(mesh.isValid()) {
-            m_cachedRenderData.m_faceMeshes.push_back(std::move(mesh));
-        }
-    }
-
-    // Generate edge meshes
-    auto edges = entitiesByType(EntityType::Edge);
-    LOG_DEBUG("getRenderData: Found {} edges in document", edges.size());
-    for(const auto& edge : edges) {
-        auto mesh = generateEdgeMesh(edge, options);
-        if(mesh.isValid()) {
-            m_cachedRenderData.m_edgeMeshes.push_back(std::move(mesh));
-        }
-    }
-
-    // Generate vertex meshes
-    auto vertices = entitiesByType(EntityType::Vertex);
-    LOG_DEBUG("getRenderData: Found {} vertices in document", vertices.size());
-    for(const auto& vertex : vertices) {
-        auto mesh = generateVertexMesh(vertex);
-        if(mesh.isValid()) {
-            m_cachedRenderData.m_vertexMeshes.push_back(std::move(mesh));
-        }
-    }
-    LOG_DEBUG("getRenderData: Generated {} face meshes, {} edge meshes, {} vertex meshes",
-              m_cachedRenderData.m_faceMeshes.size(), m_cachedRenderData.m_edgeMeshes.size(),
-              m_cachedRenderData.m_vertexMeshes.size());
-    m_cachedRenderData.updateBoundingBox();
-    m_renderDataValid = true;
-
-    return m_cachedRenderData;
-}
-
-void GeometryDocumentImpl::invalidateRenderData() {
-    std::lock_guard<std::mutex> lock(m_renderDataMutex);
-    m_renderDataValid = false;
-}
 std::vector<EntityKey> GeometryDocumentImpl::findRelatedEntities(EntityId entity_id,
                                                                  EntityType related_type) const {
+    std::shared_lock<std::shared_mutex> lock(m_documentMutex);
+    return findRelatedEntitiesUnlocked(entity_id, related_type);
+}
+
+std::vector<EntityKey>
+GeometryDocumentImpl::findRelatedEntitiesUnlocked(EntityId entity_id,
+                                                  EntityType related_type) const {
     return m_relationshipIndex.findRelatedEntities(entity_id, related_type);
 }
 
 std::vector<EntityKey> GeometryDocumentImpl::findRelatedEntities(EntityUID entity_uid,
                                                                  EntityType entity_type,
                                                                  EntityType related_type) const {
+    std::shared_lock<std::shared_mutex> lock(m_documentMutex);
+    return findRelatedEntitiesUnlocked(entity_uid, entity_type, related_type);
+}
+
+std::vector<EntityKey> GeometryDocumentImpl::findRelatedEntitiesUnlocked(
+    EntityUID entity_uid, EntityType entity_type, EntityType related_type) const {
     return m_relationshipIndex.findRelatedEntities(entity_uid, entity_type, related_type);
 }
-Render::RenderMesh
-GeometryDocumentImpl::generateFaceMesh(const GeometryEntityPtr& entity,
-                                       const Render::TessellationOptions& options) {
-    Render::RenderMesh mesh;
-    mesh.m_entityId = entity->entityId();
-    mesh.m_entityType = EntityType::Face;
-    mesh.m_entityUid = entity->entityUID();
-    mesh.m_primitiveType = Render::RenderPrimitiveType::Triangles;
 
-    const auto& shape = entity->shape();
-    if(shape.IsNull()) {
-        return mesh;
-    }
-
-    // Determine face color based on owning part
-    PartColor face_color(0.7f, 0.7f, 0.7f, 1.0f); // Default gray
-    auto parts = findRelatedEntities(entity->entityId(), EntityType::Part);
-    auto solids = findRelatedEntities(entity->entityId(), EntityType::Solid);
-    auto wires = findRelatedEntities(entity->entityId(), EntityType::Wire);
-    if(parts.empty()) {
-        return mesh;
-    }
-    mesh.m_owningPart = parts.front();
-    auto owning_part_id = mesh.m_owningPart.m_id;
-    // Use entity ID for consistent color assignment
-    face_color = PartColorPalette::getColorByEntityId(owning_part_id);
-
-    if(!solids.empty()) {
-        mesh.m_owningSolid = solids.front();
-    }
-    if(!wires.empty()) {
-        mesh.m_owningWire.insert(wires.begin(), wires.end());
-    }
-
-    // Mesh-level colors (base/hover/selected). Base is kept consistent with per-vertex colors.
-    mesh.m_baseColor = Render::RenderColor{face_color.r, face_color.g, face_color.b, face_color.a};
-    mesh.m_hoverColor = Render::RenderColor{0.310f, 0.765f, 0.969f, face_color.a};
-    mesh.m_selectedColor = Render::RenderColor{0.118f, 0.533f, 0.898f, face_color.a};
-
-    // (Re)mesh with current tessellation options to avoid reusing a coarse cached triangulation.
-    // This is important for curved primitives (cylinder/torus) to look smooth.
-    const double linear_deflection = std::max(1e-6, options.m_linearDeflection);
-    BRepMesh_IncrementalMesh mesher(shape, linear_deflection, Standard_False,
-                                    options.m_angularDeflection);
-
-    // Use OCC's triangulation (computed by BRepMesh)
-    TopLoc_Location loc;
-    const Handle(Poly_Triangulation) tri = BRep_Tool::Triangulation(TopoDS::Face(shape), loc);
-    if(tri.IsNull()) {
-        return mesh;
-    }
-
-    const gp_Trsf& trsf = loc.Transformation();
-    const bool has_transform = !isIdentityTrsf(trsf);
-
-    // Extract vertices
-    const Standard_Integer nb_nodes = tri->NbNodes();
-    mesh.m_vertices.reserve(static_cast<size_t>(nb_nodes));
-
-    for(Standard_Integer i = 1; i <= nb_nodes; ++i) {
-        gp_Pnt pnt = tri->Node(i);
-        if(has_transform) {
-            pnt.Transform(trsf);
-        }
-
-        Render::RenderVertex vertex(static_cast<float>(pnt.X()), static_cast<float>(pnt.Y()),
-                                    static_cast<float>(pnt.Z()));
-
-        // Set face color based on owning part
-        vertex.setColor(face_color.r, face_color.g, face_color.b, face_color.a);
-
-        // Get normal if available; otherwise compute smooth normals after indices are built.
-        if(options.m_computeNormals && tri->HasNormals()) {
-            gp_Dir normal = tri->Normal(i);
-            if(has_transform) {
-                normal.Transform(trsf);
-            }
-            vertex.m_normal[0] = static_cast<float>(normal.X());
-            vertex.m_normal[1] = static_cast<float>(normal.Y());
-            vertex.m_normal[2] = static_cast<float>(normal.Z());
-        }
-
-        mesh.m_vertices.push_back(vertex);
-        mesh.m_boundingBox.expand(Point3D(pnt.X(), pnt.Y(), pnt.Z()));
-    }
-
-    // Extract triangles
-    const Standard_Integer nb_triangles = tri->NbTriangles();
-    mesh.m_indices.reserve(static_cast<size_t>(nb_triangles) * 3);
-
-    const TopAbs_Orientation orientation = shape.Orientation();
-
-    for(Standard_Integer i = 1; i <= nb_triangles; ++i) {
-        const Poly_Triangle& triangle = tri->Triangle(i);
-        Standard_Integer n1, n2, n3;
-        triangle.Get(n1, n2, n3);
-
-        // Adjust winding based on face orientation
-        if(orientation == TopAbs_REVERSED) {
-            std::swap(n2, n3);
-        }
-
-        mesh.m_indices.push_back(static_cast<uint32_t>(n1 - 1));
-        mesh.m_indices.push_back(static_cast<uint32_t>(n2 - 1));
-        mesh.m_indices.push_back(static_cast<uint32_t>(n3 - 1));
-    }
-
-    if(options.m_computeNormals && !tri->HasNormals()) {
-        computeSmoothVertexNormals(mesh);
-    }
-
-    return mesh;
+// =============================================================================
+// Render Data Implementation
+// =============================================================================
+bool GeometryDocumentImpl::getRenderData(Render::RenderData& render_data,
+                                         const Render::TessellationOptions& options) {
+    std::shared_lock<std::shared_mutex> lock(m_documentMutex);
+    return getRenderDataUnlocked(render_data, options);
 }
 
-Render::RenderMesh
-GeometryDocumentImpl::generateEdgeMesh(const GeometryEntityPtr& entity,
-                                       const Render::TessellationOptions& options) {
-    Render::RenderMesh mesh;
-    mesh.m_entityId = entity->entityId();
-    mesh.m_entityType = EntityType::Edge;
-    mesh.m_entityUid = entity->entityUID();
-    mesh.m_primitiveType = Render::RenderPrimitiveType::LineStrip;
-
-    // Owning info (for selection propagation & wire picking/highlighting)
-    {
-        const auto owning_parts = findRelatedEntities(entity->entityId(), EntityType::Part);
-        if(!owning_parts.empty()) {
-            mesh.m_owningPart = owning_parts.front();
-        }
-        const auto owning_solids = findRelatedEntities(entity->entityId(), EntityType::Solid);
-        if(!owning_solids.empty()) {
-            mesh.m_owningSolid = owning_solids.front();
-        }
-        const auto owning_wires = findRelatedEntities(entity->entityId(), EntityType::Wire);
-        if(!owning_wires.empty()) {
-            mesh.m_owningWire.insert(owning_wires.begin(), owning_wires.end());
-        }
-    }
-
-    // Edge color: yellow for visibility
-    constexpr float edge_color[4] = {1.0f, 0.8f, 0.2f, 1.0f};
-    mesh.m_baseColor =
-        Render::RenderColor{edge_color[0], edge_color[1], edge_color[2], edge_color[3]};
-    mesh.m_hoverColor = Render::RenderColor{1.0f, 0.6f, 0.6f, edge_color[3]};
-    mesh.m_selectedColor = Render::RenderColor{1.0f, 0.0f, 0.0f, edge_color[3]};
-    const auto& shape = entity->shape();
-    if(shape.IsNull()) {
-        return mesh;
-    }
-
-    const TopoDS_Edge& edge = TopoDS::Edge(shape);
-
-    const double linear_deflection = std::max(1e-6, options.m_linearDeflection);
-    BRepMesh_IncrementalMesh mesher(shape, linear_deflection, Standard_False,
-                                    options.m_angularDeflection);
-
-    // Prefer polygonal data generated by meshing (most consistent with surface triangulation).
-    {
-        TopLoc_Location loc;
-        const Handle(Poly_Polygon3D) polygon = BRep_Tool::Polygon3D(edge, loc);
-        if(!polygon.IsNull()) {
-            const TColgp_Array1OfPnt& nodes = polygon->Nodes();
-            const gp_Trsf& trsf = loc.Transformation();
-
-            for(Standard_Integer i = nodes.Lower(); i <= nodes.Upper(); ++i) {
-                gp_Pnt pnt = nodes(i);
-                if(!isIdentityTrsf(trsf)) {
-                    pnt.Transform(trsf);
-                }
-                auto& vertex = mesh.m_vertices.emplace_back(static_cast<float>(pnt.X()),
-                                                            static_cast<float>(pnt.Y()),
-                                                            static_cast<float>(pnt.Z()));
-                vertex.setColor(edge_color[0], edge_color[1], edge_color[2], edge_color[3]);
-                mesh.m_boundingBox.expand(Point3D(pnt.X(), pnt.Y(), pnt.Z()));
-            }
-
-            return mesh;
-        }
-    }
-
-    Standard_Real first, last;
-    TopLoc_Location curve_loc;
-    const Handle(Geom_Curve) curve = BRep_Tool::Curve(edge, curve_loc, first, last);
-
-    if(curve.IsNull()) {
-        return mesh;
-    }
-
-    const gp_Trsf& curve_trsf = curve_loc.Transformation();
-    const bool has_transform = !isIdentityTrsf(curve_trsf);
-
-    // Sample the curve
-    GCPnts_UniformDeflection sampler(GeomAdaptor_Curve(curve, first, last), linear_deflection);
-
-    if(!sampler.IsDone()) {
-        return mesh;
-    }
-
-    const Standard_Integer nb_points = sampler.NbPoints();
-    mesh.m_vertices.reserve(static_cast<size_t>(nb_points));
-
-    for(Standard_Integer i = 1; i <= nb_points; ++i) {
-        gp_Pnt pnt = sampler.Value(i);
-        if(has_transform) {
-            pnt.Transform(curve_trsf);
-        }
-        auto& vertex = mesh.m_vertices.emplace_back(
-            static_cast<float>(pnt.X()), static_cast<float>(pnt.Y()), static_cast<float>(pnt.Z()));
-        vertex.setColor(edge_color[0], edge_color[1], edge_color[2], edge_color[3]);
-        mesh.m_boundingBox.expand(Point3D(pnt.X(), pnt.Y(), pnt.Z()));
-    }
-
-    return mesh;
-}
-
-Render::RenderMesh GeometryDocumentImpl::generateVertexMesh(const GeometryEntityPtr& entity) {
-    Render::RenderMesh mesh;
-    mesh.m_entityId = entity->entityId();
-    mesh.m_entityUid = entity->entityUID();
-    mesh.m_entityType = EntityType::Vertex;
-    mesh.m_primitiveType = Render::RenderPrimitiveType::Points;
-    constexpr float vertex_color[4] = {0.2f, 1.0f, 0.4f, 1.0f};
-
-    mesh.m_baseColor =
-        Render::RenderColor{vertex_color[0], vertex_color[1], vertex_color[2], vertex_color[3]};
-    mesh.m_hoverColor = Render::RenderColor{1.0f, 0.6f, 0.0f, vertex_color[3]};
-    mesh.m_selectedColor = Render::RenderColor{1.0f, 0.3f, 0.0f, vertex_color[3]};
-    const auto& shape = entity->shape();
-    if(shape.IsNull()) {
-        return mesh;
-    }
-
-    // Owning info (for selection propagation & wire picking/highlighting)
-    {
-        const auto owning_parts = findRelatedEntities(entity->entityId(), EntityType::Part);
-        if(!owning_parts.empty()) {
-            mesh.m_owningPart = owning_parts.front();
-        }
-        const auto owning_solids = findRelatedEntities(entity->entityId(), EntityType::Solid);
-        if(!owning_solids.empty()) {
-            mesh.m_owningSolid = owning_solids.front();
-        }
-        const auto owning_wires = findRelatedEntities(entity->entityId(), EntityType::Wire);
-        if(!owning_wires.empty()) {
-            mesh.m_owningWire.insert(owning_wires.begin(), owning_wires.end());
-        }
-    }
-
-    const TopoDS_Vertex& vertex = TopoDS::Vertex(shape);
-    const gp_Pnt pnt = BRep_Tool::Pnt(vertex);
-
-    auto& render_vertex = mesh.m_vertices.emplace_back(
-        static_cast<float>(pnt.X()), static_cast<float>(pnt.Y()), static_cast<float>(pnt.Z()));
-    render_vertex.setColor(vertex_color[0], vertex_color[1], vertex_color[2], vertex_color[3]);
-
-    mesh.m_boundingBox.expand(Point3D(pnt.X(), pnt.Y(), pnt.Z()));
-
-    return mesh;
+bool GeometryDocumentImpl::getRenderDataUnlocked(Render::RenderData& render_data,
+                                                 const Render::TessellationOptions& options) {
+    GeometryRenderInput input{m_entityIndex, m_relationshipIndex, options};
+    render_data.markGeometryUpdated();
+    return GeometryRenderBuilder::build(render_data, input);
 }
 
 // =============================================================================
@@ -596,7 +333,6 @@ GeometryDocumentImpl::subscribeToChanges(std::function<void(const GeometryChange
 }
 
 void GeometryDocumentImpl::emitChangeEvent(const GeometryChangeEvent& event) {
-    invalidateRenderData();
     m_changeSignal.emitSignal(event);
 }
 

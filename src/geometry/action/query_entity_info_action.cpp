@@ -5,7 +5,7 @@
 
 #include "query_entity_info_action.hpp"
 
-#include "../geometry_document_managerImpl.hpp"
+#include "../geometry_documentImpl.hpp"
 #include "geometry/geometry_types.hpp"
 #include "util/logger.hpp"
 
@@ -27,8 +27,8 @@ namespace {
 }
 
 [[nodiscard]] nlohmann::json bboxToJson(const BoundingBox3D& bbox) {
-    return nlohmann::json{{"min", {bbox.m_min.m_x, bbox.m_min.m_y, bbox.m_min.m_z}},
-                          {"max", {bbox.m_max.m_x, bbox.m_max.m_y, bbox.m_max.m_z}}};
+    return nlohmann::json{{"min", {bbox.m_min.x, bbox.m_min.y, bbox.m_min.z}},
+                          {"max", {bbox.m_max.x, bbox.m_max.y, bbox.m_max.z}}};
 }
 
 [[nodiscard]] bool validateEntityHandle(const nlohmann::json& j, std::string& error) {
@@ -58,7 +58,7 @@ nlohmann::json QueryEntityInfoAction::execute(const nlohmann::json& params,
         return response;
     }
 
-    auto document = GeometryDocumentManagerImpl::instance()->currentDocumentImplType();
+    auto document = GeometryDocumentImpl::instance();
     if(!document) {
         response["success"] = false;
         response["error"] = "No active document";
@@ -96,16 +96,15 @@ nlohmann::json QueryEntityInfoAction::execute(const nlohmann::json& params,
         const auto uid = static_cast<EntityUID>(h["uid"].get<uint64_t>());
         const auto type_str = h["type"].get<std::string>();
 
-        EntityType type = EntityType::None;
-        try {
-            type = entityTypeFromString(type_str);
-        } catch(const std::exception& e) {
+        auto type_opt = entityTypeFromString(type_str);
+        if(!type_opt) {
             response["success"] = false;
-            response["error"] = std::string("Invalid entity type: ") + e.what();
+            response["error"] = "Invalid entity type: " + type_str;
             return response;
         }
+        EntityType type = *type_opt;
 
-        const auto entity = document->findByUIDAndType(uid, type);
+        const auto entity = document->findImplByUIDAndType(uid, type);
         if(!entity) {
             not_found.push_back(nlohmann::json{{"type", type_str}, {"uid", h["uid"]}});
             ++processed;
@@ -113,7 +112,7 @@ nlohmann::json QueryEntityInfoAction::execute(const nlohmann::json& params,
         }
 
         nlohmann::json info;
-        info["type"] = entityTypeToString(entity->entityType());
+        info["type"] = entityTypeToString(entity->entityType()).value();
         info["uid"] = static_cast<uint64_t>(entity->entityUID());
         info["id"] = entity->entityId();
         info["name"] = entity->name();

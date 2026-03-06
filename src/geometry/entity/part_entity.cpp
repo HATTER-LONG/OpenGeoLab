@@ -8,6 +8,6 @@
 namespace OpenGeoLab::Geometry {
 
 PartEntity::PartEntity(const TopoDS_Shape& shape)
-    : GeometryEntity(EntityType::Part), m_shape(shape) {}
+    : GeometryEntityImpl(EntityType::Part), m_shape(shape) {}
 
 } // namespace OpenGeoLab::Geometry

@@ -5,8 +5,6 @@
 
 #pragma once
 
-#include "service.hpp"
-
 #include <QObject>
 #include <atomic>
 #include <nlohmann/json.hpp>
@@ -31,6 +29,7 @@ public:
      */
     explicit ServiceWorker(const QString& module_name,
                            nlohmann::json params,
+                           bool silent,
                            std::atomic<bool>& cancel_requested,
                            QObject* parent = nullptr);
     ~ServiceWorker() override = default;
@@ -50,25 +49,8 @@ signals:
 private:
     QString m_moduleName;
     nlohmann::json m_params; ///< Pre-parsed JSON parameters
+    bool m_silent{false};
     std::atomic<bool>& m_cancelRequested;
-};
-
-/**
- * @brief Qt-compatible progress reporter adapter
- *
- * Bridges IProgressReporter interface to Qt signals for thread-safe UI updates.
- */
-class QtProgressReporter : public IProgressReporter {
-public:
-    QtProgressReporter(ServiceWorker* worker, std::atomic<bool>& cancelled);
-
-    void reportProgress(double progress, const std::string& message) override;
-    void reportError(const std::string& error) override;
-    [[nodiscard]] bool isCancelled() const override;
-
-private:
-    ServiceWorker* m_worker; ///< Worker to emit signals through
-    std::atomic<bool>& m_cancelled;
 };
 
 } // namespace OpenGeoLab::App

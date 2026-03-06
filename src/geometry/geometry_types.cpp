@@ -7,6 +7,7 @@
 
 #include <array>
 #include <atomic>
+#include <optional>
 #include <stdexcept>
 #include <unordered_map>
 
@@ -33,7 +34,7 @@ std::array<std::atomic<EntityUID>, 10> g_next_entity_uids = {
 };
 
 } // namespace
-EntityType entityTypeFromString(std::string_view value) {
+std::optional<EntityType> entityTypeFromString(std::string_view value) noexcept {
     static const std::unordered_map<std::string_view, EntityType> type_map = {
         {"None", EntityType::None},         {"Vertex", EntityType::Vertex},
         {"Edge", EntityType::Edge},         {"Wire", EntityType::Wire},
@@ -45,10 +46,10 @@ EntityType entityTypeFromString(std::string_view value) {
     if(it != type_map.end()) {
         return it->second;
     }
-    throw std::invalid_argument("Invalid entity type string: " + std::string(value));
+    return std::nullopt;
 }
 
-std::string entityTypeToString(EntityType type) {
+std::optional<std::string> entityTypeToString(EntityType type) noexcept {
     switch(type) {
     case EntityType::None:
         return "None";
@@ -73,29 +74,32 @@ std::string entityTypeToString(EntityType type) {
     default:
         break;
     }
-    throw std::invalid_argument("Invalid entity type enum value");
+    return std::nullopt;
 }
 EntityId generateEntityId() { return g_next_entity_id.fetch_add(1, std::memory_order_relaxed); }
 
 EntityUID generateEntityUID(EntityType type) {
     const auto index = static_cast<size_t>(type);
     if(index >= g_next_entity_uids.size()) {
-        return INVALID_ENTITY_UID;
+        throw std::invalid_argument("Invalid EntityType for UID generation");
     }
     return g_next_entity_uids[index].fetch_add(1, std::memory_order_relaxed);
 }
-uint32_t getMaxIdByType(EntityType type) {
+
+uint64_t getMaxIdByType(EntityType type) {
     const auto index = static_cast<size_t>(type);
     if(index >= g_next_entity_uids.size()) {
-        return 0;
+        throw std::invalid_argument("Invalid EntityType for max UID retrieval");
     }
-    return static_cast<uint32_t>(g_next_entity_uids[index].load(std::memory_order_relaxed) - 1);
+    return static_cast<uint64_t>(g_next_entity_uids[index].load(std::memory_order_relaxed) - 1);
 }
+
 void resetEntityUIDGenerator(EntityType type) {
     const auto index = static_cast<size_t>(type);
-    if(index < g_next_entity_uids.size()) {
-        g_next_entity_uids[index].store(1, std::memory_order_relaxed);
+    if(index >= g_next_entity_uids.size()) {
+        throw std::invalid_argument("Invalid EntityType for UID reset");
     }
+    g_next_entity_uids[index].store(1, std::memory_order_relaxed);
 }
 
 void resetAllEntityUIDGenerators() {

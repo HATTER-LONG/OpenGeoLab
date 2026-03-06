@@ -1,25 +1,23 @@
 /**
  * @file render_scene_controller.hpp
- * @brief Scene controller that bridges geometry documents and OpenGL rendering
- *
- * RenderSceneController is the render-layer middle component:
- * - Upstream: consumed by viewport/rendering components (e.g., GLViewport)
- * - Downstream: tracks the current geometry document and produces DocumentRenderData
- * - Supports render actions to manipulate camera and trigger scene updates
+ * @brief Central controller managing camera state, render data, and scene lifecycle.
  */
 
 #pragma once
 
 #include "geometry/geometry_document.hpp"
+#include "geometry/geometry_types.hpp"
 #include "render/render_data.hpp"
-#include "util/signal.hpp"
 
 #include <QMatrix4x4>
 #include <QVector3D>
-#include <functional>
+#include <kangaroo/util/noncopyable.hpp>
+
+#include <atomic>
+#include <memory>
+#include <mutex>
 
 namespace OpenGeoLab::Render {
-
 /**
  * @brief Camera configuration for a 3D viewport
  */
@@ -44,9 +42,9 @@ struct CameraState {
     [[nodiscard]] QMatrix4x4 viewMatrix() const;
 
     /**
-     * @brief Build a perspective projection matrix
+     * @brief Build an orthographic projection matrix
      * @param aspect_ratio Viewport aspect ratio (width/height)
-     * @return Perspective projection matrix
+     * @return Projection matrix
      */
     [[nodiscard]] QMatrix4x4 projectionMatrix(float aspect_ratio) const;
 
@@ -63,149 +61,158 @@ struct CameraState {
 };
 
 /**
- * @brief Singleton controller for render scene state and data synchronization
- *
- * This component owns the current camera state and keeps DocumentRenderData
- * synchronized with the active GeometryDocument.
- *
- * Threading model:
- * - Geometry changes are bridged onto the Qt GUI thread before updating state.
+ * @brief Describes what changed in the scene, so listeners can react accordingly.
  */
-class RenderSceneController {
-public:
-    /**
-     * @brief Get the singleton instance
-     * @return Reference to the global RenderSceneController
-     */
-    static RenderSceneController& instance();
+enum class SceneUpdateType : uint8_t {
+    GeometryChanged = 0,
+    MeshChanged = 1,
+    CameraChanged = 2,
+};
 
-    RenderSceneController(const RenderSceneController&) = delete;
-    RenderSceneController& operator=(const RenderSceneController&) = delete;
-    RenderSceneController(RenderSceneController&&) = delete;
-    RenderSceneController& operator=(RenderSceneController&&) = delete;
-
+/**
+ * @brief Singleton coordinating camera state, render data, and document subscriptions.
+ *
+ * Bridges geometry/mesh documents with the render layer: listens for document
+ * changes, rebuilds render data, and notifies the viewport to schedule redraws.
+ * Also provides camera presets (front/back/top/...) and scene-fit operations.
+ */
+class RenderSceneController : public Kangaroo::Util::NonCopyMoveable {
+protected:
     RenderSceneController();
-    ~RenderSceneController();
+
+public:
+    static RenderSceneController& instance();
+    virtual ~RenderSceneController();
+
+    virtual CameraState& cameraState() { return m_cameraState; }
 
     /**
-     * @brief Check whether any renderable geometry exists
-     * @return true if the current render data is non-empty
-     */
-    [[nodiscard]] bool hasGeometry() const;
-
-    /**
-     * @brief Get the current render data snapshot
-     * @return Reference to the current DocumentRenderData
-     */
-    [[nodiscard]] const DocumentRenderData& renderData() const;
-
-    /**
-     * @brief Get the currently subscribed geometry document.
-     *
-     * This is primarily useful for pick/hover mapping (uid+type -> related entities)
-     * without scanning render meshes.
-     */
-    [[nodiscard]] Geometry::GeometryDocumentPtr currentDocument() const;
-
-    /**
-     * @brief Get or set current camera state
-     */
-    [[nodiscard]] CameraState& camera();
-    [[nodiscard]] const CameraState& camera() const;
-
-    /**
-     * @brief Replace camera state and notify listeners
-     * @param camera New camera configuration
+     * @brief Replace the current camera state.
+     * @param camera New camera configuration.
+     * @param notify If true, emit SceneUpdateType::CameraChanged to trigger a redraw.
      */
     void setCamera(const CameraState& camera, bool notify = true);
 
-    /**
-     * @brief Refresh render data from the current geometry document
-     */
+    /** @brief Rebuild all render data from the current documents and schedule a redraw. */
     void refreshScene(bool notify = true);
 
-    /**
-     * @brief Fit camera to view all geometry
-     */
+    /** @brief Fit the camera to the bounding box of all visible geometry. */
     void fitToScene(bool notify = true);
 
-    /**
-     * @brief Reset camera to default view
-     */
+    /** @brief Reset the camera to its default position and orientation. */
     void resetCamera(bool notify = true);
 
-    /**
-     * @brief Set camera to a front view (view direction along -Z)
-     */
+    /** @brief Set camera to front orthographic view. */
     void setFrontView(bool notify = true);
 
-    /**
-     * @brief Set camera to a back view (view direction along +Z)
-     */
+    /** @brief Set camera to back orthographic view. */
     void setBackView(bool notify = true);
 
-    /**
-     * @brief Set camera to a top view (view direction along -Y)
-     */
+    /** @brief Set camera to top orthographic view. */
     void setTopView(bool notify = true);
 
-    /**
-     * @brief Set camera to a bottom view (view direction along +Y)
-     */
+    /** @brief Set camera to bottom orthographic view. */
     void setBottomView(bool notify = true);
 
-    /**
-     * @brief Set camera to a left view (view direction along +X)
-     */
+    /** @brief Set camera to left orthographic view. */
     void setLeftView(bool notify = true);
 
-    /**
-     * @brief Set camera to a right view (view direction along -X)
-     */
+    /** @brief Set camera to right orthographic view. */
     void setRightView(bool notify = true);
 
-    // ---------------------------------------------------------------------
-    // Signals (Util::Signal based)
-    // ---------------------------------------------------------------------
-
     /**
-     * @brief Subscribe to render data changes
-     * @param callback Callback executed when render data updates
-     * @return Scoped connection that disconnects on destruction
+     * @brief Toggle X-ray mode (semi-transparent faces to see edges through surfaces)
      */
-    [[nodiscard]] Util::ScopedConnection subscribeGeometryChanged(std::function<void()> callback);
+    void toggleXRayMode(bool notify = true);
+
+    /** @brief Check whether X-ray mode is currently enabled. */
+    [[nodiscard]] bool isXRayMode() const noexcept;
 
     /**
-     * @brief Subscribe to camera changes
-     * @param callback Callback executed when camera updates
-     * @return Scoped connection that disconnects on destruction
+     * @brief Cycle mesh display mode: Wireframe -> Surface+Points -> Surface+Points+Wireframe ->
+     * ...
      */
-    [[nodiscard]] Util::ScopedConnection subscribeCameraChanged(std::function<void()> callback);
+    void cycleMeshDisplayMode(bool notify = true);
+
+    /** @brief Current mesh display mode bitmask. */
+    [[nodiscard]] RenderDisplayModeMask meshDisplayMode() const noexcept;
 
     /**
-     * @brief Subscribe to scene update requests
+     * @brief Read-only access to the current render data snapshot.
      *
-     * This signal indicates a redraw should happen (e.g., camera changed).
+     * Thread-safety contract: this reference is read by the render thread during
+     * render() and processHover/processPicking. The GUI thread rebuilds the data
+     * in updateGeometryRenderData/updateMeshRenderData. Synchronization relies on
+     * Qt Scene Graph's synchronize() barrier — the GUI thread is blocked while
+     * synchronize() runs, and render data is not modified during render(). If the
+     * data-update frequency increases or a non-Qt renderer is introduced, consider
+     * adding a shared_mutex or double-buffering.
      */
-    [[nodiscard]] Util::ScopedConnection subscribeSceneNeedsUpdate(std::function<void()> callback);
+    [[nodiscard]] std::shared_ptr<const RenderData> renderData() const;
+
+    /** @brief Current geometry document (may be null if no document is loaded). */
+    [[nodiscard]] Geometry::GeometryDocumentPtr currentGeometryDocument() const;
+
+    /** @brief Show or hide a part's geometry (CAD shape) rendering. */
+    void setPartGeometryVisible(Geometry::EntityUID part_uid, bool visible);
+
+    /** @brief Show or hide a part's mesh rendering. */
+    void setPartMeshVisible(Geometry::EntityUID part_uid, bool visible);
+    [[nodiscard]] bool isPartGeometryVisible(Geometry::EntityUID part_uid) const;
+    [[nodiscard]] bool isPartMeshVisible(Geometry::EntityUID part_uid) const;
+
+    /**
+     * @brief Subscribe to scene-update notifications.
+     * @param callback Invoked with the SceneUpdateType whenever
+     *        geometry, mesh, or camera data changes.
+     * @return ScopedConnection that automatically unsubscribes on destruction.
+     */
+    [[nodiscard]] Util::ScopedConnection
+    subscribeToSceneNeedsUpdate(std::function<void(SceneUpdateType)> callback) {
+        return m_sceneNeedsUpdate.connect(callback);
+    }
 
 private:
-    void subscribeToCurrentDocument();
-    void subscribeToDocument(const Geometry::GeometryDocumentPtr& document);
-    void updateRenderData();
+    void subscribeToGeometryDocument();
+
+    void subscribeToMeshDocument();
 
     void handleDocumentGeometryChanged(const Geometry::GeometryChangeEvent& event);
 
+    void handleDocumentMeshChanged();
+
+    void updateGeometryRenderData();
+
+    void updateMeshRenderData();
+
+    void applyGeometryVisibility(RenderData& render_data) const;
+
+    void applyMeshVisibility(RenderData& render_data) const;
+
 private:
-    DocumentRenderData m_renderData;                 ///< Current render data snapshot
-    CameraState m_camera;                            ///< Current camera state
-    Geometry::GeometryDocumentPtr m_currentDocument; ///< Currently subscribed document
-    Util::ScopedConnection m_documentConnection;     ///< Connection to document changes
-    bool m_hasGeometry{false};                       ///< Whether geometry is loaded
+    CameraState m_cameraState; ///< Current camera configuration
 
-    Util::Signal<> m_geometryChanged;
-    Util::Signal<> m_cameraChanged;
-    Util::Signal<> m_sceneNeedsUpdate;
+    Util::ScopedConnection m_geometryDocumentConnection; ///< Geometry-change subscription
+    Util::ScopedConnection m_meshDocumentConnection;     ///< Mesh-change subscription
+
+    Util::Signal<SceneUpdateType> m_sceneNeedsUpdate; ///< Notifies listeners to redraw
+
+    mutable std::mutex m_renderDataMutex; ///< Guards m_renderData snapshot swaps
+    std::shared_ptr<RenderData> m_renderData{std::make_shared<RenderData>()};
+    ///< Snapshot of all renderable data (geometry + mesh)
+
+    /// Per-part visibility toggles for geometry and mesh layers
+    struct PartVisibility {
+        bool m_geometryVisible{true}; ///< CAD shape visible
+        bool m_meshVisible{true};     ///< FEM mesh visible
+    };
+    mutable std::mutex m_visibilityMutex; ///< Guards m_partVisibility
+    std::unordered_map<Geometry::EntityUID, PartVisibility> m_partVisibility;
+
+    std::atomic<uint8_t> m_meshDisplayMode{
+        static_cast<uint8_t>(RenderDisplayModeMask::Wireframe |
+                             RenderDisplayModeMask::Points)}; ///< Mesh display mode bitmask
+
+    std::atomic<bool> m_xRayMode{false}; ///< X-ray transparency toggle
 };
-
 } // namespace OpenGeoLab::Render

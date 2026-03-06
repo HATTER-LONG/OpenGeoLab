@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "geometry_entity.hpp"
+#include "geometry_entityImpl.hpp"
 #include <TopoDS_Compound.hxx>
 
 namespace OpenGeoLab::Geometry {
@@ -23,7 +23,7 @@ using CompoundEntityPtr = std::shared_ptr<CompoundEntity>;
  * topological constraints. Unlike CompSolid, compound shapes don't
  * need to share faces.
  */
-class CompoundEntity : public GeometryEntity {
+class CompoundEntity : public GeometryEntityImpl {
 public:
     explicit CompoundEntity(const TopoDS_Compound& compound);
     ~CompoundEntity() override = default;
@@ -38,6 +38,7 @@ public:
 
     [[nodiscard]] const TopoDS_Shape& shape() const override { return m_compound; }
 
+    [[nodiscard]] bool hasShape() const override { return !m_compound.IsNull(); }
     /**
      * @brief Get the typed OCC compound
      * @return Const reference to TopoDS_Compound

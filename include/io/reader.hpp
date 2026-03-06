@@ -61,7 +61,7 @@ struct ReadResult {
  * Reader implementations are responsible for:
  * - File format validation
  * - Progress reporting during long operations
- * - Creating GeometryEntity hierarchy from OCC shapes
+ * - Creating GeometryEntityImpl hierarchy from OCC shapes
  * - Error handling and meaningful error messages
  */
 class ReaderBase : public Kangaroo::Util::NonCopyMoveable {

@@ -7,11 +7,14 @@
  */
 
 #pragma once
+#include "geometry/geometry_entity.hpp"
 #include "geometry/geometry_types.hpp"
+
 #include "render/render_data.hpp"
 #include "util/progress_callback.hpp"
 #include "util/signal.hpp"
 
+#include <kangaroo/util/component_factory.hpp>
 #include <kangaroo/util/noncopyable.hpp>
 #include <memory>
 #include <string>
@@ -87,7 +90,6 @@ struct LoadResult {
  */
 class GeometryDocument : public Kangaroo::Util::NonCopyMoveable {
 public:
-    GeometryDocument() = default;
     virtual ~GeometryDocument() = default;
 
     // -------------------------------------------------------------------------
@@ -126,24 +128,35 @@ public:
     // Render Data Access
     // -------------------------------------------------------------------------
 
-    /**
-     * @brief Get render data for OpenGL visualization
-     * @param options Tessellation options for mesh generation
-     * @return Complete render data including faces, edges, and vertices
-     *
-     * @note This method may cache tessellated data. Call invalidateRenderData()
-     *       to force regeneration after geometry changes.
-     */
-    [[nodiscard]] virtual Render::DocumentRenderData
-    getRenderData(const Render::TessellationOptions& options) = 0;
+    [[nodiscard]] virtual bool getRenderData(Render::RenderData& render_data,
+                                             const Render::TessellationOptions& options) = 0;
+
+    // -------------------------------------------------------------------------
+    // Entity Lookup
+    // -------------------------------------------------------------------------
 
     /**
-     * @brief Invalidate cached render data
-     *
-     * Call this method to force regeneration of render data on the next
-     * getRenderData() call. Automatically called when geometry changes.
+     * @brief Find an entity by global id
+     * @param entity_id Global entity id
+     * @return Geometry entity pointer, or nullptr if not found
      */
-    virtual void invalidateRenderData() = 0;
+    [[nodiscard]] virtual GeometryEntityPtr findById(EntityId entity_id) const = 0;
+
+    /**
+     * @brief Find an entity by (uid,type) handle
+     * @param entity_uid Type-scoped uid
+     * @param entity_type Entity type
+     * @return Geometry entity pointer, or nullptr if not found
+     */
+    [[nodiscard]] virtual GeometryEntityPtr findByUIDAndType(EntityUID entity_uid,
+                                                             EntityType entity_type) const = 0;
+
+    /**
+     * @brief Find an entity by its underlying shape
+     * @param shape OCC shape to look for
+     * @return Geometry entity pointer, or nullptr if not found
+     */
+    [[nodiscard]] virtual GeometryEntityPtr findByShape(const TopoDS_Shape& shape) const = 0;
 
     // -------------------------------------------------------------------------
     // Relationship Queries
@@ -191,6 +204,26 @@ public:
      */
     [[nodiscard]] virtual Util::ScopedConnection
     subscribeToChanges(std::function<void(const GeometryChangeEvent&)> callback) = 0;
+
+protected:
+    GeometryDocument() = default;
 };
 
+/**
+ * @brief Singleton factory interface for GeometryDocument
+ */
+class GeometryDocumentSingletonFactory
+    : public Kangaroo::Util::FactoryTraits<GeometryDocumentSingletonFactory, GeometryDocument> {
+public:
+    GeometryDocumentSingletonFactory() = default;
+    virtual ~GeometryDocumentSingletonFactory() = default;
+
+    /**
+     * @brief Get the singleton instance of the document
+     * @return Shared pointer to the document instance
+     */
+    virtual tObjectSharedPtr instance() const = 0;
+};
 } // namespace OpenGeoLab::Geometry
+#define GeoDocumentInstance                                                                        \
+    g_ComponentFactory.getInstanceObject<Geometry::GeometryDocumentSingletonFactory>()

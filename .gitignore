@@ -91,3 +91,6 @@ CMakeLists.txt.user*
 
 openglunderqml
 __cmake_*
+*.vs
+
+out

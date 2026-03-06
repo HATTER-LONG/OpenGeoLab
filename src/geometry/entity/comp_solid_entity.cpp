@@ -7,5 +7,5 @@
 
 namespace OpenGeoLab::Geometry {
 CompSolidEntity::CompSolidEntity(const TopoDS_CompSolid& compsolid)
-    : GeometryEntity(EntityType::CompSolid), m_compsolid(compsolid) {}
+    : GeometryEntityImpl(EntityType::CompSolid), m_compsolid(compsolid) {}
 } // namespace OpenGeoLab::Geometry

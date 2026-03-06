@@ -4,8 +4,9 @@
  */
 
 #include "get_part_list_action.hpp"
-#include "../geometry_document_managerImpl.hpp"
-#include "geometry/part_color.hpp"
+#include "../geometry_documentImpl.hpp"
+#include "render/render_scene_controller.hpp"
+#include "util/color_map.hpp"
 #include "util/logger.hpp"
 
 namespace OpenGeoLab::Geometry {
@@ -20,7 +21,7 @@ nlohmann::json GetPartListAction::execute(const nlohmann::json& /*params*/,
         return response;
     }
 
-    auto document = GeometryDocumentManagerImpl::instance()->currentDocumentImplType();
+    auto document = GeometryDocumentImpl::instance();
     if(!document) {
         LOG_ERROR("GetPartListAction: No active document");
         response["success"] = false;
@@ -39,6 +40,7 @@ nlohmann::json GetPartListAction::execute(const nlohmann::json& /*params*/,
 
     nlohmann::json parts_array = nlohmann::json::array();
     size_t processed_count = 0;
+    auto& scene_controller = Render::RenderSceneController::instance();
 
     for(const auto& part : parts) {
         if(!part) {
@@ -49,11 +51,13 @@ nlohmann::json GetPartListAction::execute(const nlohmann::json& /*params*/,
         part_info["id"] = part->entityId();
         part_info["uid"] = part->entityUID();
         part_info["name"] = part->name();
+        part_info["geometry_visible"] = scene_controller.isPartGeometryVisible(part->entityUID());
+        part_info["mesh_visible"] = scene_controller.isPartMeshVisible(part->entityUID());
 
         // Get color for this part based on entity ID for consistency
-        PartColor color = PartColorPalette::getColorByEntityId(part->entityId());
+        Render::RenderColor color = Util::ColorMap::instance().getColorForPartId(part->entityUID());
         part_info["color"] = color.toHex();
-        part_info["color_rgba"] = {color.r, color.g, color.b, color.a};
+        part_info["color_rgba"] = {color.m_r, color.m_g, color.m_b, color.m_a};
 
         // Count entities by type within this part
         nlohmann::json entity_counts;
@@ -109,8 +113,8 @@ nlohmann::json GetPartListAction::execute(const nlohmann::json& /*params*/,
         // Bounding box
         auto bbox = part->boundingBox();
         if(bbox.isValid()) {
-            part_info["bounding_box"] = {{"min", {bbox.m_min.m_x, bbox.m_min.m_y, bbox.m_min.m_z}},
-                                         {"max", {bbox.m_max.m_x, bbox.m_max.m_y, bbox.m_max.m_z}}};
+            part_info["bounding_box"] = {{"min", {bbox.m_min.x, bbox.m_min.y, bbox.m_min.z}},
+                                         {"max", {bbox.m_max.x, bbox.m_max.y, bbox.m_max.z}}};
         }
 
         parts_array.push_back(part_info);

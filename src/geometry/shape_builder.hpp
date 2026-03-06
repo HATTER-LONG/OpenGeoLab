@@ -3,7 +3,7 @@
  * @brief Builder for creating entity hierarchies from OCC shapes
  *
  * ShapeBuilder traverses an OCC TopoDS_Shape and creates corresponding
- * GeometryEntity objects, establishing parent-child relationships to
+ * GeometryEntityImpl objects, establishing parent-child relationships to
  * form a complete entity hierarchy within a GeometryDocument.
  *
  * @note Uses TopTools_IndexedMapOfShape to ensure each unique topological
@@ -78,7 +78,7 @@ struct ShapeBuildResult {
  * @brief Builder for creating entity hierarchies from OCC shapes
  *
  * Recursively traverses TopoDS_Shape structures and creates corresponding
- * GeometryEntity objects with proper parent-child relationships.
+ * GeometryEntityImpl objects with proper parent-child relationships.
  *
  * Uses shape indexing to ensure each unique topological element (vertex, edge,
  * face, etc.) is created only once, even when shared by multiple parent shapes.
@@ -120,7 +120,7 @@ private:
      * Shape index comes from TopTools_IndexedMapOfShape which assigns
      * a unique integer index to each unique shape in a model.
      */
-    using ShapeEntityMap = std::unordered_map<int, GeometryEntityPtr>;
+    using ShapeEntityMap = std::unordered_map<int, GeometryEntityImplPtr>;
 
     /**
      * @brief Build all entities from indexed shapes
@@ -142,7 +142,7 @@ private:
     void buildRelationships(const TopoDS_Shape& root_shape,
                             const TopTools_IndexedMapOfShape& shape_map,
                             const ShapeEntityMap& shape_entity_map,
-                            const GeometryEntityPtr& root_entity);
+                            const GeometryEntityImplPtr& root_entity);
 
     /**
      * @brief Recursively build parent-child relationships
@@ -152,14 +152,14 @@ private:
      * @param shape_entity_map Map from shape index to entity
      */
     void buildChildRelationships(const TopoDS_Shape& parent_shape,
-                                 const GeometryEntityPtr& parent_entity,
+                                 const GeometryEntityImplPtr& parent_entity,
                                  const TopTools_IndexedMapOfShape& shape_map,
                                  const ShapeEntityMap& shape_entity_map);
 
     /**
      * @brief Create appropriate entity type for a shape
      */
-    [[nodiscard]] GeometryEntityPtr createEntityForShape(const TopoDS_Shape& shape);
+    [[nodiscard]] GeometryEntityImplPtr createEntityForShape(const TopoDS_Shape& shape);
 
     /**
      * @brief Update entity counts in the result

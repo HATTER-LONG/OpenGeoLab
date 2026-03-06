@@ -1,0 +1,113 @@
+/**
+ * @file render_sceneImpl.hpp
+ * @brief Internal implementation of IRenderScene — owns the render passes
+ *        and orchestrates per-frame rendering and GPU picking.
+ */
+
+#pragma once
+
+#include "pass/highlight_pass.hpp"
+#include "pass/opaque_pass.hpp"
+#include "pass/selection_pass.hpp"
+#include "pass/wireframe_pass.hpp"
+#include "render/render_scene.hpp"
+
+#include "render_pick_resolver.hpp"
+
+// #include "render/pick_resolver.hpp"
+// #include "render/pass/mesh_pass.hpp"
+// #include "render/pass/pick_pass.hpp"
+
+namespace OpenGeoLab::Render {
+/** @brief Concrete IRenderScene that composes GeometryPass, MeshPass, and PickPass. */
+class RenderSceneImpl : public IRenderScene {
+public:
+    RenderSceneImpl();
+    ~RenderSceneImpl() override;
+
+    /** @brief Initialise geometry, mesh, and pick passes. */
+    void initialize() override;
+    [[nodiscard]] bool isInitialized() const override;
+    /** @brief Resize the pick FBO to match the viewport.
+     *  @param size New viewport size in device pixels.
+     */
+    void setViewportSize(const QSize& size) override;
+
+    /**
+     * @brief Synchronize GUI-thread state into the render scene.
+     *
+     * Caches render data, camera, and display mode. Updates GPU buffers
+     * and pick resolver when data is dirty.
+     */
+    void synchronize(const SceneFrameState& state) override;
+
+    /** @brief Process a mouse-click pick action.
+     *  @param input Pick parameters (cursor position, action type).
+     */
+    void processPicking(const PickingInput& input) override;
+    /** @brief Execute all render passes for the current frame using cached state. */
+    void render() override;
+    /** @brief Release all GPU resources across all passes. */
+    void cleanup() override;
+
+    /**
+     * @brief Process hover — render to pick FBO and update hover state.
+     *
+     * Call after main render with current cursor position. Uses region-based
+     * picking with priority selection (Vertex > Edge > Face > Part).
+     * Camera matrices are obtained from the cached SceneFrameState.
+     */
+    void processHover(int pixel_x, int pixel_y) override;
+
+private:
+    void synchronizeGeometry(const RenderData& render_data);
+    void synchronizeMesh(const RenderData& render_data);
+    [[nodiscard]] RenderPassContext buildRenderPassContext();
+    [[nodiscard]] RenderPassContext buildPickPassContext(RenderEntityTypeMask pick_mask);
+
+    // --- GPU Buffers (shared across passes) ---
+    GpuBuffer m_geometryBuffer; ///< Geometry (CAD) vertex/index data
+    GpuBuffer m_meshBuffer;     ///< Mesh (FEM) vertex data
+
+    // --- Render Passes ---
+    OpaquePass m_opaquePass;
+    WireframePass m_wireframePass;
+    HighlightPass m_highlightPass;
+    SelectionPass m_selectionPass;
+
+    // --- Pick Resolution ---
+    PickResolver m_pickResolver;
+
+    // --- Pre-built draw ranges (copied from RenderData during synchronize) ---
+    std::vector<DrawRange> m_geometryTriangleRanges;
+    std::vector<DrawRange> m_geometryLineRanges;
+    std::vector<DrawRange> m_geometryPointRanges;
+    GeometryDrawBatchCache m_geometryBatches;
+
+    std::vector<DrawRange> m_meshTriangleRanges;
+    std::vector<DrawRange> m_meshLineRanges;
+    std::vector<DrawRange> m_meshPointRanges;
+    MeshDrawBatchCache m_meshBatches;
+
+    SceneFrameState m_frameState; ///< Cached per-frame state from GUI thread
+
+    QSize m_viewportSize;
+    bool m_initialized{false};
+
+    uint64_t m_geometryDataVersion{0}; ///< Last geometry data version uploaded to GPU
+    uint64_t m_meshDataVersion{0};     ///< Last mesh data version uploaded to GPU
+};
+
+// =============================================================================
+// SceneRendererFactory implementation
+// =============================================================================
+
+/** @brief Factory registered with the component system to create RenderSceneImpl instances. */
+class SceneRendererFactoryImpl : public SceneRendererFactory {
+public:
+    SceneRendererFactoryImpl() = default;
+    ~SceneRendererFactoryImpl() = default;
+
+    tObjectPtr create() override { return std::make_unique<RenderSceneImpl>(); }
+};
+} // namespace OpenGeoLab::Render

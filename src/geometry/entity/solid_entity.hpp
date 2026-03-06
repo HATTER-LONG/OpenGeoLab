@@ -8,7 +8,8 @@
 
 #pragma once
 
-#include "geometry_entity.hpp"
+#include "geometry_entityImpl.hpp"
+#include "util/point_vector3d.hpp"
 #include <TopoDS_Solid.hxx>
 
 namespace OpenGeoLab::Geometry {
@@ -23,7 +24,7 @@ using SolidEntityPtr = std::shared_ptr<SolidEntity>;
  * more shells. The outer shell defines the solid boundary, while
  * inner shells define cavities.
  */
-class SolidEntity : public GeometryEntity {
+class SolidEntity : public GeometryEntityImpl {
 public:
     explicit SolidEntity(const TopoDS_Solid& solid);
     ~SolidEntity() override = default;
@@ -38,7 +39,7 @@ public:
     }
 
     [[nodiscard]] const TopoDS_Shape& shape() const override { return m_solid; }
-
+    [[nodiscard]] bool hasShape() const override { return !m_solid.IsNull(); }
     /**
      * @brief Get the typed OCC solid
      * @return Const reference to TopoDS_Solid
@@ -64,7 +65,7 @@ public:
      * @brief Get center of mass
      * @return Center point
      */
-    [[nodiscard]] Point3D centerOfMass() const;
+    [[nodiscard]] Util::Pt3d centerOfMass() const;
 
     // -------------------------------------------------------------------------
     // Topology Queries
