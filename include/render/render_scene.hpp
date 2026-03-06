@@ -13,6 +13,8 @@
 #include <kangaroo/util/component_factory.hpp>
 #include <kangaroo/util/noncopyable.hpp>
 
+#include <memory>
+
 namespace OpenGeoLab::Render {
 
 /**
@@ -24,11 +26,12 @@ namespace OpenGeoLab::Render {
  * on any GUI-thread singleton.
  */
 struct SceneFrameState {
-    const RenderData* m_renderData{nullptr}; ///< Pointer to controller's render data snapshot
-    QVector3D m_cameraPos;                   ///< Camera world-space position (for lighting)
-    QMatrix4x4 m_viewMatrix;                 ///< View transformation matrix
-    QMatrix4x4 m_projMatrix;                 ///< Projection transformation matrix
-    bool m_xRayMode{false};                  ///< X-ray (semi-transparent surfaces) mode
+    std::shared_ptr<const RenderData>
+        m_renderData;        ///< Shared snapshot owned by the GUI-side controller
+    QVector3D m_cameraPos;   ///< Camera world-space position (for lighting)
+    QMatrix4x4 m_viewMatrix; ///< View transformation matrix
+    QMatrix4x4 m_projMatrix; ///< Projection transformation matrix
+    bool m_xRayMode{false};  ///< X-ray (semi-transparent surfaces) mode
     RenderDisplayModeMask m_meshDisplayMode{
         RenderDisplayModeMask::None}; ///< Active mesh display modes
 };

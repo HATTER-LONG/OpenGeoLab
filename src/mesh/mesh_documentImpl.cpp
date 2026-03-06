@@ -7,6 +7,8 @@
 #include "mesh_render_builder.hpp"
 #include "util/logger.hpp"
 
+#include <mutex>
+
 namespace OpenGeoLab::Mesh {
 std::shared_ptr<MeshDocumentImpl> MeshDocumentImpl::instance() {
     static auto inst = std::shared_ptr<MeshDocumentImpl>(new MeshDocumentImpl());
@@ -17,6 +19,11 @@ std::shared_ptr<MeshDocumentImpl> MeshDocumentImpl::instance() {
 // Node Management
 // =============================================================================
 bool MeshDocumentImpl::addNode(MeshNode node) {
+    std::unique_lock<std::shared_mutex> lock(m_documentMutex);
+    return addNodeUnlocked(std::move(node));
+}
+
+bool MeshDocumentImpl::addNodeUnlocked(MeshNode node) {
     const MeshNodeId id = node.nodeId();
     if(id == INVALID_MESH_NODE_ID || m_nodeIdToIndex.find(id) != m_nodeIdToIndex.end()) {
         return false;
@@ -28,11 +35,21 @@ bool MeshDocumentImpl::addNode(MeshNode node) {
 }
 
 void MeshDocumentImpl::reserveNodeCapacity(size_t capacity) {
+    std::unique_lock<std::shared_mutex> lock(m_documentMutex);
+    reserveNodeCapacityUnlocked(capacity);
+}
+
+void MeshDocumentImpl::reserveNodeCapacityUnlocked(size_t capacity) {
     m_nodes.reserve(capacity);
     m_nodeIdToIndex.reserve(capacity);
 }
 
 MeshNode MeshDocumentImpl::findNodeById(MeshNodeId node_id) const {
+    std::shared_lock<std::shared_mutex> lock(m_documentMutex);
+    return findNodeByIdUnlocked(node_id);
+}
+
+MeshNode MeshDocumentImpl::findNodeByIdUnlocked(MeshNodeId node_id) const {
     if(node_id == INVALID_MESH_NODE_ID) {
         throw std::out_of_range("Mesh node id not found: " + std::to_string(node_id));
     }
@@ -44,13 +61,23 @@ MeshNode MeshDocumentImpl::findNodeById(MeshNodeId node_id) const {
     return m_nodes[it->second];
 }
 
-size_t MeshDocumentImpl::nodeCount() const { return m_nodeIdToIndex.size(); }
+size_t MeshDocumentImpl::nodeCount() const {
+    std::shared_lock<std::shared_mutex> lock(m_documentMutex);
+    return nodeCountUnlocked();
+}
+
+size_t MeshDocumentImpl::nodeCountUnlocked() const { return m_nodeIdToIndex.size(); }
 
 // =============================================================================
 // Element Management
 // =============================================================================
 
 bool MeshDocumentImpl::addElement(MeshElement element) {
+    std::unique_lock<std::shared_mutex> lock(m_documentMutex);
+    return addElementUnlocked(std::move(element));
+}
+
+bool MeshDocumentImpl::addElementUnlocked(MeshElement element) {
     const MeshElementId id = element.elementId();
     const MeshElementRef ref = element.elementRef();
     if(id == INVALID_MESH_ELEMENT_ID || element.elementType() == MeshElementType::None ||
@@ -67,12 +94,22 @@ bool MeshDocumentImpl::addElement(MeshElement element) {
 }
 
 void MeshDocumentImpl::reserveElementCapacity(size_t capacity) {
+    std::unique_lock<std::shared_mutex> lock(m_documentMutex);
+    reserveElementCapacityUnlocked(capacity);
+}
+
+void MeshDocumentImpl::reserveElementCapacityUnlocked(size_t capacity) {
     m_elements.reserve(capacity);
     m_elementIdToIndex.reserve(capacity);
     m_refToIndex.reserve(capacity);
 }
 
 MeshElement MeshDocumentImpl::findElementById(MeshElementId element_id) const {
+    std::shared_lock<std::shared_mutex> lock(m_documentMutex);
+    return findElementByIdUnlocked(element_id);
+}
+
+MeshElement MeshDocumentImpl::findElementByIdUnlocked(MeshElementId element_id) const {
     if(element_id == INVALID_MESH_ELEMENT_ID) {
         throw std::out_of_range("Mesh element id not found: " + std::to_string(element_id));
     }
@@ -85,6 +122,11 @@ MeshElement MeshDocumentImpl::findElementById(MeshElementId element_id) const {
 }
 
 MeshElement MeshDocumentImpl::findElementByRef(const MeshElementRef& ref) const {
+    std::shared_lock<std::shared_mutex> lock(m_documentMutex);
+    return findElementByRefUnlocked(ref);
+}
+
+MeshElement MeshDocumentImpl::findElementByRefUnlocked(const MeshElementRef& ref) const {
     auto it = m_refToIndex.find(ref);
     if(it == m_refToIndex.end()) {
         throw std::out_of_range("Mesh element not found for ref: " + std::to_string(ref.m_uid));
@@ -96,11 +138,86 @@ MeshElement MeshDocumentImpl::findElementByRef(const MeshElementRef& ref) const 
     return m_elements[it->second];
 }
 
-size_t MeshDocumentImpl::elementCount() const { return m_elementIdToIndex.size(); }
+size_t MeshDocumentImpl::elementCount() const {
+    std::shared_lock<std::shared_mutex> lock(m_documentMutex);
+    return elementCountUnlocked();
+}
+
+size_t MeshDocumentImpl::elementCountUnlocked() const { return m_elementIdToIndex.size(); }
 
 void MeshDocumentImpl::clear() {
-    const size_t node_count = nodeCount();
-    const size_t element_count = elementCount();
+    size_t node_count = 0;
+    size_t element_count = 0;
+    {
+        std::unique_lock<std::shared_mutex> lock(m_documentMutex);
+        node_count = nodeCountUnlocked();
+        element_count = elementCountUnlocked();
+        clearUnlocked();
+    }
+    LOG_DEBUG("MeshDocumentImpl: Cleared {} nodes, {} elements, reset mesh id generators",
+              node_count, element_count);
+    notifyChanged();
+}
+
+bool MeshDocumentImpl::replaceMeshData(std::vector<MeshNode> nodes,
+                                       std::vector<MeshElement> elements,
+                                       std::string& error) {
+    std::unordered_map<MeshNodeId, size_t> node_id_to_index;
+    node_id_to_index.reserve(nodes.size());
+    for(size_t index = 0; index < nodes.size(); ++index) {
+        const MeshNodeId node_id = nodes[index].nodeId();
+        if(node_id == INVALID_MESH_NODE_ID) {
+            error = "Generated mesh contains an invalid node id";
+            return false;
+        }
+        if(!node_id_to_index.emplace(node_id, index).second) {
+            error = "Generated mesh contains duplicate node ids";
+            return false;
+        }
+    }
+
+    std::unordered_map<MeshElementId, size_t> element_id_to_index;
+    element_id_to_index.reserve(elements.size());
+    std::unordered_map<MeshElementRef, size_t, MeshElementRefHash> ref_to_index;
+    ref_to_index.reserve(elements.size());
+    for(size_t index = 0; index < elements.size(); ++index) {
+        const auto& element = elements[index];
+        if(element.elementId() == INVALID_MESH_ELEMENT_ID ||
+           element.elementType() == MeshElementType::None) {
+            error = "Generated mesh contains an invalid element";
+            return false;
+        }
+        if(!element_id_to_index.emplace(element.elementId(), index).second) {
+            error = "Generated mesh contains duplicate element ids";
+            return false;
+        }
+        if(!ref_to_index.emplace(element.elementRef(), index).second) {
+            error = "Generated mesh contains duplicate element references";
+            return false;
+        }
+    }
+
+    {
+        std::unique_lock<std::shared_mutex> lock(m_documentMutex);
+        m_nodes = std::move(nodes);
+        m_elements = std::move(elements);
+        m_nodeIdToIndex = std::move(node_id_to_index);
+        m_elementIdToIndex = std::move(element_id_to_index);
+        m_refToIndex = std::move(ref_to_index);
+        m_nodeToLines.clear();
+        m_nodeToElements.clear();
+        m_lineToElements.clear();
+        m_elementToLines.clear();
+        m_edgeKeyToLineRef.clear();
+        createLineElementsFromEdges();
+        buildRelationMaps();
+    }
+
+    notifyChanged();
+    return true;
+}
+
+void MeshDocumentImpl::clearUnlocked() {
     m_nodes.clear();
     m_elements.clear();
     m_nodeIdToIndex.clear();
@@ -113,9 +230,6 @@ void MeshDocumentImpl::clear() {
     m_edgeKeyToLineRef.clear();
     resetMeshElementIdGenerator();
     resetAllMeshElementUIDGenerators();
-    LOG_DEBUG("MeshDocumentImpl: Cleared {} nodes, {} elements, reset mesh id generators",
-              node_count, element_count);
-    notifyChanged();
 }
 
 // =============================================================================
@@ -170,6 +284,7 @@ EdgeTable edgeTableForType(MeshElementType type) {
 } // namespace
 
 void MeshDocumentImpl::buildEdgeElements() {
+    std::unique_lock<std::shared_mutex> lock(m_documentMutex);
     m_nodeToLines.clear();
     m_nodeToElements.clear();
     m_lineToElements.clear();
@@ -179,7 +294,7 @@ void MeshDocumentImpl::buildEdgeElements() {
     createLineElementsFromEdges();
     buildRelationMaps();
     LOG_DEBUG("MeshDocumentImpl::buildEdgeElements: {} Line elements, total elements {}",
-              m_edgeKeyToLineRef.size(), elementCount());
+              m_edgeKeyToLineRef.size(), m_elementIdToIndex.size());
 }
 
 void MeshDocumentImpl::createLineElementsFromEdges() {
@@ -200,7 +315,7 @@ void MeshDocumentImpl::createLineElementsFromEdges() {
 
         estimated_new_lines += edgeTableForType(elem.elementType()).m_count;
     }
-    reserveElementCapacity(elementCount() + estimated_new_lines);
+    reserveElementCapacityUnlocked(m_elements.size() + estimated_new_lines);
 
     // Scan non-Line elements and create new Line elements for unique edges
     const size_t original_count = m_elements.size();
@@ -229,7 +344,7 @@ void MeshDocumentImpl::createLineElementsFromEdges() {
                 line.setNodeId(0, std::min(n0, n1));
                 line.setNodeId(1, std::max(n0, n1));
                 const MeshElementRef line_ref = line.elementRef();
-                if(addElement(std::move(line))) {
+                if(addElementUnlocked(std::move(line))) {
                     m_edgeKeyToLineRef.emplace(key, line_ref);
                 }
             }
@@ -287,6 +402,11 @@ void MeshDocumentImpl::buildRelationMaps() {
 // =============================================================================
 
 std::vector<MeshElementRef> MeshDocumentImpl::findLinesByNodeId(MeshNodeId node_id) const {
+    std::shared_lock<std::shared_mutex> lock(m_documentMutex);
+    return findLinesByNodeIdUnlocked(node_id);
+}
+
+std::vector<MeshElementRef> MeshDocumentImpl::findLinesByNodeIdUnlocked(MeshNodeId node_id) const {
     auto it = m_nodeToLines.find(node_id);
     if(it != m_nodeToLines.end()) {
         return it->second;
@@ -295,6 +415,12 @@ std::vector<MeshElementRef> MeshDocumentImpl::findLinesByNodeId(MeshNodeId node_
 }
 
 std::vector<MeshElementRef> MeshDocumentImpl::findElementsByNodeId(MeshNodeId node_id) const {
+    std::shared_lock<std::shared_mutex> lock(m_documentMutex);
+    return findElementsByNodeIdUnlocked(node_id);
+}
+
+std::vector<MeshElementRef>
+MeshDocumentImpl::findElementsByNodeIdUnlocked(MeshNodeId node_id) const {
     auto it = m_nodeToElements.find(node_id);
     if(it != m_nodeToElements.end()) {
         return it->second;
@@ -304,6 +430,12 @@ std::vector<MeshElementRef> MeshDocumentImpl::findElementsByNodeId(MeshNodeId no
 
 std::vector<MeshElementRef>
 MeshDocumentImpl::findElementsByLineRef(const MeshElementRef& line_ref) const {
+    std::shared_lock<std::shared_mutex> lock(m_documentMutex);
+    return findElementsByLineRefUnlocked(line_ref);
+}
+
+std::vector<MeshElementRef>
+MeshDocumentImpl::findElementsByLineRefUnlocked(const MeshElementRef& line_ref) const {
     auto it = m_lineToElements.find(line_ref);
     if(it != m_lineToElements.end()) {
         return it->second;
@@ -313,6 +445,12 @@ MeshDocumentImpl::findElementsByLineRef(const MeshElementRef& line_ref) const {
 
 std::vector<MeshElementRef>
 MeshDocumentImpl::findLinesByElementRef(const MeshElementRef& element_ref) const {
+    std::shared_lock<std::shared_mutex> lock(m_documentMutex);
+    return findLinesByElementRefUnlocked(element_ref);
+}
+
+std::vector<MeshElementRef>
+MeshDocumentImpl::findLinesByElementRefUnlocked(const MeshElementRef& element_ref) const {
     auto it = m_elementToLines.find(element_ref);
     if(it != m_elementToLines.end()) {
         return it->second;
@@ -328,8 +466,15 @@ Util::ScopedConnection MeshDocumentImpl::subscribeToChanges(std::function<void()
 }
 
 void MeshDocumentImpl::notifyChanged() {
-    LOG_DEBUG("MeshDocumentImpl: Notifying change, nodes={}, elements={}", m_nodes.size(),
-              m_elements.size());
+    size_t node_count = 0;
+    size_t element_count = 0;
+    {
+        std::shared_lock<std::shared_mutex> lock(m_documentMutex);
+        node_count = m_nodes.size();
+        element_count = m_elements.size();
+    }
+    LOG_DEBUG("MeshDocumentImpl: Notifying change, nodes={}, elements={}", node_count,
+              element_count);
     m_changeSignal.emitSignal();
 }
 
@@ -338,7 +483,11 @@ void MeshDocumentImpl::notifyChanged() {
 // =============================================================================
 
 bool MeshDocumentImpl::getRenderData(Render::RenderData& render_data) {
-    std::lock_guard<std::mutex> lock(m_renderDataMutex);
+    std::shared_lock<std::shared_mutex> lock(m_documentMutex);
+    return getRenderDataUnlocked(render_data);
+}
+
+bool MeshDocumentImpl::getRenderDataUnlocked(Render::RenderData& render_data) {
     MeshRenderInput input{m_nodes, m_elements};
     render_data.markMeshUpdated();
     return MeshRenderBuilder::build(render_data, input);

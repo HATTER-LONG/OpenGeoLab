@@ -15,7 +15,7 @@
 #include "geometry/geometry_document.hpp"
 
 #include <memory>
-#include <mutex>
+#include <shared_mutex>
 #include <vector>
 
 namespace OpenGeoLab::Geometry {
@@ -172,6 +172,29 @@ public:
     }
 
 private:
+    // Internal helpers below assume the caller already holds m_documentMutex.
+    [[nodiscard]] bool addEntityUnlocked(const GeometryEntityImplPtr& entity);
+    [[nodiscard]] bool removeEntityUnlocked(EntityId entity_id);
+    void clearUnlocked();
+    [[nodiscard]] GeometryEntityImplPtr findImplByIdUnlocked(EntityId entity_id) const;
+    [[nodiscard]] GeometryEntityImplPtr findImplByUIDAndTypeUnlocked(EntityUID entity_uid,
+                                                                     EntityType entity_type) const;
+    [[nodiscard]] GeometryEntityPtr findByShapeUnlocked(const TopoDS_Shape& shape) const;
+    [[nodiscard]] size_t entityCountUnlocked() const;
+    [[nodiscard]] size_t entityCountByTypeUnlocked(EntityType entity_type) const;
+    [[nodiscard]] std::vector<GeometryEntityImplPtr>
+    entitiesByTypeUnlocked(EntityType entity_type) const;
+    [[nodiscard]] std::vector<GeometryEntityImplPtr> allEntitiesUnlocked() const;
+    [[nodiscard]] std::vector<EntityKey> findRelatedEntitiesUnlocked(EntityId entity_id,
+                                                                     EntityType related_type) const;
+    [[nodiscard]] std::vector<EntityKey> findRelatedEntitiesUnlocked(EntityUID entity_uid,
+                                                                     EntityType entity_type,
+                                                                     EntityType related_type) const;
+    [[nodiscard]] bool addChildEdgeUnlocked(const GeometryEntityImpl& parent,
+                                            const GeometryEntityImpl& child);
+    [[nodiscard]] bool getRenderDataUnlocked(Render::RenderData& render_data,
+                                             const Render::TessellationOptions& options);
+
     void removeEntityRecursive(EntityId entity_id, size_t& removed_count);
 
     void generateFaceMesh(Render::RenderData& render_data,
@@ -196,7 +219,7 @@ private:
     /// Signal for geometry change notifications
     Util::Signal<const GeometryChangeEvent&> m_changeSignal;
 
-    mutable std::mutex m_renderDataMutex;
+    mutable std::shared_mutex m_documentMutex;
     // /// Cached render data
     // mutable Render::RenderData m_cachedRenderData;
     // mutable bool m_renderDataValid{false};

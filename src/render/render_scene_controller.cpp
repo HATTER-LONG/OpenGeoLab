@@ -10,8 +10,16 @@
 #include "util/logger.hpp"
 
 #include <algorithm>
+#include <utility>
 
 namespace OpenGeoLab::Render {
+namespace {
+[[nodiscard]] std::shared_ptr<RenderData>
+cloneRenderDataSnapshot(const std::shared_ptr<RenderData>& snapshot) {
+    return std::make_shared<RenderData>(snapshot ? *snapshot : RenderData{});
+}
+} // namespace
+
 // =============================================================================
 // CameraState
 // =============================================================================
@@ -114,11 +122,22 @@ void RenderSceneController::handleDocumentGeometryChanged(
 
 void RenderSceneController::updateGeometryRenderData() {
     auto document = GeoDocumentInstance;
+    std::shared_ptr<RenderData> next_render_data;
+    {
+        std::lock_guard<std::mutex> lock(m_renderDataMutex);
+        next_render_data = cloneRenderDataSnapshot(m_renderData);
+    }
 
     auto default_options = Render::TessellationOptions::defaultOptions();
-    auto ret = document->getRenderData(m_renderData, default_options);
+    const bool ret = document->getRenderData(*next_render_data, default_options);
     if(!ret) {
         LOG_ERROR("RenderSceneController: Failed to get geometry render data");
+        return;
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(m_renderDataMutex);
+        m_renderData = std::move(next_render_data);
     }
 }
 
@@ -136,9 +155,21 @@ void RenderSceneController::handleDocumentMeshChanged() {
 
 void RenderSceneController::updateMeshRenderData() {
     auto document = MeshDocumentInstance;
-    const bool ret = document->getRenderData(m_renderData);
+    std::shared_ptr<RenderData> next_render_data;
+    {
+        std::lock_guard<std::mutex> lock(m_renderDataMutex);
+        next_render_data = cloneRenderDataSnapshot(m_renderData);
+    }
+
+    const bool ret = document->getRenderData(*next_render_data);
     if(!ret) {
         LOG_ERROR("RenderSceneController: Failed to get mesh render data");
+        return;
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(m_renderDataMutex);
+        m_renderData = std::move(next_render_data);
     }
 }
 
@@ -159,8 +190,9 @@ void RenderSceneController::refreshScene(bool notify) {
 }
 
 void RenderSceneController::fitToScene(bool notify) {
-    if(m_renderData.m_sceneBBox.isValid()) {
-        m_cameraState.fitToBoundingBox(m_renderData.m_sceneBBox);
+    const auto render_data = this->renderData();
+    if(render_data && render_data->m_sceneBBox.isValid()) {
+        m_cameraState.fitToBoundingBox(render_data->m_sceneBBox);
     }
     if(notify) {
         m_sceneNeedsUpdate.emitSignal(SceneUpdateType::GeometryChanged);
@@ -279,7 +311,10 @@ RenderDisplayModeMask RenderSceneController::meshDisplayMode() const noexcept {
 // Render data access
 // =============================================================================
 
-const RenderData& RenderSceneController::renderData() const { return m_renderData; }
+std::shared_ptr<const RenderData> RenderSceneController::renderData() const {
+    std::lock_guard<std::mutex> lock(m_renderDataMutex);
+    return m_renderData;
+}
 
 Geometry::GeometryDocumentPtr RenderSceneController::currentGeometryDocument() const {
     return GeoDocumentInstance;

@@ -13,6 +13,12 @@ namespace OpenGeoLab::Mesh {
 
 namespace {
 
+struct QueryOutcome {
+    nlohmann::json m_info;
+    std::string m_error;
+    bool m_notFound{false};
+};
+
 [[nodiscard]] bool validateEntityHandle(const nlohmann::json& j, std::string& error) {
     if(!j.is_object()) {
         error = "Each entity handle must be an object";
@@ -45,7 +51,7 @@ namespace {
 /**
  * @brief Query a mesh node by its ID, including related lines and elements.
  */
-[[nodiscard]] nlohmann::json queryNode(const MeshDocumentImpl& doc, MeshNodeId uid) {
+[[nodiscard]] QueryOutcome queryNode(const MeshDocumentImpl& doc, MeshNodeId uid) {
     try {
         const auto node = doc.findNodeById(uid);
         nlohmann::json info{{"type", "Node"},
@@ -56,9 +62,11 @@ namespace {
         info["relatedLines"] = refsToJson(doc.findLinesByNodeId(uid));
         info["relatedElements"] = refsToJson(doc.findElementsByNodeId(uid));
 
-        return info;
-    } catch(...) {
-        return nlohmann::json{};
+        return QueryOutcome{std::move(info), {}, false};
+    } catch(const std::out_of_range& e) {
+        return QueryOutcome{nlohmann::json{}, e.what(), true};
+    } catch(const std::exception& e) {
+        return QueryOutcome{nlohmann::json{}, e.what(), false};
     }
 }
 
@@ -68,7 +76,7 @@ namespace {
  * For Line elements, includes related elements sharing this edge.
  * For face/volume elements, includes related Line elements forming its edges.
  */
-[[nodiscard]] nlohmann::json
+[[nodiscard]] QueryOutcome
 queryElement(const MeshDocumentImpl& doc, MeshElementUID uid, MeshElementType type) {
     try {
         const MeshElementRef ref(uid, type);
@@ -98,9 +106,9 @@ queryElement(const MeshDocumentImpl& doc, MeshElementUID uid, MeshElementType ty
                                                {"x", node.x()},
                                                {"y", node.y()},
                                                {"z", node.z()}});
-            } catch(...) {
+            } catch(const std::exception& e) {
                 nodes.push_back(nlohmann::json{{"id", static_cast<uint64_t>(element.nodeId(i))},
-                                               {"error", "node not found"}});
+                                               {"error", e.what()}});
             }
         }
         info["nodes"] = std::move(nodes);
@@ -112,9 +120,11 @@ queryElement(const MeshDocumentImpl& doc, MeshElementUID uid, MeshElementType ty
             info["relatedLines"] = refsToJson(doc.findLinesByElementRef(ref));
         }
 
-        return info;
-    } catch(...) {
-        return nlohmann::json{};
+        return QueryOutcome{std::move(info), {}, false};
+    } catch(const std::out_of_range& e) {
+        return QueryOutcome{nlohmann::json{}, e.what(), true};
+    } catch(const std::exception& e) {
+        return QueryOutcome{nlohmann::json{}, e.what(), false};
     }
 }
 
@@ -153,6 +163,7 @@ nlohmann::json QueryMeshInfoAction::execute(const nlohmann::json& params,
     const auto& handles = *entities_it;
     nlohmann::json results = nlohmann::json::array();
     nlohmann::json not_found = nlohmann::json::array();
+    nlohmann::json errors = nlohmann::json::array();
 
     const size_t total = handles.size();
     size_t processed = 0;
@@ -168,16 +179,16 @@ nlohmann::json QueryMeshInfoAction::execute(const nlohmann::json& params,
         const auto uid = h["uid"].get<uint64_t>();
         const auto type_str = h["type"].get<std::string>();
 
-        nlohmann::json info;
+        QueryOutcome outcome;
 
         if(type_str == "Node") {
-            info = queryNode(*document, static_cast<MeshNodeId>(uid));
+            outcome = queryNode(*document, static_cast<MeshNodeId>(uid));
         } else {
             // Try to parse as mesh element type (Line, Triangle, Quad4, etc.)
             auto elem_type_opt = meshElementTypeFromString(type_str);
             if(elem_type_opt.has_value()) {
-                info = queryElement(*document, static_cast<MeshElementUID>(uid),
-                                    elem_type_opt.value());
+                outcome = queryElement(*document, static_cast<MeshElementUID>(uid),
+                                       elem_type_opt.value());
             } else {
                 not_found.push_back(
                     nlohmann::json{{"type", type_str}, {"uid", uid}, {"error", "unknown type"}});
@@ -186,10 +197,19 @@ nlohmann::json QueryMeshInfoAction::execute(const nlohmann::json& params,
             }
         }
 
-        if(info.empty()) {
-            not_found.push_back(nlohmann::json{{"type", type_str}, {"uid", uid}});
+        if(!outcome.m_info.empty()) {
+            results.push_back(std::move(outcome.m_info));
+        } else if(outcome.m_notFound) {
+            nlohmann::json item{{"type", type_str}, {"uid", uid}};
+            if(!outcome.m_error.empty()) {
+                item["error"] = outcome.m_error;
+            }
+            not_found.push_back(std::move(item));
         } else {
-            results.push_back(std::move(info));
+            errors.push_back(nlohmann::json{
+                {"type", type_str},
+                {"uid", uid},
+                {"error", outcome.m_error.empty() ? "Mesh query failed" : outcome.m_error}});
         }
 
         ++processed;
@@ -211,9 +231,13 @@ nlohmann::json QueryMeshInfoAction::execute(const nlohmann::json& params,
     LOG_DEBUG("QueryMeshInfoAction: queried {}, found {}, not_found {}", total, results.size(),
               not_found.size());
 
-    response["success"] = true;
+    response["success"] = errors.empty();
+    if(!errors.empty()) {
+        response["error"] = "One or more mesh entities failed to query";
+    }
     response["entities"] = std::move(results);
     response["not_found"] = std::move(not_found);
+    response["errors"] = std::move(errors);
     response["total"] = total;
     return response;
 }

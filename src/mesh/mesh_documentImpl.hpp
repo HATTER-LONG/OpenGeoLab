@@ -8,6 +8,9 @@
 
 #include "mesh/mesh_document.hpp"
 
+#include <shared_mutex>
+#include <string>
+
 namespace OpenGeoLab::Mesh {
 /**
  * @brief Singleton MeshDocument implementation.
@@ -80,6 +83,10 @@ public:
 
     void clear() override;
 
+    [[nodiscard]] bool replaceMeshData(std::vector<MeshNode> nodes,
+                                       std::vector<MeshElement> elements,
+                                       std::string& error);
+
     // -------------------------------------------------------------------------
     // Render Data
     // -------------------------------------------------------------------------
@@ -95,6 +102,26 @@ public:
     void notifyChanged() override;
 
 private:
+    // Internal helpers below assume the caller already holds m_documentMutex.
+    [[nodiscard]] bool addNodeUnlocked(MeshNode node);
+    void reserveNodeCapacityUnlocked(size_t capacity);
+    [[nodiscard]] MeshNode findNodeByIdUnlocked(MeshNodeId node_id) const;
+    [[nodiscard]] size_t nodeCountUnlocked() const;
+    [[nodiscard]] bool addElementUnlocked(MeshElement element);
+    void reserveElementCapacityUnlocked(size_t capacity);
+    [[nodiscard]] MeshElement findElementByIdUnlocked(MeshElementId element_id) const;
+    [[nodiscard]] MeshElement findElementByRefUnlocked(const MeshElementRef& ref) const;
+    [[nodiscard]] size_t elementCountUnlocked() const;
+    void clearUnlocked();
+    [[nodiscard]] std::vector<MeshElementRef> findLinesByNodeIdUnlocked(MeshNodeId node_id) const;
+    [[nodiscard]] std::vector<MeshElementRef>
+    findElementsByNodeIdUnlocked(MeshNodeId node_id) const;
+    [[nodiscard]] std::vector<MeshElementRef>
+    findElementsByLineRefUnlocked(const MeshElementRef& line_ref) const;
+    [[nodiscard]] std::vector<MeshElementRef>
+    findLinesByElementRefUnlocked(const MeshElementRef& element_ref) const;
+    [[nodiscard]] bool getRenderDataUnlocked(Render::RenderData& render_data);
+
     std::vector<MeshNode> m_nodes;                                ///< List of mesh nodes
     std::vector<MeshElement> m_elements;                          ///< List of mesh elements
     std::unordered_map<MeshNodeId, size_t> m_nodeIdToIndex;       ///< Node id -> vector index
@@ -121,7 +148,7 @@ private:
 
     Util::Signal<> m_changeSignal; /// Change notification signal
 
-    mutable std::mutex m_renderDataMutex;
+    mutable std::shared_mutex m_documentMutex;
 
     /// Create Line elements from edges of 2D/3D elements, populating m_edgeKeyToLineRef.
     void createLineElementsFromEdges();

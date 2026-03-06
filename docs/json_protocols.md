@@ -39,7 +39,7 @@
 ```
 响应：
 ```json
-{ "status": "success", "action": "ViewPortControl" }
+{ "success": true, "action": "ViewPortControl" }
 ```
 
 ### 2.2 SelectControl
@@ -118,7 +118,7 @@
 ```
 响应：
 ```json
-{ "status": "success", "action": "ViewPortControl" }
+{ "success": true, "action": "ViewPortControl" }
 ```
 
 #### 2.1.3 View Preset
@@ -140,7 +140,7 @@
 ```
 响应：
 ```json
-{ "status": "success", "action": "ViewPortControl" }
+{ "success": true, "action": "ViewPortControl" }
 ```
 
 ---

@@ -7,6 +7,8 @@
 
 #include "geometry/geometry_types.hpp"
 #include "mesh/mesh_action.hpp"
+#include "mesh/mesh_element.hpp"
+#include "mesh/mesh_node.hpp"
 #include "mesh/mesh_types.hpp"
 
 #include <TopoDS_Compound.hxx>
@@ -33,6 +35,10 @@ struct GmshMeshContext {
 
     // --- Node mapping (set by extractNodes) ---
     std::unordered_map<size_t, MeshNodeId> m_gmshToLocal; ///< Gmsh node tag -> local MeshNodeId
+
+    // --- Staged mesh data (committed only after successful pipeline completion) ---
+    std::vector<MeshNode> m_nodes;
+    std::vector<MeshElement> m_elements;
 };
 
 /**
@@ -70,7 +76,8 @@ private:
      *
      * Gmsh must already be initialized before calling this method.
      */
-    void runGmshPipeline(GmshMeshContext& ctx, Util::ProgressCallback progress_callback);
+    [[nodiscard]] bool runGmshPipeline(GmshMeshContext& ctx,
+                                       Util::ProgressCallback progress_callback);
 };
 
 class GenerateMeshActionFactory : public MeshActionFactory {

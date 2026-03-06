@@ -72,17 +72,17 @@ void GLViewportRender::synchronize(QQuickFramebufferObject* item) {
     // Build SceneFrameState from GUI-thread singletons (safe: GUI thread is blocked)
     auto* scene_controller = &Render::RenderSceneController::instance();
     const auto& camera = scene_controller->cameraState();
+    std::shared_ptr<const Render::RenderData> render_data = scene_controller->renderData();
     const float aspect = static_cast<float>(viewport->width()) /
                          static_cast<float>(std::max(1.0, viewport->height()));
 
-    Render::SceneFrameState frame_state{
-        .m_renderData = &scene_controller->renderData(),
-        .m_cameraPos = camera.m_position,
-        .m_viewMatrix = camera.viewMatrix(),
-        .m_projMatrix = camera.projectionMatrix(aspect),
-        .m_xRayMode = scene_controller->isXRayMode(),
-        .m_meshDisplayMode = scene_controller->meshDisplayMode(),
-    };
+    Render::SceneFrameState frame_state;
+    frame_state.m_renderData = std::move(render_data);
+    frame_state.m_cameraPos = camera.m_position;
+    frame_state.m_viewMatrix = camera.viewMatrix();
+    frame_state.m_projMatrix = camera.projectionMatrix(aspect);
+    frame_state.m_xRayMode = scene_controller->isXRayMode();
+    frame_state.m_meshDisplayMode = scene_controller->meshDisplayMode();
 
     m_renderScene->synchronize(frame_state);
 }

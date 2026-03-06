@@ -25,6 +25,11 @@ GeometryDocumentImplSingletonFactory::instance() const {
 GeometryDocumentImpl::GeometryDocumentImpl() : m_relationshipIndex(m_entityIndex) {}
 
 bool GeometryDocumentImpl::addEntity(const GeometryEntityImplPtr& entity) {
+    std::unique_lock<std::shared_mutex> lock(m_documentMutex);
+    return addEntityUnlocked(entity);
+}
+
+bool GeometryDocumentImpl::addEntityUnlocked(const GeometryEntityImplPtr& entity) {
     if(!m_entityIndex.addEntity(entity)) {
         LOG_WARN("GeometryDocument: Failed to add entity id={}", entity ? entity->entityId() : 0);
         return false;
@@ -36,7 +41,12 @@ bool GeometryDocumentImpl::addEntity(const GeometryEntityImplPtr& entity) {
 }
 
 bool GeometryDocumentImpl::removeEntity(EntityId entity_id) {
-    const auto entity = m_entityIndex.findById(entity_id);
+    std::unique_lock<std::shared_mutex> lock(m_documentMutex);
+    return removeEntityUnlocked(entity_id);
+}
+
+bool GeometryDocumentImpl::removeEntityUnlocked(EntityId entity_id) {
+    const auto entity = findImplByIdUnlocked(entity_id);
     if(!entity) {
         LOG_DEBUG("GeometryDocument: Entity not found for removal, id={}", entity_id);
         return false;
@@ -55,7 +65,10 @@ bool GeometryDocumentImpl::removeEntity(EntityId entity_id) {
 size_t GeometryDocumentImpl::removeEntityWithChildren(EntityId entity_id) {
     LOG_DEBUG("GeometryDocument: Removing entity and children, rootId={}", entity_id);
     size_t removed_count = 0;
-    removeEntityRecursive(entity_id, removed_count);
+    {
+        std::unique_lock<std::shared_mutex> lock(m_documentMutex);
+        removeEntityRecursive(entity_id, removed_count);
+    }
     LOG_DEBUG("GeometryDocument: Removed {} entities", removed_count);
     return removed_count;
 }
@@ -74,62 +87,120 @@ void GeometryDocumentImpl::removeEntityRecursive(EntityId entity_id, // NOLINT
     }
 
     // Then remove this entity
-    if(removeEntity(entity_id)) {
+    if(!m_entityIndex.removeEntity(entity_id)) {
+        return;
+    }
+
+    entity->setDocument({});
+    LOG_TRACE("GeometryDocument: Removed entity id={}", entity_id);
+    {
         ++removed_count;
     }
 }
 
 void GeometryDocumentImpl::clear() {
-    const size_t count = m_entityIndex.entityCount();
-    m_relationshipIndex.clear();
-    m_entityIndex.clear();
-    resetEntityIdGenerator();
-    resetAllEntityUIDGenerators();
+    size_t count = 0;
+    {
+        std::unique_lock<std::shared_mutex> lock(m_documentMutex);
+        count = entityCountUnlocked();
+        clearUnlocked();
+    }
     LOG_INFO("GeometryDocument: Cleared document, removed {} entities", count);
     emitChangeEvent(GeometryChangeEvent(GeometryChangeType::EntityRemoved, INVALID_ENTITY_ID));
 }
 
+void GeometryDocumentImpl::clearUnlocked() {
+    m_relationshipIndex.clear();
+    m_entityIndex.clear();
+    resetEntityIdGenerator();
+    resetAllEntityUIDGenerators();
+}
+
 GeometryEntityPtr GeometryDocumentImpl::findById(EntityId entity_id) const {
-    return m_entityIndex.findById(entity_id);
+    std::shared_lock<std::shared_mutex> lock(m_documentMutex);
+    return findImplByIdUnlocked(entity_id);
 }
 
 GeometryEntityPtr GeometryDocumentImpl::findByUIDAndType(EntityUID entity_uid,
                                                          EntityType entity_type) const {
-    return m_entityIndex.findByUIDAndType(entity_uid, entity_type);
+    std::shared_lock<std::shared_mutex> lock(m_documentMutex);
+    return findImplByUIDAndTypeUnlocked(entity_uid, entity_type);
 }
 
 GeometryEntityImplPtr GeometryDocumentImpl::findImplById(EntityId entity_id) const {
+    std::shared_lock<std::shared_mutex> lock(m_documentMutex);
+    return findImplByIdUnlocked(entity_id);
+}
+
+GeometryEntityImplPtr GeometryDocumentImpl::findImplByIdUnlocked(EntityId entity_id) const {
     return m_entityIndex.findById(entity_id);
 }
 
 GeometryEntityImplPtr GeometryDocumentImpl::findImplByUIDAndType(EntityUID entity_uid,
                                                                  EntityType entity_type) const {
+    std::shared_lock<std::shared_mutex> lock(m_documentMutex);
+    return findImplByUIDAndTypeUnlocked(entity_uid, entity_type);
+}
+
+GeometryEntityImplPtr
+GeometryDocumentImpl::findImplByUIDAndTypeUnlocked(EntityUID entity_uid,
+                                                   EntityType entity_type) const {
     return m_entityIndex.findByUIDAndType(entity_uid, entity_type);
 }
 
 GeometryEntityPtr GeometryDocumentImpl::findByShape(const TopoDS_Shape& shape) const {
+    std::shared_lock<std::shared_mutex> lock(m_documentMutex);
+    return findByShapeUnlocked(shape);
+}
+
+GeometryEntityPtr GeometryDocumentImpl::findByShapeUnlocked(const TopoDS_Shape& shape) const {
     return m_entityIndex.findByShape(shape);
 }
 
 [[nodiscard]] size_t GeometryDocumentImpl::entityCount() const {
-    return m_entityIndex.entityCount();
+    std::shared_lock<std::shared_mutex> lock(m_documentMutex);
+    return entityCountUnlocked();
 }
 
+size_t GeometryDocumentImpl::entityCountUnlocked() const { return m_entityIndex.entityCount(); }
+
 [[nodiscard]] size_t GeometryDocumentImpl::entityCountByType(EntityType entity_type) const {
+    std::shared_lock<std::shared_mutex> lock(m_documentMutex);
+    return entityCountByTypeUnlocked(entity_type);
+}
+
+size_t GeometryDocumentImpl::entityCountByTypeUnlocked(EntityType entity_type) const {
     return m_entityIndex.entityCountByType(entity_type);
 }
 
 std::vector<GeometryEntityImplPtr>
 GeometryDocumentImpl::entitiesByType(EntityType entity_type) const {
+    std::shared_lock<std::shared_mutex> lock(m_documentMutex);
+    return entitiesByTypeUnlocked(entity_type);
+}
+
+std::vector<GeometryEntityImplPtr>
+GeometryDocumentImpl::entitiesByTypeUnlocked(EntityType entity_type) const {
     return m_entityIndex.entitiesByType(entity_type);
 }
 
 std::vector<GeometryEntityImplPtr> GeometryDocumentImpl::allEntities() const {
+    std::shared_lock<std::shared_mutex> lock(m_documentMutex);
+    return allEntitiesUnlocked();
+}
+
+std::vector<GeometryEntityImplPtr> GeometryDocumentImpl::allEntitiesUnlocked() const {
     return m_entityIndex.snapshotEntities();
 }
 
 bool GeometryDocumentImpl::addChildEdge(const GeometryEntityImpl& parent,
                                         const GeometryEntityImpl& child) {
+    std::unique_lock<std::shared_mutex> lock(m_documentMutex);
+    return addChildEdgeUnlocked(parent, child);
+}
+
+bool GeometryDocumentImpl::addChildEdgeUnlocked(const GeometryEntityImpl& parent,
+                                                const GeometryEntityImpl& child) {
     if(parent.entityId() == child.entityId()) {
         return false;
     }
@@ -214,12 +285,25 @@ LoadResult GeometryDocumentImpl::appendShape(const TopoDS_Shape& shape,
 
 std::vector<EntityKey> GeometryDocumentImpl::findRelatedEntities(EntityId entity_id,
                                                                  EntityType related_type) const {
+    std::shared_lock<std::shared_mutex> lock(m_documentMutex);
+    return findRelatedEntitiesUnlocked(entity_id, related_type);
+}
+
+std::vector<EntityKey>
+GeometryDocumentImpl::findRelatedEntitiesUnlocked(EntityId entity_id,
+                                                  EntityType related_type) const {
     return m_relationshipIndex.findRelatedEntities(entity_id, related_type);
 }
 
 std::vector<EntityKey> GeometryDocumentImpl::findRelatedEntities(EntityUID entity_uid,
                                                                  EntityType entity_type,
                                                                  EntityType related_type) const {
+    std::shared_lock<std::shared_mutex> lock(m_documentMutex);
+    return findRelatedEntitiesUnlocked(entity_uid, entity_type, related_type);
+}
+
+std::vector<EntityKey> GeometryDocumentImpl::findRelatedEntitiesUnlocked(
+    EntityUID entity_uid, EntityType entity_type, EntityType related_type) const {
     return m_relationshipIndex.findRelatedEntities(entity_uid, entity_type, related_type);
 }
 
@@ -228,7 +312,12 @@ std::vector<EntityKey> GeometryDocumentImpl::findRelatedEntities(EntityUID entit
 // =============================================================================
 bool GeometryDocumentImpl::getRenderData(Render::RenderData& render_data,
                                          const Render::TessellationOptions& options) {
-    std::lock_guard<std::mutex> lock(m_renderDataMutex);
+    std::shared_lock<std::shared_mutex> lock(m_documentMutex);
+    return getRenderDataUnlocked(render_data, options);
+}
+
+bool GeometryDocumentImpl::getRenderDataUnlocked(Render::RenderData& render_data,
+                                                 const Render::TessellationOptions& options) {
     GeometryRenderInput input{m_entityIndex, m_relationshipIndex, options};
     render_data.markGeometryUpdated();
     return GeometryRenderBuilder::build(render_data, input);

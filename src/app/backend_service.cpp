@@ -68,8 +68,8 @@ QString BackendService::message() const { return m_message; }
 
 void BackendService::request(const QString& module_name, const QString& params) {
     if(module_name.trimmed().isEmpty()) {
-        emit operationFailed(module_name, QStringLiteral("Module name is empty. Aborting request."),
-                             QString{});
+        emit operationFailed(module_name, QString{},
+                             QStringLiteral("Module name is empty. Aborting request."));
         return;
     }
 
@@ -79,10 +79,9 @@ void BackendService::request(const QString& module_name, const QString& params) 
         try {
             param_json = nlohmann::json::parse(params.toStdString());
         } catch(const nlohmann::json::parse_error& e) {
-            emit operationFailed(module_name,
+            emit operationFailed(module_name, QString{},
                                  QStringLiteral("Failed to parse params JSON: ") +
-                                     QString::fromStdString(e.what()),
-                                 QString{});
+                                     QString::fromStdString(e.what()));
             return;
         }
     }
@@ -156,10 +155,8 @@ void BackendService::cancel() {
         setMessage(QStringLiteral("Cancellation requested for operation [%1]...")
                        .arg(m_currentRequest.m_moduleName));
     }
-    if(m_workerThread && m_workerThread->isRunning()) {
-        m_workerThread->quit();
-        m_workerThread->wait(1000);
-    }
+    LOG_INFO("Backend cancellation requested for module='{}'",
+             qPrintable(m_currentRequest.m_moduleName));
 }
 
 void BackendService::onWorkerProgress(double progress, const QString& message) {

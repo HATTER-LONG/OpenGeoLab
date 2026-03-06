@@ -14,6 +14,7 @@
 #include <kangaroo/util/noncopyable.hpp>
 
 #include <atomic>
+#include <memory>
 #include <mutex>
 
 namespace OpenGeoLab::Render {
@@ -147,7 +148,7 @@ public:
      * data-update frequency increases or a non-Qt renderer is introduced, consider
      * adding a shared_mutex or double-buffering.
      */
-    [[nodiscard]] const RenderData& renderData() const;
+    [[nodiscard]] std::shared_ptr<const RenderData> renderData() const;
 
     /** @brief Current geometry document (may be null if no document is loaded). */
     [[nodiscard]] Geometry::GeometryDocumentPtr currentGeometryDocument() const;
@@ -192,7 +193,9 @@ private:
 
     Util::Signal<SceneUpdateType> m_sceneNeedsUpdate; ///< Notifies listeners to redraw
 
-    RenderData m_renderData; ///< Snapshot of all renderable data (geometry + mesh)
+    mutable std::mutex m_renderDataMutex; ///< Guards m_renderData snapshot swaps
+    std::shared_ptr<RenderData> m_renderData{std::make_shared<RenderData>()};
+    ///< Snapshot of all renderable data (geometry + mesh)
 
     /// Per-part visibility toggles for geometry and mesh layers
     struct PartVisibility {

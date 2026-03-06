@@ -5,15 +5,16 @@
 
 #include "generate_mesh_action.hpp"
 
+#include "../mesh_documentImpl.hpp"
 #include "geometry/geometry_document.hpp"
 #include "geometry/geometry_entity.hpp"
-#include "mesh/mesh_document.hpp"
 #include "util/logger.hpp"
 #include "util/progress_callback.hpp"
 
 #include <BRep_Builder.hxx>
 #include <gmsh.h>
 
+#include "util/process_path_guard.hpp"
 #include <kangaroo/util/component_factory.hpp>
 
 namespace OpenGeoLab::Mesh {
@@ -37,7 +38,7 @@ struct MeshRequestData {
 };
 
 struct ElementWriteContext {
-    const MeshDocumentPtr& m_meshDoc;
+    std::vector<MeshElement>& m_elements;
     const std::unordered_map<size_t, MeshNodeId>& m_gmshToLocal;
 };
 
@@ -53,7 +54,7 @@ bool reportCancelled(Util::ProgressCallback progress_callback,
                      double progress,
                      const char* message,
                      nlohmann::json& response) {
-    if(progress_callback(progress, message)) {
+    if(!progress_callback || progress_callback(progress, message)) {
         return true;
     }
     response["success"] = false;
@@ -191,6 +192,8 @@ void collectSingleFaceEntity(const Geometry::GeometryDocumentPtr& doc,
 }
 
 template <typename Fn> void withGmshSession(Fn&& fn) {
+    const WindowsProcessPathGuard path_guard;
+
     gmsh::initialize();
     gmsh::option::setNumber("General.Terminal", 0);
     gmsh::model::add("mesh_model");
@@ -273,19 +276,19 @@ void importAndMapShape(GmshMeshContext& ctx) {
 }
 
 /// Extract nodes from Gmsh and add them to the mesh document.
-void extractNodes(GmshMeshContext& ctx, const MeshDocumentPtr& mesh_doc) {
+void extractNodes(GmshMeshContext& ctx) {
     std::vector<std::size_t> node_tags;
     std::vector<double> node_coords;
     std::vector<double> parametric_coords;
     gmsh::model::mesh::getNodes(node_tags, node_coords, parametric_coords);
 
-    mesh_doc->reserveNodeCapacity(mesh_doc->nodeCount() + node_tags.size());
+    ctx.m_nodes.reserve(node_tags.size());
     ctx.m_gmshToLocal.reserve(node_tags.size());
 
     for(size_t i = 0; i < node_tags.size(); ++i) {
         MeshNode node(node_coords[3 * i], node_coords[3 * i + 1], node_coords[3 * i + 2]);
         ctx.m_gmshToLocal[node_tags[i]] = node.nodeId();
-        mesh_doc->addNode(node);
+        ctx.m_nodes.emplace_back(std::move(node));
     }
 
     LOG_DEBUG("GenerateMeshAction: Extracted {} nodes", node_tags.size());
@@ -311,15 +314,15 @@ void addElementsOfType(const ElementWriteContext& write_ctx, const ElementBatchS
                 elem.setNodeId(ni, it->second);
             }
         }
-        write_ctx.m_meshDoc->addElement(std::move(elem));
+        write_ctx.m_elements.emplace_back(std::move(elem));
     }
 }
 
 /// Extract elements from Gmsh per entity and add them to the mesh document.
-void extractElements(const GmshMeshContext& ctx, const MeshDocumentPtr& mesh_doc) {
+void extractElements(GmshMeshContext& ctx) {
     std::vector<std::pair<int, int>> all_entities;
     gmsh::model::getEntities(all_entities);
-    const ElementWriteContext write_ctx{mesh_doc, ctx.m_gmshToLocal};
+    const ElementWriteContext write_ctx{ctx.m_elements, ctx.m_gmshToLocal};
 
     for(const auto& [dim, tag] : all_entities) {
         std::vector<int> element_types;
@@ -331,7 +334,7 @@ void extractElements(const GmshMeshContext& ctx, const MeshDocumentPtr& mesh_doc
         for(const auto& tags : element_tags) {
             entity_element_count += tags.size();
         }
-        mesh_doc->reserveElementCapacity(mesh_doc->elementCount() + entity_element_count);
+        ctx.m_elements.reserve(ctx.m_elements.size() + entity_element_count);
 
         // Look up Part UID for this Gmsh entity
         uint64_t part_uid = 0;
@@ -361,7 +364,7 @@ void extractElements(const GmshMeshContext& ctx, const MeshDocumentPtr& mesh_doc
         }
     }
 
-    LOG_DEBUG("GenerateMeshAction: Extracted elements, total: {}", mesh_doc->elementCount());
+    LOG_DEBUG("GenerateMeshAction: Extracted elements, total: {}", ctx.m_elements.size());
 }
 
 } // anonymous namespace
@@ -394,20 +397,39 @@ nlohmann::json GenerateMeshAction::execute(const nlohmann::json& params,
 
     // --- Run Gmsh pipeline ---
     try {
-        withGmshSession([&]() { runGmshPipeline(request.m_ctx, progress_callback); });
+        bool pipeline_completed = false;
+        withGmshSession(
+            [&]() { pipeline_completed = runGmshPipeline(request.m_ctx, progress_callback); });
+        if(!pipeline_completed) {
+            response["success"] = false;
+            response["error"] = "Operation cancelled";
+            return response;
+        }
     } catch(const std::exception& e) {
         LOG_ERROR("GenerateMeshAction: Gmsh error: {}", e.what());
         ERROR_AND_RETURN(std::string("Gmsh import failed: ") + e.what());
     }
 
-    auto mesh_doc = MeshDocumentInstance;
+    auto mesh_doc = MeshDocumentImpl::instance();
+    if(!mesh_doc) {
+        ERROR_AND_RETURN("No active mesh document");
+    }
+
+    if(!mesh_doc->replaceMeshData(std::move(request.m_ctx.m_nodes),
+                                  std::move(request.m_ctx.m_elements), error)) {
+        LOG_ERROR("GenerateMeshAction: Failed to commit mesh data: {}", error);
+        ERROR_AND_RETURN(error);
+    }
+
     LOG_INFO("GenerateMeshAction: Generated {} nodes, {} elements", mesh_doc->nodeCount(),
              mesh_doc->elementCount());
 
     response["success"] = true;
     response["nodeCount"] = mesh_doc->nodeCount();
     response["elementCount"] = mesh_doc->elementCount();
-    progress_callback(1.0, "Mesh generation complete");
+    if(progress_callback) {
+        progress_callback(1.0, "Mesh generation complete");
+    }
     return response;
 }
 
@@ -434,41 +456,39 @@ void GenerateMeshAction::collectFaceShapes(const Geometry::EntityRefSet& entitie
     LOG_INFO("GenerateMeshAction: Collected {} face shapes for meshing", ctx.m_facePartUids.size());
 }
 
-void GenerateMeshAction::runGmshPipeline(GmshMeshContext& ctx,
+bool GenerateMeshAction::runGmshPipeline(GmshMeshContext& ctx,
                                          Util::ProgressCallback progress_callback) {
     importAndMapShape(ctx);
 
-    if(!progress_callback(0.3, "Configuring mesh parameters...")) {
-        return;
+    if(progress_callback && !progress_callback(0.3, "Configuring mesh parameters...")) {
+        return false;
     }
 
     configureGmshAlgorithm(ctx.m_elementSize, ctx.m_elementType);
 
-    if(!progress_callback(0.4, "Running Gmsh mesh generation...")) {
-        return;
+    if(progress_callback && !progress_callback(0.4, "Running Gmsh mesh generation...")) {
+        return false;
     }
 
     gmsh::model::mesh::generate(ctx.m_meshDimension);
 
-    if(!progress_callback(0.6, "Extracting nodes...")) {
-        return;
+    if(progress_callback && !progress_callback(0.6, "Extracting nodes...")) {
+        return false;
     }
 
-    auto mesh_doc = MeshDocumentInstance;
-    mesh_doc->clear();
-    extractNodes(ctx, mesh_doc);
+    extractNodes(ctx);
 
-    if(!progress_callback(0.75, "Extracting elements...")) {
-        return;
+    if(progress_callback && !progress_callback(0.75, "Extracting elements...")) {
+        return false;
     }
 
-    extractElements(ctx, mesh_doc);
+    extractElements(ctx);
 
-    // Build Line elements from edges and populate node-line-element relation maps
-    mesh_doc->buildEdgeElements();
+    if(progress_callback && !progress_callback(0.9, "Mesh extraction complete")) {
+        return false;
+    }
 
-    progress_callback(0.9, "Mesh extraction complete");
-    mesh_doc->notifyChanged();
+    return true;
 }
 
 } // namespace OpenGeoLab::Mesh

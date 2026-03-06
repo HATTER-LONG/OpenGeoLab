@@ -1,89 +1,78 @@
 # OpenGeoLab
 
-English docs: `README.en.md` and `docs/json_protocols.en.md`.
+OpenGeoLab 是一个面向 CAD/CAE 场景的桌面原型工程，使用 Qt Quick(QML) 构建界面，使用 OpenGL 做实时显示，使用 OpenCASCADE 管理几何拓扑，并逐步引入网格生成、选择编辑和 AI 辅助分析能力。
 
-OpenGeoLab 是一个基于 Qt Quick(QML) + OpenGL 的几何/模型可视化与编辑原型项目：
-- 读取 BREP / STEP(STP) 等模型文件
-- 基于 OpenCASCADE(OCC) 管理几何拓扑（点/边/面/Part）
-- OpenGL 渲染显示，并提供基础视口交互（旋转/平移/缩放、视图预设、Fit）
-- 后续将支持鼠标编辑（如 trim/offset）、网格剖分、以及 AI 辅助网格质量诊断与修复
+英文说明见 README.en.md，协议说明见 docs/json_protocols.md。
 
-## 目录结构（约定）
-- `include/`：对外接口头文件；不同模块应只通过此处暴露的接口互相调用
-- `src/`：模块实现
-  - `src/app/`：应用入口、QML 单例后端（BackendService）、OpenGL 视口（GLViewport）
-  - `src/geometry/`：几何文档/实体、OCC 形体构建与导出渲染数据
-    - 实体标识：内部使用 `EntityKey = (EntityId + EntityUID + EntityType)` 作为可比较/可哈希的实体句柄
-  - `src/io/`：模型文件读取服务（STEP/BREP）
-  - `src/render/`：渲染数据结构、SceneRenderer、RenderSceneController 等
-- `resources/qml/`：QML UI（主窗口、页面、工具条等）
-- `test/`：单元测试（默认关闭，见 CMake 选项）
+## 功能概览
+
+- 导入 BREP / STEP(STP) 模型。
+- 基于 OCC 管理点、边、线框、面、实体和 Part 等几何层级。
+- 通过 OpenGL 渲染几何与网格，并提供基础视口交互。
+- 支持基于拾取的查询、高亮与选择。
+- 为后续 trim、offset、网格质量诊断与 AI 协助修复预留扩展点。
+
+## 模块结构
+
+- include/：跨模块公共接口；模块间依赖应经由这里暴露。
+- src/app/：应用入口、QML 后端桥接、异步服务、视口对象。
+- src/geometry/：几何文档、实体关系、OCC 形体装配、几何渲染数据构建。
+- src/mesh/：网格文档、节点/单元管理、关系索引、网格渲染数据构建。
+- src/render/：渲染快照、场景控制、GPU pass、拾取与高亮。
+- src/io/：BREP / STEP 读取服务。
+- resources/qml/：QML 页面与组件。
+- test/：单元测试与测试构建脚本。
+
+更完整的架构说明见 docs/architecture.md。
 
 ## 依赖
-- CMake >= 3.14
-- Qt 6.8（组件：Core/Gui/Qml/Quick/OpenGL）
-- OpenCASCADE（必须预装，CMake 通过 `find_package(OpenCASCADE REQUIRED)` 查找）
-- GMesh（用于网格剖分与处理，需预装）:
-```json
-{
-    "cmake.configureArgs": [
-        "-DENABLE_BUILD_DYNAMIC=ON",
-        "-DENABLE_OCC=ON",
-        "-DENABLE_FLTK=OFF",
-        "-DCMAKE_BUILD_TYPE=Debug",
-        "-DCMAKE_INSTALL_PREFIX=\"D:/WorkSpace/OpenSource/GMesh/gmsh_4_15_0-debug\"",
-        "-DENABLE_TESTS=OFF",
-        "-DENABLE_OPENMP=OFF"
-    ],
-    "search.useIgnoreFiles": false
-}
-```
-- HDF5（HighFive 需要系统预装 HDF5；若未用到可后续做成可选依赖）
-- Ninja（推荐）+ MSVC（Windows）
 
-项目使用 CPM 拉取部分依赖：Kangaroo、nlohmann/json、HighFive 等。
+- CMake 3.14+
+- Qt 6.8+：Core、Gui、Qml、Quick、OpenGL
+- OpenCASCADE
+- gmsh
+- Ninja + MSVC 或等价的 Windows C++20 工具链
+- 可选：HDF5 / HighFive
 
-## 构建（Windows 示例）
+项目使用 CPM 拉取部分三方库，包括 Kangaroo、nlohmann/json、Catch2、fmt、spdlog 等。
 
-> 以下以 Ninja + MSVC Developer Prompt 为例。
+## 构建
 
-1) 配置
+以下命令以 Windows + Ninja 为例。
 
 ```powershell
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
+cmake --build build --target opengeolab
 ```
 
-如果 OpenCASCADE 未能被自动找到，请按你的安装方式设置 `OpenCASCADE_DIR` 或相关 CMake 变量（取决于你的 OCC 安装包导出的配置）。
+生成的可执行文件位于 build/bin/OpenGeoLabApp.exe。
 
-2) 编译
+如果需要启用测试：
 
 ```powershell
-cmake --build build
+cmake -S . -B build -G Ninja -DENABLE_TEST=ON
+cmake --build build --target OpenGeoLabTests
+ctest --test-dir build --output-on-failure
 ```
 
-3) 运行
+## QML 与后端协议
 
-可执行文件输出到：`build/bin/OpenGeoLabApp.exe`
+- QML 统一通过 BackendService.request(module, JSON.stringify(params)) 发送请求。
+- 各模块服务在 processRequest 中按照 action 分发。
+- 结果信号：operationFinished(moduleName, actionName, result)
+- 失败信号：operationFailed(moduleName, actionName, error)
 
-## JSON 协议（QML ↔ C++）
-- 统一入口：QML 调用 `BackendService.request(module, JSON.stringify(params))`
-- 服务端分发：各模块 `*Service::processRequest()` 按 `action` 路由到对应 Action
+完整字段说明见 docs/json_protocols.md。
 
-信号约定：
-- `operationFinished(moduleName, actionName, result)`
-- `operationFailed(moduleName, actionName, error)`
+## 本轮工程化改进
 
-完整协议清单见：`docs/json_protocols.md`
+- GeometryDocumentImpl 与 MeshDocumentImpl 增加文档级读写锁，修正后台服务与渲染数据构建之间的并发边界。
+- RenderSceneController 改为共享快照交换，避免后台线程直接改写正在被渲染线程消费的数据。
+- BackendService 修正请求失败信号参数与取消语义，避免伪中断和错误字段错位。
+- 测试工程升级到 C++20，并补充 mesh 文档与渲染构建测试。
 
-近期新增：
-- Geo Query 页面通过 `GeometryService` 的 `query_entity_info` action，基于当前拾取到的实体 (type+uid) 查询实体详细信息并在页面下方列表展示。
+## 开发约定
 
-## 后续开发任务（来自 plan.md，做了轻度工程化拆分）
-- 几何交互：选择（点/边/面/Part）、高亮、拾取、变换与编辑操作（trim/offset 等）
-- 网格：面网格剖分、网格质量指标、平滑/修复工具链
-- 渲染：更一致的光照（可能引入 PBR/IBL）、选择高亮/描边、可视化辅助（法线/网格）
-- IO：导入进度与错误回传更完整；导出 STEP/BREP/网格格式
-- AI：网格质量诊断与修复建议、交互式问答与操作编排
-
-## 代码规范与注释
-- Doxygen 注释风格参考：`doxygen_comment_style.md`
+- 注释风格参考 doxygen_comment_style.md。
+- include 中的头文件视为模块边界；避免直接跨模块依赖 src 实现细节。
+- 新增长耗时操作时，优先考虑取消、进度回传和线程边界。

@@ -7,6 +7,8 @@
 
 #include "render/render_action.hpp"
 
+#include <string>
+
 namespace OpenGeoLab::Render {
 
 /**
@@ -26,7 +28,7 @@ public:
                                          Util::ProgressCallback progress_callback) override;
 
 private:
-    void applyPreset(ViewPreset preset);
+    [[nodiscard]] bool applyPreset(ViewPreset preset, std::string& error);
 
 private:
     ViewPreset m_preset{ViewPreset::Front};

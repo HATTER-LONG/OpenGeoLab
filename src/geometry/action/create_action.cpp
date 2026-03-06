@@ -7,7 +7,6 @@
 #include "../geometry_documentImpl.hpp"
 #include "util/logger.hpp"
 
-
 #include <BRepPrimAPI_MakeBox.hxx>
 #include <BRepPrimAPI_MakeCone.hxx>
 #include <BRepPrimAPI_MakeCylinder.hxx>
@@ -239,7 +238,27 @@ namespace {
         return response;
     }
 
-    std::string type = params["type"];
+    if(!params["type"].is_string()) {
+        if(progress_callback) {
+            progress_callback(1.0, "Error: 'type' parameter must be a string.");
+        }
+        LOG_ERROR("CreateAction: 'type' parameter must be a string");
+        response["success"] = false;
+        response["error"] = "'type' parameter must be a string";
+        return response;
+    }
+
+    if(params.contains("name") && !params["name"].is_string()) {
+        if(progress_callback) {
+            progress_callback(1.0, "Error: 'name' parameter must be a string.");
+        }
+        LOG_ERROR("CreateAction: 'name' parameter must be a string");
+        response["success"] = false;
+        response["error"] = "'name' parameter must be a string";
+        return response;
+    }
+
+    std::string type = params["type"].get<std::string>();
     std::string part_name = params.value("name", type);
 
     if(progress_callback && !progress_callback(0.1, "Creating " + type + "...")) {

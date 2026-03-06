@@ -60,10 +60,8 @@ void ServiceWorker::process() {
     try {
         auto service = g_ComponentFactory.getInstanceObjectWithID<IServiceSingletonFactory>(
             m_moduleName.toStdString());
-        IProgressReporterPtr reporter;
-        if(!m_silent) {
-            reporter = std::make_shared<QtProgressReporter>(this, m_cancelRequested);
-        }
+        IProgressReporterPtr reporter =
+            std::make_shared<QtProgressReporter>(this, m_cancelRequested);
 
         if(m_cancelRequested.load()) {
             emit errorOccurred(m_moduleName, QStringLiteral("Operation cancelled before start."));
