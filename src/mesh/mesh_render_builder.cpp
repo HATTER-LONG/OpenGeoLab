@@ -17,6 +17,7 @@
 #include "util/point_vector3d.hpp"
 
 #include <cmath>
+#include <unordered_map>
 
 namespace OpenGeoLab::Mesh {
 
@@ -36,6 +37,7 @@ struct BuildContext {
     const Mesh::MeshRenderInput& m_input;
     const Util::ColorMap& m_colorMap;
     Render::RenderPassData& m_meshPass;
+    std::unordered_map<Mesh::MeshNodeId, Vec3f> m_nodePositions;
     uint32_t m_surfaceVertexCount{0};
     uint32_t m_wireframeVertexCount{0};
     uint32_t m_nodeVertexCount{0};
@@ -44,13 +46,26 @@ struct BuildContext {
                  const Mesh::MeshRenderInput& input,
                  const Util::ColorMap& color_map,
                  Render::RenderPassData& mesh_pass)
-        : m_renderData(render_data), m_input(input), m_colorMap(color_map), m_meshPass(mesh_pass) {}
+        : m_renderData(render_data), m_input(input), m_colorMap(color_map), m_meshPass(mesh_pass) {
+        m_nodePositions.reserve(input.m_nodes.size());
+        for(const auto& node : input.m_nodes) {
+            if(node.nodeId() == Mesh::INVALID_MESH_NODE_ID) {
+                continue;
+            }
+            m_nodePositions.emplace(node.nodeId(), toVec3f(node.position()));
+        }
+    }
 
     Vec3f nodePos(Mesh::MeshNodeId nid) const {
-        if(nid == Mesh::INVALID_MESH_NODE_ID || nid > m_input.m_nodes.size()) {
+        if(nid == Mesh::INVALID_MESH_NODE_ID) {
             return {};
         }
-        return toVec3f(m_input.m_nodes[static_cast<size_t>(nid - 1)].position());
+
+        const auto it = m_nodePositions.find(nid);
+        if(it == m_nodePositions.end()) {
+            return {};
+        }
+        return it->second;
     }
 };
 

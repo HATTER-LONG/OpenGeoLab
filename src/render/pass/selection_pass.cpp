@@ -80,6 +80,27 @@ ArrayDrawBatch collectArrayBatches(const ArrayBatchCache& cache, RenderEntityTyp
     return result;
 }
 
+void renderDepthOccluders(QOpenGLContext* ctx_gl,
+                          QOpenGLFunctions* f,
+                          const GeometryPassInput& geometry,
+                          const MeshPassInput& mesh) {
+    f->glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+
+    if(geometry.m_buffer.vertexCount() > 0 && !geometry.m_batches.m_triangles.m_all.empty()) {
+        geometry.m_buffer.bindForDraw();
+        PassUtil::multiDrawElements(ctx_gl, f, GL_TRIANGLES, geometry.m_batches.m_triangles.m_all);
+        geometry.m_buffer.unbind();
+    }
+
+    if(mesh.m_buffer.vertexCount() > 0 && !mesh.m_batches.m_triangles.m_all.empty()) {
+        mesh.m_buffer.bindForDraw();
+        PassUtil::multiDrawArrays(ctx_gl, f, GL_TRIANGLES, mesh.m_batches.m_triangles.m_all);
+        mesh.m_buffer.unbind();
+    }
+
+    f->glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+}
+
 } // namespace
 
 void SelectionPass::initialize(int width, int height) {
@@ -122,6 +143,7 @@ void SelectionPass::render(RenderPassContext& ctx) {
 
     const auto& view_matrix = ctx.m_params.m_viewMatrix;
     const auto& proj_matrix = ctx.m_params.m_projMatrix;
+    const bool xray_mode = ctx.m_params.m_xRayMode;
 
     const auto& pick_mask = ctx.m_params.m_pickEntityMask;
     QOpenGLFunctions* f = QOpenGLContext::currentContext()->functions();
@@ -142,14 +164,25 @@ void SelectionPass::render(RenderPassContext& ctx) {
     m_pickShader.setUniformFloat("u_pointSize", 1.0f);
     m_pickShader.setUniformFloat("u_viewOffset", 0.0f);
 
+    if(!xray_mode) {
+        renderDepthOccluders(ctx_gl, f, ctx.m_geometry, ctx.m_mesh);
+    }
+
     if(geom_buffer.vertexCount() > 0) {
         geom_buffer.bindForDraw();
 
         // Triangles
         if(hasAny(pick_mask, TRIANGLE_PICK_TYPES) && !geometry_batches.m_triangles.m_all.empty()) {
+            if(!xray_mode) {
+                f->glEnable(GL_CULL_FACE);
+                f->glCullFace(GL_BACK);
+            }
             const auto triangle_batch =
                 collectIndexedBatches(geometry_batches.m_triangles, pick_mask);
             PassUtil::multiDrawElements(ctx_gl, f, GL_TRIANGLES, triangle_batch);
+            if(!xray_mode) {
+                f->glDisable(GL_CULL_FACE);
+            }
         }
         // Lines
         if(hasAny(pick_mask, RenderEntityTypeMask::Edge) &&
@@ -178,8 +211,15 @@ void SelectionPass::render(RenderPassContext& ctx) {
         mesh_buffer.bindForDraw();
 
         if(hasAny(pick_mask, RENDER_MESH_ELEMENTS) && !mesh_batches.m_triangles.m_all.empty()) {
+            if(!xray_mode) {
+                f->glEnable(GL_CULL_FACE);
+                f->glCullFace(GL_BACK);
+            }
             const auto triangle_batch = collectArrayBatches(mesh_batches.m_triangles, pick_mask);
             PassUtil::multiDrawArrays(ctx_gl, f, GL_TRIANGLES, triangle_batch);
+            if(!xray_mode) {
+                f->glDisable(GL_CULL_FACE);
+            }
         }
 
         if(hasAny(pick_mask, RenderEntityTypeMask::MeshLine) &&
@@ -199,6 +239,7 @@ void SelectionPass::render(RenderPassContext& ctx) {
         }
         mesh_buffer.unbind();
     }
+    f->glDisable(GL_PROGRAM_POINT_SIZE);
     m_pickShader.release();
     m_fbo.unbind();
     f->glDepthFunc(GL_LESS);

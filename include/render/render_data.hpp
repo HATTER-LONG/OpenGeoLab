@@ -155,6 +155,7 @@ struct RenderNodeKeyHash {
 struct DrawRange {
     RenderNodeKey m_entityKey; ///< Entity identity (type + uid)
     uint64_t m_partUid{0};     ///< Parent part uid for reverse lookup
+    uint64_t m_solidUid{0};    ///< Parent solid uid for aggregate highlight / lookup
     uint64_t m_wireUid{0};     ///< Parent wire uid for edge-to-wire lookup
 
     uint32_t m_vertexOffset{0}; ///< First vertex index in the pass vertex buffer
@@ -363,11 +364,17 @@ struct PickResolutionData {
     /// An edge shared between two faces belongs to two different wires.
     std::unordered_map<uint64_t, std::vector<uint64_t>> m_edgeToWireUids;
 
+    /// Edge uid → parent solid uid(s) lookup.
+    std::unordered_map<uint64_t, std::vector<uint64_t>> m_edgeToSolidUids;
+
     /// Wire uid → edge uids reverse lookup for complete wire highlighting
     std::unordered_map<uint64_t, std::vector<uint64_t>> m_wireToEdgeUids;
 
     /// Wire uid → parent face uid lookup (each wire belongs to exactly one face)
     std::unordered_map<uint64_t, uint64_t> m_wireToFaceUid;
+
+    /// Face uid → parent solid uid lookup.
+    std::unordered_map<uint64_t, uint64_t> m_faceToSolidUid;
 
     /// Entity uid → parent part uid (built from DrawRangeEx data during build phase)
     std::unordered_map<uint64_t, uint64_t> m_entityToPartUid;
@@ -378,16 +385,20 @@ struct PickResolutionData {
 
     void clear() {
         m_edgeToWireUids.clear();
+        m_edgeToSolidUids.clear();
         m_wireToEdgeUids.clear();
         m_wireToFaceUid.clear();
+        m_faceToSolidUid.clear();
         m_entityToPartUid.clear();
         m_meshLineNodes.clear();
     }
 
     void clearGeometry() {
         m_edgeToWireUids.clear();
+        m_edgeToSolidUids.clear();
         m_wireToEdgeUids.clear();
         m_wireToFaceUid.clear();
+        m_faceToSolidUid.clear();
         m_entityToPartUid.clear();
     }
 

@@ -206,7 +206,7 @@ void RenderSceneImpl::processHover(int pixel_x, int pixel_y) {
     }
 
     select_mgr.setHoverEntity(resolved.m_uid, resolved.m_type, resolved.m_partUid,
-                              resolved.m_wireUid);
+                              resolved.m_solidUid, resolved.m_wireUid);
 
     // For Wire mode: pass the full edge set so the highlight pass can draw the whole loop.
     if(resolved.m_type == RenderEntityType::Wire) {

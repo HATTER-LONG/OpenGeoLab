@@ -202,17 +202,17 @@ std::vector<PickResult> RenderSelectManager::selections() const {
 // Hover state
 // =============================================================================
 
-void RenderSelectManager::setHoverEntity(uint64_t uid,
-                                         RenderEntityType type,
-                                         uint64_t part_uid,
-                                         uint64_t wire_uid) {
+void RenderSelectManager::setHoverEntity(
+    uint64_t uid, RenderEntityType type, uint64_t part_uid, uint64_t solid_uid, uint64_t wire_uid) {
     bool changed = false;
     {
         std::lock_guard lock(m_mutex);
         if(m_hoveredEntity.m_uid != uid || m_hoveredEntity.m_type != type ||
-           m_hoveredPartUid != part_uid || m_hoveredWireUid != wire_uid) {
+           m_hoveredPartUid != part_uid || m_hoveredSolidUid != solid_uid ||
+           m_hoveredWireUid != wire_uid) {
             m_hoveredEntity = PickResult{uid, type};
             m_hoveredPartUid = part_uid;
+            m_hoveredSolidUid = solid_uid;
             m_hoveredWireUid = wire_uid;
             changed = true;
         }
@@ -229,6 +229,7 @@ void RenderSelectManager::clearHover() {
         if(m_hoveredEntity.m_uid != 0 || m_hoveredEntity.m_type != RenderEntityType::None) {
             m_hoveredEntity = PickResult{0, RenderEntityType::None};
             m_hoveredPartUid = 0;
+            m_hoveredSolidUid = 0;
             m_hoveredWireUid = 0;
             m_hoveredWireEdgeUids.clear();
             changed = true;
@@ -255,6 +256,14 @@ bool RenderSelectManager::isPartHovered(uint64_t part_uid) const {
     }
     std::lock_guard lock(m_mutex);
     return m_hoveredPartUid == part_uid;
+}
+
+bool RenderSelectManager::isSolidHovered(uint64_t solid_uid) const {
+    if(solid_uid == 0) {
+        return false;
+    }
+    std::lock_guard lock(m_mutex);
+    return m_hoveredSolidUid == solid_uid;
 }
 
 bool RenderSelectManager::isWireHovered(uint64_t wire_uid) const {
@@ -288,6 +297,18 @@ bool RenderSelectManager::isPartSelected(uint64_t part_uid) const {
         return false;
     }
     return it->second.contains(PickResult{part_uid, RenderEntityType::Part});
+}
+
+bool RenderSelectManager::isSolidSelected(uint64_t solid_uid) const {
+    if(solid_uid == 0) {
+        return false;
+    }
+    std::lock_guard lock(m_mutex);
+    auto it = m_selectionsByType.find(RenderEntityType::Solid);
+    if(it == m_selectionsByType.end()) {
+        return false;
+    }
+    return it->second.contains(PickResult{solid_uid, RenderEntityType::Solid});
 }
 
 bool RenderSelectManager::isWireSelected(uint64_t wire_uid) const {

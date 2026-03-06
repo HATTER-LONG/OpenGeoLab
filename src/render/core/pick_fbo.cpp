@@ -7,6 +7,9 @@
 
 #include "util/logger.hpp"
 
+#include <algorithm>
+#include <numeric>
+
 #include <QOpenGLContext>
 #include <QOpenGLExtraFunctions>
 
@@ -171,8 +174,27 @@ std::vector<uint64_t> PickFbo::readPickRegion(int cx, int cy, int radius) const 
 
     ef->glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    // Reassemble pick ids
-    for(int i = 0; i < w * h; ++i) {
+    // Reassemble pick ids in center-first order so aggregate resolvers (wire/solid/part)
+    // prefer the entity closest to the cursor instead of the first raster-scanned pixel.
+    std::vector<int> order(static_cast<size_t>(w * h));
+    std::iota(order.begin(), order.end(), 0);
+    std::stable_sort(order.begin(), order.end(), [=](int lhs, int rhs) {
+        const int lhs_x = lhs % w;
+        const int lhs_y = lhs / w;
+        const int rhs_x = rhs % w;
+        const int rhs_y = rhs / w;
+
+        const int lhs_dx = (x0 + lhs_x) - cx;
+        const int lhs_dy = (y0 + lhs_y) - cy;
+        const int rhs_dx = (x0 + rhs_x) - cx;
+        const int rhs_dy = (y0 + rhs_y) - cy;
+
+        const int lhs_dist2 = lhs_dx * lhs_dx + lhs_dy * lhs_dy;
+        const int rhs_dist2 = rhs_dx * rhs_dx + rhs_dy * rhs_dy;
+        return lhs_dist2 < rhs_dist2;
+    });
+
+    for(const int i : order) {
         const uint64_t low = pixels[static_cast<size_t>(i * 2)];
         const uint64_t high = pixels[static_cast<size_t>(i * 2 + 1)];
         const uint64_t id = (high << 32u) | low;

@@ -288,6 +288,8 @@ void HighlightPass::renderGeometry(const RenderPassContext& ctx) { // NOLINT
 
     const bool part_mode = (select_mgr.isTypePickable(RenderEntityType::Part) ||
                             select_mgr.hasSelectionsOfType(RenderEntityType::Part));
+    const bool solid_mode = (select_mgr.isTypePickable(RenderEntityType::Solid) ||
+                             select_mgr.hasSelectionsOfType(RenderEntityType::Solid));
     const bool wire_mode = (select_mgr.isTypePickable(RenderEntityType::Wire) ||
                             select_mgr.hasSelectionsOfType(RenderEntityType::Wire));
 
@@ -301,14 +303,16 @@ void HighlightPass::renderGeometry(const RenderPassContext& ctx) { // NOLINT
         float m_alpha{1.0f};
         bool m_selected; ///< true = selected state, false = hovered state
     };
-    auto resolve_highlight = [&select_mgr, &part_mode, &wire_mode](
+    auto resolve_highlight = [&select_mgr, &part_mode, &solid_mode, &wire_mode](
                                  const DrawRange& r, bool check_wire, const RenderColor& sel_color,
                                  float sel_alpha, const RenderColor& hov_color, float hov_alpha,
                                  HighlightInfo& out) -> bool {
         bool sel = select_mgr.isSelected(r.m_entityKey) ||
-                   (part_mode && select_mgr.isPartSelected(r.m_partUid));
+                   (part_mode && select_mgr.isPartSelected(r.m_partUid)) ||
+                   (solid_mode && select_mgr.isSolidSelected(r.m_solidUid));
         bool hov = select_mgr.isEntityHovered(r.m_entityKey) ||
-                   (part_mode && select_mgr.isPartHovered(r.m_partUid));
+                   (part_mode && select_mgr.isPartHovered(r.m_partUid)) ||
+                   (solid_mode && select_mgr.isSolidHovered(r.m_solidUid));
         if(check_wire && wire_mode) {
             sel |= (wire_mode && select_mgr.isEdgeInSelectedWire(r.m_entityKey.m_uid));
             hov |= (wire_mode && select_mgr.isEdgeInHoveredWire(r.m_entityKey.m_uid));

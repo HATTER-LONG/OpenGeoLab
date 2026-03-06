@@ -20,6 +20,7 @@ struct ResolvedPickResult {
     uint64_t m_uid{0};                               ///< Entity UID
     RenderEntityType m_type{RenderEntityType::None}; ///< Entity type
     uint64_t m_partUid{0};                           ///< Parent part UID (0 = not resolvable)
+    uint64_t m_solidUid{0};                          ///< Parent solid UID for aggregate modes
     uint64_t m_wireUid{0};        ///< Wire UID (set when hovering edge in wire mode)
     uint64_t m_faceContextUid{0}; ///< Face from pick region (for wire disambiguation)
 
@@ -32,10 +33,10 @@ struct ResolvedPickResult {
  * Responsibilities
  * ----------------
  * 1. computeEffectiveMask() — expand the user pick-type mask so the GPU also renders
- *    sub-entities required for Wire/Part aggregate resolution (Face + Edge).
+ *    sub-entities required for Wire/Solid/Part aggregate resolution (Face + Edge).
  *
  * 2. resolve() — fully resolve raw GPU pick IDs to the *final* entity including
- *    Wire/Part mode promotion and all pick constraints:
+ *    Wire/Solid/Part mode promotion and all pick constraints:
  *
  *    Sub-entity mode (Vertex / Edge / Face mix):
  *      Priority: Vertex > MeshNode > Edge > MeshLine > Face > Shell
@@ -48,6 +49,11 @@ struct ResolvedPickResult {
  *      is shared by multiple wires.
  *      Add:    skip if the wire is already selected.
  *      Remove: skip if the wire is not selected.
+ *
+ *    Solid aggregate mode:
+ *      Any face/edge hit resolves to its parent Solid via face / edge lookup tables.
+ *      Add:    skip if the solid is already selected.
+ *      Remove: skip if the solid is not selected.
  *
  *    Part aggregate mode:
  *      Any face/edge hit resolves to its parent Part via m_entityToPartUid.
@@ -65,7 +71,7 @@ public:
      * @brief Expand user pick-type mask for GPU rendering.
      *
      * Wire mode needs Face + Edge rendered so sub-entities can be resolved to Wire.
-     * Part mode similarly needs Face + Edge.
+     * Solid / Part mode similarly need Face + Edge.
      */
     [[nodiscard]] RenderEntityTypeMask computeEffectiveMask(RenderEntityTypeMask user_mask) const;
 
@@ -94,6 +100,8 @@ private:
                                                     PickAction action) const;
     [[nodiscard]] ResolvedPickResult resolveWireMode(const std::vector<uint64_t>& pick_ids,
                                                      PickAction action) const;
+    [[nodiscard]] ResolvedPickResult resolveSolidMode(const std::vector<uint64_t>& pick_ids,
+                                                      PickAction action) const;
     [[nodiscard]] ResolvedPickResult resolvePartMode(const std::vector<uint64_t>& pick_ids,
                                                      PickAction action) const;
 
@@ -101,6 +109,8 @@ private:
     [[nodiscard]] uint64_t resolvePartUid(uint64_t uid, RenderEntityType type) const;
     [[nodiscard]] uint64_t resolveWireUid(uint64_t edge_uid, uint64_t face_uid) const;
     [[nodiscard]] uint64_t resolveWireUidForFace(uint64_t face_uid) const;
+    [[nodiscard]] uint64_t resolveSolidUid(uint64_t edge_uid, uint64_t face_uid) const;
+    [[nodiscard]] uint64_t resolveSolidUidForFace(uint64_t face_uid) const;
 
     const PickResolutionData* m_pickData{nullptr};
 };

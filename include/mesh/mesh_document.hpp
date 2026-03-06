@@ -47,6 +47,11 @@ public:
     virtual bool addNode(MeshNode node) = 0;
 
     /**
+     * @brief Reserve storage for at least the given number of nodes.
+     */
+    virtual void reserveNodeCapacity(size_t capacity) = 0;
+
+    /**
      * @brief Find a node by id.
      * @param node_id Node id to find.
      * @return Copy of the node, or throws if not found.
@@ -55,6 +60,7 @@ public:
 
     /**
      * @brief Get total node count.
+     * @return Number of valid nodes in the document.
      */
     [[nodiscard]] virtual size_t nodeCount() const = 0;
 
@@ -68,6 +74,11 @@ public:
      * @return true if added; false on duplicate id.
      */
     virtual bool addElement(MeshElement element) = 0;
+
+    /**
+     * @brief Reserve storage for at least the given number of elements.
+     */
+    virtual void reserveElementCapacity(size_t capacity) = 0;
 
     /**
      * @brief Find an element by global id.
@@ -85,7 +96,7 @@ public:
 
     /**
      * @brief Get total element count.
-     * @return Total number of elements in the document.
+     * @return Number of valid elements in the document.
      */
     [[nodiscard]] virtual size_t elementCount() const = 0;
 

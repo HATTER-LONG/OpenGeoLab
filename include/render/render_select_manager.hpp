@@ -126,6 +126,7 @@ public:
     void setHoverEntity(uint64_t uid,
                         RenderEntityType type,
                         uint64_t part_uid = 0,
+                        uint64_t solid_uid = 0,
                         uint64_t wire_uid = 0);
     /** @brief Clear the hovered entity. */
     void clearHover();
@@ -135,6 +136,8 @@ public:
     [[nodiscard]] bool isEntityHovered(const RenderNodeKey& key) const;
     /** @brief Check whether a part is currently hovered. */
     [[nodiscard]] bool isPartHovered(uint64_t part_uid) const;
+    /** @brief Check whether a solid is currently hovered. */
+    [[nodiscard]] bool isSolidHovered(uint64_t solid_uid) const;
     /** @brief Check whether a wire is currently hovered. */
     [[nodiscard]] bool isWireHovered(uint64_t wire_uid) const;
 
@@ -153,6 +156,8 @@ public:
     [[nodiscard]] bool isSelected(const RenderNodeKey& key) const;
     /** @brief Check whether a part is in the selection set. */
     [[nodiscard]] bool isPartSelected(uint64_t part_uid) const;
+    /** @brief Check whether a solid is in the selection set. */
+    [[nodiscard]] bool isSolidSelected(uint64_t solid_uid) const;
     /** @brief Check whether a wire is in the selection set. */
     [[nodiscard]] bool isWireSelected(uint64_t wire_uid) const;
 
@@ -200,6 +205,7 @@ private:
 
     PickResult m_hoveredEntity{0, RenderEntityType::None}; ///< Entity under the cursor
     uint64_t m_hoveredPartUid{0};                          ///< Parent part uid of hovered entity
+    uint64_t m_hoveredSolidUid{0};                         ///< Parent solid uid of hovered entity
     uint64_t m_hoveredWireUid{0};                          ///< Parent wire uid of hovered edge
     std::unordered_set<uint64_t> m_hoveredWireEdgeUids;    ///< All edge UIDs in hovered wire
 

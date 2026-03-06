@@ -34,6 +34,8 @@ public:
 
     bool addNode(MeshNode node) override;
 
+    void reserveNodeCapacity(size_t capacity) override;
+
     [[nodiscard]] MeshNode findNodeById(MeshNodeId node_id) const override;
 
     [[nodiscard]] size_t nodeCount() const override;
@@ -43,6 +45,8 @@ public:
     // -------------------------------------------------------------------------
 
     bool addElement(MeshElement element) override;
+
+    void reserveElementCapacity(size_t capacity) override;
 
     [[nodiscard]] MeshElement findElementById(MeshElementId element_id) const override;
 
@@ -91,10 +95,12 @@ public:
     void notifyChanged() override;
 
 private:
-    std::vector<MeshNode> m_nodes;       ///< List of mesh nodes
-    std::vector<MeshElement> m_elements; ///< List of mesh elements
-    std::unordered_map<MeshElementRef, MeshElementId, MeshElementRefHash>
-        m_refToId; ///< Fast lookup for elements by (uid, type)
+    std::vector<MeshNode> m_nodes;                                ///< List of mesh nodes
+    std::vector<MeshElement> m_elements;                          ///< List of mesh elements
+    std::unordered_map<MeshNodeId, size_t> m_nodeIdToIndex;       ///< Node id -> vector index
+    std::unordered_map<MeshElementId, size_t> m_elementIdToIndex; ///< Element id -> vector index
+    std::unordered_map<MeshElementRef, size_t, MeshElementRefHash>
+        m_refToIndex; ///< Element ref -> vector index
 
     // ---- Relation maps (populated by buildEdgeElements) ----
 

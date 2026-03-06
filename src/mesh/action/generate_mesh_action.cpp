@@ -279,6 +279,7 @@ void extractNodes(GmshMeshContext& ctx, const MeshDocumentPtr& mesh_doc) {
     std::vector<double> parametric_coords;
     gmsh::model::mesh::getNodes(node_tags, node_coords, parametric_coords);
 
+    mesh_doc->reserveNodeCapacity(mesh_doc->nodeCount() + node_tags.size());
     ctx.m_gmshToLocal.reserve(node_tags.size());
 
     for(size_t i = 0; i < node_tags.size(); ++i) {
@@ -325,6 +326,12 @@ void extractElements(const GmshMeshContext& ctx, const MeshDocumentPtr& mesh_doc
         std::vector<std::vector<size_t>> element_tags;
         std::vector<std::vector<size_t>> element_node_tags;
         gmsh::model::mesh::getElements(element_types, element_tags, element_node_tags, dim, tag);
+
+        size_t entity_element_count = 0;
+        for(const auto& tags : element_tags) {
+            entity_element_count += tags.size();
+        }
+        mesh_doc->reserveElementCapacity(mesh_doc->elementCount() + entity_element_count);
 
         // Look up Part UID for this Gmsh entity
         uint64_t part_uid = 0;
@@ -448,6 +455,7 @@ void GenerateMeshAction::runGmshPipeline(GmshMeshContext& ctx,
     }
 
     auto mesh_doc = MeshDocumentInstance;
+    mesh_doc->clear();
     extractNodes(ctx, mesh_doc);
 
     if(!progress_callback(0.75, "Extracting elements...")) {

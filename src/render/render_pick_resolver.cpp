@@ -85,6 +85,9 @@ ResolvedPickResult PickResolver::resolve(const std::vector<uint64_t>& pick_ids,
     if(hasMask(user_mask, RenderEntityTypeMask::Wire)) {
         return resolveWireMode(pick_ids, action);
     }
+    if(hasMask(user_mask, RenderEntityTypeMask::Solid)) {
+        return resolveSolidMode(pick_ids, action);
+    }
     if(hasMask(user_mask, RenderEntityTypeMask::Part)) {
         return resolvePartMode(pick_ids, action);
     }
@@ -161,6 +164,7 @@ ResolvedPickResult PickResolver::resolveVEFMode(const std::vector<uint64_t>& pic
     result.m_uid = PickId::decodeUID(best_encoded);
     result.m_partUid = resolvePartUid(result.m_uid, result.m_type);
     result.m_faceContextUid = best_face_encoded != 0 ? PickId::decodeUID(best_face_encoded) : 0;
+    result.m_solidUid = resolveSolidUid(result.m_uid, result.m_faceContextUid);
     if(result.m_type == RenderEntityType::Edge) {
         result.m_wireUid = resolveWireUid(result.m_uid, result.m_faceContextUid);
     }
@@ -283,6 +287,56 @@ ResolvedPickResult PickResolver::resolvePartMode(const std::vector<uint64_t>& pi
     return result;
 }
 
+ResolvedPickResult PickResolver::resolveSolidMode(const std::vector<uint64_t>& pick_ids,
+                                                  PickAction action) const {
+    uint64_t best_face_uid = 0;
+    uint64_t best_edge_uid = 0;
+
+    for(const auto encoded : pick_ids) {
+        const RenderEntityType type = PickId::decodeType(encoded);
+        if(type == RenderEntityType::Face && best_face_uid == 0) {
+            best_face_uid = PickId::decodeUID(encoded);
+        } else if(type == RenderEntityType::Edge && best_edge_uid == 0) {
+            best_edge_uid = PickId::decodeUID(encoded);
+        }
+        if(best_face_uid != 0 && best_edge_uid != 0) {
+            break;
+        }
+    }
+
+    uint64_t solid_uid = 0;
+    if(best_face_uid != 0) {
+        solid_uid = resolveSolidUidForFace(best_face_uid);
+    }
+    if(solid_uid == 0 && best_edge_uid != 0) {
+        solid_uid = resolveSolidUid(best_edge_uid, best_face_uid);
+    }
+
+    if(solid_uid == 0) {
+        return ResolvedPickResult{};
+    }
+
+    const bool is_selected = RenderSelectManager::instance().isSolidSelected(solid_uid);
+    if(action == PickAction::Add && is_selected) {
+        return ResolvedPickResult{};
+    }
+    if(action == PickAction::Remove && !is_selected) {
+        return ResolvedPickResult{};
+    }
+
+    ResolvedPickResult result;
+    result.m_uid = solid_uid;
+    result.m_type = RenderEntityType::Solid;
+    result.m_solidUid = solid_uid;
+    result.m_faceContextUid = best_face_uid;
+    if(best_face_uid != 0) {
+        result.m_partUid = resolvePartUid(best_face_uid, RenderEntityType::Face);
+    } else if(best_edge_uid != 0) {
+        result.m_partUid = resolvePartUid(best_edge_uid, RenderEntityType::Edge);
+    }
+    return result;
+}
+
 // =============================================================================
 // Wire edge lookup (for highlight pass)
 // =============================================================================
@@ -349,6 +403,32 @@ uint64_t PickResolver::resolveWireUidForFace(uint64_t face_uid) const {
         }
     }
     return 0;
+}
+
+uint64_t PickResolver::resolveSolidUid(uint64_t edge_uid, uint64_t face_uid) const {
+    if(!m_pickData) {
+        return 0;
+    }
+    if(face_uid != 0) {
+        auto fit = m_pickData->m_faceToSolidUid.find(face_uid);
+        if(fit != m_pickData->m_faceToSolidUid.end()) {
+            return fit->second;
+        }
+    }
+
+    auto it = m_pickData->m_edgeToSolidUids.find(edge_uid);
+    if(it == m_pickData->m_edgeToSolidUids.end() || it->second.empty()) {
+        return 0;
+    }
+    return it->second.front();
+}
+
+uint64_t PickResolver::resolveSolidUidForFace(uint64_t face_uid) const {
+    if(!m_pickData || face_uid == 0) {
+        return 0;
+    }
+    auto it = m_pickData->m_faceToSolidUid.find(face_uid);
+    return it != m_pickData->m_faceToSolidUid.end() ? it->second : 0;
 }
 
 } // namespace OpenGeoLab::Render

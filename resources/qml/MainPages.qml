@@ -68,7 +68,10 @@ QtObject {
                 path: "Pages/SmoothMeshPage.qml",
                 floating: true
             },
-
+            "meshQuery": {
+                path: "Pages/MeshQueryPage.qml",
+                floating: true
+            },
             // AI
             "aiSuggest": {
                 path: "Pages/AISuggestPage.qml",

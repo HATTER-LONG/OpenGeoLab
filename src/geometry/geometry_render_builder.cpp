@@ -80,6 +80,33 @@ void buildWireEdgeLookupsForPart(Render::RenderData& render_data,
     }
 }
 
+std::vector<EntityUID> findOwningSolidUids(const GeometryRenderInput& input,
+                                           const Geometry::GeometryEntityImplPtr& entity) {
+    std::vector<EntityUID> solid_uids;
+    if(!entity) {
+        return solid_uids;
+    }
+
+    const auto solid_keys = input.m_relationshipIndex.findRelatedEntities(
+        entity->entityId(), Geometry::EntityType::Solid);
+    solid_uids.reserve(solid_keys.size());
+    for(const auto& solid_key : solid_keys) {
+        if(solid_key.m_uid == Geometry::INVALID_ENTITY_UID) {
+            continue;
+        }
+        if(std::find(solid_uids.begin(), solid_uids.end(), solid_key.m_uid) == solid_uids.end()) {
+            solid_uids.push_back(solid_key.m_uid);
+        }
+    }
+    return solid_uids;
+}
+
+EntityUID firstOwningSolidUid(const GeometryRenderInput& input,
+                              const Geometry::GeometryEntityImplPtr& entity) {
+    const auto solid_uids = findOwningSolidUids(input, entity);
+    return solid_uids.empty() ? Geometry::INVALID_ENTITY_UID : solid_uids.front();
+}
+
 } // namespace
 
 bool GeometryRenderBuilder::build(Render::RenderData& render_data,
@@ -149,8 +176,20 @@ void GeometryRenderBuilder::appendEdgeNodes(const PartBuildContext& context) {
         if(range.m_vertexCount == 0) {
             continue;
         }
+        const auto solid_uids = findOwningSolidUids(context.m_input, edge_entity);
+        range.m_solidUid = solid_uids.empty() ? 0 : solid_uids.front();
         context.m_renderData.m_pickData.m_entityToPartUid[Render::PickId::encode(
             Render::RenderEntityType::Edge, edge_entity->entityUID())] = context.m_partUid;
+        if(!solid_uids.empty()) {
+            auto& edge_solids =
+                context.m_renderData.m_pickData.m_edgeToSolidUids[edge_entity->entityUID()];
+            for(const auto solid_uid : solid_uids) {
+                if(std::find(edge_solids.begin(), edge_solids.end(), solid_uid) ==
+                   edge_solids.end()) {
+                    edge_solids.push_back(solid_uid);
+                }
+            }
+        }
         appendRange(context.m_renderData.m_geometryLineRanges,
                     context.m_renderData.m_geometryBatches.m_lines, std::move(range));
     }
@@ -205,6 +244,11 @@ bool GeometryRenderBuilder::tryAppendFaceNode(const PartBuildContext& context,
                                   context.m_input.m_options);
     if(range.m_indexCount == 0 && range.m_vertexCount == 0) {
         return false;
+    }
+    const auto solid_uid = firstOwningSolidUid(context.m_input, face_entity);
+    if(solid_uid != Geometry::INVALID_ENTITY_UID) {
+        context.m_renderData.m_pickData.m_faceToSolidUid[face_entity->entityUID()] = solid_uid;
+        range.m_solidUid = solid_uid;
     }
     context.m_renderData.m_pickData.m_entityToPartUid[Render::PickId::encode(
         Render::RenderEntityType::Face, face_entity->entityUID())] = context.m_partUid;

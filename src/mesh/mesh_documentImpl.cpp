@@ -18,27 +18,33 @@ std::shared_ptr<MeshDocumentImpl> MeshDocumentImpl::instance() {
 // =============================================================================
 bool MeshDocumentImpl::addNode(MeshNode node) {
     const MeshNodeId id = node.nodeId();
-    if(id == INVALID_MESH_NODE_ID || id != m_nodes.size() + 1) {
+    if(id == INVALID_MESH_NODE_ID || m_nodeIdToIndex.find(id) != m_nodeIdToIndex.end()) {
         return false;
     }
 
     m_nodes.emplace_back(std::move(node));
+    m_nodeIdToIndex.emplace(id, m_nodes.size() - 1);
     return true;
 }
 
-MeshNode MeshDocumentImpl::findNodeById(MeshNodeId node_id) const {
-    if(node_id == INVALID_MESH_NODE_ID || node_id > m_nodes.size()) {
-        throw std::out_of_range("Mesh node id not found: " + std::to_string(node_id));
-    }
-
-    const auto index = static_cast<size_t>(node_id - 1);
-    if(m_nodes[index].nodeId() == INVALID_MESH_NODE_ID) {
-        throw std::out_of_range("Mesh node id not found: " + std::to_string(node_id));
-    }
-    return m_nodes[index];
+void MeshDocumentImpl::reserveNodeCapacity(size_t capacity) {
+    m_nodes.reserve(capacity);
+    m_nodeIdToIndex.reserve(capacity);
 }
 
-size_t MeshDocumentImpl::nodeCount() const { return m_nodes.size(); }
+MeshNode MeshDocumentImpl::findNodeById(MeshNodeId node_id) const {
+    if(node_id == INVALID_MESH_NODE_ID) {
+        throw std::out_of_range("Mesh node id not found: " + std::to_string(node_id));
+    }
+
+    const auto it = m_nodeIdToIndex.find(node_id);
+    if(it == m_nodeIdToIndex.end()) {
+        throw std::out_of_range("Mesh node id not found: " + std::to_string(node_id));
+    }
+    return m_nodes[it->second];
+}
+
+size_t MeshDocumentImpl::nodeCount() const { return m_nodeIdToIndex.size(); }
 
 // =============================================================================
 // Element Management
@@ -46,31 +52,41 @@ size_t MeshDocumentImpl::nodeCount() const { return m_nodes.size(); }
 
 bool MeshDocumentImpl::addElement(MeshElement element) {
     const MeshElementId id = element.elementId();
+    const MeshElementRef ref = element.elementRef();
     if(id == INVALID_MESH_ELEMENT_ID || element.elementType() == MeshElementType::None ||
-       id != m_elements.size() + 1) {
+       m_elementIdToIndex.find(id) != m_elementIdToIndex.end() ||
+       m_refToIndex.find(ref) != m_refToIndex.end()) {
         return false;
     }
 
-    m_refToId.emplace(element.elementRef(), static_cast<MeshElementId>(m_elements.size()));
     m_elements.emplace_back(std::move(element));
+    const size_t index = m_elements.size() - 1;
+    m_elementIdToIndex.emplace(id, index);
+    m_refToIndex.emplace(ref, index);
     return true;
 }
 
+void MeshDocumentImpl::reserveElementCapacity(size_t capacity) {
+    m_elements.reserve(capacity);
+    m_elementIdToIndex.reserve(capacity);
+    m_refToIndex.reserve(capacity);
+}
+
 MeshElement MeshDocumentImpl::findElementById(MeshElementId element_id) const {
-    if(element_id == INVALID_MESH_ELEMENT_ID || element_id > m_elements.size()) {
+    if(element_id == INVALID_MESH_ELEMENT_ID) {
         throw std::out_of_range("Mesh element id not found: " + std::to_string(element_id));
     }
 
-    const auto index = static_cast<size_t>(element_id - 1);
-    if(m_elements[index].elementId() == INVALID_MESH_ELEMENT_ID) {
+    const auto it = m_elementIdToIndex.find(element_id);
+    if(it == m_elementIdToIndex.end()) {
         throw std::out_of_range("Mesh element id not found: " + std::to_string(element_id));
     }
-    return m_elements[index];
+    return m_elements[it->second];
 }
 
 MeshElement MeshDocumentImpl::findElementByRef(const MeshElementRef& ref) const {
-    auto it = m_refToId.find(ref);
-    if(it == m_refToId.end()) {
+    auto it = m_refToIndex.find(ref);
+    if(it == m_refToIndex.end()) {
         throw std::out_of_range("Mesh element not found for ref: " + std::to_string(ref.m_uid));
     }
     if(it->second >= m_elements.size()) {
@@ -80,18 +96,25 @@ MeshElement MeshDocumentImpl::findElementByRef(const MeshElementRef& ref) const 
     return m_elements[it->second];
 }
 
-size_t MeshDocumentImpl::elementCount() const { return m_elements.size(); }
+size_t MeshDocumentImpl::elementCount() const { return m_elementIdToIndex.size(); }
 
 void MeshDocumentImpl::clear() {
+    const size_t node_count = nodeCount();
+    const size_t element_count = elementCount();
     m_nodes.clear();
     m_elements.clear();
-    m_refToId.clear();
+    m_nodeIdToIndex.clear();
+    m_elementIdToIndex.clear();
+    m_refToIndex.clear();
     m_nodeToLines.clear();
     m_nodeToElements.clear();
     m_lineToElements.clear();
     m_elementToLines.clear();
     m_edgeKeyToLineRef.clear();
-    LOG_DEBUG("MeshDocumentImpl: Cleared all nodes, elements, and relations");
+    resetMeshElementIdGenerator();
+    resetAllMeshElementUIDGenerators();
+    LOG_DEBUG("MeshDocumentImpl: Cleared {} nodes, {} elements, reset mesh id generators",
+              node_count, element_count);
     notifyChanged();
 }
 
@@ -156,7 +179,7 @@ void MeshDocumentImpl::buildEdgeElements() {
     createLineElementsFromEdges();
     buildRelationMaps();
     LOG_DEBUG("MeshDocumentImpl::buildEdgeElements: {} Line elements, total elements {}",
-              m_edgeKeyToLineRef.size(), m_elements.size());
+              m_edgeKeyToLineRef.size(), elementCount());
 }
 
 void MeshDocumentImpl::createLineElementsFromEdges() {
@@ -167,6 +190,17 @@ void MeshDocumentImpl::createLineElementsFromEdges() {
             m_edgeKeyToLineRef.emplace(key, elem.elementRef());
         }
     }
+
+    size_t estimated_new_lines = 0;
+    for(const auto& elem : m_elements) {
+        if(!elem.isValid() || elem.elementType() == MeshElementType::Line ||
+           elem.elementType() == MeshElementType::Node) {
+            continue;
+        }
+
+        estimated_new_lines += edgeTableForType(elem.elementType()).m_count;
+    }
+    reserveElementCapacity(elementCount() + estimated_new_lines);
 
     // Scan non-Line elements and create new Line elements for unique edges
     const size_t original_count = m_elements.size();
@@ -194,8 +228,10 @@ void MeshDocumentImpl::createLineElementsFromEdges() {
                 MeshElement line(MeshElementType::Line);
                 line.setNodeId(0, std::min(n0, n1));
                 line.setNodeId(1, std::max(n0, n1));
-                m_edgeKeyToLineRef.emplace(key, line.elementRef());
-                addElement(std::move(line));
+                const MeshElementRef line_ref = line.elementRef();
+                if(addElement(std::move(line))) {
+                    m_edgeKeyToLineRef.emplace(key, line_ref);
+                }
             }
         }
     }
@@ -210,8 +246,12 @@ void MeshDocumentImpl::buildRelationMaps() {
         const auto ref = elem.elementRef();
 
         if(elem.elementType() == MeshElementType::Line) {
-            m_nodeToLines[elem.nodeId(0)].push_back(ref);
-            m_nodeToLines[elem.nodeId(1)].push_back(ref);
+            if(elem.nodeId(0) != INVALID_MESH_NODE_ID) {
+                m_nodeToLines[elem.nodeId(0)].push_back(ref);
+            }
+            if(elem.nodeId(1) != INVALID_MESH_NODE_ID) {
+                m_nodeToLines[elem.nodeId(1)].push_back(ref);
+            }
         } else if(elem.elementType() != MeshElementType::Node) {
             // node → elements (non-Line)
             for(uint8_t i = 0; i < elem.nodeCount(); ++i) {
@@ -227,6 +267,9 @@ void MeshDocumentImpl::buildRelationMaps() {
                 for(size_t i = 0; i < count; ++i) {
                     const MeshNodeId n0 = elem.nodeId(edges[i][0]);
                     const MeshNodeId n1 = elem.nodeId(edges[i][1]);
+                    if(n0 == INVALID_MESH_NODE_ID || n1 == INVALID_MESH_NODE_ID) {
+                        continue;
+                    }
                     const uint64_t key = makeEdgeKey(n0, n1);
                     auto it = m_edgeKeyToLineRef.find(key);
                     if(it != m_edgeKeyToLineRef.end()) {
