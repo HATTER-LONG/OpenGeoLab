@@ -395,15 +395,49 @@ void MeshDocumentImpl::createLineElementsFromEdges() {
     }
 
     size_t estimated_new_lines = 0;
+    std::unordered_map<uint64_t, uint64_t> edge_to_part_uid;
     for(const auto& elem : m_elements) {
         if(!elem.isValid() || elem.elementType() == MeshElementType::Line ||
            elem.elementType() == MeshElementType::Node) {
             continue;
         }
 
-        estimated_new_lines += edgeTableForType(elem.elementType()).m_count;
+        const auto [edges, count] = edgeTableForType(elem.elementType());
+        estimated_new_lines += count;
+
+        if(!edges) {
+            continue;
+        }
+
+        for(size_t i = 0; i < count; ++i) {
+            const MeshNodeId n0 = elem.nodeId(edges[i][0]);
+            const MeshNodeId n1 = elem.nodeId(edges[i][1]);
+            if(n0 == INVALID_MESH_NODE_ID || n1 == INVALID_MESH_NODE_ID) {
+                continue;
+            }
+
+            const uint64_t key = makeEdgeKey(n0, n1);
+            auto [it, inserted] = edge_to_part_uid.emplace(key, elem.partUid());
+            if(!inserted && it->second != elem.partUid()) {
+                it->second = 0;
+            }
+        }
     }
     reserveElementCapacityUnlocked(m_elements.size() + estimated_new_lines);
+
+    for(const auto& [key, line_ref] : m_edgeKeyToLineRef) {
+        const auto owner_it = edge_to_part_uid.find(key);
+        if(owner_it == edge_to_part_uid.end()) {
+            continue;
+        }
+
+        const auto index_it = m_refToIndex.find(line_ref);
+        if(index_it == m_refToIndex.end()) {
+            continue;
+        }
+
+        m_elements[index_it->second].setPartUid(owner_it->second);
+    }
 
     // Scan non-Line elements and create new Line elements for unique edges
     const size_t original_count = m_elements.size();
@@ -431,6 +465,10 @@ void MeshDocumentImpl::createLineElementsFromEdges() {
                 MeshElement line(MeshElementType::Line);
                 line.setNodeId(0, std::min(n0, n1));
                 line.setNodeId(1, std::max(n0, n1));
+                const auto owner_it = edge_to_part_uid.find(key);
+                if(owner_it != edge_to_part_uid.end()) {
+                    line.setPartUid(owner_it->second);
+                }
                 const MeshElementRef line_ref = line.elementRef();
                 if(addElementUnlocked(std::move(line))) {
                     m_edgeKeyToLineRef.emplace(key, line_ref);

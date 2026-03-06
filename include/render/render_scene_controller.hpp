@@ -185,6 +185,10 @@ private:
 
     void updateMeshRenderData();
 
+    void applyGeometryVisibility(RenderData& render_data) const;
+
+    void applyMeshVisibility(RenderData& render_data) const;
+
 private:
     CameraState m_cameraState; ///< Current camera configuration
 

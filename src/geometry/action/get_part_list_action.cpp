@@ -5,6 +5,7 @@
 
 #include "get_part_list_action.hpp"
 #include "../geometry_documentImpl.hpp"
+#include "render/render_scene_controller.hpp"
 #include "util/color_map.hpp"
 #include "util/logger.hpp"
 
@@ -39,6 +40,7 @@ nlohmann::json GetPartListAction::execute(const nlohmann::json& /*params*/,
 
     nlohmann::json parts_array = nlohmann::json::array();
     size_t processed_count = 0;
+    auto& scene_controller = Render::RenderSceneController::instance();
 
     for(const auto& part : parts) {
         if(!part) {
@@ -49,6 +51,8 @@ nlohmann::json GetPartListAction::execute(const nlohmann::json& /*params*/,
         part_info["id"] = part->entityId();
         part_info["uid"] = part->entityUID();
         part_info["name"] = part->name();
+        part_info["geometry_visible"] = scene_controller.isPartGeometryVisible(part->entityUID());
+        part_info["mesh_visible"] = scene_controller.isPartMeshVisible(part->entityUID());
 
         // Get color for this part based on entity ID for consistency
         Render::RenderColor color = Util::ColorMap::instance().getColorForPartId(part->entityUID());

@@ -383,6 +383,9 @@ struct PickResolutionData {
     /// Built by MeshRenderBuilder; used to resolve mesh line picks back to node pairs.
     std::unordered_map<uint64_t, std::pair<Mesh::MeshNodeId, Mesh::MeshNodeId>> m_meshLineNodes;
 
+    /// Mesh line uid → parent part uid(s) lookup used by visibility filtering.
+    std::unordered_map<uint64_t, std::vector<uint64_t>> m_meshLineToPartUids;
+
     void clear() {
         m_edgeToWireUids.clear();
         m_edgeToSolidUids.clear();
@@ -391,6 +394,7 @@ struct PickResolutionData {
         m_faceToSolidUid.clear();
         m_entityToPartUid.clear();
         m_meshLineNodes.clear();
+        m_meshLineToPartUids.clear();
     }
 
     void clearGeometry() {
@@ -402,7 +406,10 @@ struct PickResolutionData {
         m_entityToPartUid.clear();
     }
 
-    void clearMesh() { m_meshLineNodes.clear(); }
+    void clearMesh() {
+        m_meshLineNodes.clear();
+        m_meshLineToPartUids.clear();
+    }
 };
 
 // =============================================================================

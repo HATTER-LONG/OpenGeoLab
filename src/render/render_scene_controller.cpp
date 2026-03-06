@@ -18,6 +18,23 @@ namespace {
 cloneRenderDataSnapshot(const std::shared_ptr<RenderData>& snapshot) {
     return std::make_shared<RenderData>(snapshot ? *snapshot : RenderData{});
 }
+
+template <typename TBatchCache, typename Predicate>
+void filterRanges(std::vector<DrawRange>& ranges, TBatchCache& batches, Predicate&& predicate) {
+    std::vector<DrawRange> filtered;
+    filtered.reserve(ranges.size());
+    for(const auto& range : ranges) {
+        if(predicate(range)) {
+            filtered.push_back(range);
+        }
+    }
+
+    ranges = std::move(filtered);
+    batches.clear();
+    for(const auto& range : ranges) {
+        batches.append(range);
+    }
+}
 } // namespace
 
 // =============================================================================
@@ -135,6 +152,8 @@ void RenderSceneController::updateGeometryRenderData() {
         return;
     }
 
+    applyGeometryVisibility(*next_render_data);
+
     {
         std::lock_guard<std::mutex> lock(m_renderDataMutex);
         m_renderData = std::move(next_render_data);
@@ -167,10 +186,70 @@ void RenderSceneController::updateMeshRenderData() {
         return;
     }
 
+    applyMeshVisibility(*next_render_data);
+
     {
         std::lock_guard<std::mutex> lock(m_renderDataMutex);
         m_renderData = std::move(next_render_data);
     }
+}
+
+void RenderSceneController::applyGeometryVisibility(RenderData& render_data) const {
+    std::unordered_map<Geometry::EntityUID, PartVisibility> visibility_snapshot;
+    {
+        std::lock_guard lock(m_visibilityMutex);
+        visibility_snapshot = m_partVisibility;
+    }
+
+    const auto is_visible = [&visibility_snapshot](const DrawRange& range) {
+        if(range.m_partUid == 0) {
+            return true;
+        }
+        const auto it = visibility_snapshot.find(range.m_partUid);
+        return it == visibility_snapshot.end() || it->second.m_geometryVisible;
+    };
+
+    filterRanges(render_data.m_geometryTriangleRanges, render_data.m_geometryBatches.m_triangles,
+                 is_visible);
+    filterRanges(render_data.m_geometryLineRanges, render_data.m_geometryBatches.m_lines,
+                 is_visible);
+    filterRanges(render_data.m_geometryPointRanges, render_data.m_geometryBatches.m_points,
+                 is_visible);
+}
+
+void RenderSceneController::applyMeshVisibility(RenderData& render_data) const {
+    std::unordered_map<Geometry::EntityUID, PartVisibility> visibility_snapshot;
+    {
+        std::lock_guard lock(m_visibilityMutex);
+        visibility_snapshot = m_partVisibility;
+    }
+
+    const auto is_visible = [&visibility_snapshot, &render_data](const DrawRange& range) {
+        if(range.m_entityKey.m_type == RenderEntityType::MeshLine) {
+            const auto line_it =
+                render_data.m_pickData.m_meshLineToPartUids.find(range.m_entityKey.m_uid);
+            if(line_it != render_data.m_pickData.m_meshLineToPartUids.end() &&
+               !line_it->second.empty()) {
+                return std::any_of(line_it->second.begin(), line_it->second.end(),
+                                   [&visibility_snapshot](uint64_t part_uid) {
+                                       const auto it = visibility_snapshot.find(part_uid);
+                                       return it == visibility_snapshot.end() ||
+                                              it->second.m_meshVisible;
+                                   });
+            }
+        }
+
+        if(range.m_partUid == 0) {
+            return true;
+        }
+        const auto it = visibility_snapshot.find(range.m_partUid);
+        return it == visibility_snapshot.end() || it->second.m_meshVisible;
+    };
+
+    filterRanges(render_data.m_meshTriangleRanges, render_data.m_meshBatches.m_triangles,
+                 is_visible);
+    filterRanges(render_data.m_meshLineRanges, render_data.m_meshBatches.m_lines, is_visible);
+    filterRanges(render_data.m_meshPointRanges, render_data.m_meshBatches.m_points, is_visible);
 }
 
 void RenderSceneController::setCamera(const CameraState& camera, bool notify) {
@@ -328,6 +407,7 @@ void RenderSceneController::setPartGeometryVisible(Geometry::EntityUID part_uid,
         std::lock_guard lock(m_visibilityMutex);
         m_partVisibility[part_uid].m_geometryVisible = visible;
     }
+    updateGeometryRenderData();
     m_sceneNeedsUpdate.emitSignal(SceneUpdateType::GeometryChanged);
 }
 
@@ -336,6 +416,7 @@ void RenderSceneController::setPartMeshVisible(Geometry::EntityUID part_uid, boo
         std::lock_guard lock(m_visibilityMutex);
         m_partVisibility[part_uid].m_meshVisible = visible;
     }
+    updateMeshRenderData();
     m_sceneNeedsUpdate.emitSignal(SceneUpdateType::MeshChanged);
 }
 

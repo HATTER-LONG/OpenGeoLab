@@ -4,6 +4,7 @@
  */
 
 #include "render/render_service.hpp"
+#include "action/part_visibility_control.hpp"
 #include "action/viewport_control.hpp"
 
 #include "render/render_action.hpp"
@@ -41,6 +42,7 @@ void registerServices() {
     LOG_DEBUG("RenderService: Registering render services");
     g_ComponentFactory.registInstanceFactoryWithID<RenderServiceFactory>("RenderService");
     g_ComponentFactory.registFactoryWithID<SceneRendererFactoryImpl>("SceneRenderer");
+    g_ComponentFactory.registFactoryWithID<PartVisibilityControlFactory>("PartVisibilityControl");
     g_ComponentFactory.registFactoryWithID<ViewPortControlFactory>("ViewPortControl");
 }
 

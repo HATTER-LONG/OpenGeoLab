@@ -22,9 +22,21 @@ Rectangle {
     /// Whether the item is expanded to show details
     property bool isExpanded: false
 
+    readonly property bool geometryVisible: root.partData.geometry_visible !== false
+    readonly property bool meshVisible: root.partData.mesh_visible !== false
+    readonly property bool dimmed: !root.geometryVisible && !root.meshVisible
+
+    signal toggleGeometryRequested(var partUid, bool visible)
+    signal toggleMeshRequested(var partUid, bool visible)
+
+    readonly property color activeToggleFill: Theme.isDark ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.2) : Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.14)
+    readonly property color inactiveToggleFill: Theme.isDark ? Qt.rgba(Theme.surface.r, Theme.surface.g, Theme.surface.b, 0.82) : Qt.rgba(Theme.surface.r, Theme.surface.g, Theme.surface.b, 0.92)
+
     height: isExpanded ? expandedHeight : collapsedHeight
-    radius: 4
-    color: itemArea.containsMouse ? Theme.hovered : "transparent"
+    radius: 8
+    color: itemArea.containsMouse ? Qt.rgba(Theme.hovered.r, Theme.hovered.g, Theme.hovered.b, 0.85) : "transparent"
+    border.width: root.dimmed ? 1 : 0
+    border.color: root.dimmed ? Theme.border : "transparent"
 
     readonly property int collapsedHeight: 36
     readonly property int expandedHeight: collapsedHeight + detailsColumn.implicitHeight + 8
@@ -40,7 +52,11 @@ Rectangle {
         id: itemArea
         anchors.fill: parent
         hoverEnabled: true
-        onClicked: root.isExpanded = !root.isExpanded
+        onClicked: function (mouse) {
+            if (geometryArea.containsMouse || meshArea.containsMouse)
+                return;
+            root.isExpanded = !root.isExpanded;
+        }
     }
 
     ColumnLayout {
@@ -53,6 +69,7 @@ Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: root.collapsedHeight - 8
             spacing: 8
+            opacity: root.dimmed ? 0.72 : 1.0
 
             // Color indicator
             Rectangle {
@@ -71,6 +88,102 @@ Rectangle {
                 color: Theme.textPrimary
                 elide: Text.ElideRight
                 Layout.fillWidth: true
+            }
+
+            RowLayout {
+                spacing: 4
+
+                Rectangle {
+                    id: geometryToggle
+                    implicitWidth: 24
+                    implicitHeight: 24
+                    radius: 7
+                    border.width: 1
+                    border.color: root.geometryVisible ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, Theme.isDark ? 0.9 : 0.55) : Theme.border
+                    color: geometryArea.pressed ? (root.geometryVisible ? Qt.darker(root.activeToggleFill, 1.08) : Theme.clicked) : (geometryArea.containsMouse ? (root.geometryVisible ? Qt.lighter(root.activeToggleFill, 1.08) : Theme.hovered) : (root.geometryVisible ? root.activeToggleFill : root.inactiveToggleFill))
+
+                    ThemedIcon {
+                        anchors.centerIn: parent
+                        source: "qrc:/opengeolab/resources/icons/face.svg"
+                        size: 14
+                        color: root.geometryVisible ? Theme.accent : Theme.textSecondary
+                        opacity: root.geometryVisible ? 1.0 : 0.82
+                    }
+
+                    Rectangle {
+                        anchors.centerIn: parent
+                        width: 2
+                        height: 14
+                        radius: 1
+                        rotation: 45
+                        color: Theme.danger
+                        opacity: root.geometryVisible ? 0.0 : 0.92
+                    }
+
+                    MouseArea {
+                        id: geometryArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        preventStealing: true
+                        onPressed: function (mouse) {
+                            mouse.accepted = true;
+                        }
+                        onClicked: function (mouse) {
+                            mouse.accepted = true;
+                            root.toggleGeometryRequested(root.partData.uid, !root.geometryVisible);
+                        }
+                    }
+
+                    ToolTip.visible: geometryArea.containsMouse
+                    ToolTip.text: root.geometryVisible ? qsTr("Hide geometry") : qsTr("Show geometry")
+                    ToolTip.delay: 400
+                }
+
+                Rectangle {
+                    id: meshToggle
+                    implicitWidth: 24
+                    implicitHeight: 24
+                    radius: 7
+                    border.width: 1
+                    border.color: root.meshVisible ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, Theme.isDark ? 0.9 : 0.55) : Theme.border
+                    color: meshArea.pressed ? (root.meshVisible ? Qt.darker(root.activeToggleFill, 1.08) : Theme.clicked) : (meshArea.containsMouse ? (root.meshVisible ? Qt.lighter(root.activeToggleFill, 1.08) : Theme.hovered) : (root.meshVisible ? root.activeToggleFill : root.inactiveToggleFill))
+
+                    ThemedIcon {
+                        anchors.centerIn: parent
+                        source: "qrc:/opengeolab/resources/icons/mesh.svg"
+                        size: 14
+                        color: root.meshVisible ? Theme.accent : Theme.textSecondary
+                        opacity: root.meshVisible ? 1.0 : 0.82
+                    }
+
+                    Rectangle {
+                        anchors.centerIn: parent
+                        width: 2
+                        height: 14
+                        radius: 1
+                        rotation: 45
+                        color: Theme.danger
+                        opacity: root.meshVisible ? 0.0 : 0.92
+                    }
+
+                    MouseArea {
+                        id: meshArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        preventStealing: true
+                        onPressed: function (mouse) {
+                            mouse.accepted = true;
+                        }
+                        onClicked: function (mouse) {
+                            mouse.accepted = true;
+                            root.toggleMeshRequested(root.partData.uid, !root.meshVisible);
+                        }
+                    }
+
+                    ToolTip.visible: meshArea.containsMouse
+                    ToolTip.text: root.meshVisible ? qsTr("Hide mesh") : qsTr("Show mesh")
+                    ToolTip.delay: 400
+                }
             }
 
             // Entity count badge
@@ -156,7 +269,7 @@ Rectangle {
 
             // Part ID info
             Label {
-                text: qsTr("ID: %1").arg(root.partData.uid || "N/A")
+                text: qsTr("ID: %1  |  Geo %2  |  Mesh %3").arg(root.partData.uid || "N/A").arg(root.geometryVisible ? qsTr("On") : qsTr("Off")).arg(root.meshVisible ? qsTr("On") : qsTr("Off"))
                 font.pixelSize: 10
                 color: Theme.textSecondary
             }

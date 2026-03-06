@@ -16,6 +16,7 @@
 #include "util/logger.hpp"
 #include "util/point_vector3d.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <unordered_map>
 
@@ -26,6 +27,14 @@ namespace {
 using Vec3f = Util::Vec3f;
 
 Vec3f toVec3f(const Util::Pt3d& p);
+uint64_t makeEdgeKey(MeshNodeId a, MeshNodeId b);
+
+struct EdgeTableView {
+    const int (*m_edges)[2]{nullptr};
+    size_t m_count{0};
+};
+
+EdgeTableView edgeTableForType(Mesh::MeshElementType type);
 
 struct PrimitiveStyle {
     Render::RenderColor m_color;
@@ -38,6 +47,8 @@ struct BuildContext {
     const Util::ColorMap& m_colorMap;
     Render::RenderPassData& m_meshPass;
     std::unordered_map<Mesh::MeshNodeId, Vec3f> m_nodePositions;
+    std::unordered_map<Mesh::MeshNodeId, Geometry::EntityUID> m_nodePartUids;
+    std::unordered_map<uint64_t, std::vector<Geometry::EntityUID>> m_linePartUids;
     uint32_t m_surfaceVertexCount{0};
     uint32_t m_wireframeVertexCount{0};
     uint32_t m_nodeVertexCount{0};
@@ -54,6 +65,48 @@ struct BuildContext {
             }
             m_nodePositions.emplace(node.nodeId(), toVec3f(node.position()));
         }
+
+        for(const auto& element : input.m_elements) {
+            if(!element.isValid() || element.partUid() == 0) {
+                continue;
+            }
+
+            for(int i = 0; i < element.nodeCount(); ++i) {
+                const auto node_id = element.nodeId(i);
+                if(node_id == Mesh::INVALID_MESH_NODE_ID) {
+                    continue;
+                }
+
+                auto [it, inserted] = m_nodePartUids.emplace(node_id, element.partUid());
+                if(!inserted && it->second != element.partUid()) {
+                    it->second = 0;
+                }
+            }
+
+            if(element.elementType() == Mesh::MeshElementType::Line ||
+               element.elementType() == Mesh::MeshElementType::Node) {
+                continue;
+            }
+
+            const auto [edges, count] = edgeTableForType(element.elementType());
+            if(!edges) {
+                continue;
+            }
+
+            for(size_t i = 0; i < count; ++i) {
+                const auto node_a = element.nodeId(edges[i][0]);
+                const auto node_b = element.nodeId(edges[i][1]);
+                if(node_a == Mesh::INVALID_MESH_NODE_ID || node_b == Mesh::INVALID_MESH_NODE_ID) {
+                    continue;
+                }
+
+                auto& part_uids = m_linePartUids[makeEdgeKey(node_a, node_b)];
+                if(std::find(part_uids.begin(), part_uids.end(), element.partUid()) ==
+                   part_uids.end()) {
+                    part_uids.push_back(element.partUid());
+                }
+            }
+        }
     }
 
     Vec3f nodePos(Mesh::MeshNodeId nid) const {
@@ -67,11 +120,24 @@ struct BuildContext {
         }
         return it->second;
     }
+
+    Geometry::EntityUID nodePartUid(Mesh::MeshNodeId nid) const {
+        const auto it = m_nodePartUids.find(nid);
+        return it == m_nodePartUids.end() ? 0 : it->second;
+    }
+
+    const std::vector<Geometry::EntityUID>* linePartUids(Mesh::MeshNodeId a,
+                                                         Mesh::MeshNodeId b) const {
+        const auto it = m_linePartUids.find(makeEdgeKey(a, b));
+        return it == m_linePartUids.end() ? nullptr : &it->second;
+    }
 };
 
 void appendMeshRange(std::vector<Render::DrawRange>& ranges,
                      Render::ArrayBatchCache& batches,
                      Render::RenderEntityType type,
+                     uint64_t entity_uid,
+                     uint64_t part_uid,
                      uint32_t vertex_offset,
                      uint32_t vertex_count,
                      Render::PrimitiveTopology topology) {
@@ -80,27 +146,14 @@ void appendMeshRange(std::vector<Render::DrawRange>& ranges,
     }
 
     Render::DrawRange range;
-    range.m_entityKey = {type, 0};
+    range.m_entityKey = {type, entity_uid};
+    range.m_partUid = part_uid;
     range.m_vertexOffset = vertex_offset;
     range.m_vertexCount = vertex_count;
     range.m_topology = topology;
 
     batches.append(range);
     ranges.push_back(std::move(range));
-}
-
-void finalizeMeshRanges(BuildContext& ctx) {
-    appendMeshRange(ctx.m_renderData.m_meshTriangleRanges,
-                    ctx.m_renderData.m_meshBatches.m_triangles,
-                    Render::RenderEntityType::MeshTriangle, 0, ctx.m_surfaceVertexCount,
-                    Render::PrimitiveTopology::Triangles);
-    appendMeshRange(ctx.m_renderData.m_meshLineRanges, ctx.m_renderData.m_meshBatches.m_lines,
-                    Render::RenderEntityType::MeshLine, ctx.m_surfaceVertexCount,
-                    ctx.m_wireframeVertexCount, Render::PrimitiveTopology::Lines);
-    appendMeshRange(ctx.m_renderData.m_meshPointRanges, ctx.m_renderData.m_meshBatches.m_points,
-                    Render::RenderEntityType::MeshNode,
-                    ctx.m_surfaceVertexCount + ctx.m_wireframeVertexCount, ctx.m_nodeVertexCount,
-                    Render::PrimitiveTopology::Points);
 }
 
 void expandSceneBounds(BuildContext& ctx) {
@@ -194,6 +247,41 @@ constexpr int PRISM6_QUAD_FACES[][4] = {{0, 3, 4, 1}, {1, 4, 5, 2}, {0, 2, 5, 3}
 constexpr int PYRAMID5_BASE[] = {0, 3, 2, 1};
 constexpr int PYRAMID5_TRI_FACES[][3] = {{0, 1, 4}, {1, 2, 4}, {2, 3, 4}, {0, 4, 3}};
 
+constexpr int TRIANGLE_EDGES[][2] = {{0, 1}, {1, 2}, {2, 0}};
+constexpr int QUAD4_EDGES[][2] = {{0, 1}, {1, 2}, {2, 3}, {3, 0}};
+constexpr int TETRA4_EDGES[][2] = {{0, 1}, {0, 2}, {0, 3}, {1, 2}, {1, 3}, {2, 3}};
+constexpr int HEXA8_EDGES[][2] = {{0, 1}, {1, 2}, {2, 3}, {3, 0}, {4, 5}, {5, 6},
+                                  {6, 7}, {7, 4}, {0, 4}, {1, 5}, {2, 6}, {3, 7}};
+constexpr int PRISM6_EDGES[][2] = {{0, 1}, {1, 2}, {2, 0}, {3, 4}, {4, 5},
+                                   {5, 3}, {0, 3}, {1, 4}, {2, 5}};
+constexpr int PYRAMID5_EDGES[][2] = {{0, 1}, {1, 2}, {2, 3}, {3, 0},
+                                     {0, 4}, {1, 4}, {2, 4}, {3, 4}};
+
+uint64_t makeEdgeKey(MeshNodeId a, MeshNodeId b) {
+    const auto lo = std::min(a, b);
+    const auto hi = std::max(a, b);
+    return (lo << 32u) | (hi & 0xFFFFFFFFu);
+}
+
+EdgeTableView edgeTableForType(Mesh::MeshElementType type) {
+    switch(type) {
+    case Mesh::MeshElementType::Triangle:
+        return {TRIANGLE_EDGES, 3};
+    case Mesh::MeshElementType::Quad4:
+        return {QUAD4_EDGES, 4};
+    case Mesh::MeshElementType::Tetra4:
+        return {TETRA4_EDGES, 6};
+    case Mesh::MeshElementType::Hexa8:
+        return {HEXA8_EDGES, 12};
+    case Mesh::MeshElementType::Prism6:
+        return {PRISM6_EDGES, 9};
+    case Mesh::MeshElementType::Pyramid5:
+        return {PYRAMID5_EDGES, 8};
+    default:
+        return {};
+    }
+}
+
 void appendSurfaceTriangles(BuildContext& ctx) {
     constexpr float darken_factor = 0.8f;
     const Render::RenderColor fallback_color{0.55f, 0.65f, 0.75f, 1.0f};
@@ -204,7 +292,6 @@ void appendSurfaceTriangles(BuildContext& ctx) {
         }
 
         const Render::RenderEntityType render_type = Render::toRenderEntityType(elem.elementType());
-        ctx.m_renderData.m_pickData.m_entityToPartUid[elem.elementUID()] = elem.partUid();
 
         // Derive surface color from the element's parent Part color
         Render::RenderColor surface_color = fallback_color;
@@ -215,6 +302,7 @@ void appendSurfaceTriangles(BuildContext& ctx) {
 
         const PrimitiveStyle style{surface_color,
                                    Render::PickId::encode(render_type, elem.elementUID())};
+        const uint32_t vertex_offset = static_cast<uint32_t>(ctx.m_meshPass.m_vertices.size());
 
         switch(elem.elementType()) {
         case Mesh::MeshElementType::Triangle: {
@@ -288,9 +376,20 @@ void appendSurfaceTriangles(BuildContext& ctx) {
         default:
             break;
         }
-    }
 
-    ctx.m_surfaceVertexCount = static_cast<uint32_t>(ctx.m_meshPass.m_vertices.size());
+        const uint32_t vertex_count =
+            static_cast<uint32_t>(ctx.m_meshPass.m_vertices.size()) - vertex_offset;
+        if(vertex_count == 0) {
+            continue;
+        }
+
+        ctx.m_renderData.m_pickData.m_entityToPartUid[elem.elementUID()] = elem.partUid();
+        appendMeshRange(ctx.m_renderData.m_meshTriangleRanges,
+                        ctx.m_renderData.m_meshBatches.m_triangles, render_type, elem.elementUID(),
+                        elem.partUid(), vertex_offset, vertex_count,
+                        Render::PrimitiveTopology::Triangles);
+        ctx.m_surfaceVertexCount += vertex_count;
+    }
 }
 
 /**
@@ -308,17 +407,31 @@ void appendWireframeEdges(BuildContext& ctx) {
             continue;
         }
 
+        const uint32_t vertex_offset = static_cast<uint32_t>(ctx.m_meshPass.m_vertices.size());
+        const auto* part_uids = ctx.linePartUids(elem.nodeId(0), elem.nodeId(1));
+        uint64_t line_part_uid = elem.partUid();
+        if(part_uids && !part_uids->empty()) {
+            ctx.m_renderData.m_pickData.m_meshLineToPartUids[elem.elementUID()] = *part_uids;
+            line_part_uid = part_uids->size() == 1 ? (*part_uids)[0] : 0;
+        } else if(elem.partUid() != 0) {
+            ctx.m_renderData.m_pickData.m_meshLineToPartUids[elem.elementUID()] = {elem.partUid()};
+        }
+
         const PrimitiveStyle style{
             wire_color,
             Render::PickId::encode(Render::RenderEntityType::MeshLine, elem.elementUID())};
-        ctx.m_renderData.m_pickData.m_entityToPartUid[elem.elementUID()] = elem.partUid();
+        ctx.m_renderData.m_pickData.m_entityToPartUid[elem.elementUID()] = line_part_uid;
         ctx.m_renderData.m_pickData.m_meshLineNodes[elem.elementUID()] = {elem.nodeId(0),
                                                                           elem.nodeId(1)};
         pushEdge(ctx.m_meshPass, ctx.nodePos(elem.nodeId(0)), ctx.nodePos(elem.nodeId(1)), style);
-    }
 
-    ctx.m_wireframeVertexCount =
-        static_cast<uint32_t>(ctx.m_meshPass.m_vertices.size()) - ctx.m_surfaceVertexCount;
+        const uint32_t vertex_count =
+            static_cast<uint32_t>(ctx.m_meshPass.m_vertices.size()) - vertex_offset;
+        appendMeshRange(ctx.m_renderData.m_meshLineRanges, ctx.m_renderData.m_meshBatches.m_lines,
+                        Render::RenderEntityType::MeshLine, elem.elementUID(), line_part_uid,
+                        vertex_offset, vertex_count, Render::PrimitiveTopology::Lines);
+        ctx.m_wireframeVertexCount += vertex_count;
+    }
 }
 
 void appendNodePoints(BuildContext& ctx) {
@@ -330,13 +443,20 @@ void appendNodePoints(BuildContext& ctx) {
             continue;
         }
 
+        const uint32_t vertex_offset = static_cast<uint32_t>(ctx.m_meshPass.m_vertices.size());
+        const auto part_uid = ctx.nodePartUid(node.nodeId());
         const PrimitiveStyle style{
             node_color, Render::PickId::encode(Render::RenderEntityType::MeshNode, node.nodeId())};
         pushVertex(ctx.m_meshPass, toVec3f(node.position()), zero_normal, style);
-    }
 
-    ctx.m_nodeVertexCount = static_cast<uint32_t>(ctx.m_meshPass.m_vertices.size()) -
-                            ctx.m_surfaceVertexCount - ctx.m_wireframeVertexCount;
+        if(part_uid != 0) {
+            ctx.m_renderData.m_pickData.m_entityToPartUid[node.nodeId()] = part_uid;
+        }
+        appendMeshRange(ctx.m_renderData.m_meshPointRanges, ctx.m_renderData.m_meshBatches.m_points,
+                        Render::RenderEntityType::MeshNode, node.nodeId(), part_uid, vertex_offset,
+                        1, Render::PrimitiveTopology::Points);
+        ++ctx.m_nodeVertexCount;
+    }
 }
 
 } // namespace
@@ -353,7 +473,6 @@ bool MeshRenderBuilder::build(Render::RenderData& render_data, const MeshRenderI
     appendSurfaceTriangles(ctx);
     appendWireframeEdges(ctx);
     appendNodePoints(ctx);
-    finalizeMeshRanges(ctx);
     expandSceneBounds(ctx);
 
     mesh_pass.markDataUpdated();
