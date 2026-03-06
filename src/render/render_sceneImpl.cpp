@@ -162,7 +162,6 @@ void RenderSceneImpl::render() {
 };
 
 void RenderSceneImpl::processHover(int pixel_x, int pixel_y) {
-    LOG_DEBUG("RenderSceneImpl: Processing hover at pixel position ({}, {})", pixel_x, pixel_y);
     if(!m_initialized || !m_selectionPass.isInitialized()) {
         return;
     }

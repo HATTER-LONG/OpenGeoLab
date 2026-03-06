@@ -212,7 +212,7 @@ void toUvec2(uint64_t encoded, uint32_t& lo, uint32_t& hi) {
     lo = static_cast<uint32_t>(encoded & 0xFFFFFFFFu);
     hi = static_cast<uint32_t>((encoded >> 32u) & 0xFFFFFFFFu);
 }
-
+constexpr float K_MESH_LINE_VIEW_OFFSET = -0.05f;
 } // namespace
 
 bool HighlightPass::onInitialize() {
@@ -540,6 +540,8 @@ void HighlightPass::renderMesh(const RenderPassContext& ctx) { // NOLINT
        !mesh_batches.m_lines.m_all.empty()) {
         m_meshFlatShader.bind();
         bind_mesh_pick_uniforms(m_meshFlatShader, 1, line_count);
+        // Slight view-space offset for mesh wire/highlight lines to avoid z-fighting
+        m_meshFlatShader.setUniformFloat("u_viewOffset", K_MESH_LINE_VIEW_OFFSET);
         m_meshFlatShader.setUniformVec4("u_hoverColor", ev_hover_color.m_r, ev_hover_color.m_g,
                                         ev_hover_color.m_b, 1.0f);
         m_meshFlatShader.setUniformVec4("u_selectColor", ev_select_color.m_r, ev_select_color.m_g,
@@ -556,6 +558,8 @@ void HighlightPass::renderMesh(const RenderPassContext& ctx) { // NOLINT
         m_meshFlatShader.bind();
         bind_mesh_pick_uniforms(m_meshFlatShader, 2, node_count);
         m_meshFlatShader.setUniformFloat("u_pointSize", 3.0f);
+        // Offset mesh highlight points slightly to avoid z-fighting with surfaces
+        m_meshFlatShader.setUniformFloat("u_viewOffset", K_MESH_LINE_VIEW_OFFSET);
         m_meshFlatShader.setUniformVec4("u_hoverColor", ev_hover_color.m_r, ev_hover_color.m_g,
                                         ev_hover_color.m_b, 1.0f);
         m_meshFlatShader.setUniformVec4("u_selectColor", ev_select_color.m_r, ev_select_color.m_g,
@@ -563,6 +567,7 @@ void HighlightPass::renderMesh(const RenderPassContext& ctx) { // NOLINT
 
         f->glEnable(GL_PROGRAM_POINT_SIZE);
         PassUtil::multiDrawArrays(ctx_gl, f, GL_POINTS, mesh_batches.m_points.m_all);
+        m_meshFlatShader.setUniformFloat("u_viewOffset", 0.0f);
 
         m_meshFlatShader.release();
     }

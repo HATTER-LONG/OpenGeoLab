@@ -415,8 +415,8 @@ nlohmann::json GenerateMeshAction::execute(const nlohmann::json& params,
         ERROR_AND_RETURN("No active mesh document");
     }
 
-    if(!mesh_doc->replaceMeshData(std::move(request.m_ctx.m_nodes),
-                                  std::move(request.m_ctx.m_elements), error)) {
+    if(!mesh_doc->appendMeshData(std::move(request.m_ctx.m_nodes),
+                                 std::move(request.m_ctx.m_elements), error)) {
         LOG_ERROR("GenerateMeshAction: Failed to commit mesh data: {}", error);
         ERROR_AND_RETURN(error);
     }

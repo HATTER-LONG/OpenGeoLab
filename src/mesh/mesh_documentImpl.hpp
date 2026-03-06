@@ -87,6 +87,10 @@ public:
                                        std::vector<MeshElement> elements,
                                        std::string& error);
 
+    [[nodiscard]] bool appendMeshData(std::vector<MeshNode> nodes,
+                                      std::vector<MeshElement> elements,
+                                      std::string& error);
+
     // -------------------------------------------------------------------------
     // Render Data
     // -------------------------------------------------------------------------

@@ -43,6 +43,10 @@ void main() {
 }
 )";
 
+// Small view-space offset applied to mesh lines/points to avoid Z-fighting
+// with filled surfaces. Value is in view-space units (eye-space z).
+constexpr float K_MESH_LINE_VIEW_OFFSET = -0.05f;
+
 [[nodiscard]] constexpr bool hasMode(RenderDisplayModeMask value, RenderDisplayModeMask flag) {
     return (static_cast<uint8_t>(value) & static_cast<uint8_t>(flag)) != 0;
 }
@@ -104,8 +108,15 @@ void WireframePass::render(RenderPassContext& ctx) {
        !mesh_batches.m_lines.m_all.empty() && mesh_buf.vertexCount() > 0) {
         mesh_buf.bindForDraw();
 
+        // Push mesh wireframe slightly towards the camera in view-space to avoid
+        // z-fighting with surface geometry (especially in frontal views).
+        m_flatShader.setUniformFloat("u_viewOffset", K_MESH_LINE_VIEW_OFFSET);
+
         f->glLineWidth(1.0f);
         PassUtil::multiDrawArrays(ctx_gl, f, GL_LINES, mesh_batches.m_lines.m_all);
+
+        // Restore zero offset for any subsequent draws.
+        m_flatShader.setUniformFloat("u_viewOffset", 0.0f);
 
         mesh_buf.unbind();
     }
@@ -117,7 +128,11 @@ void WireframePass::render(RenderPassContext& ctx) {
 
         f->glEnable(GL_PROGRAM_POINT_SIZE);
         m_flatShader.setUniformFloat("u_pointSize", 3.0f);
+        // Also offset mesh points slightly to avoid coincident rasterization with
+        // surfaces and edges.
+        m_flatShader.setUniformFloat("u_viewOffset", K_MESH_LINE_VIEW_OFFSET);
         PassUtil::multiDrawArrays(ctx_gl, f, GL_POINTS, mesh_batches.m_points.m_all);
+        m_flatShader.setUniformFloat("u_viewOffset", 0.0f);
 
         mesh_buf.unbind();
     }

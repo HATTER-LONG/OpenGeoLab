@@ -15,7 +15,7 @@
 namespace OpenGeoLab::Render {
 namespace {
 constexpr float K_GEOMETRY_SURFACE_OFFSET_FACTOR = 2.0f;
-constexpr float K_GEOMETRY_SURFACE_OFFSET_UNITS = 2.0f;
+constexpr float K_GEOMETRY_SURFACE_OFFSET_UNITS = 10.0f;
 constexpr float K_MESH_SURFACE_OFFSET_FACTOR = 1.0f;
 constexpr float K_MESH_SURFACE_OFFSET_UNITS = 1.0f;
 

@@ -217,6 +217,94 @@ bool MeshDocumentImpl::replaceMeshData(std::vector<MeshNode> nodes,
     return true;
 }
 
+bool MeshDocumentImpl::appendMeshData(std::vector<MeshNode> nodes,
+                                      std::vector<MeshElement> elements,
+                                      std::string& error) {
+    std::unordered_map<MeshNodeId, size_t> incoming_node_id_to_index;
+    incoming_node_id_to_index.reserve(nodes.size());
+    for(size_t index = 0; index < nodes.size(); ++index) {
+        const MeshNodeId node_id = nodes[index].nodeId();
+        if(node_id == INVALID_MESH_NODE_ID) {
+            error = "Generated mesh contains an invalid node id";
+            return false;
+        }
+        if(!incoming_node_id_to_index.emplace(node_id, index).second) {
+            error = "Generated mesh contains duplicate node ids";
+            return false;
+        }
+    }
+
+    std::unordered_map<MeshElementId, size_t> incoming_element_id_to_index;
+    incoming_element_id_to_index.reserve(elements.size());
+    std::unordered_map<MeshElementRef, size_t, MeshElementRefHash> incoming_ref_to_index;
+    incoming_ref_to_index.reserve(elements.size());
+    for(size_t index = 0; index < elements.size(); ++index) {
+        const auto& element = elements[index];
+        if(element.elementId() == INVALID_MESH_ELEMENT_ID ||
+           element.elementType() == MeshElementType::None) {
+            error = "Generated mesh contains an invalid element";
+            return false;
+        }
+        if(!incoming_element_id_to_index.emplace(element.elementId(), index).second) {
+            error = "Generated mesh contains duplicate element ids";
+            return false;
+        }
+        if(!incoming_ref_to_index.emplace(element.elementRef(), index).second) {
+            error = "Generated mesh contains duplicate element references";
+            return false;
+        }
+    }
+
+    {
+        std::unique_lock<std::shared_mutex> lock(m_documentMutex);
+
+        for(const auto& node : nodes) {
+            if(m_nodeIdToIndex.contains(node.nodeId())) {
+                error = "Generated mesh node id conflicts with existing mesh data";
+                return false;
+            }
+        }
+
+        for(const auto& element : elements) {
+            if(m_elementIdToIndex.contains(element.elementId())) {
+                error = "Generated mesh element id conflicts with existing mesh data";
+                return false;
+            }
+            if(m_refToIndex.contains(element.elementRef())) {
+                error = "Generated mesh element reference conflicts with existing mesh data";
+                return false;
+            }
+        }
+
+        reserveNodeCapacityUnlocked(m_nodes.size() + nodes.size());
+        reserveElementCapacityUnlocked(m_elements.size() + elements.size());
+
+        for(auto& node : nodes) {
+            const size_t index = m_nodes.size();
+            m_nodeIdToIndex.emplace(node.nodeId(), index);
+            m_nodes.emplace_back(std::move(node));
+        }
+
+        for(auto& element : elements) {
+            const size_t index = m_elements.size();
+            m_elementIdToIndex.emplace(element.elementId(), index);
+            m_refToIndex.emplace(element.elementRef(), index);
+            m_elements.emplace_back(std::move(element));
+        }
+
+        m_nodeToLines.clear();
+        m_nodeToElements.clear();
+        m_lineToElements.clear();
+        m_elementToLines.clear();
+        m_edgeKeyToLineRef.clear();
+        createLineElementsFromEdges();
+        buildRelationMaps();
+    }
+
+    notifyChanged();
+    return true;
+}
+
 void MeshDocumentImpl::clearUnlocked() {
     m_nodes.clear();
     m_elements.clear();
