@@ -93,6 +93,12 @@ void RenderSceneImpl::render() {
 
     auto* f = QOpenGLContext::currentContext()->functions();
 
+    // Always reset the viewport to the current window size before rendering.
+    // This is required after resize events: the selection pass FBO may have
+    // set a different viewport, and processHover/processPicking may not have
+    // been called yet to restore it.
+    f->glViewport(0, 0, m_viewportSize.width(), m_viewportSize.height());
+
     f->glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     f->glDepthMask(GL_TRUE);
     f->glDisable(GL_BLEND);
@@ -137,14 +143,9 @@ void RenderSceneImpl::processHover(int pixel_x, int pixel_y) {
         select_mgr.clearHover();
         return;
     }
-    // For Wire/Part mode, render sub-entities so we can resolve to parent
-    RenderEntityTypeMask effective_mask = pick_mask;
-    if(select_mgr.isTypePickable(RenderEntityType::Wire)) {
-        effective_mask = effective_mask | RenderEntityTypeMask::Edge | RenderEntityTypeMask::Face;
-    }
-    if(select_mgr.isTypePickable(RenderEntityType::Part)) {
-        effective_mask = effective_mask | RenderEntityTypeMask::Face | RenderEntityTypeMask::Edge;
-    }
+
+    // Expand mask for Wire/Part/Solid modes so their sub-entities are rendered.
+    const RenderEntityTypeMask effective_mask = m_pickResolver.computeEffectiveMask(pick_mask);
 
     RenderPassContext pass_context{
         {m_frameState.m_viewMatrix, m_frameState.m_projMatrix, m_frameState.m_cameraPos,
@@ -164,17 +165,16 @@ void RenderSceneImpl::processHover(int pixel_x, int pixel_y) {
         select_mgr.clearHover();
         return;
     }
-    // Resolve via PickResolver
-    const auto resolved = m_pickResolver.resolve(pick_ids, PickAction::Add);
-    if(!resolved.isValid()) {
-        select_mgr.clearHover();
-        return;
-    }
 
-    // Filter hover entity for Wire/Part modes
-    const bool wire_mode = select_mgr.isTypePickable(RenderEntityType::Wire);
-    // const bool part_mode = select_mgr.isTypePickable(RenderEntityType::Part);
-    if(wire_mode && resolved.m_type == RenderEntityType::Face) {
+    // Resolve hover entity.
+    // Try Add first (unselected entity the user can select); if nothing found try
+    // Remove (already-selected entity the user can deselect via right-click).
+    // This ensures that selected wires / parts still show hover feedback.
+    auto resolved = m_pickResolver.resolve(pick_ids, PickAction::Add, pick_mask);
+    if(!resolved.isValid()) {
+        resolved = m_pickResolver.resolve(pick_ids, PickAction::Remove, pick_mask);
+    }
+    if(!resolved.isValid()) {
         select_mgr.clearHover();
         return;
     }
@@ -182,9 +182,9 @@ void RenderSceneImpl::processHover(int pixel_x, int pixel_y) {
     select_mgr.setHoverEntity(resolved.m_uid, resolved.m_type, resolved.m_partUid,
                               resolved.m_wireUid);
 
-    // For wire mode: pass complete set of edge UIDs for wire loop highlighting
-    if(resolved.m_wireUid != 0 && wire_mode) {
-        const auto& wire_edges = m_pickResolver.wireEdges(resolved.m_wireUid);
+    // For Wire mode: pass the full edge set so the highlight pass can draw the whole loop.
+    if(resolved.m_type == RenderEntityType::Wire) {
+        const auto& wire_edges = m_pickResolver.wireEdges(resolved.m_uid);
         select_mgr.setHoveredWireEdges(wire_edges);
     } else {
         select_mgr.setHoveredWireEdges({});
@@ -207,15 +207,7 @@ void RenderSceneImpl::processPicking(const PickingInput& input) {
                                     input.m_devicePixelRatio);
 
     const RenderEntityTypeMask pick_mask = select_mgr.getPickTypes();
-
-    // Expand mask for Wire/Part mode
-    RenderEntityTypeMask effective_mask = pick_mask;
-    if(select_mgr.isTypePickable(RenderEntityType::Wire)) {
-        effective_mask = effective_mask | RenderEntityTypeMask::Edge | RenderEntityTypeMask::Face;
-    }
-    if(select_mgr.isTypePickable(RenderEntityType::Part)) {
-        effective_mask = effective_mask | RenderEntityTypeMask::Face | RenderEntityTypeMask::Edge;
-    }
+    const RenderEntityTypeMask effective_mask = m_pickResolver.computeEffectiveMask(pick_mask);
 
     RenderPassContext pass_context{
         {m_frameState.m_viewMatrix, m_frameState.m_projMatrix, m_frameState.m_cameraPos,
@@ -229,34 +221,15 @@ void RenderSceneImpl::processPicking(const PickingInput& input) {
     auto* f = QOpenGLContext::currentContext()->functions();
     f->glViewport(0, 0, m_viewportSize.width(), m_viewportSize.height());
 
-    // Read a small region for priority-based picking
     const auto pick_ids = m_selectionPass.readPickRegion(px, py, K_PICK_REGION_RADIUS);
-
     if(pick_ids.empty()) {
         return;
     }
 
-    auto resolved = m_pickResolver.resolve(pick_ids, input.m_action);
+    // Resolver handles mode detection, aggregate promotion, and all constraints.
+    const auto resolved = m_pickResolver.resolve(pick_ids, input.m_action, pick_mask);
     if(!resolved.isValid()) {
         return;
-    }
-
-    if(select_mgr.isTypePickable(RenderEntityType::Wire)) {
-        if(resolved.m_type == RenderEntityType::Edge) {
-            if(resolved.m_wireUid != 0) {
-                resolved.m_uid = resolved.m_wireUid;
-                resolved.m_type = RenderEntityType::Wire;
-            }
-        } else if(resolved.m_type == RenderEntityType::Face) {
-            return;
-        }
-    }
-    if(select_mgr.isTypePickable(RenderEntityType::Part) &&
-       resolved.m_type != RenderEntityType::Part) {
-        if(resolved.m_partUid != 0) {
-            resolved.m_uid = resolved.m_partUid;
-            resolved.m_type = RenderEntityType::Part;
-        }
     }
 
     if(input.m_action == PickAction::Add) {

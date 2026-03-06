@@ -20,66 +20,88 @@ struct ResolvedPickResult {
     uint64_t m_uid{0};                               ///< Entity UID
     RenderEntityType m_type{RenderEntityType::None}; ///< Entity type
     uint64_t m_partUid{0};                           ///< Parent part UID (0 = not resolvable)
-    uint64_t m_wireUid{0};                           ///< Parent wire UID for edges (0 = N/A)
+    uint64_t m_wireUid{0};        ///< Wire UID (set when hovering edge in wire mode)
     uint64_t m_faceContextUid{0}; ///< Face from pick region (for wire disambiguation)
 
     [[nodiscard]] bool isValid() const { return m_uid != 0 && m_type != RenderEntityType::None; }
 };
 
 /**
- * @brief GL-free pick entity resolver.
+ * @brief GL-free pick entity resolver — single point of truth for all pick/hover logic.
  *
- * Resolves raw GPU pick IDs from the pick FBO into typed entities with
- * hierarchy context (parent Part, parent Wire). Priority-based selection
- * chooses the highest-priority entity from a region of pick IDs:
- *   Vertex > MeshNode > Edge > MeshLine > Face > Shell > Wire > Solid > Part > ...
+ * Responsibilities
+ * ----------------
+ * 1. computeEffectiveMask() — expand the user pick-type mask so the GPU also renders
+ *    sub-entities required for Wire/Part aggregate resolution (Face + Edge).
  *
- * This class has no OpenGL dependency and can be independently tested.
- * It references PickResolutionData directly (no copies) for efficient
- * hierarchy lookups. The PickResolutionData must outlive the PickResolver
- * while the pointer is set.
+ * 2. resolve() — fully resolve raw GPU pick IDs to the *final* entity including
+ *    Wire/Part mode promotion and all pick constraints:
+ *
+ *    Sub-entity mode (Vertex / Edge / Face mix):
+ *      Priority: Vertex > MeshNode > Edge > MeshLine > Face > Shell
+ *      Constraints: skip already-selected, skip sub-entity of selected Part,
+ *                   skip Edge whose parent Wire is selected (Add action).
+ *
+ *    Wire aggregate mode:
+ *      Any face or face-boundary edge in the pick region resolves to the Wire that
+ *      bounds the nearest face.  Face context is used to disambiguate when an edge
+ *      is shared by multiple wires.
+ *      Add:    skip if the wire is already selected.
+ *      Remove: skip if the wire is not selected.
+ *
+ *    Part aggregate mode:
+ *      Any face/edge hit resolves to its parent Part via m_entityToPartUid.
+ *      Add:    skip if the part is already selected.
+ *      Remove: skip if the part is not selected.
+ *
+ * This class has no OpenGL dependency.
  */
 class PickResolver {
 public:
-    /**
-     * @brief Set reference to pick resolution data (no copy).
-     *
-     * Call when geometry data changes. The PickResolutionData must outlive
-     * this PickResolver while the pointer is active.
-     *
-     * @param pickData  Pick-specific lookup tables from RenderData.
-     */
+    /** @brief Bind pick resolution data.  Must outlive this resolver while active. */
     void setPickData(const PickResolutionData& pick_data);
 
     /**
-     * @brief Resolve raw pick IDs to the highest-priority entity with hierarchy context.
+     * @brief Expand user pick-type mask for GPU rendering.
      *
-     * Finds the highest-priority entity from the pick region, then resolves
-     * parent Part and Wire UIDs. Face context from the region is used to
-     * disambiguate shared edges belonging to multiple wires.
-     *
-     * @param pickIds Encoded pick IDs read from the pick FBO region.
-     * @param action   The pick action type (Add/Remove) for selection-aware resolution.
-     * @return Resolved pick result with entity identity and hierarchy context.
+     * Wire mode needs Face + Edge rendered so sub-entities can be resolved to Wire.
+     * Part mode similarly needs Face + Edge.
      */
-    [[nodiscard]] ResolvedPickResult resolve(const std::vector<uint64_t>& pick_ids,
-                                             PickAction action) const;
+    [[nodiscard]] RenderEntityTypeMask computeEffectiveMask(RenderEntityTypeMask user_mask) const;
 
     /**
-     * @brief Get all edge UIDs belonging to a wire.
-     * @param wireUid Wire entity UID.
-     * @return Reference to the edge UID vector (empty if not found).
+     * @brief Fully resolve raw GPU pick IDs for the given action and user mode.
+     *
+     * @param pick_ids  Unique encoded pick IDs read from the pick FBO region.
+     * @param action    Add or Remove.
+     * @param user_mask The *user-configured* pick type mask (not the expanded GPU mask).
+     * @return  Resolved entity (already promoted to Wire/Part when in those modes).
+     *          isValid() == false when no actionable entity is found.
      */
+    [[nodiscard]] ResolvedPickResult resolve(const std::vector<uint64_t>& pick_ids,
+                                             PickAction action,
+                                             RenderEntityTypeMask user_mask) const;
+
+    /** @brief Get all edge UIDs belonging to a wire (empty if not found). */
     [[nodiscard]] const std::vector<uint64_t>& wireEdges(uint64_t wire_uid) const;
 
     /** @brief Clear the pick data reference. */
     void clear();
 
 private:
+    // --- Mode-specific resolvers ---
+    [[nodiscard]] ResolvedPickResult resolveVEFMode(const std::vector<uint64_t>& pick_ids,
+                                                    PickAction action) const;
+    [[nodiscard]] ResolvedPickResult resolveWireMode(const std::vector<uint64_t>& pick_ids,
+                                                     PickAction action) const;
+    [[nodiscard]] ResolvedPickResult resolvePartMode(const std::vector<uint64_t>& pick_ids,
+                                                     PickAction action) const;
+
+    // --- Hierarchy helpers ---
     [[nodiscard]] uint64_t resolvePartUid(uint64_t uid, RenderEntityType type) const;
     [[nodiscard]] uint64_t resolveWireUid(uint64_t edge_uid, uint64_t face_uid) const;
+    [[nodiscard]] uint64_t resolveWireUidForFace(uint64_t face_uid) const;
 
-    /// Pointer to authoritative pick resolution data (owned by RenderData)
     const PickResolutionData* m_pickData{nullptr};
 };
 
