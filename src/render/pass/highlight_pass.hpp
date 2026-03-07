@@ -47,6 +47,7 @@ private:
     /// Per-topology pick-ID textures (GL_RG32UI, width = selection count).
     /// Index 0 = surface, 1 = line, 2 = node.  Uploaded each frame via glTexImage2D.
     std::array<GLuint, 3> m_selectPickTex{0, 0, 0};
+    std::array<GLuint, 3> m_hoverPickTex{0, 0, 0};
 };
 
 } // namespace OpenGeoLab::Render

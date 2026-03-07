@@ -305,6 +305,36 @@ bool MeshDocumentImpl::appendMeshData(std::vector<MeshNode> nodes,
     return true;
 }
 
+void MeshDocumentImpl::snapshotMesh(std::vector<MeshNode>& nodes,
+                                    std::vector<MeshElement>& elements) const {
+    std::shared_lock<std::shared_mutex> lock(m_documentMutex);
+    nodes = m_nodes;
+    elements = m_elements;
+}
+
+bool MeshDocumentImpl::updateNodePositions(
+    const std::unordered_map<MeshNodeId, Util::Pt3d>& positions, std::string& error) {
+    if(positions.empty()) {
+        error = "No node positions provided";
+        return false;
+    }
+
+    {
+        std::unique_lock<std::shared_mutex> lock(m_documentMutex);
+        for(const auto& [node_id, position] : positions) {
+            const auto it = m_nodeIdToIndex.find(node_id);
+            if(it == m_nodeIdToIndex.end()) {
+                error = "Mesh node id not found: " + std::to_string(node_id);
+                return false;
+            }
+            m_nodes[it->second].setPosition(position);
+        }
+    }
+
+    notifyChanged();
+    return true;
+}
+
 void MeshDocumentImpl::clearUnlocked() {
     m_nodes.clear();
     m_elements.clear();
@@ -615,7 +645,6 @@ bool MeshDocumentImpl::getRenderData(Render::RenderData& render_data) {
 
 bool MeshDocumentImpl::getRenderDataUnlocked(Render::RenderData& render_data) {
     MeshRenderInput input{m_nodes, m_elements};
-    render_data.markMeshUpdated();
     return MeshRenderBuilder::build(render_data, input);
 }
 // =============================================================================

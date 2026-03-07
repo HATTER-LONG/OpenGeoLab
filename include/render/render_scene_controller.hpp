@@ -137,6 +137,9 @@ public:
     /** @brief Current mesh display mode bitmask. */
     [[nodiscard]] RenderDisplayModeMask meshDisplayMode() const noexcept;
 
+    /** @brief Explicitly set mesh display mode instead of cycling presets. */
+    void setMeshDisplayMode(RenderDisplayModeMask mode, bool notify = true);
+
     /**
      * @brief Read-only access to the current render data snapshot.
      *
@@ -185,6 +188,10 @@ private:
 
     void updateMeshRenderData();
 
+    [[nodiscard]] std::shared_ptr<RenderData> acquireWorkingRenderData();
+
+    void publishRenderData(std::shared_ptr<RenderData> next_render_data);
+
     void applyGeometryVisibility(RenderData& render_data) const;
 
     void applyMeshVisibility(RenderData& render_data) const;
@@ -199,6 +206,7 @@ private:
 
     mutable std::mutex m_renderDataMutex; ///< Guards m_renderData snapshot swaps
     std::shared_ptr<RenderData> m_renderData{std::make_shared<RenderData>()};
+    std::shared_ptr<RenderData> m_reusableRenderData;
     ///< Snapshot of all renderable data (geometry + mesh)
 
     /// Per-part visibility toggles for geometry and mesh layers
@@ -212,6 +220,9 @@ private:
     std::atomic<uint8_t> m_meshDisplayMode{
         static_cast<uint8_t>(RenderDisplayModeMask::Wireframe |
                              RenderDisplayModeMask::Points)}; ///< Mesh display mode bitmask
+
+    std::atomic<uint64_t> m_geometryVersionSeed{1};
+    std::atomic<uint64_t> m_meshVersionSeed{1};
 
     std::atomic<bool> m_xRayMode{false}; ///< X-ray transparency toggle
 };

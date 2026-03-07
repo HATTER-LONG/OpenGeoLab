@@ -23,11 +23,7 @@
 
 namespace OpenGeoLab::Geometry {
 namespace {
-template <typename TBatchCache>
-void appendRange(std::vector<Render::DrawRange>& ranges,
-                 TBatchCache& batches,
-                 Render::DrawRange&& range) {
-    batches.append(range);
+void appendRange(std::vector<Render::DrawRange>& ranges, Render::DrawRange&& range) {
     ranges.push_back(std::move(range));
 }
 
@@ -71,11 +67,11 @@ void buildWireEdgeLookupsForPart(Render::RenderData& render_data,
                 continue;
             }
             const EntityUID edge_uid = edge_entity->entityUID();
-            auto& edge_wires = render_data.m_pickData.m_edgeToWireUids[edge_uid];
+            auto& edge_wires = render_data.m_geometry.m_pickData.m_edgeToWireUids[edge_uid];
             if(std::find(edge_wires.begin(), edge_wires.end(), wire_uid) == edge_wires.end()) {
                 edge_wires.push_back(wire_uid);
             }
-            render_data.m_pickData.m_wireToEdgeUids[wire_uid].push_back(edge_uid);
+            render_data.m_geometry.m_pickData.m_wireToEdgeUids[wire_uid].push_back(edge_uid);
         }
     }
 }
@@ -112,9 +108,11 @@ EntityUID firstOwningSolidUid(const GeometryRenderInput& input,
 bool GeometryRenderBuilder::build(Render::RenderData& render_data,
                                   const GeometryRenderInput& input) {
     render_data.clearGeometry();
+    auto& geometry = render_data.m_geometry;
     const auto parts = input.m_entityIndex.entitiesByType(Geometry::EntityType::Part);
     if(parts.empty()) {
         LOG_DEBUG("GeometryRenderBuilder::build: No parts to render");
+        geometry.markUpdated();
         return true;
     }
 
@@ -134,20 +132,15 @@ bool GeometryRenderBuilder::build(Render::RenderData& render_data,
         appendEdgeNodes(context);
         appendVertexNodes(context);
 
-        render_data.m_sceneBBox.expand(part->boundingBox());
+        geometry.m_bbox.expand(part->boundingBox());
     }
-    render_data.markGeometryUpdated();
+    geometry.markUpdated();
 
     LOG_DEBUG("GeometryRenderBuilder::build: geom tris={}, lines={}, points={}, vertices={}, "
               "indices={}",
-              render_data.m_geometryTriangleRanges.size(), render_data.m_geometryLineRanges.size(),
-              render_data.m_geometryPointRanges.size(),
-              render_data.m_passData.count(Render::RenderPassType::Geometry)
-                  ? render_data.m_passData[Render::RenderPassType::Geometry].m_vertices.size()
-                  : 0,
-              render_data.m_passData.count(Render::RenderPassType::Geometry)
-                  ? render_data.m_passData[Render::RenderPassType::Geometry].m_indices.size()
-                  : 0);
+              geometry.m_triangleRanges.size(), geometry.m_lineRanges.size(),
+              geometry.m_pointRanges.size(), geometry.m_passData.m_vertices.size(),
+              geometry.m_passData.m_indices.size());
     return true;
 }
 void GeometryRenderBuilder::appendFaceNodes(const PartBuildContext& context) {
@@ -178,11 +171,11 @@ void GeometryRenderBuilder::appendEdgeNodes(const PartBuildContext& context) {
         }
         const auto solid_uids = findOwningSolidUids(context.m_input, edge_entity);
         range.m_solidUid = solid_uids.empty() ? 0 : solid_uids.front();
-        context.m_renderData.m_pickData.m_entityToPartUid[Render::PickId::encode(
+        context.m_renderData.m_geometry.m_pickData.m_entityToPartUid[Render::PickId::encode(
             Render::RenderEntityType::Edge, edge_entity->entityUID())] = context.m_partUid;
         if(!solid_uids.empty()) {
-            auto& edge_solids =
-                context.m_renderData.m_pickData.m_edgeToSolidUids[edge_entity->entityUID()];
+            auto& edge_solids = context.m_renderData.m_geometry.m_pickData
+                                    .m_edgeToSolidUids[edge_entity->entityUID()];
             for(const auto solid_uid : solid_uids) {
                 if(std::find(edge_solids.begin(), edge_solids.end(), solid_uid) ==
                    edge_solids.end()) {
@@ -190,8 +183,7 @@ void GeometryRenderBuilder::appendEdgeNodes(const PartBuildContext& context) {
                 }
             }
         }
-        appendRange(context.m_renderData.m_geometryLineRanges,
-                    context.m_renderData.m_geometryBatches.m_lines, std::move(range));
+        appendRange(context.m_renderData.m_geometry.m_lineRanges, std::move(range));
     }
 }
 
@@ -214,8 +206,7 @@ void GeometryRenderBuilder::appendVertexNodes(const PartBuildContext& context) {
 
         // context.m_renderData.m_pickData.m_entityToPartUid[vertex_entity->entityUID()] =
         //     context.m_partUid;
-        appendRange(context.m_renderData.m_geometryPointRanges,
-                    context.m_renderData.m_geometryBatches.m_points, std::move(range));
+        appendRange(context.m_renderData.m_geometry.m_pointRanges, std::move(range));
     }
 }
 
@@ -232,7 +223,7 @@ void GeometryRenderBuilder::mapFaceWireRelations(
     for(const auto& wk : face_wire_keys) {
         auto wire_entity = context.m_input.m_entityIndex.findByKey(wk);
         if(wire_entity) {
-            context.m_renderData.m_pickData.m_wireToFaceUid[wire_entity->entityUID()] =
+            context.m_renderData.m_geometry.m_pickData.m_wireToFaceUid[wire_entity->entityUID()] =
                 face_entity->entityUID();
         }
     }
@@ -247,13 +238,13 @@ bool GeometryRenderBuilder::tryAppendFaceNode(const PartBuildContext& context,
     }
     const auto solid_uid = firstOwningSolidUid(context.m_input, face_entity);
     if(solid_uid != Geometry::INVALID_ENTITY_UID) {
-        context.m_renderData.m_pickData.m_faceToSolidUid[face_entity->entityUID()] = solid_uid;
+        context.m_renderData.m_geometry.m_pickData.m_faceToSolidUid[face_entity->entityUID()] =
+            solid_uid;
         range.m_solidUid = solid_uid;
     }
-    context.m_renderData.m_pickData.m_entityToPartUid[Render::PickId::encode(
+    context.m_renderData.m_geometry.m_pickData.m_entityToPartUid[Render::PickId::encode(
         Render::RenderEntityType::Face, face_entity->entityUID())] = context.m_partUid;
-    appendRange(context.m_renderData.m_geometryTriangleRanges,
-                context.m_renderData.m_geometryBatches.m_triangles, std::move(range));
+    appendRange(context.m_renderData.m_geometry.m_triangleRanges, std::move(range));
     return true;
 }
 
@@ -274,7 +265,7 @@ GeometryRenderBuilder::generateFaceMesh(Render::RenderData& render_data,
         return result;
     }
 
-    auto& pass_data = render_data.m_passData[Render::RenderPassType::Geometry];
+    auto& pass_data = render_data.m_geometry.m_passData;
     const auto base_vertex = static_cast<uint32_t>(pass_data.m_vertices.size());
     const auto base_index = static_cast<uint32_t>(pass_data.m_indices.size());
 
@@ -367,7 +358,7 @@ GeometryRenderBuilder::generateEdgeMesh(Render::RenderData& render_data,
         return result;
     }
 
-    auto& pass_data = render_data.m_passData[Render::RenderPassType::Geometry];
+    auto& pass_data = render_data.m_geometry.m_passData;
     const auto base_vertex = static_cast<uint32_t>(pass_data.m_vertices.size());
 
     const auto& color_map = Util::ColorMap::instance();
@@ -454,8 +445,9 @@ GeometryRenderBuilder::generateEdgeMesh(Render::RenderData& render_data,
     result.m_entityKey = {Render::RenderEntityType::Edge, entity->entityUID()};
     result.m_partUid = owner_part_uid;
 
-    auto wire_it = render_data.m_pickData.m_edgeToWireUids.find(entity->entityUID());
-    if(wire_it != render_data.m_pickData.m_edgeToWireUids.end() && !wire_it->second.empty()) {
+    auto wire_it = render_data.m_geometry.m_pickData.m_edgeToWireUids.find(entity->entityUID());
+    if(wire_it != render_data.m_geometry.m_pickData.m_edgeToWireUids.end() &&
+       !wire_it->second.empty()) {
         result.m_wireUid = wire_it->second.front();
     }
 
@@ -474,7 +466,7 @@ GeometryRenderBuilder::generateVertexMesh(Render::RenderData& render_data,
     const auto vertex = TopoDS::Vertex(entity->shape());
     const gp_Pnt p = BRep_Tool::Pnt(vertex);
 
-    auto& pass_data = render_data.m_passData[Render::RenderPassType::Geometry];
+    auto& pass_data = render_data.m_geometry.m_passData;
     const auto base_vertex = static_cast<uint32_t>(pass_data.m_vertices.size());
 
     const auto& color_map = Util::ColorMap::instance();

@@ -1,8 +1,6 @@
 /**
  * @file SmoothMeshPage.qml
- * @brief Function page for mesh smoothing
- *
- * Allows user to configure mesh smoothing parameters.
+ * @brief Function page for mesh smoothing.
  */
 pragma ComponentBehavior: Bound
 import QtQuick
@@ -18,28 +16,24 @@ FunctionPageBase {
     pageIcon: "qrc:/opengeolab/resources/icons/smooth_mesh.svg"
     serviceName: "MeshService"
     actionId: "smoothMesh"
+    executeButtonText: qsTr("Smooth")
 
-    width: 320
+    width: 420
 
-    // =========================================================
-    // Parameters
-    // =========================================================
+    readonly property string backendActionName: "smooth_mesh"
 
-    /// Target mesh ID
-    property string targetMesh: ""
-    /// Smoothing iterations
-    property int iterations: 3
-    /// Smoothing factor (0-1)
-    property real factor: 0.5
-    /// Preserve boundaries
-    property bool preserveBoundaries: true
-    /// Smoothing method
+    property var targetEntities: []
+    property int iterations: 6
+    property real factor: 0.35
     property string method: "laplacian"
+    property bool preserveBoundaries: true
+    property var meshEntities: []
+    property var meshSummary: ({})
 
     function getParameters() {
         return {
-            "action": "smoothMesh",
-            "target": targetMesh,
+            "action": backendActionName,
+            "entities": targetEntities,
             "iterations": iterations,
             "factor": factor,
             "method": method,
@@ -47,267 +41,368 @@ FunctionPageBase {
         };
     }
 
-    // =========================================================
-    // Content
-    // =========================================================
+    function requestMeshPreview() {
+        BackendService.request("RenderService", JSON.stringify({
+            "action": "ViewPortControl",
+            "view_ctrl": {
+                "mesh_display": {
+                    "surface": true,
+                    "wireframe": true,
+                    "points": false
+                },
+                "fit": true
+            }
+        }));
+    }
 
     Column {
         width: parent.width
-        spacing: 12
+        spacing: 14
 
-        // Target mesh selection
-        Column {
-            width: parent.width
-            spacing: 4
-
-            Label {
-                text: qsTr("Target Mesh")
-                font.pixelSize: 11
-                color: Theme.textSecondary
-            }
-
-            Rectangle {
-                width: parent.width
-                height: 32
-                radius: 4
-                color: Theme.surface
-                border.width: 1
-                border.color: Theme.border
-
-                RowLayout {
-                    anchors.fill: parent
-                    anchors.leftMargin: 8
-                    anchors.rightMargin: 8
-                    spacing: 8
-
-                    Label {
-                        text: root.targetMesh || qsTr("Click to select...")
-                        font.pixelSize: 12
-                        color: root.targetMesh ? Theme.textPrimary : Theme.textDisabled
-                        elide: Text.ElideMiddle
-                        Layout.fillWidth: true
-                    }
-
-                    ViewportPickButton {}
-                }
-            }
-        }
-
-        // Smoothing method
-        Column {
-            width: parent.width
-            spacing: 4
-
-            Label {
-                text: qsTr("Smoothing Method")
-                font.pixelSize: 11
-                color: Theme.textSecondary
-            }
-
-            RowLayout {
-                width: parent.width
-                spacing: 8
-
-                MethodButton {
-                    Layout.fillWidth: true
-                    text: qsTr("Laplacian")
-                    selected: root.method === "laplacian"
-                    onClicked: root.method = "laplacian"
-                }
-
-                MethodButton {
-                    Layout.fillWidth: true
-                    text: qsTr("Taubin")
-                    selected: root.method === "taubin"
-                    onClicked: root.method = "taubin"
-                }
-            }
-        }
-
-        // Iterations
-        Column {
-            width: parent.width
-            spacing: 4
-
-            RowLayout {
-                width: parent.width
-
-                Label {
-                    text: qsTr("Iterations")
-                    font.pixelSize: 11
-                    color: Theme.textSecondary
-                }
-
-                Item {
-                    Layout.fillWidth: true
-                }
-
-                Label {
-                    text: root.iterations.toString()
-                    font.pixelSize: 11
-                    font.bold: true
-                    color: Theme.textPrimary
-                }
-            }
-
-            Slider {
-                id: iterSlider
-                width: parent.width
-                from: 1
-                to: 20
-                value: root.iterations
-                stepSize: 1
-
-                onValueChanged: root.iterations = Math.round(value)
-
-                background: Rectangle {
-                    x: iterSlider.leftPadding
-                    y: iterSlider.topPadding + iterSlider.availableHeight / 2 - height / 2
-                    implicitWidth: 200
-                    implicitHeight: 4
-                    width: iterSlider.availableWidth
-                    height: implicitHeight
-                    radius: 2
-                    color: Theme.border
-
-                    Rectangle {
-                        width: iterSlider.visualPosition * parent.width
-                        height: parent.height
-                        color: Theme.accent
-                        radius: 2
-                    }
-                }
-
-                handle: Rectangle {
-                    x: iterSlider.leftPadding + iterSlider.visualPosition * (iterSlider.availableWidth - width)
-                    y: iterSlider.topPadding + iterSlider.availableHeight / 2 - height / 2
-                    implicitWidth: 16
-                    implicitHeight: 16
-                    radius: 8
-                    color: iterSlider.pressed ? Qt.darker(Theme.accent, 1.2) : Theme.accent
-                    border.width: 2
-                    border.color: Theme.white
-                }
-            }
-        }
-
-        // Smoothing factor
-        Column {
-            width: parent.width
-            spacing: 4
-
-            RowLayout {
-                width: parent.width
-
-                Label {
-                    text: qsTr("Smoothing Factor")
-                    font.pixelSize: 11
-                    color: Theme.textSecondary
-                }
-
-                Item {
-                    Layout.fillWidth: true
-                }
-
-                Label {
-                    text: root.factor.toFixed(2)
-                    font.pixelSize: 11
-                    font.bold: true
-                    color: Theme.textPrimary
-                }
-            }
-
-            Slider {
-                id: factorSlider
-                width: parent.width
-                from: 0.0
-                to: 1.0
-                value: root.factor
-                stepSize: 0.05
-
-                onValueChanged: root.factor = value
-
-                background: Rectangle {
-                    x: factorSlider.leftPadding
-                    y: factorSlider.topPadding + factorSlider.availableHeight / 2 - height / 2
-                    implicitWidth: 200
-                    implicitHeight: 4
-                    width: factorSlider.availableWidth
-                    height: implicitHeight
-                    radius: 2
-                    color: Theme.border
-
-                    Rectangle {
-                        width: factorSlider.visualPosition * parent.width
-                        height: parent.height
-                        color: Theme.accent
-                        radius: 2
-                    }
-                }
-
-                handle: Rectangle {
-                    x: factorSlider.leftPadding + factorSlider.visualPosition * (factorSlider.availableWidth - width)
-                    y: factorSlider.topPadding + factorSlider.availableHeight / 2 - height / 2
-                    implicitWidth: 16
-                    implicitHeight: 16
-                    radius: 8
-                    color: factorSlider.pressed ? Qt.darker(Theme.accent, 1.2) : Theme.accent
-                    border.width: 2
-                    border.color: Theme.white
-                }
-            }
-        }
-
-        // Options
         Rectangle {
             width: parent.width
-            height: optionRow.implicitHeight + 12
-            radius: 4
+            height: heroColumn.implicitHeight + 20
+            radius: 10
             color: Theme.surfaceAlt
+            border.width: 1
+            border.color: Theme.border
 
-            RowLayout {
-                id: optionRow
+            Column {
+                id: heroColumn
                 anchors.fill: parent
-                anchors.margins: 6
-                spacing: 8
+                anchors.margins: 10
+                spacing: 6
 
-                CheckBox {
-                    id: preserveCheck
-                    checked: root.preserveBoundaries
-                    onCheckedChanged: root.preserveBoundaries = checked
+                Label {
+                    text: qsTr("Smooth Mesh Region")
+                    font.pixelSize: 15
+                    font.bold: true
+                    color: Theme.textPrimary
+                }
 
-                    indicator: Rectangle {
-                        implicitWidth: 16
-                        implicitHeight: 16
-                        radius: 3
-                        color: preserveCheck.checked ? Theme.accent : Theme.surface
-                        border.width: 1
-                        border.color: preserveCheck.checked ? Theme.accent : Theme.border
+                Label {
+                    text: qsTr("Select nodes, lines, elements, or a Part, then relax the mesh with a focused parameter set that fits smaller side panels cleanly.")
+                    font.pixelSize: 11
+                    color: Theme.textSecondary
+                    wrapMode: Text.WordWrap
+                }
+            }
+        }
+
+        Label {
+            text: qsTr("Targets")
+            font.pixelSize: 11
+            font.bold: true
+            color: Theme.textSecondary
+        }
+
+        Selector {
+            width: parent.width
+            allowedTypes: mesh_node_type | mesh_line_type | mesh_element_type | part_type
+            onSelectedEntitiesUpdated: function (entities) {
+                root.targetEntities = entities;
+            }
+        }
+
+        Rectangle {
+            width: parent.width
+            height: targetInfo.implicitHeight + 14
+            radius: 8
+            color: Theme.surfaceAlt
+            border.width: 1
+            border.color: Theme.border
+
+            Column {
+                id: targetInfo
+                anchors.fill: parent
+                anchors.margins: 7
+                spacing: 4
+
+                Label {
+                    text: root.targetEntities.length > 0 ? qsTr("%1 targets selected for smoothing").arg(root.targetEntities.length) : qsTr("Select mesh nodes, lines, elements, or a Part")
+                    font.pixelSize: 11
+                    color: root.targetEntities.length > 0 ? Theme.textPrimary : Theme.textDisabled
+                }
+
+                Label {
+                    text: qsTr("Node picks smooth a local neighborhood, while line, element, and Part picks expand to their connected region automatically.")
+                    font.pixelSize: 10
+                    color: Theme.textSecondary
+                    wrapMode: Text.WordWrap
+                }
+            }
+        }
+
+        Label {
+            text: qsTr("Smoothing Strategy")
+            font.pixelSize: 11
+            font.bold: true
+            color: Theme.textSecondary
+        }
+
+        Rectangle {
+            width: parent.width
+            height: strategyGrid.implicitHeight + 20
+            radius: 8
+            color: Theme.surfaceAlt
+            border.width: 1
+            border.color: Theme.border
+
+            GridLayout {
+                id: strategyGrid
+                anchors.fill: parent
+                anchors.margins: 10
+                columns: 2
+                rowSpacing: 10
+                columnSpacing: 10
+
+                Column {
+                    Layout.fillWidth: true
+                    spacing: 4
+
+                    Label {
+                        text: qsTr("Method")
+                        font.pixelSize: 11
+                        color: Theme.textSecondary
+                    }
+
+                    ComboBox {
+                        width: parent.width
+                        model: [qsTr("Laplacian"), qsTr("Taubin")]
+                        currentIndex: root.method === "taubin" ? 1 : 0
+                        onActivated: root.method = currentIndex === 1 ? "taubin" : "laplacian"
+                    }
+                }
+
+                Column {
+                    Layout.fillWidth: true
+                    spacing: 4
+
+                    Label {
+                        text: qsTr("Iterations")
+                        font.pixelSize: 11
+                        color: Theme.textSecondary
+                    }
+
+                    SpinBox {
+                        width: parent.width
+                        from: 1
+                        to: 100
+                        value: root.iterations
+                        editable: true
+                        onValueModified: root.iterations = value
+                    }
+                }
+
+                Column {
+                    Layout.fillWidth: true
+                    spacing: 4
+
+                    Label {
+                        text: qsTr("Smoothing Factor")
+                        font.pixelSize: 11
+                        color: Theme.textSecondary
+                    }
+
+                    Slider {
+                        width: parent.width
+                        from: 0.05
+                        to: 1.0
+                        stepSize: 0.05
+                        value: root.factor
+                        onMoved: root.factor = Number(value.toFixed(2))
+                    }
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.alignment: Qt.AlignBottom
+                    height: factorInfo.implicitHeight + 12
+                    radius: 6
+                    color: Theme.surface
+
+                    RowLayout {
+                        id: factorInfo
+                        anchors.fill: parent
+                        anchors.margins: 6
+                        spacing: 8
 
                         Label {
-                            anchors.centerIn: parent
-                            text: "✓"
+                            text: qsTr("Current factor")
                             font.pixelSize: 11
-                            color: Theme.white
-                            visible: preserveCheck.checked
+                            color: Theme.textSecondary
+                        }
+
+                        Item {
+                            Layout.fillWidth: true
+                        }
+
+                        Label {
+                            text: root.factor.toFixed(2)
+                            font.pixelSize: 12
+                            font.bold: true
+                            color: Theme.textPrimary
                         }
                     }
                 }
+            }
+        }
+
+        Label {
+            text: qsTr("Boundary Control")
+            font.pixelSize: 11
+            font.bold: true
+            color: Theme.textSecondary
+        }
+
+        Rectangle {
+            width: parent.width
+            height: boundaryColumn.implicitHeight + 20
+            radius: 8
+            color: Theme.surfaceAlt
+            border.width: 1
+            border.color: Theme.border
+
+            Column {
+                id: boundaryColumn
+                anchors.fill: parent
+                anchors.margins: 10
+                spacing: 10
+
+                RowLayout {
+                    width: parent.width
+                    spacing: 8
+
+                    CheckBox {
+                        checked: root.preserveBoundaries
+                        onCheckedChanged: root.preserveBoundaries = checked
+                    }
+
+                    Label {
+                        text: qsTr("Preserve open boundaries and sharp feature borders")
+                        font.pixelSize: 11
+                        color: Theme.textPrimary
+                        Layout.fillWidth: true
+                        wrapMode: Text.WordWrap
+                    }
+                }
 
                 Label {
-                    text: qsTr("Preserve boundary vertices")
-                    font.pixelSize: 11
-                    color: Theme.textPrimary
-                    Layout.fillWidth: true
+                    text: root.method === "taubin" ? qsTr("Taubin smoothing alternates positive and negative Laplacian passes to reduce volume shrinkage.") : qsTr("Laplacian smoothing moves each unlocked node toward the average of its adjacent nodes.")
+                    font.pixelSize: 10
+                    color: Theme.textSecondary
+                    wrapMode: Text.WordWrap
+                }
+            }
+        }
 
-                    MouseArea {
-                        anchors.fill: parent
-                        onClicked: preserveCheck.toggle()
+        Label {
+            text: qsTr("Last Result")
+            font.pixelSize: 11
+            font.bold: true
+            color: Theme.textSecondary
+        }
+
+        Rectangle {
+            width: parent.width
+            height: resultColumn.implicitHeight + 12
+            radius: 8
+            color: Theme.surfaceAlt
+            border.width: 1
+            border.color: Theme.border
+
+            Column {
+                id: resultColumn
+                anchors.fill: parent
+                anchors.margins: 6
+                spacing: 6
+
+                Label {
+                    visible: !!root.meshSummary.error
+                    text: root.meshSummary.error || ""
+                    font.pixelSize: 11
+                    color: Theme.danger
+                    wrapMode: Text.WordWrap
+                }
+
+                Label {
+                    text: Object.keys(root.meshSummary).length === 0 ? qsTr("No smoothing result yet") : qsTr("Smoothed %1 nodes").arg(root.meshSummary.smoothedNodeCount || 0)
+                    font.pixelSize: 11
+                    color: Object.keys(root.meshSummary).length === 0 ? Theme.textDisabled : Theme.textPrimary
+                }
+
+                Label {
+                    visible: Object.keys(root.meshSummary).length > 0
+                    text: qsTr("Targets: %1 nodes, locked boundary nodes: %2, max displacement: %3").arg(root.meshSummary.targetNodeCount || 0).arg(root.meshSummary.boundaryNodeCount || 0).arg(Number(root.meshSummary.maxDisplacement || 0).toFixed(4))
+                    font.pixelSize: 11
+                    color: Theme.textSecondary
+                    wrapMode: Text.WordWrap
+                }
+
+                Label {
+                    visible: Object.keys(root.meshSummary).length > 0
+                    text: qsTr("Method: %1, iterations: %2, document total: %3 nodes / %4 elements").arg(root.meshSummary.method || "-").arg(root.meshSummary.iterations || 0).arg(root.meshSummary.nodeCount || 0).arg(root.meshSummary.elementCount || 0)
+                    font.pixelSize: 11
+                    color: Theme.textSecondary
+                    wrapMode: Text.WordWrap
+                }
+
+                Repeater {
+                    model: root.meshEntities
+                    delegate: RowLayout {
+                        id: meshEntityRow
+                        required property var modelData
+                        width: parent.width
+                        spacing: 8
+
+                        Label {
+                            text: meshEntityRow.modelData.type
+                            font.pixelSize: 11
+                            font.bold: true
+                            color: Theme.textPrimary
+                        }
+
+                        Item {
+                            Layout.fillWidth: true
+                        }
+
+                        Label {
+                            text: qsTr("count=%1").arg(meshEntityRow.modelData.count)
+                            font.pixelSize: 11
+                            color: Theme.textSecondary
+                        }
                     }
                 }
             }
         }
     }
 
-    component MethodButton: SelectableButton {}
+    Connections {
+        target: BackendService
+        enabled: root.visible
+
+        function onOperationFinished(moduleName, actionName, result) {
+            if (moduleName !== root.serviceName || actionName !== root.backendActionName)
+                return;
+            try {
+                const obj = JSON.parse(result);
+                root.meshSummary = obj;
+                root.meshEntities = obj.mesh_entities || [];
+                if (obj.success)
+                    root.requestMeshPreview();
+            } catch (e) {
+                root.meshSummary = ({});
+                root.meshEntities = [];
+            }
+        }
+
+        function onOperationFailed(moduleName, actionName, error) {
+            if (moduleName !== root.serviceName || actionName !== root.backendActionName)
+                return;
+            root.meshSummary = {
+                "error": error || qsTr("Mesh smoothing failed")
+            };
+            root.meshEntities = [];
+        }
+    }
 }

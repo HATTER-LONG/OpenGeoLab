@@ -2,7 +2,7 @@
 
 OpenGeoLab 是一个面向 CAD/CAE 场景的桌面原型工程，使用 Qt Quick(QML) 构建界面，使用 OpenGL 做实时显示，使用 OpenCASCADE 管理几何拓扑，并逐步引入网格生成、选择编辑和 AI 辅助分析能力。
 
-英文说明见 README.en.md，协议说明见 docs/json_protocols.md。
+英文说明见 README.en.md，协议说明见 docs/json_protocols.md，面向大模型的几何/网格协议设计见 docs/llm_geometry_mesh_protocol.md。
 
 ## 功能概览
 
@@ -10,6 +10,7 @@ OpenGeoLab 是一个面向 CAD/CAE 场景的桌面原型工程，使用 Qt Quick
 - 基于 OCC 管理点、边、线框、面、实体和 Part 等几何层级。
 - 通过 OpenGL 渲染几何与网格，并提供基础视口交互。
 - 支持基于拾取的查询、高亮与选择。
+- 支持基于几何对象的网格生成，以及基于局部区域的网格平滑。
 - 为后续 trim、offset、网格质量诊断与 AI 协助修复预留扩展点。
 
 ## 模块结构

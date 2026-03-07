@@ -2,6 +2,7 @@
 
 #include "render/render_types.hpp"
 
+#include <array>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
@@ -165,6 +166,8 @@ struct DrawRange {
     PrimitiveTopology m_topology{PrimitiveTopology::Triangles};
 };
 
+constexpr size_t K_RENDER_ENTITY_TYPE_BUCKET_COUNT = static_cast<size_t>(RenderEntityType::None);
+
 // =============================================================================
 // Multi-draw batch caches
 // =============================================================================
@@ -245,18 +248,23 @@ struct ArrayDrawBatch {
  */
 struct IndexedBatchCache {
     IndexedDrawBatch m_all;
-    std::unordered_map<RenderEntityType, IndexedDrawBatch> m_byType;
+    std::array<IndexedDrawBatch, K_RENDER_ENTITY_TYPE_BUCKET_COUNT> m_byType;
 
     void reserve(size_t size) { m_all.reserve(size); }
 
     void append(const DrawRange& range) {
         m_all.append(range);
-        m_byType[range.m_entityKey.m_type].append(range);
+        const auto index = static_cast<size_t>(range.m_entityKey.m_type);
+        if(index < m_byType.size()) {
+            m_byType[index].append(range);
+        }
     }
 
     void clear() {
         m_all.clear();
-        m_byType.clear();
+        for(auto& batch : m_byType) {
+            batch.clear();
+        }
     }
 };
 
@@ -265,18 +273,23 @@ struct IndexedBatchCache {
  */
 struct ArrayBatchCache {
     ArrayDrawBatch m_all;
-    std::unordered_map<RenderEntityType, ArrayDrawBatch> m_byType;
+    std::array<ArrayDrawBatch, K_RENDER_ENTITY_TYPE_BUCKET_COUNT> m_byType;
 
     void reserve(size_t size) { m_all.reserve(size); }
 
     void append(const DrawRange& range) {
         m_all.append(range);
-        m_byType[range.m_entityKey.m_type].append(range);
+        const auto index = static_cast<size_t>(range.m_entityKey.m_type);
+        if(index < m_byType.size()) {
+            m_byType[index].append(range);
+        }
     }
 
     void clear() {
         m_all.clear();
-        m_byType.clear();
+        for(auto& batch : m_byType) {
+            batch.clear();
+        }
     }
 };
 
@@ -347,7 +360,7 @@ struct RenderPassData {
 };
 
 // =============================================================================
-// PickResolutionData — Lookup tables for pick/hover entity resolution
+// Pick Resolution Data — Domain-specific lookup tables
 // =============================================================================
 
 /**
@@ -359,7 +372,7 @@ struct RenderPassData {
  * edges to wires, wires to faces, and mesh line IDs to node pairs.
  * They are NOT used during normal rendering — only during pick resolution.
  */
-struct PickResolutionData {
+struct GeometryPickData {
     /// Edge uid → parent wire uid(s) lookup (built by GeometryRenderBuilder).
     /// An edge shared between two faces belongs to two different wires.
     std::unordered_map<uint64_t, std::vector<uint64_t>> m_edgeToWireUids;
@@ -379,13 +392,6 @@ struct PickResolutionData {
     /// Entity uid → parent part uid (built from DrawRangeEx data during build phase)
     std::unordered_map<uint64_t, uint64_t> m_entityToPartUid;
 
-    /// Mesh line sequential ID → (nodeA, nodeB) lookup.
-    /// Built by MeshRenderBuilder; used to resolve mesh line picks back to node pairs.
-    std::unordered_map<uint64_t, std::pair<Mesh::MeshNodeId, Mesh::MeshNodeId>> m_meshLineNodes;
-
-    /// Mesh line uid → parent part uid(s) lookup used by visibility filtering.
-    std::unordered_map<uint64_t, std::vector<uint64_t>> m_meshLineToPartUids;
-
     void clear() {
         m_edgeToWireUids.clear();
         m_edgeToSolidUids.clear();
@@ -393,22 +399,103 @@ struct PickResolutionData {
         m_wireToFaceUid.clear();
         m_faceToSolidUid.clear();
         m_entityToPartUid.clear();
+    }
+};
+
+struct MeshPickData {
+    /// Mesh line sequential ID → (nodeA, nodeB) lookup.
+    /// Built by MeshRenderBuilder; used to resolve mesh line picks back to node pairs.
+    std::unordered_map<uint64_t, std::pair<Mesh::MeshNodeId, Mesh::MeshNodeId>> m_meshLineNodes;
+
+    /// Mesh line uid → parent part uid(s) lookup used by visibility filtering.
+    std::unordered_map<uint64_t, std::vector<uint64_t>> m_meshLineToPartUids;
+
+    /// Encoded mesh entity pick id → parent part uid.
+    /// Entries with ambiguous ownership are omitted.
+    std::unordered_map<uint64_t, uint64_t> m_entityToPartUid;
+
+    void clear() {
         m_meshLineNodes.clear();
         m_meshLineToPartUids.clear();
-    }
-
-    void clearGeometry() {
-        m_edgeToWireUids.clear();
-        m_edgeToSolidUids.clear();
-        m_wireToEdgeUids.clear();
-        m_wireToFaceUid.clear();
-        m_faceToSolidUid.clear();
         m_entityToPartUid.clear();
     }
+};
 
-    void clearMesh() {
-        m_meshLineNodes.clear();
-        m_meshLineToPartUids.clear();
+struct GeometryRenderDomain {
+    RenderPassData m_passData;
+    GeometryPickData m_pickData;
+    std::vector<DrawRange> m_triangleRanges;
+    std::vector<DrawRange> m_lineRanges;
+    std::vector<DrawRange> m_pointRanges;
+    GeometryDrawBatchCache m_batches;
+    Geometry::BoundingBox3D m_bbox;
+    uint64_t m_version{0};
+
+    void markUpdated() { ++m_version; }
+
+    void rebuildBatches() {
+        m_batches.clear();
+        m_batches.m_triangles.reserve(m_triangleRanges.size());
+        m_batches.m_lines.reserve(m_lineRanges.size());
+        m_batches.m_points.reserve(m_pointRanges.size());
+        for(const auto& range : m_triangleRanges) {
+            m_batches.m_triangles.append(range);
+        }
+        for(const auto& range : m_lineRanges) {
+            m_batches.m_lines.append(range);
+        }
+        for(const auto& range : m_pointRanges) {
+            m_batches.m_points.append(range);
+        }
+    }
+
+    void clear() {
+        m_passData = {};
+        m_pickData.clear();
+        m_triangleRanges.clear();
+        m_lineRanges.clear();
+        m_pointRanges.clear();
+        m_batches.clear();
+        m_bbox = {};
+    }
+};
+
+struct MeshRenderDomain {
+    RenderPassData m_passData;
+    MeshPickData m_pickData;
+    std::vector<DrawRange> m_triangleRanges;
+    std::vector<DrawRange> m_lineRanges;
+    std::vector<DrawRange> m_pointRanges;
+    MeshDrawBatchCache m_batches;
+    Geometry::BoundingBox3D m_bbox;
+    uint64_t m_version{0};
+
+    void markUpdated() { ++m_version; }
+
+    void rebuildBatches() {
+        m_batches.clear();
+        m_batches.m_triangles.reserve(m_triangleRanges.size());
+        m_batches.m_lines.reserve(m_lineRanges.size());
+        m_batches.m_points.reserve(m_pointRanges.size());
+        for(const auto& range : m_triangleRanges) {
+            m_batches.m_triangles.append(range);
+        }
+        for(const auto& range : m_lineRanges) {
+            m_batches.m_lines.append(range);
+        }
+        for(const auto& range : m_pointRanges) {
+            m_batches.m_points.append(range);
+        }
+    }
+
+    void clear() {
+        m_passData = {};
+        m_pickData.clear();
+        m_triangleRanges.clear();
+        m_lineRanges.clear();
+        m_pointRanges.clear();
+        m_batches.clear();
+        m_bbox = {};
     }
 };
 
@@ -424,77 +511,36 @@ struct PickResolutionData {
  * tables (m_pickData) are separated for clarity.
  */
 struct RenderData {
-    /// Per-pass flat GPU buffer data
-    std::unordered_map<RenderPassType, RenderPassData> m_passData;
+    GeometryRenderDomain m_geometry;
+    MeshRenderDomain m_mesh;
 
-    /// Pick-specific lookup tables for entity hierarchy resolution
-    PickResolutionData m_pickData;
+    void markGeometryUpdated() { m_geometry.markUpdated(); }
+    void markMeshUpdated() { m_mesh.markUpdated(); }
 
-    /// Pre-built geometry DrawRangeEx by topology (generated during build phase)
-    std::vector<DrawRange> m_geometryTriangleRanges;
-    std::vector<DrawRange> m_geometryLineRanges;
-    std::vector<DrawRange> m_geometryPointRanges;
-
-    /// Pre-built mesh DrawRangeEx by topology (generated during build phase)
-    std::vector<DrawRange> m_meshTriangleRanges;
-    std::vector<DrawRange> m_meshLineRanges;
-    std::vector<DrawRange> m_meshPointRanges;
-
-    /// Cached multi-draw batches for geometry and mesh topologies
-    GeometryDrawBatchCache m_geometryBatches;
-    MeshDrawBatchCache m_meshBatches;
-
-    /// Scene-wide bounding box (union of all visible geometry)
-    Geometry::BoundingBox3D m_sceneBBox;
-
-    /// Dirty flags per domain
-    uint64_t m_geometryVersion{0};
-    uint64_t m_meshVersion{0};
-
-    void markGeometryUpdated() { ++m_geometryVersion; }
-    void markMeshUpdated() { ++m_meshVersion; }
+    [[nodiscard]] Geometry::BoundingBox3D sceneBoundingBox() const {
+        Geometry::BoundingBox3D scene_bbox;
+        scene_bbox.expand(m_geometry.m_bbox);
+        scene_bbox.expand(m_mesh.m_bbox);
+        return scene_bbox;
+    }
 
     /**
      * @brief Clear all render data (geometry + mesh)
      */
     void clear() {
-        m_passData.clear();
-        m_pickData.clear();
-        m_geometryTriangleRanges.clear();
-        m_geometryLineRanges.clear();
-        m_geometryPointRanges.clear();
-        m_meshTriangleRanges.clear();
-        m_meshLineRanges.clear();
-        m_meshPointRanges.clear();
-        m_geometryBatches.clear();
-        m_meshBatches.clear();
-        m_sceneBBox = {};
+        m_geometry.clear();
+        m_mesh.clear();
     }
 
     /**
      * @brief Clear geometry-domain data only, preserving mesh data
      */
-    void clearGeometry() {
-        // Clear geometry pass buffer
-        m_passData.erase(RenderPassType::Geometry);
-        m_pickData.clearGeometry();
-        m_geometryTriangleRanges.clear();
-        m_geometryLineRanges.clear();
-        m_geometryPointRanges.clear();
-        m_geometryBatches.clear();
-    }
+    void clearGeometry() { m_geometry.clear(); }
 
     /**
      * @brief Clear mesh-domain data only, preserving geometry data
      */
-    void clearMesh() {
-        m_passData.erase(RenderPassType::Mesh);
-        m_pickData.clearMesh();
-        m_meshTriangleRanges.clear();
-        m_meshLineRanges.clear();
-        m_meshPointRanges.clear();
-        m_meshBatches.clear();
-    }
+    void clearMesh() { m_mesh.clear(); }
 };
 
 // =============================================================================

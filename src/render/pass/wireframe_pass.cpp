@@ -50,6 +50,11 @@ constexpr float K_MESH_LINE_VIEW_OFFSET = -0.05f;
 [[nodiscard]] constexpr bool hasMode(RenderDisplayModeMask value, RenderDisplayModeMask flag) {
     return (static_cast<uint8_t>(value) & static_cast<uint8_t>(flag)) != 0;
 }
+
+[[nodiscard]] constexpr bool allowsMeshPenetration(bool xray_mode,
+                                                   RenderDisplayModeMask display_mode) {
+    return xray_mode || display_mode == RenderDisplayModeMask::Wireframe;
+}
 } // namespace
 bool WireframePass::onInitialize() {
     if(!m_flatShader.compile(flat_vertex_shader, flat_fragment_shader)) {
@@ -73,6 +78,9 @@ void WireframePass::render(RenderPassContext& ctx) {
     const auto& geometry_batches = ctx.m_geometry.m_batches;
     const auto& mesh_batches = ctx.m_mesh.m_batches;
     const auto mesh_display_mode = ctx.m_mesh.m_displayMode;
+    const float mesh_overlay_offset = allowsMeshPenetration(params.m_xRayMode, mesh_display_mode)
+                                          ? K_MESH_LINE_VIEW_OFFSET
+                                          : 0.0f;
 
     QOpenGLFunctions* f = QOpenGLContext::currentContext()->functions();
     QOpenGLContext* ctx_gl = QOpenGLContext::currentContext();
@@ -108,9 +116,7 @@ void WireframePass::render(RenderPassContext& ctx) {
        !mesh_batches.m_lines.m_all.empty() && mesh_buf.vertexCount() > 0) {
         mesh_buf.bindForDraw();
 
-        // Push mesh wireframe slightly towards the camera in view-space to avoid
-        // z-fighting with surface geometry (especially in frontal views).
-        m_flatShader.setUniformFloat("u_viewOffset", K_MESH_LINE_VIEW_OFFSET);
+        m_flatShader.setUniformFloat("u_viewOffset", mesh_overlay_offset);
 
         f->glLineWidth(1.0f);
         PassUtil::multiDrawArrays(ctx_gl, f, GL_LINES, mesh_batches.m_lines.m_all);
@@ -128,9 +134,7 @@ void WireframePass::render(RenderPassContext& ctx) {
 
         f->glEnable(GL_PROGRAM_POINT_SIZE);
         m_flatShader.setUniformFloat("u_pointSize", 3.0f);
-        // Also offset mesh points slightly to avoid coincident rasterization with
-        // surfaces and edges.
-        m_flatShader.setUniformFloat("u_viewOffset", K_MESH_LINE_VIEW_OFFSET);
+        m_flatShader.setUniformFloat("u_viewOffset", mesh_overlay_offset);
         PassUtil::multiDrawArrays(ctx_gl, f, GL_POINTS, mesh_batches.m_points.m_all);
         m_flatShader.setUniformFloat("u_viewOffset", 0.0f);
 

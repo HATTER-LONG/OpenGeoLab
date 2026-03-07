@@ -91,6 +91,23 @@ public:
                                       std::vector<MeshElement> elements,
                                       std::string& error);
 
+    /**
+     * @brief Copy the current mesh nodes and elements.
+     * @param nodes Output node snapshot.
+     * @param elements Output element snapshot.
+     */
+    void snapshotMesh(std::vector<MeshNode>& nodes, std::vector<MeshElement>& elements) const;
+
+    /**
+     * @brief Update existing node positions in place.
+     * @param positions Node id to new position map.
+     * @param error Filled on failure.
+     * @return true on success.
+     */
+    [[nodiscard]] bool
+    updateNodePositions(const std::unordered_map<MeshNodeId, Util::Pt3d>& positions,
+                        std::string& error);
+
     // -------------------------------------------------------------------------
     // Render Data
     // -------------------------------------------------------------------------

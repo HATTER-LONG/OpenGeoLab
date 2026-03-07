@@ -45,11 +45,34 @@ int typePriority(RenderEntityType type) {
 
 } // anonymous namespace
 
+namespace {
+[[nodiscard]] uint64_t geometryPartUidForEncoded(const GeometryPickData* pick_data,
+                                                 uint64_t encoded) {
+    if(!pick_data) {
+        return 0;
+    }
+    auto it = pick_data->m_entityToPartUid.find(encoded);
+    return it != pick_data->m_entityToPartUid.end() ? it->second : 0;
+}
+
+[[nodiscard]] uint64_t meshPartUidForEncoded(const MeshPickData* pick_data, uint64_t encoded) {
+    if(!pick_data) {
+        return 0;
+    }
+    const auto it = pick_data->m_entityToPartUid.find(encoded);
+    return it != pick_data->m_entityToPartUid.end() ? it->second : 0;
+}
+} // namespace
+
 // =============================================================================
 // Bind pick data
 // =============================================================================
 
-void PickResolver::setPickData(const PickResolutionData& pick_data) { m_pickData = &pick_data; }
+void PickResolver::setPickData(const GeometryPickData& geometry_pick_data,
+                               const MeshPickData& mesh_pick_data) {
+    m_geometryPickData = &geometry_pick_data;
+    m_meshPickData = &mesh_pick_data;
+}
 
 // =============================================================================
 // Effective GPU pick mask
@@ -63,7 +86,9 @@ RenderEntityTypeMask PickResolver::computeEffectiveMask(RenderEntityTypeMask use
         effective = effective | RenderEntityTypeMask::Edge | RenderEntityTypeMask::Face;
     }
     if(hasMask(user_mask, RenderEntityTypeMask::Part)) {
-        effective = effective | RenderEntityTypeMask::Edge | RenderEntityTypeMask::Face;
+        effective = effective | RenderEntityTypeMask::Edge | RenderEntityTypeMask::Face |
+                    RenderEntityTypeMask::MeshNode | RenderEntityTypeMask::MeshLine |
+                    RENDER_MESH_ELEMENTS;
     }
     if(hasMask(user_mask, RenderEntityTypeMask::Solid)) {
         effective = effective | RenderEntityTypeMask::Edge | RenderEntityTypeMask::Face;
@@ -78,7 +103,7 @@ RenderEntityTypeMask PickResolver::computeEffectiveMask(RenderEntityTypeMask use
 ResolvedPickResult PickResolver::resolve(const std::vector<uint64_t>& pick_ids,
                                          PickAction action,
                                          RenderEntityTypeMask user_mask) const {
-    if(pick_ids.empty() || !m_pickData) {
+    if(pick_ids.empty()) {
         return ResolvedPickResult{};
     }
 
@@ -110,17 +135,21 @@ ResolvedPickResult PickResolver::resolveVEFMode(const std::vector<uint64_t>& pic
         const RenderEntityType type = PickId::decodeType(encoded);
         const auto uid = PickId::decodeUID(encoded);
 
-        const auto part_it = m_pickData->m_entityToPartUid.find(encoded);
-        const bool has_part = (part_it != m_pickData->m_entityToPartUid.end());
-        const auto part_uid = has_part ? part_it->second : 0;
+        const auto part_uid = isGeometryDomain(type)
+                                  ? geometryPartUidForEncoded(m_geometryPickData, encoded)
+                                  : meshPartUidForEncoded(m_meshPickData, encoded);
+        const bool has_part = part_uid != 0;
 
         // Check whether any wire containing this edge is currently selected.
         // If so: Add → blocked (wire takes precedence over edge);
         //        Remove → relevant (deselect via wire, not edge directly).
         bool edge_has_wire_selected = false;
         if(type == RenderEntityType::Edge) {
-            auto wit = m_pickData->m_edgeToWireUids.find(uid);
-            if(wit != m_pickData->m_edgeToWireUids.end()) {
+            if(!m_geometryPickData) {
+                continue;
+            }
+            auto wit = m_geometryPickData->m_edgeToWireUids.find(uid);
+            if(wit != m_geometryPickData->m_edgeToWireUids.end()) {
                 for(const auto wire_uid : wit->second) {
                     if(select_mgr.isWireSelected(wire_uid)) {
                         edge_has_wire_selected = true;
@@ -251,20 +280,31 @@ ResolvedPickResult PickResolver::resolvePartMode(const std::vector<uint64_t>& pi
 
     for(const auto encoded : pick_ids) {
         const RenderEntityType type = PickId::decodeType(encoded);
-        if(type != RenderEntityType::Face && type != RenderEntityType::Edge) {
+        if(type == RenderEntityType::Face || type == RenderEntityType::Edge) {
+            if(!m_geometryPickData) {
+                continue;
+            }
+
+            auto it = m_geometryPickData->m_entityToPartUid.find(encoded);
+            if(it == m_geometryPickData->m_entityToPartUid.end() || it->second == 0) {
+                continue;
+            }
+
+            part_uid = it->second;
+            if(type == RenderEntityType::Face) {
+                face_context = PickId::decodeUID(encoded);
+            }
+            break;
+        }
+
+        if(!isMeshDomain(type)) {
             continue;
         }
 
-        auto it = m_pickData->m_entityToPartUid.find(encoded);
-        if(it == m_pickData->m_entityToPartUid.end() || it->second == 0) {
-            continue;
+        part_uid = meshPartUidForEncoded(m_meshPickData, encoded);
+        if(part_uid != 0) {
+            break;
         }
-
-        part_uid = it->second;
-        if(type == RenderEntityType::Face) {
-            face_context = PickId::decodeUID(encoded);
-        }
-        break; // first candidate is sufficient
     }
 
     if(part_uid == 0) {
@@ -343,14 +383,17 @@ ResolvedPickResult PickResolver::resolveSolidMode(const std::vector<uint64_t>& p
 
 const std::vector<uint64_t>& PickResolver::wireEdges(uint64_t wire_uid) const {
     static const std::vector<uint64_t> empty;
-    if(!m_pickData) {
+    if(!m_geometryPickData) {
         return empty;
     }
-    auto it = m_pickData->m_wireToEdgeUids.find(wire_uid);
-    return it != m_pickData->m_wireToEdgeUids.end() ? it->second : empty;
+    auto it = m_geometryPickData->m_wireToEdgeUids.find(wire_uid);
+    return it != m_geometryPickData->m_wireToEdgeUids.end() ? it->second : empty;
 }
 
-void PickResolver::clear() { m_pickData = nullptr; }
+void PickResolver::clear() {
+    m_geometryPickData = nullptr;
+    m_meshPickData = nullptr;
+}
 
 // =============================================================================
 // Hierarchy helpers
@@ -360,20 +403,28 @@ uint64_t PickResolver::resolvePartUid(uint64_t uid, RenderEntityType type) const
     if(type == RenderEntityType::Part) {
         return uid;
     }
-    if(!m_pickData) {
+    if(isMeshDomain(type)) {
+        if(!m_meshPickData) {
+            return 0;
+        }
+        const uint64_t encoded = PickId::encode(type, uid);
+        auto it = m_meshPickData->m_entityToPartUid.find(encoded);
+        return it != m_meshPickData->m_entityToPartUid.end() ? it->second : 0;
+    }
+    if(!m_geometryPickData) {
         return 0;
     }
     const uint64_t encoded = PickId::encode(type, uid);
-    auto it = m_pickData->m_entityToPartUid.find(encoded);
-    return it != m_pickData->m_entityToPartUid.end() ? it->second : 0;
+    auto it = m_geometryPickData->m_entityToPartUid.find(encoded);
+    return it != m_geometryPickData->m_entityToPartUid.end() ? it->second : 0;
 }
 
 uint64_t PickResolver::resolveWireUid(uint64_t edge_uid, uint64_t face_uid) const {
-    if(!m_pickData) {
+    if(!m_geometryPickData) {
         return 0;
     }
-    auto it = m_pickData->m_edgeToWireUids.find(edge_uid);
-    if(it == m_pickData->m_edgeToWireUids.end() || it->second.empty()) {
+    auto it = m_geometryPickData->m_edgeToWireUids.find(edge_uid);
+    if(it == m_geometryPickData->m_edgeToWireUids.end() || it->second.empty()) {
         return 0;
     }
     if(it->second.size() == 1) {
@@ -382,8 +433,8 @@ uint64_t PickResolver::resolveWireUid(uint64_t edge_uid, uint64_t face_uid) cons
     // Multiple wires share this edge — prefer the wire whose face matches context.
     if(face_uid != 0) {
         for(const auto wire_uid : it->second) {
-            auto fit = m_pickData->m_wireToFaceUid.find(wire_uid);
-            if(fit != m_pickData->m_wireToFaceUid.end() && fit->second == face_uid) {
+            auto fit = m_geometryPickData->m_wireToFaceUid.find(wire_uid);
+            if(fit != m_geometryPickData->m_wireToFaceUid.end() && fit->second == face_uid) {
                 return wire_uid;
             }
         }
@@ -392,12 +443,12 @@ uint64_t PickResolver::resolveWireUid(uint64_t edge_uid, uint64_t face_uid) cons
 }
 
 uint64_t PickResolver::resolveWireUidForFace(uint64_t face_uid) const {
-    if(!m_pickData || face_uid == 0) {
+    if(!m_geometryPickData || face_uid == 0) {
         return 0;
     }
     // Scan wireToFaceUid to find a wire whose bounding face is face_uid.
     // Typical geometry has few wires so linear scan is acceptable.
-    for(const auto& [wire_uid, fuid] : m_pickData->m_wireToFaceUid) {
+    for(const auto& [wire_uid, fuid] : m_geometryPickData->m_wireToFaceUid) {
         if(fuid == face_uid) {
             return wire_uid;
         }
@@ -406,29 +457,29 @@ uint64_t PickResolver::resolveWireUidForFace(uint64_t face_uid) const {
 }
 
 uint64_t PickResolver::resolveSolidUid(uint64_t edge_uid, uint64_t face_uid) const {
-    if(!m_pickData) {
+    if(!m_geometryPickData) {
         return 0;
     }
     if(face_uid != 0) {
-        auto fit = m_pickData->m_faceToSolidUid.find(face_uid);
-        if(fit != m_pickData->m_faceToSolidUid.end()) {
+        auto fit = m_geometryPickData->m_faceToSolidUid.find(face_uid);
+        if(fit != m_geometryPickData->m_faceToSolidUid.end()) {
             return fit->second;
         }
     }
 
-    auto it = m_pickData->m_edgeToSolidUids.find(edge_uid);
-    if(it == m_pickData->m_edgeToSolidUids.end() || it->second.empty()) {
+    auto it = m_geometryPickData->m_edgeToSolidUids.find(edge_uid);
+    if(it == m_geometryPickData->m_edgeToSolidUids.end() || it->second.empty()) {
         return 0;
     }
     return it->second.front();
 }
 
 uint64_t PickResolver::resolveSolidUidForFace(uint64_t face_uid) const {
-    if(!m_pickData || face_uid == 0) {
+    if(!m_geometryPickData || face_uid == 0) {
         return 0;
     }
-    auto it = m_pickData->m_faceToSolidUid.find(face_uid);
-    return it != m_pickData->m_faceToSolidUid.end() ? it->second : 0;
+    auto it = m_geometryPickData->m_faceToSolidUid.find(face_uid);
+    return it != m_geometryPickData->m_faceToSolidUid.end() ? it->second : 0;
 }
 
 } // namespace OpenGeoLab::Render

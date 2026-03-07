@@ -23,51 +23,40 @@ RenderSceneImpl::RenderSceneImpl() { LOG_DEBUG("RenderSceneImpl: Created"); }
 
 RenderSceneImpl::~RenderSceneImpl() { LOG_DEBUG("RenderSceneImpl: Destroyed"); }
 
-void RenderSceneImpl::synchronizeGeometry(const RenderData& render_data) {
-    auto pass_it = render_data.m_passData.find(RenderPassType::Geometry);
-    if(pass_it != render_data.m_passData.end()) {
-        if(!m_geometryBuffer.upload(pass_it->second)) {
-            LOG_ERROR("RenderSceneImpl: Failed to upload geometry GPU buffer");
-        }
+void RenderSceneImpl::synchronizeGeometry(const GeometryRenderDomain& geometry) {
+    if(!m_geometryBuffer.upload(geometry.m_passData)) {
+        LOG_ERROR("RenderSceneImpl: Failed to upload geometry GPU buffer");
     }
-
-    m_geometryTriangleRanges = render_data.m_geometryTriangleRanges;
-    m_geometryLineRanges = render_data.m_geometryLineRanges;
-    m_geometryPointRanges = render_data.m_geometryPointRanges;
-    m_geometryBatches = render_data.m_geometryBatches;
-    m_geometryDataVersion = render_data.m_geometryVersion;
+    m_geometryDataVersion = geometry.m_version;
 }
 
-void RenderSceneImpl::synchronizeMesh(const RenderData& render_data) {
-    auto mesh_it = render_data.m_passData.find(RenderPassType::Mesh);
-    if(mesh_it != render_data.m_passData.end()) {
-        if(!m_meshBuffer.upload(mesh_it->second)) {
-            LOG_ERROR("RenderSceneImpl: Failed to upload mesh GPU buffer");
-        }
+void RenderSceneImpl::synchronizeMesh(const MeshRenderDomain& mesh) {
+    if(!m_meshBuffer.upload(mesh.m_passData)) {
+        LOG_ERROR("RenderSceneImpl: Failed to upload mesh GPU buffer");
     }
-
-    m_meshTriangleRanges = render_data.m_meshTriangleRanges;
-    m_meshLineRanges = render_data.m_meshLineRanges;
-    m_meshPointRanges = render_data.m_meshPointRanges;
-    m_meshBatches = render_data.m_meshBatches;
-    m_meshDataVersion = render_data.m_meshVersion;
+    m_meshDataVersion = mesh.m_version;
 }
 
-RenderPassContext RenderSceneImpl::buildRenderPassContext() {
+RenderPassContext RenderSceneImpl::buildRenderPassContext(const RenderData& render_data) {
     return {{m_frameState.m_viewMatrix, m_frameState.m_projMatrix, m_frameState.m_cameraPos,
              m_frameState.m_xRayMode},
-            {m_geometryBuffer, m_geometryTriangleRanges, m_geometryLineRanges,
-             m_geometryPointRanges, m_geometryBatches},
-            {m_meshBuffer, m_meshTriangleRanges, m_meshLineRanges, m_meshPointRanges, m_meshBatches,
+            {m_geometryBuffer, render_data.m_geometry.m_triangleRanges,
+             render_data.m_geometry.m_lineRanges, render_data.m_geometry.m_pointRanges,
+             render_data.m_geometry.m_batches},
+            {m_meshBuffer, render_data.m_mesh.m_triangleRanges, render_data.m_mesh.m_lineRanges,
+             render_data.m_mesh.m_pointRanges, render_data.m_mesh.m_batches,
              m_frameState.m_meshDisplayMode}};
 }
 
-RenderPassContext RenderSceneImpl::buildPickPassContext(RenderEntityTypeMask pick_mask) {
+RenderPassContext RenderSceneImpl::buildPickPassContext(const RenderData& render_data,
+                                                        RenderEntityTypeMask pick_mask) {
     return {{m_frameState.m_viewMatrix, m_frameState.m_projMatrix, m_frameState.m_cameraPos,
              m_frameState.m_xRayMode, pick_mask},
-            {m_geometryBuffer, m_geometryTriangleRanges, m_geometryLineRanges,
-             m_geometryPointRanges, m_geometryBatches},
-            {m_meshBuffer, m_meshTriangleRanges, m_meshLineRanges, m_meshPointRanges, m_meshBatches,
+            {m_geometryBuffer, render_data.m_geometry.m_triangleRanges,
+             render_data.m_geometry.m_lineRanges, render_data.m_geometry.m_pointRanges,
+             render_data.m_geometry.m_batches},
+            {m_meshBuffer, render_data.m_mesh.m_triangleRanges, render_data.m_mesh.m_lineRanges,
+             render_data.m_mesh.m_pointRanges, render_data.m_mesh.m_batches,
              m_frameState.m_meshDisplayMode}};
 }
 
@@ -110,17 +99,18 @@ void RenderSceneImpl::synchronize(const SceneFrameState& state) {
     }
 
     const auto& render_data = *state.m_renderData;
-    if(render_data.m_geometryVersion != m_geometryDataVersion ||
-       render_data.m_meshVersion != m_meshDataVersion) {
+    if(render_data.m_geometry.m_version != m_geometryDataVersion ||
+       render_data.m_mesh.m_version != m_meshDataVersion) {
         // Update pick resolver reference data for hierarchy lookups
-        m_pickResolver.setPickData(render_data.m_pickData);
+        m_pickResolver.setPickData(render_data.m_geometry.m_pickData,
+                                   render_data.m_mesh.m_pickData);
     }
-    if(render_data.m_geometryVersion != m_geometryDataVersion) {
-        synchronizeGeometry(render_data);
+    if(render_data.m_geometry.m_version != m_geometryDataVersion) {
+        synchronizeGeometry(render_data.m_geometry);
     }
 
-    if(render_data.m_meshVersion != m_meshDataVersion) {
-        synchronizeMesh(render_data);
+    if(render_data.m_mesh.m_version != m_meshDataVersion) {
+        synchronizeMesh(render_data.m_mesh);
     }
 }
 
@@ -144,7 +134,11 @@ void RenderSceneImpl::render() {
     f->glClearColor(bg.m_r, bg.m_g, bg.m_b, 1.0f);
     f->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    RenderPassContext pass_context = buildRenderPassContext();
+    if(!m_frameState.m_renderData) {
+        return;
+    }
+
+    RenderPassContext pass_context = buildRenderPassContext(*m_frameState.m_renderData);
 
     // --- Pass 1: Surfaces ---
     m_opaquePass.render(pass_context);
@@ -176,7 +170,12 @@ void RenderSceneImpl::processHover(int pixel_x, int pixel_y) {
     // Expand mask for Wire/Part/Solid modes so their sub-entities are rendered.
     const RenderEntityTypeMask effective_mask = m_pickResolver.computeEffectiveMask(pick_mask);
 
-    RenderPassContext pass_context = buildPickPassContext(effective_mask);
+    if(!m_frameState.m_renderData) {
+        return;
+    }
+
+    RenderPassContext pass_context =
+        buildPickPassContext(*m_frameState.m_renderData, effective_mask);
     m_selectionPass.render(pass_context);
 
     // Restore main framebuffer viewport
@@ -234,7 +233,12 @@ void RenderSceneImpl::processPicking(const PickingInput& input) {
     const RenderEntityTypeMask pick_mask = select_mgr.getPickTypes();
     const RenderEntityTypeMask effective_mask = m_pickResolver.computeEffectiveMask(pick_mask);
 
-    RenderPassContext pass_context = buildPickPassContext(effective_mask);
+    if(!m_frameState.m_renderData) {
+        return;
+    }
+
+    RenderPassContext pass_context =
+        buildPickPassContext(*m_frameState.m_renderData, effective_mask);
 
     m_selectionPass.render(pass_context);
 
@@ -276,8 +280,6 @@ void RenderSceneImpl::cleanup() {
     m_selectionPass.cleanup();
     m_geometryBuffer.cleanup();
     m_meshBuffer.cleanup();
-    m_geometryBatches.clear();
-    m_meshBatches.clear();
     m_pickResolver.clear();
     m_geometryDataVersion = 0;
     m_meshDataVersion = 0;

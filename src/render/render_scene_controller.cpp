@@ -10,17 +10,13 @@
 #include "util/logger.hpp"
 
 #include <algorithm>
+#include <cstddef>
 #include <utility>
 
 namespace OpenGeoLab::Render {
 namespace {
-[[nodiscard]] std::shared_ptr<RenderData>
-cloneRenderDataSnapshot(const std::shared_ptr<RenderData>& snapshot) {
-    return std::make_shared<RenderData>(snapshot ? *snapshot : RenderData{});
-}
-
-template <typename TBatchCache, typename Predicate>
-void filterRanges(std::vector<DrawRange>& ranges, TBatchCache& batches, Predicate&& predicate) {
+template <typename Predicate>
+void filterRanges(std::vector<DrawRange>& ranges, Predicate&& predicate) {
     std::vector<DrawRange> filtered;
     filtered.reserve(ranges.size());
     for(const auto& range : ranges) {
@@ -30,10 +26,76 @@ void filterRanges(std::vector<DrawRange>& ranges, TBatchCache& batches, Predicat
     }
 
     ranges = std::move(filtered);
-    batches.clear();
-    for(const auto& range : ranges) {
-        batches.append(range);
+}
+
+void copyGeometryDomainSnapshot(RenderData& destination, const RenderData& source) {
+    destination.m_geometry = source.m_geometry;
+}
+
+void copyMeshDomainSnapshot(RenderData& destination, const RenderData& source) {
+    destination.m_mesh = source.m_mesh;
+}
+
+void expandArrayRangeBounds(const RenderPassData& pass_data,
+                            const DrawRange& range,
+                            Geometry::BoundingBox3D& bbox) {
+    const size_t start = static_cast<size_t>(range.m_vertexOffset);
+    const size_t end = start + static_cast<size_t>(range.m_vertexCount);
+    if(end > pass_data.m_vertices.size()) {
+        return;
     }
+
+    for(size_t index = start; index < end; ++index) {
+        const auto& vertex = pass_data.m_vertices[index];
+        bbox.expand({vertex.m_position[0], vertex.m_position[1], vertex.m_position[2]});
+    }
+}
+
+void expandIndexedRangeBounds(const RenderPassData& pass_data,
+                              const DrawRange& range,
+                              Geometry::BoundingBox3D& bbox) {
+    const size_t start = static_cast<size_t>(range.m_indexOffset);
+    const size_t end = start + static_cast<size_t>(range.m_indexCount);
+    if(end > pass_data.m_indices.size()) {
+        return;
+    }
+
+    for(size_t index = start; index < end; ++index) {
+        const auto vertex_index = static_cast<size_t>(pass_data.m_indices[index]);
+        if(vertex_index >= pass_data.m_vertices.size()) {
+            continue;
+        }
+        const auto& vertex = pass_data.m_vertices[vertex_index];
+        bbox.expand({vertex.m_position[0], vertex.m_position[1], vertex.m_position[2]});
+    }
+}
+
+Geometry::BoundingBox3D computeGeometryVisibleBoundingBox(const GeometryRenderDomain& geometry) {
+    Geometry::BoundingBox3D bbox;
+    for(const auto& range : geometry.m_triangleRanges) {
+        expandIndexedRangeBounds(geometry.m_passData, range, bbox);
+    }
+    for(const auto& range : geometry.m_lineRanges) {
+        expandIndexedRangeBounds(geometry.m_passData, range, bbox);
+    }
+    for(const auto& range : geometry.m_pointRanges) {
+        expandArrayRangeBounds(geometry.m_passData, range, bbox);
+    }
+    return bbox;
+}
+
+Geometry::BoundingBox3D computeMeshVisibleBoundingBox(const MeshRenderDomain& mesh) {
+    Geometry::BoundingBox3D bbox;
+    for(const auto& range : mesh.m_triangleRanges) {
+        expandArrayRangeBounds(mesh.m_passData, range, bbox);
+    }
+    for(const auto& range : mesh.m_lineRanges) {
+        expandArrayRangeBounds(mesh.m_passData, range, bbox);
+    }
+    for(const auto& range : mesh.m_pointRanges) {
+        expandArrayRangeBounds(mesh.m_passData, range, bbox);
+    }
+    return bbox;
 }
 } // namespace
 
@@ -139,10 +201,12 @@ void RenderSceneController::handleDocumentGeometryChanged(
 
 void RenderSceneController::updateGeometryRenderData() {
     auto document = GeoDocumentInstance;
-    std::shared_ptr<RenderData> next_render_data;
+    auto next_render_data = acquireWorkingRenderData();
     {
         std::lock_guard<std::mutex> lock(m_renderDataMutex);
-        next_render_data = cloneRenderDataSnapshot(m_renderData);
+        if(m_renderData) {
+            copyMeshDomainSnapshot(*next_render_data, *m_renderData);
+        }
     }
 
     auto default_options = Render::TessellationOptions::defaultOptions();
@@ -153,11 +217,9 @@ void RenderSceneController::updateGeometryRenderData() {
     }
 
     applyGeometryVisibility(*next_render_data);
-
-    {
-        std::lock_guard<std::mutex> lock(m_renderDataMutex);
-        m_renderData = std::move(next_render_data);
-    }
+    next_render_data->m_geometry.m_version =
+        m_geometryVersionSeed.fetch_add(1, std::memory_order_relaxed);
+    publishRenderData(std::move(next_render_data));
 }
 
 void RenderSceneController::subscribeToMeshDocument() {
@@ -174,10 +236,12 @@ void RenderSceneController::handleDocumentMeshChanged() {
 
 void RenderSceneController::updateMeshRenderData() {
     auto document = MeshDocumentInstance;
-    std::shared_ptr<RenderData> next_render_data;
+    auto next_render_data = acquireWorkingRenderData();
     {
         std::lock_guard<std::mutex> lock(m_renderDataMutex);
-        next_render_data = cloneRenderDataSnapshot(m_renderData);
+        if(m_renderData) {
+            copyGeometryDomainSnapshot(*next_render_data, *m_renderData);
+        }
     }
 
     const bool ret = document->getRenderData(*next_render_data);
@@ -187,10 +251,32 @@ void RenderSceneController::updateMeshRenderData() {
     }
 
     applyMeshVisibility(*next_render_data);
+    next_render_data->m_mesh.m_version = m_meshVersionSeed.fetch_add(1, std::memory_order_relaxed);
 
-    {
-        std::lock_guard<std::mutex> lock(m_renderDataMutex);
-        m_renderData = std::move(next_render_data);
+    publishRenderData(std::move(next_render_data));
+}
+
+std::shared_ptr<RenderData> RenderSceneController::acquireWorkingRenderData() {
+    std::lock_guard<std::mutex> lock(m_renderDataMutex);
+    if(m_reusableRenderData && m_reusableRenderData.use_count() == 1) {
+        auto working = std::move(m_reusableRenderData);
+        working->clear();
+        return working;
+    }
+
+    return std::make_shared<RenderData>();
+}
+
+void RenderSceneController::publishRenderData(std::shared_ptr<RenderData> next_render_data) {
+    std::lock_guard<std::mutex> lock(m_renderDataMutex);
+    auto previous = std::move(m_renderData);
+    m_renderData = std::move(next_render_data);
+
+    if(previous && previous.use_count() == 1) {
+        previous->clear();
+        m_reusableRenderData = std::move(previous);
+    } else if(m_reusableRenderData && m_reusableRenderData.use_count() != 1) {
+        m_reusableRenderData.reset();
     }
 }
 
@@ -209,12 +295,12 @@ void RenderSceneController::applyGeometryVisibility(RenderData& render_data) con
         return it == visibility_snapshot.end() || it->second.m_geometryVisible;
     };
 
-    filterRanges(render_data.m_geometryTriangleRanges, render_data.m_geometryBatches.m_triangles,
-                 is_visible);
-    filterRanges(render_data.m_geometryLineRanges, render_data.m_geometryBatches.m_lines,
-                 is_visible);
-    filterRanges(render_data.m_geometryPointRanges, render_data.m_geometryBatches.m_points,
-                 is_visible);
+    auto& geometry = render_data.m_geometry;
+    filterRanges(geometry.m_triangleRanges, is_visible);
+    filterRanges(geometry.m_lineRanges, is_visible);
+    filterRanges(geometry.m_pointRanges, is_visible);
+    geometry.rebuildBatches();
+    geometry.m_bbox = computeGeometryVisibleBoundingBox(geometry);
 }
 
 void RenderSceneController::applyMeshVisibility(RenderData& render_data) const {
@@ -227,8 +313,8 @@ void RenderSceneController::applyMeshVisibility(RenderData& render_data) const {
     const auto is_visible = [&visibility_snapshot, &render_data](const DrawRange& range) {
         if(range.m_entityKey.m_type == RenderEntityType::MeshLine) {
             const auto line_it =
-                render_data.m_pickData.m_meshLineToPartUids.find(range.m_entityKey.m_uid);
-            if(line_it != render_data.m_pickData.m_meshLineToPartUids.end() &&
+                render_data.m_mesh.m_pickData.m_meshLineToPartUids.find(range.m_entityKey.m_uid);
+            if(line_it != render_data.m_mesh.m_pickData.m_meshLineToPartUids.end() &&
                !line_it->second.empty()) {
                 return std::any_of(line_it->second.begin(), line_it->second.end(),
                                    [&visibility_snapshot](uint64_t part_uid) {
@@ -246,10 +332,12 @@ void RenderSceneController::applyMeshVisibility(RenderData& render_data) const {
         return it == visibility_snapshot.end() || it->second.m_meshVisible;
     };
 
-    filterRanges(render_data.m_meshTriangleRanges, render_data.m_meshBatches.m_triangles,
-                 is_visible);
-    filterRanges(render_data.m_meshLineRanges, render_data.m_meshBatches.m_lines, is_visible);
-    filterRanges(render_data.m_meshPointRanges, render_data.m_meshBatches.m_points, is_visible);
+    auto& mesh = render_data.m_mesh;
+    filterRanges(mesh.m_triangleRanges, is_visible);
+    filterRanges(mesh.m_lineRanges, is_visible);
+    filterRanges(mesh.m_pointRanges, is_visible);
+    mesh.rebuildBatches();
+    mesh.m_bbox = computeMeshVisibleBoundingBox(mesh);
 }
 
 void RenderSceneController::setCamera(const CameraState& camera, bool notify) {
@@ -270,8 +358,10 @@ void RenderSceneController::refreshScene(bool notify) {
 
 void RenderSceneController::fitToScene(bool notify) {
     const auto render_data = this->renderData();
-    if(render_data && render_data->m_sceneBBox.isValid()) {
-        m_cameraState.fitToBoundingBox(render_data->m_sceneBBox);
+    const auto scene_bbox =
+        render_data ? render_data->sceneBoundingBox() : Geometry::BoundingBox3D{};
+    if(scene_bbox.isValid()) {
+        m_cameraState.fitToBoundingBox(scene_bbox);
     }
     if(notify) {
         m_sceneNeedsUpdate.emitSignal(SceneUpdateType::GeometryChanged);
@@ -383,6 +473,18 @@ void RenderSceneController::cycleMeshDisplayMode(bool notify) {
         m_sceneNeedsUpdate.emitSignal(SceneUpdateType::MeshChanged);
     }
 }
+
+void RenderSceneController::setMeshDisplayMode(RenderDisplayModeMask mode, bool notify) {
+    m_meshDisplayMode.store(static_cast<uint8_t>(mode), std::memory_order_release);
+
+    LOG_DEBUG("RenderSceneController: Mesh display mode explicitly set to {}",
+              static_cast<uint32_t>(mode));
+
+    if(notify) {
+        m_sceneNeedsUpdate.emitSignal(SceneUpdateType::MeshChanged);
+    }
+}
+
 RenderDisplayModeMask RenderSceneController::meshDisplayMode() const noexcept {
     return static_cast<RenderDisplayModeMask>(m_meshDisplayMode.load(std::memory_order_acquire));
 }

@@ -51,6 +51,15 @@ void main() {
     return static_cast<uint32_t>(value & mask) != 0u;
 }
 
+[[nodiscard]] constexpr bool allowsMeshPenetration(bool xray_mode,
+                                                   RenderDisplayModeMask display_mode) {
+    return xray_mode || display_mode == RenderDisplayModeMask::Wireframe;
+}
+
+[[nodiscard]] constexpr bool hasMode(RenderDisplayModeMask value, RenderDisplayModeMask flag) {
+    return (static_cast<uint8_t>(value) & static_cast<uint8_t>(flag)) != 0;
+}
+
 /// Triangle-based geometry types
 constexpr auto TRIANGLE_PICK_TYPES = RenderEntityTypeMask::Face | RenderEntityTypeMask::Shell |
                                      RenderEntityTypeMask::Solid | RenderEntityTypeMask::Part |
@@ -62,7 +71,9 @@ constexpr auto MESH_PICK_TYPES =
 
 IndexedDrawBatch collectIndexedBatches(const IndexedBatchCache& cache, RenderEntityTypeMask mask) {
     IndexedDrawBatch result;
-    for(const auto& [type, batch] : cache.m_byType) {
+    for(size_t index = 0; index < cache.m_byType.size(); ++index) {
+        const auto type = static_cast<RenderEntityType>(index);
+        const auto& batch = cache.m_byType[index];
         if(hasAny(mask, toMask(type))) {
             result.append(batch);
         }
@@ -72,7 +83,9 @@ IndexedDrawBatch collectIndexedBatches(const IndexedBatchCache& cache, RenderEnt
 
 ArrayDrawBatch collectArrayBatches(const ArrayBatchCache& cache, RenderEntityTypeMask mask) {
     ArrayDrawBatch result;
-    for(const auto& [type, batch] : cache.m_byType) {
+    for(size_t index = 0; index < cache.m_byType.size(); ++index) {
+        const auto type = static_cast<RenderEntityType>(index);
+        const auto& batch = cache.m_byType[index];
         if(hasAny(mask, toMask(type))) {
             result.append(batch);
         }
@@ -96,6 +109,20 @@ void renderDepthOccluders(QOpenGLContext* ctx_gl,
         mesh.m_buffer.bindForDraw();
         PassUtil::multiDrawArrays(ctx_gl, f, GL_TRIANGLES, mesh.m_batches.m_triangles.m_all);
         mesh.m_buffer.unbind();
+    }
+
+    f->glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+}
+
+void renderGeometryDepthOccluders(QOpenGLContext* ctx_gl,
+                                  QOpenGLFunctions* f,
+                                  const GeometryPassInput& geometry) {
+    f->glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+
+    if(geometry.m_buffer.vertexCount() > 0 && !geometry.m_batches.m_triangles.m_all.empty()) {
+        geometry.m_buffer.bindForDraw();
+        PassUtil::multiDrawElements(ctx_gl, f, GL_TRIANGLES, geometry.m_batches.m_triangles.m_all);
+        geometry.m_buffer.unbind();
     }
 
     f->glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
@@ -144,6 +171,8 @@ void SelectionPass::render(RenderPassContext& ctx) {
     const auto& view_matrix = ctx.m_params.m_viewMatrix;
     const auto& proj_matrix = ctx.m_params.m_projMatrix;
     const bool xray_mode = ctx.m_params.m_xRayMode;
+    const auto mesh_display_mode = ctx.m_mesh.m_displayMode;
+    const bool mesh_penetration_enabled = allowsMeshPenetration(xray_mode, mesh_display_mode);
 
     const auto& pick_mask = ctx.m_params.m_pickEntityMask;
     QOpenGLFunctions* f = QOpenGLContext::currentContext()->functions();
@@ -164,8 +193,10 @@ void SelectionPass::render(RenderPassContext& ctx) {
     m_pickShader.setUniformFloat("u_pointSize", 1.0f);
     m_pickShader.setUniformFloat("u_viewOffset", 0.0f);
 
-    if(!xray_mode) {
+    if(!mesh_penetration_enabled) {
         renderDepthOccluders(ctx_gl, f, ctx.m_geometry, ctx.m_mesh);
+    } else if(!xray_mode) {
+        renderGeometryDepthOccluders(ctx_gl, f, ctx.m_geometry);
     }
 
     if(geom_buffer.vertexCount() > 0) {
@@ -208,9 +239,13 @@ void SelectionPass::render(RenderPassContext& ctx) {
     }
 
     if(mesh_buffer.vertexCount() > 0 && hasAny(pick_mask, MESH_PICK_TYPES)) {
+        if(mesh_penetration_enabled) {
+            f->glClear(GL_DEPTH_BUFFER_BIT);
+        }
         mesh_buffer.bindForDraw();
 
-        if(hasAny(pick_mask, RENDER_MESH_ELEMENTS) && !mesh_batches.m_triangles.m_all.empty()) {
+        if(hasAny(pick_mask, RENDER_MESH_ELEMENTS) && !mesh_batches.m_triangles.m_all.empty() &&
+           hasMode(mesh_display_mode, RenderDisplayModeMask::Surface)) {
             if(!xray_mode) {
                 f->glEnable(GL_CULL_FACE);
                 f->glCullFace(GL_BACK);
@@ -223,6 +258,7 @@ void SelectionPass::render(RenderPassContext& ctx) {
         }
 
         if(hasAny(pick_mask, RenderEntityTypeMask::MeshLine) &&
+           hasMode(mesh_display_mode, RenderDisplayModeMask::Wireframe) &&
            !mesh_batches.m_lines.m_all.empty()) {
             f->glLineWidth(3.0f);
             const auto line_batch = collectArrayBatches(mesh_batches.m_lines, pick_mask);
@@ -230,6 +266,7 @@ void SelectionPass::render(RenderPassContext& ctx) {
             f->glLineWidth(1.0f);
         }
         if(hasAny(pick_mask, RenderEntityTypeMask::MeshNode) &&
+           hasMode(mesh_display_mode, RenderDisplayModeMask::Points) &&
            !mesh_batches.m_points.m_all.empty()) {
             f->glEnable(GL_PROGRAM_POINT_SIZE);
             m_pickShader.setUniformFloat("u_pointSize", 12.0f);

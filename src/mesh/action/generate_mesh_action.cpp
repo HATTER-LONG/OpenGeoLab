@@ -8,14 +8,16 @@
 #include "../mesh_documentImpl.hpp"
 #include "geometry/geometry_document.hpp"
 #include "geometry/geometry_entity.hpp"
+#include "geometry/geometry_types.hpp"
 #include "util/logger.hpp"
+#include "util/process_path_guard.hpp"
 #include "util/progress_callback.hpp"
 
 #include <BRep_Builder.hxx>
 #include <gmsh.h>
-
-#include "util/process_path_guard.hpp"
 #include <kangaroo/util/component_factory.hpp>
+
+#include <map>
 
 namespace OpenGeoLab::Mesh {
 
@@ -109,6 +111,14 @@ bool parseMeshSettingsFromParams(const nlohmann::json& params,
         return false;
     }
 
+    ctx.m_elementSizeMin = params.value("elementSizeMin", ctx.m_elementSize);
+    ctx.m_elementSizeMax = params.value("elementSizeMax", ctx.m_elementSize * 2.0);
+    if(!(ctx.m_elementSizeMin > 0.0) || !(ctx.m_elementSizeMax > 0.0) ||
+       ctx.m_elementSizeMax < ctx.m_elementSizeMin) {
+        error = "Invalid mesh size range: require 0 < elementSizeMin <= elementSizeMax";
+        return false;
+    }
+
     ctx.m_meshDimension = params.value("meshDimension", 2);
     if(ctx.m_meshDimension != 2 && ctx.m_meshDimension != 3) {
         error = "Invalid 'meshDimension': must be 2 or 3";
@@ -121,6 +131,29 @@ bool parseMeshSettingsFromParams(const nlohmann::json& params,
         error = "Invalid 'elementType': must be 'triangle', 'quad', or 'auto'";
         return false;
     }
+
+    ctx.m_algorithm2D = params.value("algorithm2D", "frontal");
+    if(ctx.m_algorithm2D != "automatic" && ctx.m_algorithm2D != "meshadapt" &&
+       ctx.m_algorithm2D != "delaunay" && ctx.m_algorithm2D != "frontal" &&
+       ctx.m_algorithm2D != "bamg" && ctx.m_algorithm2D != "frontal_quad") {
+        error = "Invalid 'algorithm2D' parameter";
+        return false;
+    }
+
+    ctx.m_algorithm3D = params.value("algorithm3D", "delaunay");
+    if(ctx.m_algorithm3D != "delaunay" && ctx.m_algorithm3D != "frontal" &&
+       ctx.m_algorithm3D != "mmg3d" && ctx.m_algorithm3D != "rtree" && ctx.m_algorithm3D != "hxt") {
+        error = "Invalid 'algorithm3D' parameter";
+        return false;
+    }
+
+    ctx.m_elementOrder = params.value("elementOrder", 1);
+    if(ctx.m_elementOrder != 1 && ctx.m_elementOrder != 2) {
+        error = "Invalid 'elementOrder': must be 1 or 2";
+        return false;
+    }
+
+    ctx.m_optimizeMesh = params.value("optimizeMesh", true);
 
     return true;
 }
@@ -237,20 +270,80 @@ int64_t dimTagKey(int dim, int tag) {
 }
 
 /// Configure Gmsh meshing algorithm based on element type.
-void configureGmshAlgorithm(double element_size, const std::string& element_type) {
-    gmsh::option::setNumber("Mesh.MeshSizeMin", element_size);
-    gmsh::option::setNumber("Mesh.MeshSizeMax", element_size * 2);
-
-    if(element_type == "quad") {
-        gmsh::option::setNumber("Mesh.Algorithm", 8);
-        gmsh::option::setNumber("Mesh.RecombineAll", 1);
-        gmsh::option::setNumber("Mesh.RecombinationAlgorithm", 1); // Blossom
-    } else if(element_type == "auto") {
-        gmsh::option::setNumber("Mesh.Algorithm", 6); // Frontal-Delaunay
-    } else {
-        gmsh::option::setNumber("Mesh.Algorithm", 6); // Frontal-Delaunay
-        gmsh::option::setNumber("Mesh.RecombineAll", 0);
+int gmshAlgorithm2DCode(const std::string& algorithm) {
+    if(algorithm == "meshadapt") {
+        return 1;
     }
+    if(algorithm == "automatic") {
+        return 2;
+    }
+    if(algorithm == "delaunay") {
+        return 5;
+    }
+    if(algorithm == "frontal") {
+        return 6;
+    }
+    if(algorithm == "bamg") {
+        return 7;
+    }
+    if(algorithm == "frontal_quad") {
+        return 8;
+    }
+    return 6;
+}
+
+int gmshAlgorithm3DCode(const std::string& algorithm) {
+    if(algorithm == "frontal") {
+        return 4;
+    }
+    if(algorithm == "mmg3d") {
+        return 7;
+    }
+    if(algorithm == "rtree") {
+        return 9;
+    }
+    if(algorithm == "hxt") {
+        return 10;
+    }
+    return 1;
+}
+
+void configureGmshAlgorithm(const GmshMeshContext& ctx) {
+    gmsh::option::setNumber("Mesh.MeshSizeMin", ctx.m_elementSizeMin);
+    gmsh::option::setNumber("Mesh.MeshSizeMax", ctx.m_elementSizeMax);
+    gmsh::option::setNumber("Mesh.ElementOrder", ctx.m_elementOrder);
+    gmsh::option::setNumber("Mesh.RecombineAll", ctx.m_elementType == "quad" ? 1 : 0);
+
+    if(ctx.m_meshDimension == 3) {
+        gmsh::option::setNumber("Mesh.Algorithm3D", gmshAlgorithm3DCode(ctx.m_algorithm3D));
+    } else {
+        const bool wants_quad = ctx.m_elementType == "quad";
+        const std::string algorithm =
+            wants_quad && ctx.m_algorithm2D == "frontal" ? "frontal_quad" : ctx.m_algorithm2D;
+        gmsh::option::setNumber("Mesh.Algorithm", gmshAlgorithm2DCode(algorithm));
+    }
+
+    if(ctx.m_elementType == "quad") {
+        gmsh::option::setNumber("Mesh.RecombinationAlgorithm", 1);
+    }
+}
+
+nlohmann::json buildMeshSummary(const GmshMeshContext& ctx) {
+    std::map<std::string, size_t> counts_by_type;
+    for(const auto& element : ctx.m_elements) {
+        if(auto type = meshElementTypeToString(element.elementType()); type.has_value()) {
+            counts_by_type[type.value()] += 1;
+        }
+    }
+
+    nlohmann::json mesh_entities = nlohmann::json::array();
+    for(const auto& [type, count] : counts_by_type) {
+        mesh_entities.push_back({{"type", type}, {"count", count}});
+    }
+
+    return {{"generatedNodeCount", ctx.m_nodes.size()},
+            {"generatedElementCount", ctx.m_elements.size()},
+            {"mesh_entities", std::move(mesh_entities)}};
 }
 
 /// Import the OCC compound into Gmsh and build (dim,tag) -> Part UID mapping.
@@ -415,8 +508,14 @@ nlohmann::json GenerateMeshAction::execute(const nlohmann::json& params,
         ERROR_AND_RETURN("No active mesh document");
     }
 
-    if(!mesh_doc->appendMeshData(std::move(request.m_ctx.m_nodes),
-                                 std::move(request.m_ctx.m_elements), error)) {
+    const bool replace_existing = params.value("replaceExisting", false);
+    const auto summary = buildMeshSummary(request.m_ctx);
+    const bool committed =
+        replace_existing ? mesh_doc->replaceMeshData(std::move(request.m_ctx.m_nodes),
+                                                     std::move(request.m_ctx.m_elements), error)
+                         : mesh_doc->appendMeshData(std::move(request.m_ctx.m_nodes),
+                                                    std::move(request.m_ctx.m_elements), error);
+    if(!committed) {
         LOG_ERROR("GenerateMeshAction: Failed to commit mesh data: {}", error);
         ERROR_AND_RETURN(error);
     }
@@ -425,8 +524,12 @@ nlohmann::json GenerateMeshAction::execute(const nlohmann::json& params,
              mesh_doc->elementCount());
 
     response["success"] = true;
+    response["replaceExisting"] = replace_existing;
     response["nodeCount"] = mesh_doc->nodeCount();
     response["elementCount"] = mesh_doc->elementCount();
+    response["generatedNodeCount"] = summary["generatedNodeCount"];
+    response["generatedElementCount"] = summary["generatedElementCount"];
+    response["mesh_entities"] = summary["mesh_entities"];
     if(progress_callback) {
         progress_callback(1.0, "Mesh generation complete");
     }
@@ -464,13 +567,17 @@ bool GenerateMeshAction::runGmshPipeline(GmshMeshContext& ctx,
         return false;
     }
 
-    configureGmshAlgorithm(ctx.m_elementSize, ctx.m_elementType);
+    configureGmshAlgorithm(ctx);
 
     if(progress_callback && !progress_callback(0.4, "Running Gmsh mesh generation...")) {
         return false;
     }
 
     gmsh::model::mesh::generate(ctx.m_meshDimension);
+
+    if(ctx.m_optimizeMesh) {
+        gmsh::model::mesh::optimize("Netgen");
+    }
 
     if(progress_callback && !progress_callback(0.6, "Extracting nodes...")) {
         return false;

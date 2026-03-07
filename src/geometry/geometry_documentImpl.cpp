@@ -319,7 +319,6 @@ bool GeometryDocumentImpl::getRenderData(Render::RenderData& render_data,
 bool GeometryDocumentImpl::getRenderDataUnlocked(Render::RenderData& render_data,
                                                  const Render::TessellationOptions& options) {
     GeometryRenderInput input{m_entityIndex, m_relationshipIndex, options};
-    render_data.markGeometryUpdated();
     return GeometryRenderBuilder::build(render_data, input);
 }
 

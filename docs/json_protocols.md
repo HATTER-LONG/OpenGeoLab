@@ -329,3 +329,105 @@
 - 失败：抛异常并走 `operationFailed`（error 为字符串描述）
 
 > 说明：ReaderService 会校验 `action == "load_model"`；其它 action 会返回失败（走 `operationFailed`）。
+
+## 5. MeshService
+
+### 5.1 generate_mesh
+- module：`"MeshService"`
+- action：`"generate_mesh"`
+- 用途：对选中的 Face / Solid / Part 执行网格生成。
+
+请求：
+```json
+{
+  "action": "generate_mesh",
+  "entities": [
+    { "type": "Face", "uid": 101 },
+    { "type": "Part", "uid": 1 }
+  ],
+  "elementSize": 1.0,
+  "elementSizeMin": 0.8,
+  "elementSizeMax": 2.0,
+  "meshDimension": 2,
+  "elementType": "triangle",
+  "algorithm2D": "frontal",
+  "algorithm3D": "delaunay",
+  "elementOrder": 1,
+  "optimizeMesh": true
+}
+```
+
+响应：
+```json
+{
+  "success": true,
+  "generatedNodeCount": 240,
+  "generatedElementCount": 420,
+  "nodeCount": 240,
+  "elementCount": 420,
+  "mesh_entities": [
+    { "type": "Triangle", "count": 420 }
+  ]
+}
+```
+
+### 5.2 smooth_mesh
+- module：`"MeshService"`
+- action：`"smooth_mesh"`
+- 用途：对选中的 Node / Line / Element / Part 对应网格区域执行平滑。
+
+请求：
+```json
+{
+  "action": "smooth_mesh",
+  "entities": [
+    { "type": "Line", "uid": 55 },
+    { "type": "Part", "uid": 1 }
+  ],
+  "iterations": 6,
+  "factor": 0.35,
+  "method": "taubin",
+  "preserveBoundaries": true
+}
+```
+
+响应：
+```json
+{
+  "success": true,
+  "method": "taubin",
+  "iterations": 6,
+  "factor": 0.35,
+  "preserveBoundaries": true,
+  "smoothedNodeCount": 96,
+  "targetNodeCount": 120,
+  "boundaryNodeCount": 24,
+  "maxDisplacement": 0.0124,
+  "nodeCount": 240,
+  "elementCount": 420,
+  "mesh_entities": [
+    { "type": "Node", "count": 96 },
+    { "type": "Element", "count": 88 }
+  ]
+}
+```
+
+### 5.3 RenderService / ViewPortControl 扩展
+
+`view_ctrl.mesh_display` 现在支持显式设置网格显示模式：
+
+请求：
+```json
+{
+  "action": "ViewPortControl",
+  "view_ctrl": {
+    "mesh_display": {
+      "surface": true,
+      "wireframe": true,
+      "points": false
+    },
+    "fit": true
+  },
+  "_meta": { "silent": true }
+}
+```

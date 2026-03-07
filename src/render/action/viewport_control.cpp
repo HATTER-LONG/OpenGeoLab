@@ -14,6 +14,36 @@ namespace {
     return nlohmann::json{{"success", false}, {"error", error}};
 }
 
+[[nodiscard]] std::optional<RenderDisplayModeMask>
+parseMeshDisplayMode(const nlohmann::json& mesh_display, std::string& error) {
+    if(!mesh_display.is_object()) {
+        error = "'view_ctrl.mesh_display' must be an object";
+        return std::nullopt;
+    }
+
+    const bool surface = mesh_display.value("surface", false);
+    const bool wireframe = mesh_display.value("wireframe", false);
+    const bool points = mesh_display.value("points", false);
+
+    RenderDisplayModeMask mode = RenderDisplayModeMask::None;
+    if(surface) {
+        mode = mode | RenderDisplayModeMask::Surface;
+    }
+    if(wireframe) {
+        mode = mode | RenderDisplayModeMask::Wireframe;
+    }
+    if(points) {
+        mode = mode | RenderDisplayModeMask::Points;
+    }
+
+    if(mode == RenderDisplayModeMask::None) {
+        error = "Mesh display mode cannot be empty";
+        return std::nullopt;
+    }
+
+    return mode;
+}
+
 } // namespace
 
 nlohmann::json ViewPortControl::execute(const nlohmann::json& params,
@@ -23,6 +53,8 @@ nlohmann::json ViewPortControl::execute(const nlohmann::json& params,
     }
 
     const auto& view_ctrl = params["view_ctrl"];
+    bool handled = false;
+
     if(view_ctrl.contains("view")) {
         if(!view_ctrl["view"].is_number_integer()) {
             return makeErrorResponse("'view_ctrl.view' must be an integer preset value");
@@ -33,7 +65,10 @@ nlohmann::json ViewPortControl::execute(const nlohmann::json& params,
         if(!applyPreset(view, error)) {
             return makeErrorResponse(error);
         }
-    } else if(view_ctrl.contains("refresh")) {
+        handled = true;
+    }
+
+    if(view_ctrl.contains("refresh")) {
         if(!view_ctrl["refresh"].is_boolean()) {
             return makeErrorResponse("'view_ctrl.refresh' must be a boolean");
         }
@@ -41,7 +76,20 @@ nlohmann::json ViewPortControl::execute(const nlohmann::json& params,
             return makeErrorResponse("Unsupported or missing view control action");
         }
         RenderSceneController::instance().refreshScene();
-    } else if(view_ctrl.contains("fit")) {
+        handled = true;
+    }
+
+    if(view_ctrl.contains("mesh_display")) {
+        std::string error;
+        const auto mode = parseMeshDisplayMode(view_ctrl["mesh_display"], error);
+        if(!mode.has_value()) {
+            return makeErrorResponse(error);
+        }
+        RenderSceneController::instance().setMeshDisplayMode(mode.value());
+        handled = true;
+    }
+
+    if(view_ctrl.contains("fit")) {
         if(!view_ctrl["fit"].is_boolean()) {
             return makeErrorResponse("'view_ctrl.fit' must be a boolean");
         }
@@ -49,7 +97,10 @@ nlohmann::json ViewPortControl::execute(const nlohmann::json& params,
             return makeErrorResponse("Unsupported or missing view control action");
         }
         RenderSceneController::instance().fitToScene();
-    } else if(view_ctrl.contains("toggle_xray")) {
+        handled = true;
+    }
+
+    if(view_ctrl.contains("toggle_xray")) {
         if(!view_ctrl["toggle_xray"].is_boolean()) {
             return makeErrorResponse("'view_ctrl.toggle_xray' must be a boolean");
         }
@@ -57,7 +108,10 @@ nlohmann::json ViewPortControl::execute(const nlohmann::json& params,
             return makeErrorResponse("Unsupported or missing view control action");
         }
         RenderSceneController::instance().toggleXRayMode();
-    } else if(view_ctrl.contains("cycle_mesh_display")) {
+        handled = true;
+    }
+
+    if(view_ctrl.contains("cycle_mesh_display")) {
         if(!view_ctrl["cycle_mesh_display"].is_boolean()) {
             return makeErrorResponse("'view_ctrl.cycle_mesh_display' must be a boolean");
         }
@@ -65,7 +119,10 @@ nlohmann::json ViewPortControl::execute(const nlohmann::json& params,
             return makeErrorResponse("Unsupported or missing view control action");
         }
         RenderSceneController::instance().cycleMeshDisplayMode();
-    } else {
+        handled = true;
+    }
+
+    if(!handled) {
         return makeErrorResponse("Unsupported or missing view control action");
     }
 

@@ -23,8 +23,14 @@ namespace OpenGeoLab::Mesh {
 struct GmshMeshContext {
     // --- Input (set by caller) ---
     double m_elementSize{1.0};
+    double m_elementSizeMin{1.0};
+    double m_elementSizeMax{2.0};
     int m_meshDimension{2};
     std::string m_elementType{"triangle"};
+    std::string m_algorithm2D{"frontal"};
+    std::string m_algorithm3D{"delaunay"};
+    int m_elementOrder{1};
+    bool m_optimizeMesh{true};
 
     // --- Shape data (set by collectFaceShapes) ---
     TopoDS_Compound m_compound;
@@ -48,8 +54,16 @@ struct GmshMeshContext {
  * - action: "generate_mesh"
  * - entities: array of objects {"uid": <number>, "type": <string>}
  * - elementSize: number (global mesh size)
+ * - elementSizeMin: number (optional minimum mesh size)
+ * - elementSizeMax: number (optional maximum mesh size)
  * - meshDimension: number (2 or 3, default 2)
  * - elementType: string ("triangle", "quad", "auto", default "triangle")
+ * - algorithm2D: string ("automatic", "meshadapt", "delaunay", "frontal", "bamg",
+ *   "frontal_quad")
+ * - algorithm3D: string ("delaunay", "frontal", "mmg3d", "rtree", "hxt")
+ * - elementOrder: number (1 or 2)
+ * - optimizeMesh: boolean
+ * - replaceExisting: boolean
  */
 class GenerateMeshAction final : public MeshActionBase {
 public:

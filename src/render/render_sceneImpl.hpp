@@ -60,10 +60,11 @@ public:
     void processHover(int pixel_x, int pixel_y) override;
 
 private:
-    void synchronizeGeometry(const RenderData& render_data);
-    void synchronizeMesh(const RenderData& render_data);
-    [[nodiscard]] RenderPassContext buildRenderPassContext();
-    [[nodiscard]] RenderPassContext buildPickPassContext(RenderEntityTypeMask pick_mask);
+    void synchronizeGeometry(const GeometryRenderDomain& geometry);
+    void synchronizeMesh(const MeshRenderDomain& mesh);
+    [[nodiscard]] RenderPassContext buildRenderPassContext(const RenderData& render_data);
+    [[nodiscard]] RenderPassContext buildPickPassContext(const RenderData& render_data,
+                                                         RenderEntityTypeMask pick_mask);
 
     // --- GPU Buffers (shared across passes) ---
     GpuBuffer m_geometryBuffer; ///< Geometry (CAD) vertex/index data
@@ -77,17 +78,6 @@ private:
 
     // --- Pick Resolution ---
     PickResolver m_pickResolver;
-
-    // --- Pre-built draw ranges (copied from RenderData during synchronize) ---
-    std::vector<DrawRange> m_geometryTriangleRanges;
-    std::vector<DrawRange> m_geometryLineRanges;
-    std::vector<DrawRange> m_geometryPointRanges;
-    GeometryDrawBatchCache m_geometryBatches;
-
-    std::vector<DrawRange> m_meshTriangleRanges;
-    std::vector<DrawRange> m_meshLineRanges;
-    std::vector<DrawRange> m_meshPointRanges;
-    MeshDrawBatchCache m_meshBatches;
 
     SceneFrameState m_frameState; ///< Cached per-frame state from GUI thread
 

@@ -11,7 +11,7 @@
 #include "action/generate_mesh_action.hpp"
 #include "action/newmodel_action.hpp"
 #include "action/query_mesh_info_action.hpp"
-
+#include "action/smooth_mesh_action.hpp"
 
 #include "mesh_documentImpl.hpp"
 
@@ -57,6 +57,7 @@ void registerServices() {
     g_ComponentFactory.registInstanceFactoryWithID<MeshServiceFactory>("MeshService");
     g_ComponentFactory.registFactoryWithID<GenerateMeshActionFactory>(
         GenerateMeshAction::actionName());
+    g_ComponentFactory.registFactoryWithID<SmoothMeshActionFactory>(SmoothMeshAction::actionName());
     g_ComponentFactory.registFactoryWithID<QueryMeshInfoActionFactory>(
         QueryMeshInfoAction::actionName());
     g_ComponentFactory.registFactoryWithID<NewModelActionFactory>(NewModelAction::actionName());

@@ -120,7 +120,8 @@ in vec4 v_color;
 flat in uvec2 v_pickId;
 uniform vec3 u_cameraPos;
 uniform float u_alpha;
-uniform uvec2 u_hoverPickId;
+uniform usampler2D u_hoverPickIds;
+uniform int u_hoverCount;
 uniform vec4 u_hoverColor;
 uniform usampler2D u_selectPickIds;
 uniform int u_selectCount;
@@ -143,7 +144,13 @@ void main() {
             break;
         }
     }
-    bool isHovered = (u_hoverPickId != uvec2(0, 0) && v_pickId == u_hoverPickId);
+    bool isHovered = false;
+    for(int i = 0; i < u_hoverCount; i++) {
+        if(v_pickId == texelFetch(u_hoverPickIds, ivec2(i, 0), 0).xy) {
+            isHovered = true;
+            break;
+        }
+    }
 
     if(!isSelected && !isHovered) {
         discard;
@@ -179,7 +186,8 @@ const char* mesh_flat_fragment_shader = R"(
 #version 330 core
 in vec4 v_color;
 flat in uvec2 v_pickId;
-uniform uvec2 u_hoverPickId;
+uniform usampler2D u_hoverPickIds;
+uniform int u_hoverCount;
 uniform vec4 u_hoverColor;
 uniform usampler2D u_selectPickIds;
 uniform int u_selectCount;
@@ -193,7 +201,13 @@ void main() {
             break;
         }
     }
-    bool isHovered = (u_hoverPickId != uvec2(0, 0) && v_pickId == u_hoverPickId);
+    bool isHovered = false;
+    for(int i = 0; i < u_hoverCount; i++) {
+        if(v_pickId == texelFetch(u_hoverPickIds, ivec2(i, 0), 0).xy) {
+            isHovered = true;
+            break;
+        }
+    }
 
     if(!isSelected && !isHovered) {
         discard;
@@ -205,6 +219,11 @@ void main() {
 
 [[nodiscard]] constexpr bool hasMode(RenderDisplayModeMask value, RenderDisplayModeMask flag) {
     return (static_cast<uint8_t>(value) & static_cast<uint8_t>(flag)) != 0;
+}
+
+[[nodiscard]] constexpr bool allowsMeshPenetration(bool xray_mode,
+                                                   RenderDisplayModeMask display_mode) {
+    return xray_mode || display_mode == RenderDisplayModeMask::Wireframe;
 }
 
 /// Split a uint64_t encoded pick ID into two uint32 components for shader uvec2.
@@ -237,19 +256,23 @@ bool HighlightPass::onInitialize() {
     }
 
     // Allocate pick-ID lookup textures (one per mesh topology: surface / line / node).
-    // Each texture uses GL_RG32UI; width = selection count, height = 1.
+    // Each texture uses GL_RG32UI; width = pick count, height = 1.
     QOpenGLFunctions* f = QOpenGLContext::currentContext()->functions();
-    f->glGenTextures(static_cast<GLsizei>(m_selectPickTex.size()), m_selectPickTex.data());
     const uint32_t dummy[2] = {0u, 0u};
-    for(GLuint tex : m_selectPickTex) {
-        f->glBindTexture(GL_TEXTURE_2D, tex);
-        f->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        f->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        f->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        f->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        f->glTexImage2D(GL_TEXTURE_2D, 0, GL_RG32UI, 1, 1, 0, GL_RG_INTEGER, GL_UNSIGNED_INT,
-                        dummy);
-    }
+    auto initialize_pick_textures = [f, &dummy](auto& textures) {
+        f->glGenTextures(static_cast<GLsizei>(textures.size()), textures.data());
+        for(GLuint tex : textures) {
+            f->glBindTexture(GL_TEXTURE_2D, tex);
+            f->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            f->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            f->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            f->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            f->glTexImage2D(GL_TEXTURE_2D, 0, GL_RG32UI, 1, 1, 0, GL_RG_INTEGER, GL_UNSIGNED_INT,
+                            dummy);
+        }
+    };
+    initialize_pick_textures(m_selectPickTex);
+    initialize_pick_textures(m_hoverPickTex);
     f->glBindTexture(GL_TEXTURE_2D, 0);
     LOG_DEBUG("HighlightPass: Initialized");
     return true;
@@ -258,7 +281,9 @@ bool HighlightPass::onInitialize() {
 void HighlightPass::onCleanup() {
     QOpenGLFunctions* f = QOpenGLContext::currentContext()->functions();
     f->glDeleteTextures(static_cast<GLsizei>(m_selectPickTex.size()), m_selectPickTex.data());
+    f->glDeleteTextures(static_cast<GLsizei>(m_hoverPickTex.size()), m_hoverPickTex.data());
     m_selectPickTex.fill(0);
+    m_hoverPickTex.fill(0);
     LOG_DEBUG("HighlightPass: Cleaned up");
 }
 void HighlightPass::render(RenderPassContext& ctx_data) {
@@ -425,40 +450,80 @@ void HighlightPass::renderMesh(const RenderPassContext& ctx) { // NOLINT
     const auto& select_mgr = RenderSelectManager::instance();
     const auto& color_map = Util::ColorMap::instance();
 
-    // Build hover pick ID.
-    uint32_t hover_lo = 0, hover_hi = 0;
-    {
-        const auto& hovered = select_mgr.hoveredEntity();
-        if(hovered.m_type != RenderEntityType::None && isMeshDomain(hovered.m_type)) {
-            toUvec2(PickId::encode(hovered.m_type, hovered.m_uid), hover_lo, hover_hi);
-        }
-    }
-    // Build per-topology pick-ID lists (lo,hi interleaved, no size limit).
+    // Build per-topology hover/selection pick-ID lists.
     // Topology index: 0 = surface, 1 = line, 2 = node.
-    std::array<std::vector<uint32_t>, 3> picks;
-    std::array<std::unordered_set<uint64_t>, 3> seen;
+    std::array<std::vector<uint32_t>, 3> select_picks;
+    std::array<std::vector<uint32_t>, 3> hover_picks;
+    std::array<std::unordered_set<uint64_t>, 3> seen_selected;
+    std::array<std::unordered_set<uint64_t>, 3> seen_hovered;
+
+    const bool part_mode = (select_mgr.isTypePickable(RenderEntityType::Part) ||
+                            select_mgr.hasSelectionsOfType(RenderEntityType::Part));
+    const auto hovered = select_mgr.hoveredEntity();
+    const bool hovered_mesh_entity =
+        hovered.m_type != RenderEntityType::None && isMeshDomain(hovered.m_type);
+
+    auto topology_index = [](RenderEntityType type) {
+        return type == RenderEntityType::MeshNode ? 2
+                                                  : (type == RenderEntityType::MeshLine ? 1 : 0);
+    };
+    auto append_pick = [topology_index](std::array<std::vector<uint32_t>, 3>& picks,
+                                        std::array<std::unordered_set<uint64_t>, 3>& seen,
+                                        RenderEntityType type, uint64_t uid) {
+        if(!isMeshDomain(type)) {
+            return;
+        }
+        const int index = topology_index(type);
+        const uint64_t encoded = PickId::encode(type, uid);
+        if(!seen[index].insert(encoded).second) {
+            return;
+        }
+        uint32_t lo = 0;
+        uint32_t hi = 0;
+        toUvec2(encoded, lo, hi);
+        picks[index].push_back(lo);
+        picks[index].push_back(hi);
+    };
 
     for(const auto& sel : select_mgr.selections()) {
-        if(!isMeshDomain(sel.m_type)) {
-            continue;
+        if(isMeshDomain(sel.m_type)) {
+            append_pick(select_picks, seen_selected, sel.m_type, sel.m_uid);
         }
-
-        const int idx = (sel.m_type == RenderEntityType::MeshNode
-                             ? 2
-                             : (sel.m_type == RenderEntityType::MeshLine ? 1 : 0));
-        const uint64_t encoded = PickId::encode(sel.m_type, sel.m_uid);
-        if(!seen[idx].insert(encoded).second) {
-            continue;
-        }
-        uint32_t lo, hi;
-        toUvec2(encoded, lo, hi);
-        picks[idx].push_back(lo);
-        picks[idx].push_back(hi);
     }
-    const int surface_count = static_cast<int>(picks[0].size() / 2);
-    const int line_count = static_cast<int>(picks[1].size() / 2);
-    const int node_count = static_cast<int>(picks[2].size() / 2);
-    const bool any_hover = (hover_lo != 0 || hover_hi != 0);
+
+    if(hovered_mesh_entity) {
+        append_pick(hover_picks, seen_hovered, hovered.m_type, hovered.m_uid);
+    }
+
+    if(part_mode) {
+        const auto append_part_ranges = [&](const auto& ranges, bool hovered_ranges) {
+            for(const auto& range : ranges) {
+                if(range.m_partUid == 0) {
+                    continue;
+                }
+                if(select_mgr.isPartSelected(range.m_partUid)) {
+                    append_pick(select_picks, seen_selected, range.m_entityKey.m_type,
+                                range.m_entityKey.m_uid);
+                }
+                if(hovered_ranges && select_mgr.isPartHovered(range.m_partUid)) {
+                    append_pick(hover_picks, seen_hovered, range.m_entityKey.m_type,
+                                range.m_entityKey.m_uid);
+                }
+            }
+        };
+
+        append_part_ranges(ctx.m_mesh.m_triangleRanges, !hovered_mesh_entity);
+        append_part_ranges(ctx.m_mesh.m_lineRanges, !hovered_mesh_entity);
+        append_part_ranges(ctx.m_mesh.m_pointRanges, !hovered_mesh_entity);
+    }
+
+    const int surface_count = static_cast<int>(select_picks[0].size() / 2);
+    const int line_count = static_cast<int>(select_picks[1].size() / 2);
+    const int node_count = static_cast<int>(select_picks[2].size() / 2);
+    const int surface_hover_count = static_cast<int>(hover_picks[0].size() / 2);
+    const int line_hover_count = static_cast<int>(hover_picks[1].size() / 2);
+    const int node_hover_count = static_cast<int>(hover_picks[2].size() / 2);
+    const bool any_hover = surface_hover_count > 0 || line_hover_count > 0 || node_hover_count > 0;
 
     if(!any_hover && surface_count == 0 && line_count == 0 && node_count == 0) {
         return;
@@ -467,15 +532,19 @@ void HighlightPass::renderMesh(const RenderPassContext& ctx) { // NOLINT
     // Upload per-topology pick-ID textures (GL_RG32UI; width = count, height = 1).
     QOpenGLFunctions* f = QOpenGLContext::currentContext()->functions();
     const uint32_t dummy[2] = {0u, 0u};
-    for(int i = 0; i < 3; ++i) {
-        f->glBindTexture(GL_TEXTURE_2D, m_selectPickTex[i]);
-        if(picks[i].empty()) {
+    auto upload_pick_texture = [f, &dummy](GLuint texture, const std::vector<uint32_t>& picks) {
+        f->glBindTexture(GL_TEXTURE_2D, texture);
+        if(picks.empty()) {
             f->glTexImage2D(GL_TEXTURE_2D, 0, GL_RG32UI, 1, 1, 0, GL_RG_INTEGER, GL_UNSIGNED_INT,
                             dummy);
-        } else {
-            f->glTexImage2D(GL_TEXTURE_2D, 0, GL_RG32UI, static_cast<GLsizei>(picks[i].size() / 2),
-                            1, 0, GL_RG_INTEGER, GL_UNSIGNED_INT, picks[i].data());
+            return;
         }
+        f->glTexImage2D(GL_TEXTURE_2D, 0, GL_RG32UI, static_cast<GLsizei>(picks.size() / 2), 1, 0,
+                        GL_RG_INTEGER, GL_UNSIGNED_INT, picks.data());
+    };
+    for(int i = 0; i < 3; ++i) {
+        upload_pick_texture(m_selectPickTex[i], select_picks[i]);
+        upload_pick_texture(m_hoverPickTex[i], hover_picks[i]);
     }
     f->glBindTexture(GL_TEXTURE_2D, 0);
     auto& params = ctx.m_params;
@@ -501,18 +570,25 @@ void HighlightPass::renderMesh(const RenderPassContext& ctx) { // NOLINT
     mesh_buffer.bindForDraw();
 
     // Bind common mesh-pick shader uniforms and the per-topology pick-ID texture.
-    auto bind_mesh_pick_uniforms = [&](ShaderProgram& shader, int topo_idx, int select_count) {
+    auto bind_mesh_pick_uniforms = [&](ShaderProgram& shader, int topo_idx, int select_count,
+                                       int hover_count) {
         shader.setUniformMatrix4("u_viewMatrix", params.m_viewMatrix);
         shader.setUniformMatrix4("u_projMatrix", params.m_projMatrix);
         shader.setUniformFloat("u_viewOffset", 0.0f);
-        shader.setUniformUvec2("u_hoverPickId", hover_lo, hover_hi);
         shader.setUniformInt("u_selectCount", select_count);
+        shader.setUniformInt("u_hoverCount", hover_count);
         f->glActiveTexture(GL_TEXTURE0);
         f->glBindTexture(GL_TEXTURE_2D, m_selectPickTex[topo_idx]);
         shader.setUniformInt("u_selectPickIds", 0);
+        f->glActiveTexture(GL_TEXTURE1);
+        f->glBindTexture(GL_TEXTURE_2D, m_hoverPickTex[topo_idx]);
+        shader.setUniformInt("u_hoverPickIds", 1);
     };
     auto& mesh_triangle_ranges = ctx.m_mesh.m_triangleRanges;
     auto& mesh_display_mode = ctx.m_mesh.m_displayMode;
+    const float mesh_overlay_offset = allowsMeshPenetration(params.m_xRayMode, mesh_display_mode)
+                                          ? K_MESH_LINE_VIEW_OFFSET
+                                          : 0.0f;
     // --- Mesh surface highlight ---
     if(!mesh_triangle_ranges.empty() &&
        (hasMode(mesh_display_mode, RenderDisplayModeMask::Surface) || surface_count > 0 ||
@@ -521,7 +597,7 @@ void HighlightPass::renderMesh(const RenderPassContext& ctx) { // NOLINT
         f->glPolygonOffset(1.0f, 1.0f);
 
         m_meshSurfaceShader.bind();
-        bind_mesh_pick_uniforms(m_meshSurfaceShader, 0, surface_count);
+        bind_mesh_pick_uniforms(m_meshSurfaceShader, 0, surface_count, surface_hover_count);
         m_meshSurfaceShader.setUniformVec3("u_cameraPos", params.m_cameraPos);
         m_meshSurfaceShader.setUniformFloat("u_alpha", surface_alpha);
         m_meshSurfaceShader.setUniformVec4("u_hoverColor", face_hover_color.m_r,
@@ -539,9 +615,8 @@ void HighlightPass::renderMesh(const RenderPassContext& ctx) { // NOLINT
     if(hasMode(mesh_display_mode, RenderDisplayModeMask::Wireframe) &&
        !mesh_batches.m_lines.m_all.empty()) {
         m_meshFlatShader.bind();
-        bind_mesh_pick_uniforms(m_meshFlatShader, 1, line_count);
-        // Slight view-space offset for mesh wire/highlight lines to avoid z-fighting
-        m_meshFlatShader.setUniformFloat("u_viewOffset", K_MESH_LINE_VIEW_OFFSET);
+        bind_mesh_pick_uniforms(m_meshFlatShader, 1, line_count, line_hover_count);
+        m_meshFlatShader.setUniformFloat("u_viewOffset", mesh_overlay_offset);
         m_meshFlatShader.setUniformVec4("u_hoverColor", ev_hover_color.m_r, ev_hover_color.m_g,
                                         ev_hover_color.m_b, 1.0f);
         m_meshFlatShader.setUniformVec4("u_selectColor", ev_select_color.m_r, ev_select_color.m_g,
@@ -556,10 +631,9 @@ void HighlightPass::renderMesh(const RenderPassContext& ctx) { // NOLINT
     if(hasMode(mesh_display_mode, RenderDisplayModeMask::Points) &&
        !mesh_batches.m_points.m_all.empty()) {
         m_meshFlatShader.bind();
-        bind_mesh_pick_uniforms(m_meshFlatShader, 2, node_count);
+        bind_mesh_pick_uniforms(m_meshFlatShader, 2, node_count, node_hover_count);
         m_meshFlatShader.setUniformFloat("u_pointSize", 3.0f);
-        // Offset mesh highlight points slightly to avoid z-fighting with surfaces
-        m_meshFlatShader.setUniformFloat("u_viewOffset", K_MESH_LINE_VIEW_OFFSET);
+        m_meshFlatShader.setUniformFloat("u_viewOffset", mesh_overlay_offset);
         m_meshFlatShader.setUniformVec4("u_hoverColor", ev_hover_color.m_r, ev_hover_color.m_g,
                                         ev_hover_color.m_b, 1.0f);
         m_meshFlatShader.setUniformVec4("u_selectColor", ev_select_color.m_r, ev_select_color.m_g,
@@ -571,6 +645,9 @@ void HighlightPass::renderMesh(const RenderPassContext& ctx) { // NOLINT
 
         m_meshFlatShader.release();
     }
+    f->glActiveTexture(GL_TEXTURE1);
+    f->glBindTexture(GL_TEXTURE_2D, 0);
+    f->glActiveTexture(GL_TEXTURE0);
     f->glBindTexture(GL_TEXTURE_2D, 0);
     mesh_buffer.unbind();
 

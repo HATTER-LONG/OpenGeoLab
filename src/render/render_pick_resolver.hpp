@@ -65,7 +65,8 @@ struct ResolvedPickResult {
 class PickResolver {
 public:
     /** @brief Bind pick resolution data.  Must outlive this resolver while active. */
-    void setPickData(const PickResolutionData& pick_data);
+    void setPickData(const GeometryPickData& geometry_pick_data,
+                     const MeshPickData& mesh_pick_data);
 
     /**
      * @brief Expand user pick-type mask for GPU rendering.
@@ -112,7 +113,8 @@ private:
     [[nodiscard]] uint64_t resolveSolidUid(uint64_t edge_uid, uint64_t face_uid) const;
     [[nodiscard]] uint64_t resolveSolidUidForFace(uint64_t face_uid) const;
 
-    const PickResolutionData* m_pickData{nullptr};
+    const GeometryPickData* m_geometryPickData{nullptr};
+    const MeshPickData* m_meshPickData{nullptr};
 };
 
 } // namespace OpenGeoLab::Render

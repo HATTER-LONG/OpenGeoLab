@@ -39,6 +39,9 @@ Item {
     /// Whether the page is currently visible
     property bool pageVisible: false
 
+    /// Maximum content height before enabling internal scroll
+    property int maxContentHeight: 420
+
     /// Default content to be overridden by subclasses
     default property alias content: contentColumn.data
 
@@ -306,16 +309,18 @@ Item {
             // =====================================================
             // Content Area (Parameters)
             // =====================================================
-            Item {
+            ScrollView {
                 id: contentArea
                 width: parent.width
-                height: contentColumn.height + 24
+                height: Math.min(contentColumn.implicitHeight + 24, root.maxContentHeight)
+                clip: true
+                ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
 
                 Column {
                     id: contentColumn
                     x: 12
                     y: 12
-                    width: parent.width - 24
+                    width: Math.max(0, contentArea.availableWidth - 24)
                     spacing: 12
                 }
             }
