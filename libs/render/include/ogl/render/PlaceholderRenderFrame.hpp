@@ -43,8 +43,11 @@ struct OGL_RENDER_EXPORT PlaceholderDrawItem {
  */
 class OGL_RENDER_EXPORT PlaceholderRenderFrame {
 public:
-    PlaceholderRenderFrame(std::string frame_id, std::string scene_id, int viewport_width,
-                           int viewport_height, PlaceholderCameraPose camera,
+    PlaceholderRenderFrame(std::string frame_id,
+                           std::string scene_id,
+                           int viewport_width,
+                           int viewport_height,
+                           PlaceholderCameraPose camera,
                            std::vector<PlaceholderDrawItem> draw_items);
 
     [[nodiscard]] auto frameId() const -> const std::string&;
@@ -71,8 +74,8 @@ private:
  * @param params Optional request parameters such as viewport size and highlight target.
  * @return Placeholder render-frame description.
  */
-OGL_RENDER_EXPORT auto buildPlaceholderRenderFrame(const ogl::scene::PlaceholderSceneGraph& scene_graph,
-                                                   const nlohmann::json& params)
-    -> PlaceholderRenderFrame;
+OGL_RENDER_EXPORT auto
+buildPlaceholderRenderFrame(const ogl::scene::PlaceholderSceneGraph& scene_graph,
+                            const nlohmann::json& params) -> PlaceholderRenderFrame;
 
 } // namespace ogl::render

@@ -33,7 +33,8 @@ struct OGL_SELECTION_EXPORT PlaceholderSelectionHit {
  */
 class OGL_SELECTION_EXPORT PlaceholderSelectionResult {
 public:
-    PlaceholderSelectionResult(std::string mode, std::string frame_id,
+    PlaceholderSelectionResult(std::string mode,
+                               std::string frame_id,
                                std::vector<PlaceholderSelectionHit> hits);
 
     [[nodiscard]] auto mode() const -> const std::string&;
@@ -55,9 +56,9 @@ private:
  * @param params Request parameters including mode and screen-space hints.
  * @return Placeholder selection result.
  */
-OGL_SELECTION_EXPORT auto evaluatePlaceholderSelection(
-    const ogl::scene::PlaceholderSceneGraph& scene_graph,
-    const ogl::render::PlaceholderRenderFrame& render_frame, const nlohmann::json& params)
-    -> PlaceholderSelectionResult;
+OGL_SELECTION_EXPORT auto
+evaluatePlaceholderSelection(const ogl::scene::PlaceholderSceneGraph& scene_graph,
+                             const ogl::render::PlaceholderRenderFrame& render_frame,
+                             const nlohmann::json& params) -> PlaceholderSelectionResult;
 
 } // namespace ogl::selection

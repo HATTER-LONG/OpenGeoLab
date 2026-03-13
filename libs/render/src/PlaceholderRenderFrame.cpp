@@ -8,7 +8,7 @@
 namespace {
 
 constexpr std::array<const char*, 4> kPlaceholderPalette = {"#4f7b6b", "#b9854c", "#7089a3",
-                                                             "#7f5d86"};
+                                                            "#7f5d86"};
 
 } // namespace
 
@@ -25,16 +25,15 @@ auto PlaceholderDrawItem::toJson() const -> nlohmann::json {
             {"highlighted", highlighted}};
 }
 
-PlaceholderRenderFrame::PlaceholderRenderFrame(std::string frame_id, std::string scene_id,
-                                               int viewport_width, int viewport_height,
+PlaceholderRenderFrame::PlaceholderRenderFrame(std::string frame_id,
+                                               std::string scene_id,
+                                               int viewport_width,
+                                               int viewport_height,
                                                PlaceholderCameraPose camera,
                                                std::vector<PlaceholderDrawItem> draw_items)
-    : m_frameId(std::move(frame_id)),
-      m_sceneId(std::move(scene_id)),
-      m_viewportWidth(viewport_width),
-      m_viewportHeight(viewport_height),
-      m_camera(std::move(camera)),
-      m_drawItems(std::move(draw_items)) {}
+    : m_frameId(std::move(frame_id)), m_sceneId(std::move(scene_id)),
+      m_viewportWidth(viewport_width), m_viewportHeight(viewport_height),
+      m_camera(std::move(camera)), m_drawItems(std::move(draw_items)) {}
 
 auto PlaceholderRenderFrame::frameId() const -> const std::string& { return m_frameId; }
 

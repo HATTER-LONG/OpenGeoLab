@@ -33,7 +33,8 @@ struct OGL_SCENE_EXPORT PlaceholderSceneNode {
  */
 class OGL_SCENE_EXPORT PlaceholderSceneGraph {
 public:
-    PlaceholderSceneGraph(std::string scene_id, std::string model_name,
+    PlaceholderSceneGraph(std::string scene_id,
+                          std::string model_name,
                           std::vector<PlaceholderSceneNode> nodes);
 
     [[nodiscard]] auto sceneId() const -> const std::string&;
@@ -53,7 +54,8 @@ private:
  * @param geometry_model Placeholder geometry model.
  * @return Stable scene graph representation.
  */
-OGL_SCENE_EXPORT auto buildPlaceholderSceneGraph(
-    const ogl::geometry::PlaceholderGeometryModel& geometry_model) -> PlaceholderSceneGraph;
+OGL_SCENE_EXPORT auto
+buildPlaceholderSceneGraph(const ogl::geometry::PlaceholderGeometryModel& geometry_model)
+    -> PlaceholderSceneGraph;
 
 } // namespace ogl::scene

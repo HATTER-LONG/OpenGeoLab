@@ -23,8 +23,7 @@ auto buildSelectionEquivalentPython(const nlohmann::json& params) -> std::string
     std::ostringstream script;
     script << "import opengeolab\n\n";
     script << "bridge = opengeolab.OpenGeoLabPythonBridge()\n";
-    script << "result = bridge.call(\"selection\", R\"JSON(" << params.dump(2)
-           << ")JSON\")\n";
+    script << "result = bridge.call(\"selection\", R\"JSON(" << params.dump(2) << ")JSON\")\n";
     script << "print(result)";
     return script.str();
 }
@@ -63,13 +62,12 @@ public:
                     .payload = nlohmann::json::object()};
         }
 
-        if(operation_name != "pickPlaceholderEntity" &&
-           operation_name != "boxSelectPlaceholder") {
+        if(operation_name != "pickPlaceholderEntity" && operation_name != "boxSelectPlaceholder") {
             return {.success = false,
                     .moduleName = module_name,
                     .operationName = operation_name,
-                    .message =
-                        "Unsupported selection operation. Use pickPlaceholderEntity or boxSelectPlaceholder.",
+                    .message = "Unsupported selection operation. Use pickPlaceholderEntity or "
+                               "boxSelectPlaceholder.",
                     .payload = nlohmann::json::object()};
         }
 
@@ -78,24 +76,25 @@ public:
         const auto scene_graph = ogl::scene::buildPlaceholderSceneGraph(geometry_model);
         const auto render_frame =
             ogl::render::buildPlaceholderRenderFrame(scene_graph, normalized_params);
-        const auto selection_result =
-            ogl::selection::evaluatePlaceholderSelection(scene_graph, render_frame, normalized_params);
+        const auto selection_result = ogl::selection::evaluatePlaceholderSelection(
+            scene_graph, render_frame, normalized_params);
 
         auto logger = selectionLogger();
         logger->info("Resolved placeholder selection mode={} hitCount={}", selection_result.mode(),
                      selection_result.hits().size());
 
-        return {.success = true,
-                .moduleName = module_name,
-                .operationName = operation_name,
-                .message = "Placeholder selection completed through geometry, scene, and render data.",
-                .payload = {{"componentId", "selection"},
-                            {"geometryModel", geometry_model.toJson()},
-                            {"sceneGraph", scene_graph.toJson()},
-                            {"renderFrame", render_frame.toJson()},
-                            {"selectionResult", selection_result.toJson()},
-                            {"summary", selection_result.summary()},
-                            {"equivalentPython", buildSelectionEquivalentPython(normalized_params)}}};
+        return {
+            .success = true,
+            .moduleName = module_name,
+            .operationName = operation_name,
+            .message = "Placeholder selection completed through geometry, scene, and render data.",
+            .payload = {{"componentId", "selection"},
+                        {"geometryModel", geometry_model.toJson()},
+                        {"sceneGraph", scene_graph.toJson()},
+                        {"renderFrame", render_frame.toJson()},
+                        {"selectionResult", selection_result.toJson()},
+                        {"summary", selection_result.summary()},
+                        {"equivalentPython", buildSelectionEquivalentPython(normalized_params)}}};
     }
 };
 

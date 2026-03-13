@@ -7,8 +7,8 @@
 
 namespace {
 
-auto findDisplayName(const ogl::scene::PlaceholderSceneGraph& scene_graph, const std::string& node_id)
-    -> std::string {
+auto findDisplayName(const ogl::scene::PlaceholderSceneGraph& scene_graph,
+                     const std::string& node_id) -> std::string {
     for(const auto& node : scene_graph.nodes()) {
         if(node.nodeId == node_id) {
             return node.displayName;
@@ -29,7 +29,8 @@ auto PlaceholderSelectionHit::toJson() const -> nlohmann::json {
             {"hitRank", hitRank}};
 }
 
-PlaceholderSelectionResult::PlaceholderSelectionResult(std::string mode, std::string frame_id,
+PlaceholderSelectionResult::PlaceholderSelectionResult(std::string mode,
+                                                       std::string frame_id,
                                                        std::vector<PlaceholderSelectionHit> hits)
     : m_mode(std::move(mode)), m_frameId(std::move(frame_id)), m_hits(std::move(hits)) {}
 
@@ -75,8 +76,8 @@ auto evaluatePlaceholderSelection(const ogl::scene::PlaceholderSceneGraph& scene
 
     if(mode == "box") {
         const int requested_count = params.value("selectionCount", 2);
-        selection_count = static_cast<std::size_t>(std::clamp(requested_count, 1,
-                                                              static_cast<int>(draw_items.size())));
+        selection_count = static_cast<std::size_t>(
+            std::clamp(requested_count, 1, static_cast<int>(draw_items.size())));
         start_index = static_cast<std::size_t>(
             std::clamp(params.value("startIndex", 0), 0, static_cast<int>(draw_items.size() - 1)));
     } else {

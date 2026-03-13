@@ -7,15 +7,14 @@ int main() {
     ogl::selection::registerSelectionComponents();
 
     const auto response = ogl::core::ComponentRequestDispatcher::dispatch(
-        "selection",
-        nlohmann::json{{"operation", "pickPlaceholderEntity"},
-                       {"modelName", "SelectionSmokeModel"},
-                       {"bodyCount", 4},
-                       {"viewportWidth", 1024},
-                       {"viewportHeight", 768},
-                       {"screenX", 90},
-                       {"screenY", 30},
-                       {"source", "test"}});
+        "selection", nlohmann::json{{"operation", "pickPlaceholderEntity"},
+                                    {"modelName", "SelectionSmokeModel"},
+                                    {"bodyCount", 4},
+                                    {"viewportWidth", 1024},
+                                    {"viewportHeight", 768},
+                                    {"screenX", 90},
+                                    {"screenY", 30},
+                                    {"source", "test"}});
 
     if(!response.success) {
         return 1;
