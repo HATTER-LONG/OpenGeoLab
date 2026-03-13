@@ -5,22 +5,20 @@ applyTo: '**/CMakeLists.txt,cmake/**/*.cmake,cmake/**/*.cmake.in'
 
 # OpenGeoLab CMake Development
 
-These instructions apply to build-system changes in OpenGeoLab.
-
-## General Guidelines
+## Layout
 
 - Preserve a clear separation between project configuration, dependency resolution, target definition, and install / deploy logic.
 - Prefer small, explicit changes over large CMake rewrites.
 - Match the existing formatting style and command layout used in the repository.
 
-## Dependency Management
+## Dependencies
 
 - Use the existing CPM-based helpers and package resolution flow before introducing a new dependency pattern.
 - Keep third-party version declarations centralized when possible.
 - Distinguish between CPM-fetched dependencies and pre-installed dependencies such as OpenCASCADE, Qt, and Gmsh.
 - When adding a dependency, document whether it is required at configure time, build time, runtime, or install time.
 
-## Target Design
+## Targets
 
 - Prefer target-based CMake APIs.
 - Keep include directories, link libraries, compile features, and definitions attached to the owning target.
@@ -29,14 +27,11 @@ These instructions apply to build-system changes in OpenGeoLab.
 - First-party libraries should be able to switch between static and shared builds through the OpenGeoLab library-type option.
 - When a library may be built as shared on Windows, use generated export headers instead of ad hoc `__declspec` blocks.
 
-## Qt and QML
+## Qt and Packaging
 
 - Use Qt target APIs consistently for executable and QML module setup.
 - Keep QML file lists explicit enough to make packaging and deploy behavior obvious.
 - When changing QML modules, also review install rules and deploy script behavior.
-
-## Install and Runtime Packaging
-
 - Ensure new runtime dependencies are covered by install rules on supported platforms.
 - Changes to QML resources, plugins, or shared libraries must consider deployed layout, not only local builds.
 - Windows-specific runtime packaging changes should be reviewed with dependency copy behavior in mind.

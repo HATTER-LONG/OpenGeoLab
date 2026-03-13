@@ -5,9 +5,7 @@ applyTo: 'apps/**/*.qml,**/qmldir'
 
 # OpenGeoLab QML UI Development
 
-These instructions apply to QML files and QML module metadata.
-
-## General Guidelines
+## Presentation Boundary
 
 - Keep QML focused on presentation, layout, interaction wiring, and lightweight state.
 - Move heavy geometry, mesh, scene, and command logic into C++ services or controllers.
@@ -26,14 +24,11 @@ These instructions apply to QML files and QML module metadata.
 - Destructive or state-changing user operations should align with command-system concepts when the backend supports it.
 - Keep camera and viewport interactions consistent with a 3D engineering workflow.
 
-## QML Structure
+## Structure and Performance
 
 - Keep components small and composable.
 - Extract repeated UI fragments into reusable components instead of duplicating blocks.
 - Use clear names for properties and signals that match engineering concepts visible to the user.
-
-## Performance
-
 - Avoid expensive repeated bindings or large JavaScript loops in frequently updated visual paths.
 - Keep model transformations and large data preparation outside QML.
 - Be careful with object churn in dynamic views that may scale with scene complexity.

@@ -5,16 +5,16 @@ applyTo: 'libs/**/*.{h,hpp,c,cc,cpp,cxx},apps/**/*.{h,hpp,c,cc,cpp,cxx},python/p
 
 # OpenGeoLab C++ Development
 
-These instructions apply to C++ code in OpenGeoLab. Follow the repository-wide guidance from `.github/copilot-instructions.md` first.
+Follow the repository-wide guidance from `.github/copilot-instructions.md` first.
 
-## General Guidelines
+## Core Rules
 
 - Use C++20 features when they improve clarity or correctness, but avoid novelty-driven abstractions.
 - Keep geometry, mesh, scene, render, selection, and command responsibilities separated.
 - Prefer explicit types and ownership boundaries over hidden side effects.
 - Keep public APIs small, stable, and suitable for later exposure to Python or QML when needed.
 
-## Architecture Rules
+## Module Boundaries
 
 - Core domain logic should not live in UI glue code.
 - Renderer code must not directly operate on OpenCascade topology or Gmsh internals.
@@ -23,14 +23,7 @@ These instructions apply to C++ code in OpenGeoLab. Follow the repository-wide g
 - Shared cross-module capabilities should be exposed through services or well-defined interfaces, not by reaching across unrelated modules.
 - Avoid circular dependencies. If two modules start depending on each other, introduce an interface, data transfer object, or service boundary.
 
-## Domain Modeling
-
-- Model CAE entities with names that reflect engineering semantics, not temporary implementation details.
-- Distinguish clearly between topology, mesh, scene graph, and render data.
-- Preserve IDs and object identity across operations that need selection, undo/redo, or script replay.
-- Validation and precondition checks should happen close to public entry points.
-
-## Header and Source Organization
+## Public Surface
 
 - Public declarations belong in `libs/<module>/include/ogl/<module>/`.
 - Module source files belong in `libs/<module>/src/`.
@@ -39,28 +32,29 @@ These instructions apply to C++ code in OpenGeoLab. Follow the repository-wide g
 - Prefer forward declarations in headers when they reduce unnecessary coupling.
 - If a module is intended to build as a shared library, public headers must include the module export header and annotate exported API types or functions.
 
-## Error Handling and Logging
+## Modeling and Reliability
 
+- Model CAE entities with names that reflect engineering semantics, not temporary implementation details.
+- Distinguish clearly between topology, mesh, scene graph, render data, and command intent.
+- Preserve IDs and object identity across operations that need selection, undo/redo, or script replay.
+- Validation and precondition checks should happen close to public entry points.
 - Fail fast on invalid state at service or command boundaries.
 - Report recoverable runtime issues with actionable messages.
 - Use logging for workflow visibility, dependency resolution, import/export steps, and failure diagnostics.
 - Do not silently swallow OCC, Gmsh, Qt, or filesystem failures.
 
-## Performance and Memory
+## Performance and Style
 
 - Avoid unnecessary copies of large geometry, mesh, and render buffers.
 - Be explicit about expensive conversions between topology, mesh, and GPU-ready data.
 - Keep hot-path allocation patterns simple and predictable.
 - Optimize only after preserving correctness and maintainable structure.
-
-## Code Style
-
 - Follow `.clang-format` and `.clang-tidy` in the repository.
 - Use `CamelCase` for classes and `camelBack` for functions and members to match repository lint rules.
 - Keep functions focused. Split long orchestration code into small helpers if it improves readability.
 - Prefer descriptive names over abbreviations unless the term is standard in CAD / CAE.
 
-## Testing Expectations
+## Testing
 
 - New non-trivial domain logic should come with tests in the owning module's `tests/` directory.
 - Prefer testing observable behavior over private implementation details.

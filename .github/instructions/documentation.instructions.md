@@ -5,9 +5,7 @@ applyTo: '**/*.md,libs/**/*.{h,hpp,c,cc,cpp,cxx},apps/**/*.{h,hpp,c,cc,cpp,cxx},
 
 # OpenGeoLab Documentation
 
-These instructions apply to Markdown documentation and code comments.
-
-## General Guidelines
+## Core Rules
 
 - Document interfaces, constraints, invariants, side effects, and design rationale.
 - Do not comment obvious code behavior.

@@ -5,9 +5,7 @@ applyTo: '**/*.py,python/python_wrapper/**/*.{h,hpp,c,cc,cpp,cxx}'
 
 # OpenGeoLab Python Automation and Bindings
 
-These instructions apply to Python code and the pybind11 binding layer.
-
-## Primary Role of Python
+## Role of Python
 
 - Python is the automation and orchestration layer for high-level CAE workflows.
 - Expose stable, task-oriented operations such as geometry import, cleanup, meshing, quality checks, and camera / scene actions.
@@ -27,14 +25,11 @@ These instructions apply to Python code and the pybind11 binding layer.
 - Use names that align with module naming conventions such as `geometry.import`, `mesh.generateSurface`, or `scene.selectFace`.
 - Design APIs so an LLM can compose them into a valid workflow without needing private internal knowledge.
 
-## Safety and Reliability
+## Safety and Scriptability
 
 - Do not assume Python callers understand OCC or Gmsh preconditions.
 - Document required parameters, units, defaults, and failure modes.
 - Avoid hidden global state when a request payload or explicit session object would be clearer.
-
-## Examples and Scriptability
-
 - Prefer examples that reflect real engineering tasks instead of toy math snippets.
 - If an operation is script-recordable, keep the generated call shape stable and readable.
 - Generated Python should be suitable for replay in batch workflows.
