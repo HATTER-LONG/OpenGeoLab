@@ -1,0 +1,7 @@
+add_subdirectory(core)
+add_subdirectory(geometry)
+add_subdirectory(mesh)
+add_subdirectory(scene)
+add_subdirectory(render)
+add_subdirectory(selection)
+add_subdirectory(command)

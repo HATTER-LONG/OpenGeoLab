@@ -1,0 +1,7 @@
+add_executable(opengeolab_geometry_smoke_test test_placeholder_geometry.cpp)
+
+target_compile_features(opengeolab_geometry_smoke_test PRIVATE cxx_std_20)
+
+target_link_libraries(opengeolab_geometry_smoke_test PRIVATE ogl_core ogl_geometry)
+
+add_test(NAME opengeolab_geometry_smoke_test COMMAND opengeolab_geometry_smoke_test)
