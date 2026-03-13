@@ -2,10 +2,18 @@
 
 #include <ogl/core/ComponentRequestDispatcher.hpp>
 #include <ogl/geometry/GeometryComponentRegistration.hpp>
+#include <ogl/render/RenderComponentRegistration.hpp>
+#include <ogl/scene/SceneComponentRegistration.hpp>
+#include <ogl/selection/SelectionComponentRegistration.hpp>
 
 namespace ogl::python_wrapper {
 
-OpenGeoLabPythonBridge::OpenGeoLabPythonBridge() { ogl::geometry::registerGeometryComponents(); }
+OpenGeoLabPythonBridge::OpenGeoLabPythonBridge() {
+    ogl::geometry::registerGeometryComponents();
+    ogl::scene::registerSceneComponents();
+    ogl::render::registerRenderComponents();
+    ogl::selection::registerSelectionComponents();
+}
 
 auto OpenGeoLabPythonBridge::call(const std::string& module_name,
                                   const nlohmann::json& params) const -> nlohmann::json {

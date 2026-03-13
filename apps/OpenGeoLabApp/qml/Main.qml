@@ -4,7 +4,7 @@ import QtQuick.Window
 Window {
     id: root
 
-    property string defaultRequestJson: "{\n  \"operation\": \"placeholderModel\",\n  \"modelName\": \"Bracket_A01\",\n  \"bodyCount\": 3,\n  \"source\": \"qml-ui\",\n  \"requestedBy\": \"Main.qml\"\n}"
+    property string defaultRequestJson: "{\n  \"operation\": \"pickPlaceholderEntity\",\n  \"modelName\": \"Bracket_A01\",\n  \"bodyCount\": 3,\n  \"viewportWidth\": 1280,\n  \"viewportHeight\": 720,\n  \"screenX\": 412,\n  \"screenY\": 248,\n  \"source\": \"qml-ui\",\n  \"requestedBy\": \"Main.qml\"\n}"
 
     width: 1320
     height: 780
@@ -75,7 +75,7 @@ Window {
             anchors.topMargin: 82
             width: parent.width - 56
             wrapMode: Text.WordWrap
-            text: "The app layer now accepts generic module + JSON requests from QML. The controller does not hardcode geometry-specific service interfaces anymore."
+            text: "The app layer now accepts generic module + JSON requests from QML. The default demo uses the selection service, which internally builds placeholder geometry, scene, and render data before resolving a pick result."
             color: "#c0d2c7"
             font.pixelSize: 17
             lineHeight: 1.35
@@ -109,7 +109,7 @@ Window {
 
                 anchors.fill: parent
                 anchors.margins: 12
-                text: "geometry"
+                text: "selection"
                 color: "#f2ebe0"
                 font.pixelSize: 18
                 selectionColor: "#9fc4b6"
@@ -233,7 +233,7 @@ Window {
             anchors.bottomMargin: 30
             width: parent.width - 56
             wrapMode: Text.WordWrap
-            text: "The current demo still targets geometry, but the app/controller contract is now fully generic and only depends on module names plus JSON payloads from QML."
+            text: "The current demo targets the selection module so the placeholder 3D interaction flow can exercise geometry, scene, render, and selection responsibilities through one request."
             color: "#aac1b6"
             font.pixelSize: 15
             lineHeight: 1.35
@@ -256,7 +256,7 @@ Window {
             anchors.leftMargin: 30
             anchors.top: parent.top
             anchors.topMargin: 28
-            text: "Generic IService Request Evidence"
+            text: "Placeholder 3D Interaction Data Flow"
             color: "#233530"
             font.pixelSize: 30
             font.bold: true
@@ -363,7 +363,7 @@ Window {
             anchors.bottomMargin: 28
             width: parent.width - 60
             wrapMode: Text.WordWrap
-            text: "The placeholder geometry module is intentionally simple, but the request path, target separation, and future extension points now match the modular architecture direction."
+            text: "The current placeholder stack still lacks a real OpenGL viewport host and command recording, but the service graph now proves the intended geometry to scene to render to selection handoff."
             color: "#5d655f"
             font.pixelSize: 15
             lineHeight: 1.35

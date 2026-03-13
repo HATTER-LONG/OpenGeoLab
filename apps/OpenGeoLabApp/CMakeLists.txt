@@ -24,10 +24,7 @@ qt_add_qml_module(
   /
 )
 
-target_include_directories(
-  OpenGeoLabApp PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include ${OpenCASCADE_INCLUDE_DIR}
-)
-target_link_directories(OpenGeoLabApp PRIVATE ${OpenCASCADE_LIBRARY_DIR})
+target_include_directories(OpenGeoLabApp PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 target_link_libraries(
   OpenGeoLabApp
@@ -38,14 +35,7 @@ target_link_libraries(
           Qt6::Quick
           Qt6::OpenGL
           opengeolab_python_bridge
-          ogl_core
-          ogl_geometry
-          ${OpenCASCADE_LIBS}
 )
-
-if(OPENGEOLAB_GMSH_TARGET)
-  target_link_libraries(OpenGeoLabApp PRIVATE ${OPENGEOLAB_GMSH_TARGET})
-endif()
 
 set_target_properties(
   OpenGeoLabApp
@@ -86,7 +76,6 @@ install(
   DESTINATION
   ${CMAKE_INSTALL_BINDIR}
   DIRECTORIES
-  ${OpenCASCADE_LIBRARY_DIR}
   $<TARGET_FILE_DIR:Qt6::Core>
   PRE_EXCLUDE_REGEXES
   "api-ms-.*"

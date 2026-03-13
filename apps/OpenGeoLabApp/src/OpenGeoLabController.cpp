@@ -10,11 +10,15 @@ namespace ogl::app {
 OpenGeoLabController::OpenGeoLabController(QObject* parent)
     : QObject(parent),
       m_pythonBridge(std::make_unique<ogl::python_wrapper::OpenGeoLabPythonBridge>()) {
-    runServiceRequest(QStringLiteral("geometry"),
+        runServiceRequest(QStringLiteral("selection"),
                       QStringLiteral("{\n"
-                                     "  \"operation\": \"placeholderModel\",\n"
+                                                                         "  \"operation\": \"pickPlaceholderEntity\",\n"
                                      "  \"modelName\": \"Bracket_A01\",\n"
                                      "  \"bodyCount\": 3,\n"
+                                                                         "  \"viewportWidth\": 1280,\n"
+                                                                         "  \"viewportHeight\": 720,\n"
+                                                                         "  \"screenX\": 412,\n"
+                                                                         "  \"screenY\": 248,\n"
                                      "  \"source\": \"qml-ui\",\n"
                                      "  \"requestedBy\": \"OpenGeoLabController\"\n"
                                      "}"));

@@ -46,9 +46,24 @@ QML UI -> app controller -> Python bridge -> Kangaroo ComponentFactory -> geomet
 - 同时服务于 app 层和 pybind11 模块
 - 统一高层 call(module, params) 入口，避免 UI 链路和 Python 链路各自演化
 
+### 2.5 libs/scene
+
+- 负责把几何占位模型组织成稳定的 scene graph 语义层
+- 为 render 和 selection 提供节点 ID、显示标签、可选中对象集合
+
+### 2.6 libs/render
+
+- 负责把 scene graph 转换为占位 RenderFrame
+- 承载 viewport 尺寸、相机姿态、draw item 和高亮状态等渲染侧数据
+
+### 2.7 libs/selection
+
+- 负责基于 RenderFrame 和 scene graph 生成占位拾取/框选结果
+- 当前已可用单次请求串起 geometry -> scene -> render -> selection 的核心数据流
+
 ## 3. 对 QML + OpenGL + 鼠标交互 + Python 脚本记录的架构评估
 
-结论：当前框架方向是合理的，但要真正支撑旋转、拾取、框选与脚本录制，还必须把 scene、render、selection、command 四个中间层真正做出来。
+结论：当前框架方向是合理的，scene、render、selection 的占位链路已经打通；下一步瓶颈已经收敛到真正的 OpenGL 视口宿主、命令系统接管和脚本记录语义化。
 
 ### 3.1 当前框架为什么方向正确
 
@@ -57,11 +72,11 @@ QML UI -> app controller -> Python bridge -> Kangaroo ComponentFactory -> geomet
 - Kangaroo ComponentFactory 提供统一的 module 字符串分发模型，便于 geometry、mesh、scene、selection、command 按同一入口接入。
 - render 被明确要求与 geometry/mesh 内核解耦，这是 OpenGL 视图、拾取和缓存管理的正确前提。
 
-### 3.2 当前还缺的关键中间层
+### 3.2 当前还缺的关键能力
 
-- render 模块还没有真实的 OpenGL 视图宿主与 RenderData 缓冲层。
-- scene 模块还没有成为显示对象、可见性、选择状态的唯一真值来源。
-- selection 模块还没有把射线拾取、ID buffer、框选从 UI 事件里剥离出来。
+- render 模块还没有真实的 OpenGL 视图宿主与 GPU 资源管理层。
+- scene 模块虽然已有占位 scene graph，但还没有成为完整的显示对象、可见性、选择状态唯一真值来源。
+- selection 模块虽然已有占位 pick/box-select 语义，但还没有真正接入射线拾取、ID buffer 和屏幕空间框选算法。
 - command 模块还没有接管用户可见操作，因此 undo/redo 和脚本录制都还无法真正成立。
 
 ### 3.3 推荐的交互分层
@@ -127,18 +142,14 @@ QML UI -> app controller -> Python bridge -> Kangaroo ComponentFactory -> geomet
 
 ## 5. 下一阶段推荐顺序
 
-### 阶段 A：补 scene + render + selection 的可编译占位实现
-
-目标：先把 3D 交互的核心数据流打通。
-
-### 阶段 B：引入真正的 OpenGL 视图宿主
+### 阶段 A：引入真正的 OpenGL 视图宿主
 
 目标：让 QML 视口可以处理 orbit、pan、zoom 与 redraw。
 
-### 阶段 C：把 command 模块接到用户操作链路
+### 阶段 B：把 command 模块接到用户操作链路
 
 目标：建立 undo/redo 和 Python 脚本录制的统一入口。
 
-### 阶段 D：把 geometry placeholder 替换成 OCC 真实模型
+### 阶段 C：把 geometry placeholder 替换成 OCC 真实模型
 
 目标：从演示链路升级成真正可编辑、可导入的几何模块。

@@ -18,7 +18,13 @@ target_compile_features(opengeolab_python_bridge PUBLIC cxx_std_20)
 target_include_directories(opengeolab_python_bridge PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 target_link_libraries(
-  opengeolab_python_bridge PUBLIC ogl_core ogl_geometry nlohmann_json::nlohmann_json
+  opengeolab_python_bridge
+  PUBLIC ogl_core
+         ogl_geometry
+         ogl_scene
+         ogl_render
+         ogl_selection
+         nlohmann_json::nlohmann_json
 )
 
 pybind11_add_module(opengeolab MODULE src/module.cpp)
