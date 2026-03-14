@@ -13,7 +13,7 @@
 #include <string>
 #include <vector>
 
-namespace ogl::render {
+namespace OGL::Render {
 
 /**
  * @brief Minimal camera state carried by the placeholder render frame.
@@ -75,7 +75,7 @@ private:
  * @return Placeholder render-frame description.
  */
 OGL_RENDER_EXPORT auto
-buildPlaceholderRenderFrame(const ogl::scene::PlaceholderSceneGraph& scene_graph,
+buildPlaceholderRenderFrame(const OGL::Scene::PlaceholderSceneGraph& scene_graph,
                             const nlohmann::json& params) -> PlaceholderRenderFrame;
 
-} // namespace ogl::render
+} // namespace OGL::Render

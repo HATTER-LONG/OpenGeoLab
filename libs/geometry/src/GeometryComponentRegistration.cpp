@@ -8,7 +8,6 @@
 
 #include <mutex>
 #include <sstream>
-#include <utility>
 
 namespace {
 
@@ -17,7 +16,7 @@ auto geometryLogger() {
     return logger;
 }
 
-auto buildDescriptor(const nlohmann::json& params) -> ogl::geometry::PlaceholderGeometryDescriptor {
+auto buildDescriptor(const nlohmann::json& params) -> OGL::Geometry::PlaceholderGeometryDescriptor {
     return {
         .modelName = params.value("modelName", std::string{"Bracket_A01"}),
         .bodyCount = params.value("bodyCount", 3),
@@ -34,10 +33,10 @@ auto buildEquivalentPython(const nlohmann::json& params) -> std::string {
     return script.str();
 }
 
-class PlaceholderGeometryService final : public ogl::core::IService {
+class PlaceholderGeometryService final : public OGL::Core::IService {
 public:
     auto processRequest(const std::string& module_name, const nlohmann::json& params)
-        -> ogl::core::ServiceResponse override {
+        -> OGL::Core::ServiceResponse override {
         const std::string operation_name = params.value("operation", std::string{"unknown"});
         auto logger = geometryLogger();
 
@@ -62,7 +61,7 @@ public:
             };
         }
 
-        const ogl::geometry::PlaceholderGeometryModel model(buildDescriptor(params));
+        const OGL::Geometry::PlaceholderGeometryModel model(buildDescriptor(params));
         logger->info("Built placeholder geometry model name={} bodies={} source={}",
                      model.modelName(), model.bodyCount(), model.source());
 
@@ -83,7 +82,7 @@ public:
     }
 };
 
-class GeometryServiceFactory final : public ogl::core::IServiceSingletonFactory {
+class GeometryServiceFactory final : public OGL::Core::IServiceSingletonFactory {
 public:
     auto instance() const -> tObjectSharedPtr override {
         static auto service = std::make_shared<PlaceholderGeometryService>();
@@ -93,7 +92,7 @@ public:
 
 } // namespace
 
-namespace ogl::geometry {
+namespace OGL::Geometry {
 
 void registerGeometryComponents() {
     static std::once_flag once;
@@ -104,4 +103,4 @@ void registerGeometryComponents() {
     });
 }
 
-} // namespace ogl::geometry
+} // namespace OGL::Geometry

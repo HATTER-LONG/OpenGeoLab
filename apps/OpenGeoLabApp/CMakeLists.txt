@@ -1,6 +1,10 @@
-set(opengeolab_app_headers include/ogl/app/OpenGeoLabController.hpp)
-set(opengeolab_app_sources src/main.cpp src/OpenGeoLabController.cpp)
+set(opengeolab_app_headers include/ogl/app/OpenGeoLabController.hpp
+                           include/ogl/app/EmbeddedPythonRuntime.hpp
+)
+set(opengeolab_app_sources src/main.cpp src/OpenGeoLabController.cpp src/EmbeddedPythonRuntime.cpp)
 set(opengeolab_app_qml qml/Main.qml)
+
+set_source_files_properties(${opengeolab_app_qml} PROPERTIES QT_RESOURCE_ALIAS Main.qml)
 
 set(opengeolab_executable_type)
 if(WIN32 AND NOT ENABLE_CONSOLE)
@@ -20,21 +24,28 @@ qt_add_qml_module(
   1.0
   QML_FILES
   ${opengeolab_app_qml}
-  RESOURCE_PREFIX
-  /
 )
 
 target_include_directories(OpenGeoLabApp PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
+target_compile_definitions(OpenGeoLabApp PRIVATE Py_NO_LINK_LIB)
+set(opengeolab_python_no_defaultlib_option /NODEFAULTLIB:python313.lib)
+if(NOT MSVC)
+  set(opengeolab_python_no_defaultlib_option -Xlinker /NODEFAULTLIB:python313.lib)
+endif()
+
+target_link_options(OpenGeoLabApp PRIVATE ${opengeolab_python_no_defaultlib_option})
+
 target_link_libraries(
   OpenGeoLabApp
   PRIVATE Kangaroo::Kangaroo
+          OGL::Command
+          pybind11::embed
           Qt6::Core
           Qt6::Gui
           Qt6::Qml
           Qt6::Quick
           Qt6::OpenGL
-          opengeolab_python_bridge
 )
 
 set_target_properties(
@@ -89,7 +100,9 @@ qt_generate_deploy_qml_app_script(
   TARGET OpenGeoLabApp OUTPUT_SCRIPT opengeolab_deploy_script NO_UNSUPPORTED_PLATFORM_ERROR
 )
 
-set(opengeolab_deploy_wrapper "${CMAKE_CURRENT_BINARY_DIR}/opengeolab_deploy_wrapper.cmake")
+set(opengeolab_deploy_wrapper
+    "${CMAKE_CURRENT_BINARY_DIR}/opengeolab_deploy_wrapper_$<CONFIG>.cmake"
+)
 file(
   GENERATE
   OUTPUT ${opengeolab_deploy_wrapper}
@@ -100,3 +113,7 @@ file(
 install(SCRIPT ${opengeolab_deploy_wrapper})
 
 qt_finalize_executable(OpenGeoLabApp)
+
+if(ENABLE_TEST AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/CMakeLists.txt")
+  add_subdirectory(tests)
+endif()

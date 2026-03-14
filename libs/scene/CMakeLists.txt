@@ -6,7 +6,7 @@ set(ogl_scene_headers include/ogl/scene/PlaceholderSceneGraph.hpp
 set(ogl_scene_sources src/PlaceholderSceneGraph.cpp src/SceneComponentRegistration.cpp)
 
 add_library(ogl_scene ${OPENGEOLAB_LIBRARY_TYPE} ${ogl_scene_headers} ${ogl_scene_sources})
-add_library(OpenGeoLab::scene ALIAS ogl_scene)
+add_library(OGL::Scene ALIAS ogl_scene)
 
 generate_export_header(
   ogl_scene EXPORT_FILE_NAME ${CMAKE_CURRENT_BINARY_DIR}/include/ogl/scene/export.hpp

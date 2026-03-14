@@ -7,7 +7,7 @@
 
 namespace {
 
-auto findDisplayName(const ogl::scene::PlaceholderSceneGraph& scene_graph,
+auto findDisplayName(const OGL::Scene::PlaceholderSceneGraph& scene_graph,
                      const std::string& node_id) -> std::string {
     for(const auto& node : scene_graph.nodes()) {
         if(node.nodeId == node_id) {
@@ -20,7 +20,7 @@ auto findDisplayName(const ogl::scene::PlaceholderSceneGraph& scene_graph,
 
 } // namespace
 
-namespace ogl::selection {
+namespace OGL::Selection {
 
 auto PlaceholderSelectionHit::toJson() const -> nlohmann::json {
     return {{"nodeId", nodeId},
@@ -62,8 +62,8 @@ auto PlaceholderSelectionResult::toJson() const -> nlohmann::json {
             {"summary", summary()}};
 }
 
-auto evaluatePlaceholderSelection(const ogl::scene::PlaceholderSceneGraph& scene_graph,
-                                  const ogl::render::PlaceholderRenderFrame& render_frame,
+auto evaluatePlaceholderSelection(const OGL::Scene::PlaceholderSceneGraph& scene_graph,
+                                  const OGL::Render::PlaceholderRenderFrame& render_frame,
                                   const nlohmann::json& params) -> PlaceholderSelectionResult {
     const std::string mode = params.value("mode", std::string{"pick"});
     const auto& draw_items = render_frame.drawItems();
@@ -101,4 +101,4 @@ auto evaluatePlaceholderSelection(const ogl::scene::PlaceholderSceneGraph& scene
     return PlaceholderSelectionResult(mode, render_frame.frameId(), std::move(hits));
 }
 
-} // namespace ogl::selection
+} // namespace OGL::Selection

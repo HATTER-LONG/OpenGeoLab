@@ -8,7 +8,7 @@ set(ogl_selection_sources src/PlaceholderSelectionResult.cpp src/SelectionCompon
 add_library(
   ogl_selection ${OPENGEOLAB_LIBRARY_TYPE} ${ogl_selection_headers} ${ogl_selection_sources}
 )
-add_library(OpenGeoLab::selection ALIAS ogl_selection)
+add_library(OGL::Selection ALIAS ogl_selection)
 
 generate_export_header(
   ogl_selection EXPORT_FILE_NAME ${CMAKE_CURRENT_BINARY_DIR}/include/ogl/selection/export.hpp

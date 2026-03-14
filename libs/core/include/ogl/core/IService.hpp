@@ -12,7 +12,7 @@
 
 #include <string>
 
-namespace ogl::core {
+namespace OGL::Core {
 
 /**
  * @brief Structured response returned by component-backed service calls.
@@ -68,4 +68,4 @@ public:
     virtual auto instance() const -> tObjectSharedPtr = 0;
 };
 
-} // namespace ogl::core
+} // namespace OGL::Core

@@ -1,30 +1,24 @@
+#include <catch2/catch_test_macros.hpp>
+
 #include <ogl/core/ComponentRequestDispatcher.hpp>
 #include <ogl/geometry/GeometryComponentRegistration.hpp>
 
 #include <nlohmann/json.hpp>
 
-int main() {
-    ogl::geometry::registerGeometryComponents();
+#include <string>
 
-    const auto response = ogl::core::ComponentRequestDispatcher::dispatch(
-        "geometry",
-        nlohmann::json{{"operation", "placeholderModel"},
-                       {"modelName", "SmokeTestModel"},
-                       {"bodyCount", 2},
-                       {"source", "test"}});
+TEST_CASE("geometry placeholder model request returns deterministic payload", "[geometry][smoke]") {
+    OGL::Geometry::registerGeometryComponents();
 
-    if(!response.success) {
-        return 1;
-    }
+    const auto response = OGL::Core::ComponentRequestDispatcher::dispatch(
+        "geometry", nlohmann::json{{"operation", "placeholderModel"},
+                                   {"modelName", "SmokeTestModel"},
+                                   {"bodyCount", 2},
+                                   {"source", "test"}});
+
+    REQUIRE(response.success);
 
     const auto model = response.payload.value("model", nlohmann::json::object());
-    if(model.value("modelName", std::string{}) != "SmokeTestModel") {
-        return 2;
-    }
-
-    if(model.value("bodyCount", 0) != 2) {
-        return 3;
-    }
-
-    return 0;
+    CHECK(model.value("modelName", std::string{}) == "SmokeTestModel");
+    CHECK(model.value("bodyCount", 0) == 2);
 }

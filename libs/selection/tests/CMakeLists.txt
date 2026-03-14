@@ -2,6 +2,6 @@ add_executable(opengeolab_selection_smoke_test test_placeholder_selection.cpp)
 
 target_compile_features(opengeolab_selection_smoke_test PRIVATE cxx_std_20)
 
-target_link_libraries(opengeolab_selection_smoke_test PRIVATE ogl_selection)
+target_link_libraries(opengeolab_selection_smoke_test PRIVATE Catch2::Catch2WithMain ogl_selection)
 
 add_test(NAME opengeolab_selection_smoke_test COMMAND opengeolab_selection_smoke_test)

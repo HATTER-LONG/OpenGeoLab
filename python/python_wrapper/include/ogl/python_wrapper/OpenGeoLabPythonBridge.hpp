@@ -1,6 +1,6 @@
 /**
  * @file OpenGeoLabPythonBridge.hpp
- * @brief High-level Python-facing bridge that routes requests into OpenGeoLab components.
+ * @brief High-level Python-facing bridge that routes requests into the shared command layer.
  */
 
 #pragma once
@@ -9,20 +9,20 @@
 
 #include <string>
 
-namespace ogl::python_wrapper {
+namespace OGL::PythonWrapper {
 
 /**
- * @brief Shared C++ bridge used by both the application layer and pybind11 module.
+ * @brief Shared C++ bridge used by Python bindings to access the command pipeline.
  */
 class OpenGeoLabPythonBridge {
 public:
     /**
-     * @brief Construct a bridge and ensure placeholder geometry components are registered.
+     * @brief Construct a bridge.
      */
     OpenGeoLabPythonBridge();
 
     /**
-     * @brief Forward a high-level call into the component dispatcher.
+     * @brief Forward a high-level call into the shared command service.
      * @param module_name Logical service module.
      * @param params Parsed request payload.
      * @return JSON response suitable for UI or Python consumption.
@@ -40,4 +40,4 @@ public:
                                                         int body_count) const -> std::string;
 };
 
-} // namespace ogl::python_wrapper
+} // namespace OGL::PythonWrapper

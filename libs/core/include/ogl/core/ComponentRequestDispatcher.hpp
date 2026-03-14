@@ -8,8 +8,7 @@
 #include <ogl/core/IService.hpp>
 #include <ogl/core/export.hpp>
 
-
-namespace ogl::core {
+namespace OGL::Core {
 
 /**
  * @brief Central entry point for component-based service requests.
@@ -26,4 +25,4 @@ public:
         -> ServiceResponse;
 };
 
-} // namespace ogl::core
+} // namespace OGL::Core

@@ -28,8 +28,8 @@ auto buildSelectionEquivalentPython(const nlohmann::json& params) -> std::string
     return script.str();
 }
 
-auto buildGeometryModel(const nlohmann::json& params) -> ogl::geometry::PlaceholderGeometryModel {
-    return ogl::geometry::PlaceholderGeometryModel(
+auto buildGeometryModel(const nlohmann::json& params) -> OGL::Geometry::PlaceholderGeometryModel {
+    return OGL::Geometry::PlaceholderGeometryModel(
         {.modelName = params.value("modelName", std::string{"Bracket_A01"}),
          .bodyCount = params.value("bodyCount", 3),
          .source = params.value("source", std::string{"selection-service"})});
@@ -49,10 +49,10 @@ auto normalizeSelectionParams(const std::string& operation_name, const nlohmann:
     return normalized;
 }
 
-class PlaceholderSelectionService final : public ogl::core::IService {
+class PlaceholderSelectionService final : public OGL::Core::IService {
 public:
     auto processRequest(const std::string& module_name, const nlohmann::json& params)
-        -> ogl::core::ServiceResponse override {
+        -> OGL::Core::ServiceResponse override {
         const std::string operation_name = params.value("operation", std::string{"unknown"});
         if(module_name != "selection") {
             return {.success = false,
@@ -73,10 +73,10 @@ public:
 
         const auto normalized_params = normalizeSelectionParams(operation_name, params);
         const auto geometry_model = buildGeometryModel(normalized_params);
-        const auto scene_graph = ogl::scene::buildPlaceholderSceneGraph(geometry_model);
+        const auto scene_graph = OGL::Scene::buildPlaceholderSceneGraph(geometry_model);
         const auto render_frame =
-            ogl::render::buildPlaceholderRenderFrame(scene_graph, normalized_params);
-        const auto selection_result = ogl::selection::evaluatePlaceholderSelection(
+            OGL::Render::buildPlaceholderRenderFrame(scene_graph, normalized_params);
+        const auto selection_result = OGL::Selection::evaluatePlaceholderSelection(
             scene_graph, render_frame, normalized_params);
 
         auto logger = selectionLogger();
@@ -98,7 +98,7 @@ public:
     }
 };
 
-class SelectionServiceFactory final : public ogl::core::IServiceSingletonFactory {
+class SelectionServiceFactory final : public OGL::Core::IServiceSingletonFactory {
 public:
     auto instance() const -> tObjectSharedPtr override {
         static auto service = std::make_shared<PlaceholderSelectionService>();
@@ -108,7 +108,7 @@ public:
 
 } // namespace
 
-namespace ogl::selection {
+namespace OGL::Selection {
 
 void registerSelectionComponents() {
     static std::once_flag once;
@@ -119,4 +119,4 @@ void registerSelectionComponents() {
     });
 }
 
-} // namespace ogl::selection
+} // namespace OGL::Selection

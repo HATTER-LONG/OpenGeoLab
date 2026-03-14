@@ -49,8 +49,12 @@ Follow the repository-wide guidance from `.github/copilot-instructions.md` first
 - Be explicit about expensive conversions between topology, mesh, and GPU-ready data.
 - Keep hot-path allocation patterns simple and predictable.
 - Optimize only after preserving correctness and maintainable structure.
-- Follow `.clang-format` and `.clang-tidy` in the repository.
-- Use `CamelCase` for classes and `camelBack` for functions and members to match repository lint rules.
+- Follow `.clang-format` and `.clang-tidy` in the repository as the source of truth for C++ layout and naming.
+- Format C++ code with the repository `.clang-format` style before finishing changes.
+- Use `CamelCase` for namespaces, classes, structs, enums, and unions. Prefer nested namespaces such as `OGL::Geometry` and `OGL::Render`.
+- Use `camelBack` for functions, methods, and non-constant variables.
+- Use `m_` + `camelBack` only for private or protected class members.
+- Keep struct fields and other public data-transfer members in plain `camelBack` without an `m_` prefix.
 - Keep functions focused. Split long orchestration code into small helpers if it improves readability.
 - Prefer descriptive names over abbreviations unless the term is standard in CAD / CAE.
 

@@ -6,7 +6,7 @@ set(ogl_render_headers include/ogl/render/PlaceholderRenderFrame.hpp
 set(ogl_render_sources src/PlaceholderRenderFrame.cpp src/RenderComponentRegistration.cpp)
 
 add_library(ogl_render ${OPENGEOLAB_LIBRARY_TYPE} ${ogl_render_headers} ${ogl_render_sources})
-add_library(OpenGeoLab::render ALIAS ogl_render)
+add_library(OGL::Render ALIAS ogl_render)
 
 generate_export_header(
   ogl_render EXPORT_FILE_NAME ${CMAKE_CURRENT_BINARY_DIR}/include/ogl/render/export.hpp

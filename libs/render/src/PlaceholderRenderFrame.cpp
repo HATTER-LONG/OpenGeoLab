@@ -7,12 +7,12 @@
 
 namespace {
 
-constexpr std::array<const char*, 4> kPlaceholderPalette = {"#4f7b6b", "#b9854c", "#7089a3",
+constexpr std::array<const char*, 4> PLACEHOLDER_PALETTE = {"#4f7b6b", "#b9854c", "#7089a3",
                                                             "#7f5d86"};
 
 } // namespace
 
-namespace ogl::render {
+namespace OGL::Render {
 
 auto PlaceholderCameraPose::toJson() const -> nlohmann::json {
     return {{"yawDegrees", yawDegrees}, {"pitchDegrees", pitchDegrees}, {"distance", distance}};
@@ -72,7 +72,7 @@ auto PlaceholderRenderFrame::toJson() const -> nlohmann::json {
             {"summary", summary()}};
 }
 
-auto buildPlaceholderRenderFrame(const ogl::scene::PlaceholderSceneGraph& scene_graph,
+auto buildPlaceholderRenderFrame(const OGL::Scene::PlaceholderSceneGraph& scene_graph,
                                  const nlohmann::json& params) -> PlaceholderRenderFrame {
     const int viewport_width = std::max(params.value("viewportWidth", 1280), 64);
     const int viewport_height = std::max(params.value("viewportHeight", 720), 64);
@@ -90,7 +90,7 @@ auto buildPlaceholderRenderFrame(const ogl::scene::PlaceholderSceneGraph& scene_
         const bool highlighted = !highlighted_node_id.empty() && highlighted_node_id == node.nodeId;
         draw_items.push_back({.nodeId = node.nodeId,
                               .pipelineKey = node.renderPrimitive,
-                              .colorHex = kPlaceholderPalette[index % kPlaceholderPalette.size()],
+                              .colorHex = PLACEHOLDER_PALETTE[index % PLACEHOLDER_PALETTE.size()],
                               .highlighted = highlighted});
     }
 
@@ -98,4 +98,4 @@ auto buildPlaceholderRenderFrame(const ogl::scene::PlaceholderSceneGraph& scene_
                                   viewport_width, viewport_height, camera, std::move(draw_items));
 }
 
-} // namespace ogl::render
+} // namespace OGL::Render

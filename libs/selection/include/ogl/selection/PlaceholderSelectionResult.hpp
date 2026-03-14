@@ -14,7 +14,7 @@
 #include <string>
 #include <vector>
 
-namespace ogl::selection {
+namespace OGL::Selection {
 
 /**
  * @brief One placeholder hit returned by the selection layer.
@@ -57,8 +57,8 @@ private:
  * @return Placeholder selection result.
  */
 OGL_SELECTION_EXPORT auto
-evaluatePlaceholderSelection(const ogl::scene::PlaceholderSceneGraph& scene_graph,
-                             const ogl::render::PlaceholderRenderFrame& render_frame,
+evaluatePlaceholderSelection(const OGL::Scene::PlaceholderSceneGraph& scene_graph,
+                             const OGL::Render::PlaceholderRenderFrame& render_frame,
                              const nlohmann::json& params) -> PlaceholderSelectionResult;
 
-} // namespace ogl::selection
+} // namespace OGL::Selection

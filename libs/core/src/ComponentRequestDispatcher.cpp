@@ -15,7 +15,7 @@ auto componentDispatcherLogger() {
 
 } // namespace
 
-namespace ogl::core {
+namespace OGL::Core {
 
 auto ComponentRequestDispatcher::dispatch(const std::string& module_name,
                                           const nlohmann::json& params) -> ServiceResponse {
@@ -52,4 +52,4 @@ auto ComponentRequestDispatcher::dispatch(const std::string& module_name,
     }
 }
 
-} // namespace ogl::core
+} // namespace OGL::Core

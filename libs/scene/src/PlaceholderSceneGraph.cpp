@@ -13,7 +13,7 @@ auto buildNodeId(const std::string& model_name, int body_index) -> std::string {
 
 } // namespace
 
-namespace ogl::scene {
+namespace OGL::Scene {
 
 auto PlaceholderSceneNode::toJson() const -> nlohmann::json {
     return {{"nodeId", nodeId},
@@ -57,7 +57,7 @@ auto PlaceholderSceneGraph::toJson() const -> nlohmann::json {
             {"summary", summary()}};
 }
 
-auto buildPlaceholderSceneGraph(const ogl::geometry::PlaceholderGeometryModel& geometry_model)
+auto buildPlaceholderSceneGraph(const OGL::Geometry::PlaceholderGeometryModel& geometry_model)
     -> PlaceholderSceneGraph {
     std::vector<PlaceholderSceneNode> nodes;
     nodes.reserve(static_cast<std::size_t>(geometry_model.bodyCount()));
@@ -75,4 +75,4 @@ auto buildPlaceholderSceneGraph(const ogl::geometry::PlaceholderGeometryModel& g
                                  std::move(nodes));
 }
 
-} // namespace ogl::scene
+} // namespace OGL::Scene

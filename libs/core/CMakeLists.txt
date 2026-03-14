@@ -4,7 +4,7 @@ set(ogl_core_headers include/ogl/core/IService.hpp include/ogl/core/ComponentReq
 set(ogl_core_sources src/ComponentRequestDispatcher.cpp)
 
 add_library(ogl_core ${OPENGEOLAB_LIBRARY_TYPE} ${ogl_core_headers} ${ogl_core_sources})
-add_library(OpenGeoLab::core ALIAS ogl_core)
+add_library(OGL::Core ALIAS ogl_core)
 
 generate_export_header(
   ogl_core EXPORT_FILE_NAME ${CMAKE_CURRENT_BINARY_DIR}/include/ogl/core/export.hpp

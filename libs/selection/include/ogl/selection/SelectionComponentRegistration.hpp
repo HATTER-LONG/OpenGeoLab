@@ -7,11 +7,11 @@
 
 #include <ogl/selection/export.hpp>
 
-namespace ogl::selection {
+namespace OGL::Selection {
 
 /**
  * @brief Register selection services exactly once for the current process.
  */
 OGL_SELECTION_EXPORT void registerSelectionComponents();
 
-} // namespace ogl::selection
+} // namespace OGL::Selection

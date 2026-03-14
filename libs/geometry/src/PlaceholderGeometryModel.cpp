@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <utility>
 
-namespace ogl::geometry {
+namespace OGL::Geometry {
 
 PlaceholderGeometryModel::PlaceholderGeometryModel(PlaceholderGeometryDescriptor descriptor)
     : m_descriptor(std::move(descriptor)) {
@@ -39,4 +39,4 @@ auto PlaceholderGeometryModel::toJson() const -> nlohmann::json {
     };
 }
 
-} // namespace ogl::geometry
+} // namespace OGL::Geometry

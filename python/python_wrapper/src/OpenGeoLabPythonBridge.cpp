@@ -1,23 +1,17 @@
 #include <ogl/python_wrapper/OpenGeoLabPythonBridge.hpp>
 
-#include <ogl/core/ComponentRequestDispatcher.hpp>
-#include <ogl/geometry/GeometryComponentRegistration.hpp>
-#include <ogl/render/RenderComponentRegistration.hpp>
-#include <ogl/scene/SceneComponentRegistration.hpp>
-#include <ogl/selection/SelectionComponentRegistration.hpp>
+#include <ogl/command/CommandService.hpp>
 
-namespace ogl::python_wrapper {
+namespace OGL::PythonWrapper {
 
-OpenGeoLabPythonBridge::OpenGeoLabPythonBridge() {
-    ogl::geometry::registerGeometryComponents();
-    ogl::scene::registerSceneComponents();
-    ogl::render::registerRenderComponents();
-    ogl::selection::registerSelectionComponents();
-}
+OpenGeoLabPythonBridge::OpenGeoLabPythonBridge() = default;
 
 auto OpenGeoLabPythonBridge::call(const std::string& module_name,
                                   const nlohmann::json& params) const -> nlohmann::json {
-    return ogl::core::ComponentRequestDispatcher::dispatch(module_name, params).toJson();
+    const OGL::Command::CommandService command_service;
+    return command_service
+        .execute(OGL::Command::CommandRequest{.moduleName = module_name, .params = params})
+        .toJson();
 }
 
 auto OpenGeoLabPythonBridge::suggestPlaceholderGeometryScript(const std::string& model_name,
@@ -34,4 +28,4 @@ auto OpenGeoLabPythonBridge::suggestPlaceholderGeometryScript(const std::string&
         .value("equivalentPython", std::string{});
 }
 
-} // namespace ogl::python_wrapper
+} // namespace OGL::PythonWrapper

@@ -13,7 +13,7 @@
 #include <string>
 #include <vector>
 
-namespace ogl::scene {
+namespace OGL::Scene {
 
 /**
  * @brief Placeholder scene node generated from the geometry placeholder model.
@@ -55,7 +55,7 @@ private:
  * @return Stable scene graph representation.
  */
 OGL_SCENE_EXPORT auto
-buildPlaceholderSceneGraph(const ogl::geometry::PlaceholderGeometryModel& geometry_model)
+buildPlaceholderSceneGraph(const OGL::Geometry::PlaceholderGeometryModel& geometry_model)
     -> PlaceholderSceneGraph;
 
-} // namespace ogl::scene
+} // namespace OGL::Scene

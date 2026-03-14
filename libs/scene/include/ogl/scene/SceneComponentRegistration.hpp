@@ -7,11 +7,11 @@
 
 #include <ogl/scene/export.hpp>
 
-namespace ogl::scene {
+namespace OGL::Scene {
 
 /**
  * @brief Register scene services exactly once for the current process.
  */
 OGL_SCENE_EXPORT void registerSceneComponents();
 
-} // namespace ogl::scene
+} // namespace OGL::Scene

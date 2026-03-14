@@ -7,11 +7,11 @@
 
 #include <ogl/geometry/export.hpp>
 
-namespace ogl::geometry {
+namespace OGL::Geometry {
 
 /**
  * @brief Register geometry services exactly once for the current process.
  */
 OGL_GEOMETRY_EXPORT void registerGeometryComponents();
 
-} // namespace ogl::geometry
+} // namespace OGL::Geometry

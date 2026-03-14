@@ -6,7 +6,7 @@ set(ogl_geometry_headers include/ogl/geometry/PlaceholderGeometryModel.hpp
 set(ogl_geometry_sources src/PlaceholderGeometryModel.cpp src/GeometryComponentRegistration.cpp)
 
 add_library(ogl_geometry ${OPENGEOLAB_LIBRARY_TYPE} ${ogl_geometry_headers} ${ogl_geometry_sources})
-add_library(OpenGeoLab::geometry ALIAS ogl_geometry)
+add_library(OGL::Geometry ALIAS ogl_geometry)
 
 generate_export_header(
   ogl_geometry EXPORT_FILE_NAME ${CMAKE_CURRENT_BINARY_DIR}/include/ogl/geometry/export.hpp

@@ -11,7 +11,7 @@
 
 #include <string>
 
-namespace ogl::geometry {
+namespace OGL::Geometry {
 
 /**
  * @brief Descriptor used to construct a placeholder geometry model.
@@ -67,4 +67,4 @@ private:
     PlaceholderGeometryDescriptor m_descriptor;
 };
 
-} // namespace ogl::geometry
+} // namespace OGL::Geometry

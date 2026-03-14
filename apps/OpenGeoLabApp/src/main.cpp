@@ -3,12 +3,11 @@
 #include <kangaroo/util/logger_factory.hpp>
 
 #include <QCoreApplication>
-#include <QDir>
 #include <QGuiApplication>
 #include <QObject>
 #include <QQmlApplicationEngine>
-#include <QQmlContext>
 #include <QString>
+#include <QVariant>
 
 int main(int argc, char* argv[]) {
     QGuiApplication app(argc, argv);
@@ -19,16 +18,14 @@ int main(int argc, char* argv[]) {
     auto logger = Kangaroo::Util::LoggerFactory::createLogger("OpenGeoLab");
     logger->info("Starting OpenGeoLab modular application shell");
 
-    ogl::app::OpenGeoLabController controller;
+    OGL::App::OpenGeoLabController controller;
     QQmlApplicationEngine engine;
-    const QString build_qml_import_path =
-        QDir::cleanPath(QCoreApplication::applicationDirPath() + QStringLiteral("/.."));
 
-    engine.rootContext()->setContextProperty(QStringLiteral("openGeoLabController"), &controller);
-    engine.addImportPath(build_qml_import_path);
+    engine.setInitialProperties(
+        {{QStringLiteral("appController"), QVariant::fromValue(&controller)}});
     engine.addImportPath(QStringLiteral("qrc:/qt/qml"));
 
-    logger->info("Added QML import path {}", build_qml_import_path.toStdString());
+    logger->info("Added standard QML import path qrc:/qt/qml");
 
     QObject::connect(
         &engine, &QQmlApplicationEngine::objectCreationFailed, &app,

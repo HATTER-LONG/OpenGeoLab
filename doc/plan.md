@@ -1,155 +1,103 @@
-# OpenGeoLab 当前架构与演进计划
+# OpenGeoLab 当前架构快照与下一步计划
 
-## 1. 当前工程状态
+## 1. 当前垂直链路
 
-当前仓库已经完成模块化骨架迁移：
+仓库目前已经形成一条可验证交互与自动化边界的占位链路：
 
-- apps/OpenGeoLabApp
-- libs/core
-- libs/geometry
-- libs/mesh
-- libs/scene
-- libs/render
-- libs/selection
-- libs/command
-- python/python_wrapper
+- QML UI -> app controller -> command recorder -> command service -> libs
+- 内嵌 Python runtime -> opengeolab_app API -> app controller -> command recorder -> command service -> libs
+- 外部 Python 模块 -> opengeolab.OpenGeoLabPythonBridge -> command service -> libs
 
-目前已经落地的一条完整垂直链路是：
-
-QML UI -> app controller -> Python bridge -> Kangaroo ComponentFactory -> geometry lib
-
-这条链路的核心价值是先把跨层调用方式、模块边界和脚本化入口稳定下来，而不是先追求几何能力完整。
+这条链路的价值不是几何能力已经完整，而是用户可见调用路径、记录回放边界、以及 Python 自动化入口已经统一。
 
 ## 2. 当前模块职责
 
-### 2.1 apps/OpenGeoLabApp
+| 模块 | 当前职责 |
+| --- | --- |
+| apps/OpenGeoLabApp | 承载 QML 壳层、应用 controller 和内嵌 Python runtime。 |
+| libs/core | 定义 IService、ServiceResponse 与按模块名分发的 dispatcher。 |
+| libs/command | 负责命令执行、记录、回放和 Python 导出辅助能力。 |
+| libs/geometry | 提供占位几何模型构建和 geometry 服务注册。 |
+| libs/scene | 把 geometry 结果整理成稳定的占位 scene graph。 |
+| libs/render | 在不暴露几何内核细节的前提下生成占位 render frame。 |
+| libs/selection | 基于 scene 与 render 数据给出占位拾取结果。 |
+| python/python_wrapper | 提供对外 Python bridge，但内部复用共享 command service。 |
 
-- 宿主 QML UI 和应用级 controller
-- 从 QML 接收 module + JSON 请求
-- 不依赖 geometry 专用服务接口，而是统一走通用请求分发
+## 3. 应用与自动化设计判断
 
-### 2.2 libs/core
+### 3.1 command 是唯一正确的状态修改入口
 
-- 定义 IService 和 ServiceResponse
-- 提供 ComponentRequestDispatcher
-- 负责通过 Kangaroo ComponentFactory 按 moduleName 解析服务
+用户可见状态变化现在应当统一收敛到 command 层。这是后续能力的基础：
 
-### 2.3 libs/geometry
+- replay
+- 未来的 undo / redo
+- Python script export
+- LLM 编排
 
-- 当前提供 PlaceholderGeometryModel
-- 通过 registerGeometryComponents 注册 geometry 服务
-- 后续将替换为 OCC 驱动的 GeometryModel、导入、拓扑和清理能力
+app 层不再需要在语义上依赖 python_wrapper。Python 只是 command 的适配器，不是 UI 的主执行骨架。
 
-### 2.4 python/python_wrapper
+### 3.2 内嵌 Python 的定位
 
-- 提供 OpenGeoLabPythonBridge
-- 同时服务于 app 层和 pybind11 模块
-- 统一高层 call(module, params) 入口，避免 UI 链路和 Python 链路各自演化
+应用进程现在内嵌了解释器，并暴露内建模块 opengeolab_app，用于在程序运行时通过 Python API 修改 application 状态。
 
-### 2.5 libs/scene
+当前内嵌 API 形态：
 
-- 负责把几何占位模型组织成稳定的 scene graph 语义层
-- 为 render 和 selection 提供节点 ID、显示标签、可选中对象集合
+- opengeolab_app.run_command(module_name, params)
+- opengeolab_app.replay_commands()
+- opengeolab_app.clear_commands()
+- opengeolab_app.get_state()
 
-### 2.6 libs/render
+这样可以保证运行时脚本与 QML 走同一套 command 和状态模型，而不是额外再做一条旁路。
 
-- 负责把 scene graph 转换为占位 RenderFrame
-- 承载 viewport 尺寸、相机姿态、draw item 和高亮状态等渲染侧数据
+### 3.3 脚本记录粒度
 
-### 2.7 libs/selection
+脚本记录应当保留工程语义，而不是记录偶发 UI 细节。
 
-- 负责基于 RenderFrame 和 scene graph 生成占位拾取/框选结果
-- 当前已可用单次请求串起 geometry -> scene -> render -> selection 的核心数据流
+推荐粒度：
 
-## 3. 对 QML + OpenGL + 鼠标交互 + Python 脚本记录的架构评估
+- selection.pickEntity(...)
+- scene.setVisibility(...)
+- geometry.cleanup(...)
+- mesh.generateSurface(...)
+- camera.setPose(...)
 
-结论：当前框架方向是合理的，scene、render、selection 的占位链路已经打通；下一步瓶颈已经收敛到真正的 OpenGL 视口宿主、命令系统接管和脚本记录语义化。
+鼠标移动、悬停、逐帧相机增量，不应作为主要回放产物直接落入脚本层。
 
-### 3.1 当前框架为什么方向正确
+## 4. 当前仍然缺失的能力
 
-- UI 没有直接耦合几何内核，而是经 controller 和服务调用进入后端。
-- Python bridge 已经是高层自动化入口，天然适合脚本回放与 LLM 生成调用。
-- Kangaroo ComponentFactory 提供统一的 module 字符串分发模型，便于 geometry、mesh、scene、selection、command 按同一入口接入。
-- render 被明确要求与 geometry/mesh 内核解耦，这是 OpenGL 视图、拾取和缓存管理的正确前提。
+虽然命令与自动化边界已经更正确，但产品能力仍有明显缺口：
 
-### 3.2 当前还缺的关键能力
+- render 还没有真实 OpenGL viewport host 和 GPU 资源生命周期
+- scene 还不是完整的可见性、激活状态、选择状态唯一真值来源
+- selection 仍是占位逻辑，还没有真实射线拾取、ID buffer 或框选算法
+- command 目前已有 record / replay，但还没有 undo / redo
+- 内嵌 Python 目前运行在 app 线程，应继续定位为高层自动化入口，而不是长耗时计算通道
 
-- render 模块还没有真实的 OpenGL 视图宿主与 GPU 资源管理层。
-- scene 模块虽然已有占位 scene graph，但还没有成为完整的显示对象、可见性、选择状态唯一真值来源。
-- selection 模块虽然已有占位 pick/box-select 语义，但还没有真正接入射线拾取、ID buffer 和屏幕空间框选算法。
-- command 模块还没有接管用户可见操作，因此 undo/redo 和脚本录制都还无法真正成立。
+## 5. 当前实践判断
 
-### 3.3 推荐的交互分层
+和之前的 UI -> Python bridge -> libs 路径相比，当前方向更符合仓库目标，因为：
 
-建议采用以下职责分层：
+- app 到 domain 的状态修改经过 command 边界
+- Python 自动化复用同一边界，而不是绕开它
+- 导出的 Python 保持可读、可回放
+- QML 仍然保持薄表现层角色
 
-1. QML 层
-   - 只负责界面、工具状态、事件转发
-   - 不做几何、拾取和渲染算法
+接下来需要持续坚持的纪律是：先在 command 中落语义，再向 QML 和 Python 暴露适配接口。
 
-2. app / InteractionController
-   - 接收鼠标按下、移动、释放、滚轮等事件
-   - 统一转换为 orbit camera、pick face、box select 等语义请求
+## 6. 推荐下一步顺序
 
-3. scene 模块
-   - 保存 scene node、可见性、激活状态、选择集
-   - 作为 render 与 selection 的共同语义中间层
+### 阶段 A：引入真实视口宿主
 
-4. render 模块
-   - 消费 scene 导出的 RenderData
-   - 管理 GPU buffer、camera、render pass、highlight pass
-   - 不直接访问 OCC 或 Gmsh 对象
+把 render 从占位 frame 推进到真正的 OpenGL 视口与渲染资源管理。
 
-5. selection 模块
-   - 实现 ray cast、GPU picking、rectangle selection
-   - 返回实体 ID 或 scene node ID
-   - 不直接操作 UI
+### 阶段 B：扩展 command 语义
 
-6. command 模块
-   - 把所有用户可见操作落成命令
-   - 负责 undo/redo 和 Python script recording 的统一语义入口
+补充可见性、相机、选择集修改、几何清理和后续网格能力的显式命令。
 
-### 3.4 关于 Python 脚本记录的关键判断
+### 阶段 C：补齐 undo / redo
 
-脚本录制不应该记录“鼠标拖了多少像素”，而应该记录“完成了什么工程动作”。
+从 replay-only 的命令历史演进到可逆命令契约。
 
-正确粒度应当是：
+### 阶段 D：替换占位后端
 
-- 旋转视角 -> set_camera_pose
-- 点击拾取 -> select_face 或 select_entities
-- 框选 -> box_select(screen_rect, filter)
-- 几何清理 -> geometry.removeSmallFaces(params)
-- 生成网格 -> mesh.generateSurface(params)
-
-也就是说，鼠标事件只触发命令，命令再导出 Python 语义调用。不要把 UI 坐标系细节固化进脚本层。
-
-## 4. 当前 CMake 设计判断
-
-当前 CMake 相比最初的单体结构已经明显更合理：
-
-- 根 CMake 管理依赖和全局选项
-- 每个模块有独立 CMakeLists.txt
-- geometry 测试已迁移到 libs/geometry/tests
-- 首方库支持通过 OPENGEOLAB_BUILD_SHARED_LIBS 切换静态/动态构建
-- core 与 geometry 已加入生成式 export header，满足 Windows/MSVC 共享库导出规则
-- 已增加基础 install/export 规则，为后续发布库和 package config 预留空间
-
-仍需持续坚持的原则：
-
-- 所有公共库模块都必须维护自己的 export header
-- 单元测试按模块内聚，不回退到根目录 tests
-- 顶层 tests 目录只保留跨模块集成测试
-
-## 5. 下一阶段推荐顺序
-
-### 阶段 A：引入真正的 OpenGL 视图宿主
-
-目标：让 QML 视口可以处理 orbit、pan、zoom 与 redraw。
-
-### 阶段 B：把 command 模块接到用户操作链路
-
-目标：建立 undo/redo 和 Python 脚本录制的统一入口。
-
-### 阶段 C：把 geometry placeholder 替换成 OCC 真实模型
-
-目标：从演示链路升级成真正可编辑、可导入的几何模块。
+在保持 command 与自动化边界稳定的前提下，把 geometry、scene、render、selection 逐步替换成 OCC / Gmsh 驱动的真实实现。

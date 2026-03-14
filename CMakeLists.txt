@@ -21,7 +21,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(ENABLE_CONSOLE "Enable console window on Windows for debugging" ON)
-option(ENABLE_TEST "Enable building tests" OFF)
+option(ENABLE_TEST "Enable building tests" ON)
 option(ENABLE_HDF5 "Enable HDF5 support" OFF)
 option(OPENGEOLAB_FETCH_DEPENDENCIES "Fetch missing dependencies with CPM" ON)
 option(OPENGEOLAB_BUILD_SHARED_LIBS "Build first-party OpenGeoLab libraries as shared libraries"
@@ -49,11 +49,12 @@ endforeach()
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/tools.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/CPM.cmake)
 
-set(OPENGEOLAB_FMT_VERSION 11.2.0)
-set(OPENGEOLAB_SPDLOG_VERSION 1.15.3)
+set(OPENGEOLAB_FMT_VERSION 12.1.0)
+set(OPENGEOLAB_SPDLOG_VERSION 1.17.0)
 set(OPENGEOLAB_KANGAROO_VERSION 2.2.2)
 set(OPENGEOLAB_NLOHMANN_JSON_VERSION 3.12.0)
 set(OPENGEOLAB_PYBIND11_VERSION 3.0.2)
+set(OPENGEOLAB_CATCH2_VERSION 3.13.0)
 set(PYBIND11_FINDPYTHON ON)
 
 opengeolab_resolve_package(
@@ -178,6 +179,20 @@ endif()
 
 if(ENABLE_TEST)
   enable_testing()
+
+  opengeolab_resolve_package(
+    Catch2
+    Catch2::Catch2WithMain
+    VERSION
+    ${OPENGEOLAB_CATCH2_VERSION}
+    GITHUB_REPOSITORY
+    catchorg/Catch2
+    GIT_TAG
+    v${OPENGEOLAB_CATCH2_VERSION}
+    CPM_OPTIONS
+    "CATCH_BUILD_TESTING OFF"
+    "CATCH_INSTALL_DOCS OFF"
+  )
 endif()
 
 add_subdirectory(libs)
