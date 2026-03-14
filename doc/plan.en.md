@@ -82,6 +82,12 @@ The current direction matches the repository goals better than the previous UI -
 - generated Python remains readable and replay-oriented
 - QML stays presentation-focused and thin
 
+The UI shell is also converging on a cleaner structure:
+
+- the workbench header should keep moving toward reusable ribbon-group, menu-panel, and viewport-overlay subcomponents
+- icons should be rendered through a theme-aware tint pipeline so light and dark mode always preserve strong contrast
+- ribbon sizing, group captions, and accent-area balance should stay optimized for engineering readability and hit targets rather than decorative density
+
 The main discipline to preserve from here is: add new user-facing operations to command first, then expose them to QML and Python as adapters.
 
 ## 6. Recommended Next Steps
@@ -101,3 +107,7 @@ Move from replay-only history to full reversible command contracts.
 ### Phase D: real geometry and meshing backends
 
 Replace placeholder geometry, scene, render, and selection implementations with OCC and Gmsh-backed data flows while keeping the same command and automation boundaries.
+
+### Phase E: QML shell consolidation
+
+Continue splitting oversized QML pages into theme, components, and section-level files so the shell stays reusable, reviewable, and easier to evolve.

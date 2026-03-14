@@ -66,6 +66,7 @@ public:
     Q_INVOKABLE void replayRecordedCommands();
     Q_INVOKABLE void clearRecordedCommands();
     Q_INVOKABLE void recordSelectionSmokeTest();
+    Q_INVOKABLE bool exportRecordedScript(const QString& file_path);
     Q_INVOKABLE void runEmbeddedPython(const QString& script);
     Q_INVOKABLE void runEmbeddedPythonCommandLine(const QString& command_line);
 

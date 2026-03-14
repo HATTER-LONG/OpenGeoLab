@@ -82,6 +82,12 @@ app 层不再需要在语义上依赖 python_wrapper。Python 只是 command 的
 - 导出的 Python 保持可读、可回放
 - QML 仍然保持薄表现层角色
 
+当前 UI 壳层也已经形成更明确的组织方向：
+
+- workbench header 应继续拆成可复用的 ribbon group、menu panel、viewport overlay 等子组件
+- icon 应统一通过 theme-aware 着色组件输出，避免亮暗主题切换后出现低对比图标
+- ribbon 的尺寸、组标题、背景占比应保留工程软件风格，优先服务信息层次和可点击性，而不是装饰性
+
 接下来需要持续坚持的纪律是：先在 command 中落语义，再向 QML 和 Python 暴露适配接口。
 
 ## 6. 推荐下一步顺序
@@ -101,3 +107,7 @@ app 层不再需要在语义上依赖 python_wrapper。Python 只是 command 的
 ### 阶段 D：替换占位后端
 
 在保持 command 与自动化边界稳定的前提下，把 geometry、scene、render、selection 逐步替换成 OCC / Gmsh 驱动的真实实现。
+
+### 阶段 E：整理 QML 壳层
+
+继续把过长的 QML 页面拆成 theme、components、sections 三层，降低单文件体积，并沉淀可复用的 ribbon、菜单、状态面板组件。

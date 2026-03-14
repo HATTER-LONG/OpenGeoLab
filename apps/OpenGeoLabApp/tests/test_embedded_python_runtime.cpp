@@ -3,6 +3,9 @@
 #include <ogl/app/OpenGeoLabController.hpp>
 
 #include <QCoreApplication>
+#include <QDir>
+#include <QFile>
+#include <QTemporaryDir>
 
 #include <string>
 
@@ -65,4 +68,26 @@ TEST_CASE("embedded python command line evaluates expressions and statements",
     controller.runEmbeddedPythonCommandLine(
         QStringLiteral("opengeolab_app.replay_commands()['success']"));
     CHECK(controller.lastPythonOutput().trimmed().contains(QStringLiteral("True")));
+}
+
+TEST_CASE("recorded python script exports to a file", "[app][python][export]") {
+    static_cast<void>(ensureCoreApplication());
+
+    OGL::App::OpenGeoLabController controller;
+    controller.recordSelectionSmokeTest();
+
+    QTemporaryDir temp_dir;
+    REQUIRE(temp_dir.isValid());
+
+    const QString export_path = QDir(temp_dir.path()).filePath(QStringLiteral("recorded.py"));
+    REQUIRE(controller.exportRecordedScript(export_path));
+
+    QFile exported_file(export_path);
+    REQUIRE(exported_file.open(QIODevice::ReadOnly | QIODevice::Text));
+
+    const QString contents = QString::fromUtf8(exported_file.readAll());
+    CHECK(contents.contains(QStringLiteral("import opengeolab")));
+    CHECK(contents.contains(QStringLiteral("OpenGeoLabPythonBridge")));
+    CHECK(contents.contains(QStringLiteral("pickPlaceholderEntity")));
+    CHECK(controller.lastSummary().contains(export_path));
 }

@@ -1,0 +1,6 @@
+ActionButton 1.0 ActionButton.qml
+AppIcon 1.0 AppIcon.qml
+CodePanel 1.0 CodePanel.qml
+RibbonTile 1.0 RibbonTile.qml
+SectionCard 1.0 SectionCard.qml
+StatChip 1.0 StatChip.qml

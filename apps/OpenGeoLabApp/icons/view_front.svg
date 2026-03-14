@@ -1,0 +1,13 @@
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <!-- front face highlight -->
+  <rect x="6" y="9" width="10" height="10" rx="1"
+    fill="currentColor" fill-opacity="0.18"/>
+
+  <!-- cube outline -->
+  <rect x="6" y="9" width="10" height="10" rx="1"
+    fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+  <path d="M6 9l4-4h10l-4 4z"
+    fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+  <path d="M16 9v10l4-4V5"
+    fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+</svg>

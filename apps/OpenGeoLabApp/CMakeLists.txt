@@ -2,9 +2,91 @@ set(opengeolab_app_headers include/ogl/app/OpenGeoLabController.hpp
                            include/ogl/app/EmbeddedPythonRuntime.hpp
 )
 set(opengeolab_app_sources src/main.cpp src/OpenGeoLabController.cpp src/EmbeddedPythonRuntime.cpp)
-set(opengeolab_app_qml qml/Main.qml)
+set(opengeolab_app_qml
+    qml/Main.qml
+    qml/theme/AppTheme.qml
+    qml/components/ActionButton.qml
+    qml/components/AppIcon.qml
+    qml/components/CodePanel.qml
+    qml/components/RibbonTile.qml
+    qml/components/SectionCard.qml
+    qml/components/StatChip.qml
+    qml/sections/AppHeader.qml
+    qml/sections/HeaderMenuPanel.qml
+    qml/sections/HeaderRibbonGroup.qml
+    qml/sections/OutputStrip.qml
+    qml/sections/SidebarPanel.qml
+    qml/sections/ViewportPanel.qml
+)
 
-set_source_files_properties(${opengeolab_app_qml} PROPERTIES QT_RESOURCE_ALIAS Main.qml)
+set(opengeolab_app_resources
+    qml/theme/qmldir
+    qml/components/qmldir
+    qml/sections/qmldir
+    icons/ai_chat.svg
+    icons/ai_suggestion.svg
+    icons/box.svg
+    icons/clear.svg
+    icons/cylinder.svg
+    icons/dark.svg
+    icons/eye.svg
+    icons/export.svg
+    icons/export_record.svg
+    icons/import.svg
+    icons/light.svg
+    icons/menu.svg
+    icons/mesh.svg
+    icons/offset.svg
+    icons/query.svg
+    icons/record.svg
+    icons/replay.svg
+    icons/smooth_mesh.svg
+    icons/sphere.svg
+    icons/torus.svg
+    icons/trim.svg
+)
+
+set_source_files_properties(qml/Main.qml PROPERTIES QT_RESOURCE_ALIAS Main.qml)
+set_source_files_properties(qml/theme/qmldir PROPERTIES QT_RESOURCE_ALIAS theme/qmldir)
+set_source_files_properties(qml/theme/AppTheme.qml PROPERTIES QT_RESOURCE_ALIAS theme/AppTheme.qml)
+set_source_files_properties(qml/components/qmldir PROPERTIES QT_RESOURCE_ALIAS components/qmldir)
+set_source_files_properties(
+  qml/components/ActionButton.qml PROPERTIES QT_RESOURCE_ALIAS components/ActionButton.qml
+)
+set_source_files_properties(
+  qml/components/AppIcon.qml PROPERTIES QT_RESOURCE_ALIAS components/AppIcon.qml
+)
+set_source_files_properties(
+  qml/components/CodePanel.qml PROPERTIES QT_RESOURCE_ALIAS components/CodePanel.qml
+)
+set_source_files_properties(
+  qml/components/RibbonTile.qml PROPERTIES QT_RESOURCE_ALIAS components/RibbonTile.qml
+)
+set_source_files_properties(
+  qml/components/SectionCard.qml PROPERTIES QT_RESOURCE_ALIAS components/SectionCard.qml
+)
+set_source_files_properties(
+  qml/components/StatChip.qml PROPERTIES QT_RESOURCE_ALIAS components/StatChip.qml
+)
+set_source_files_properties(qml/sections/qmldir PROPERTIES QT_RESOURCE_ALIAS sections/qmldir)
+set_source_files_properties(
+  qml/sections/AppHeader.qml PROPERTIES QT_RESOURCE_ALIAS sections/AppHeader.qml
+)
+set_source_files_properties(
+  qml/sections/HeaderMenuPanel.qml PROPERTIES QT_RESOURCE_ALIAS sections/HeaderMenuPanel.qml
+)
+set_source_files_properties(
+  qml/sections/HeaderRibbonGroup.qml PROPERTIES QT_RESOURCE_ALIAS sections/HeaderRibbonGroup.qml
+)
+set_source_files_properties(
+  qml/sections/OutputStrip.qml PROPERTIES QT_RESOURCE_ALIAS sections/OutputStrip.qml
+)
+set_source_files_properties(
+  qml/sections/SidebarPanel.qml PROPERTIES QT_RESOURCE_ALIAS sections/SidebarPanel.qml
+)
+set_source_files_properties(
+  qml/sections/ViewportPanel.qml PROPERTIES QT_RESOURCE_ALIAS sections/ViewportPanel.qml
+)
 
 set(opengeolab_executable_type)
 if(WIN32 AND NOT ENABLE_CONSOLE)
@@ -24,6 +106,8 @@ qt_add_qml_module(
   1.0
   QML_FILES
   ${opengeolab_app_qml}
+  RESOURCES
+  ${opengeolab_app_resources}
 )
 
 target_include_directories(OpenGeoLabApp PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)

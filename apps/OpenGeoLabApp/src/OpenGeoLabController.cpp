@@ -2,6 +2,10 @@
 
 #include <ogl/app/EmbeddedPythonRuntime.hpp>
 
+#include <QSaveFile>
+#include <QTextStream>
+#include <QUrl>
+
 #include <exception>
 #include <nlohmann/json.hpp>
 
@@ -22,6 +26,15 @@ auto defaultRecordSelectionRequest() -> nlohmann::json {
 
 auto formatPythonOutput(const std::string& output, const char* empty_message) -> QString {
     return QString::fromStdString(output.empty() ? std::string{empty_message} : output);
+}
+
+auto resolveExportPath(const QString& file_path) -> QString {
+    const QUrl url(file_path);
+    if(url.isLocalFile()) {
+        return url.toLocalFile();
+    }
+
+    return file_path;
 }
 
 } // namespace
@@ -173,6 +186,56 @@ void OpenGeoLabController::clearRecordedCommands() { clearRecordedCommandsJson()
 void OpenGeoLabController::recordSelectionSmokeTest() {
     clearRecordedCommandsJson();
     executeCommand("selection", defaultRecordSelectionRequest(), "qml-record-test");
+}
+
+bool OpenGeoLabController::exportRecordedScript(const QString& file_path) {
+    const QString target_path = resolveExportPath(file_path).trimmed();
+    const QString exported_script =
+        m_suggestedPython.trimmed().isEmpty()
+            ? QString::fromStdString(m_commandRecorder->exportedPythonScript())
+            : m_suggestedPython;
+
+    if(target_path.isEmpty()) {
+        m_lastPythonOutput = QStringLiteral("Export path is empty.");
+        emit lastPythonOutputChanged();
+        return false;
+    }
+
+    if(exported_script.trimmed().isEmpty()) {
+        m_lastPythonOutput = QStringLiteral("No recorded Python script is available to export.");
+        emit lastPythonOutputChanged();
+        return false;
+    }
+
+    QSaveFile output_file(target_path);
+    if(!output_file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        m_lastPythonOutput =
+            QStringLiteral("Failed to open export file: %1").arg(output_file.errorString());
+        emit lastPythonOutputChanged();
+        return false;
+    }
+
+    QTextStream output_stream(&output_file);
+    output_stream << exported_script;
+    if(!exported_script.endsWith('\n')) {
+        output_stream << '\n';
+    }
+
+    if(!output_file.commit()) {
+        m_lastPythonOutput =
+            QStringLiteral("Failed to save export file: %1").arg(output_file.errorString());
+        emit lastPythonOutputChanged();
+        return false;
+    }
+
+    m_lastStatus = QStringLiteral("Script export completed");
+    m_lastSummary = QStringLiteral("Recorded Python script exported to %1").arg(target_path);
+    m_lastPythonOutput = m_lastSummary;
+
+    emit lastStatusChanged();
+    emit lastSummaryChanged();
+    emit lastPythonOutputChanged();
+    return true;
 }
 
 void OpenGeoLabController::runEmbeddedPython(const QString& script) {

@@ -1,0 +1,6 @@
+AppHeader 1.0 AppHeader.qml
+HeaderMenuPanel 1.0 HeaderMenuPanel.qml
+HeaderRibbonGroup 1.0 HeaderRibbonGroup.qml
+OutputStrip 1.0 OutputStrip.qml
+SidebarPanel 1.0 SidebarPanel.qml
+ViewportPanel 1.0 ViewportPanel.qml

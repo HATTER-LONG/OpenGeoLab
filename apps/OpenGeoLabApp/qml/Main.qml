@@ -1,4 +1,8 @@
+pragma ComponentBehavior: Bound
+
+import QtCore
 import QtQuick
+import QtQuick.Dialogs
 import QtQuick.Layouts
 import QtQuick.Window
 
@@ -6,93 +10,239 @@ Window {
     id: root
 
     required property var appController
-    property string defaultRequestJson: "{\n  \"operation\": \"pickPlaceholderEntity\",\n  \"modelName\": \"Bracket_A01\",\n  \"bodyCount\": 3,\n  \"viewportWidth\": 1280,\n  \"viewportHeight\": 720,\n  \"screenX\": 412,\n  \"screenY\": 248,\n  \"source\": \"qml-ui\",\n  \"requestedBy\": \"Main.qml\"\n}"
-    property string defaultPythonScript: "import opengeolab_app\n\nselection = opengeolab_app.run_command(\n    \"selection\",\n    {\n        \"operation\": \"pickPlaceholderEntity\",\n        \"modelName\": \"Bracket_A01\",\n        \"bodyCount\": 2,\n        \"viewportWidth\": 960,\n        \"viewportHeight\": 540,\n        \"screenX\": 180,\n        \"screenY\": 120\n    },\n)\nprint(selection[\"payload\"][\"summary\"])\nprint(opengeolab_app.get_state()[\"recordedCommandCount\"])"
-    property string defaultPythonCommandLine: "opengeolab_app.get_state()['recordedCommandCount']"
+    property bool darkMode: false
+    property bool menuOpen: false
+    property int selectedRibbonTab: 0
+    property string statusNote: appController.lastSummary.length > 0 ? appController.lastSummary : "Viewport placeholder is active. Ribbon commands stay connected to the same controller pipeline."
 
-    width: 1320
-    height: 820
-    minimumWidth: 1100
-    minimumHeight: 760
+    readonly property var ribbonTabs: ["Geometry", "Mesh", "AI"]
+    readonly property var ribbonGroupsModel: [[
+            {
+                "title": "Create",
+                "actions": [
+                    {
+                        "key": "addBox",
+                        "title": "Box",
+                        "icon": "box",
+                        "accentOne": "accentA",
+                        "accentTwo": "accentB"
+                    },
+                    {
+                        "key": "addCylinder",
+                        "title": "Cylinder",
+                        "icon": "cylinder",
+                        "accentOne": "accentA",
+                        "accentTwo": "accentB"
+                    },
+                    {
+                        "key": "addSphere",
+                        "title": "Sphere",
+                        "icon": "sphere",
+                        "accentOne": "accentA",
+                        "accentTwo": "accentB"
+                    },
+                    {
+                        "key": "addTorus",
+                        "title": "Torus",
+                        "icon": "torus",
+                        "accentOne": "accentA",
+                        "accentTwo": "accentB"
+                    }
+                ]
+            },
+            {
+                "title": "Modify",
+                "actions": [
+                    {
+                        "key": "trim",
+                        "title": "Trim",
+                        "icon": "trim",
+                        "accentOne": "accentD",
+                        "accentTwo": "accentC"
+                    },
+                    {
+                        "key": "offset",
+                        "title": "Offset",
+                        "icon": "offset",
+                        "accentOne": "accentD",
+                        "accentTwo": "accentD"
+                    }
+                ]
+            },
+            {
+                "title": "Inspect",
+                "actions": [
+                    {
+                        "key": "queryGeometry",
+                        "title": "Query",
+                        "icon": "query",
+                        "accentOne": "accentE",
+                        "accentTwo": "accentB"
+                    }
+                ]
+            }
+        ], [
+            {
+                "title": "Mesh",
+                "actions": [
+                    {
+                        "key": "generateMesh",
+                        "title": "Generate",
+                        "icon": "mesh",
+                        "accentOne": "accentB",
+                        "accentTwo": "accentA"
+                    },
+                    {
+                        "key": "smoothMesh",
+                        "title": "Smooth",
+                        "icon": "smoothMesh",
+                        "accentOne": "accentB",
+                        "accentTwo": "accentA"
+                    }
+                ]
+            },
+            {
+                "title": "Inspect",
+                "actions": [
+                    {
+                        "key": "queryMesh",
+                        "title": "Query",
+                        "icon": "query",
+                        "accentOne": "accentC",
+                        "accentTwo": "accentA"
+                    }
+                ]
+            }
+        ], [
+            {
+                "title": "Assist",
+                "actions": [
+                    {
+                        "key": "aiSuggest",
+                        "title": "Suggest",
+                        "icon": "aiSuggest",
+                        "accentOne": "accentE",
+                        "accentTwo": "accentA"
+                    },
+                    {
+                        "key": "aiChat",
+                        "title": "Chat",
+                        "icon": "aiChat",
+                        "accentOne": "accentE",
+                        "accentTwo": "accentA"
+                    }
+                ]
+            }
+        ]]
+
+    width: 1500
+    height: 900
+    minimumWidth: 1280
+    minimumHeight: 800
     visible: true
     title: "OpenGeoLab"
-    color: "#d9dfd2"
+    color: appTheme.bg0
 
-    component ActionButton: Rectangle {
-        id: actionButton
+    AppTheme {
+        id: appTheme
 
-        property string buttonText: ""
-        property color buttonColor: "#d9e1f3"
-        property color pressedColor: "#cad5ec"
-        property color labelColor: "#2a3659"
-        property int labelSize: 14
-        signal clicked
+        darkMode: root.darkMode
+    }
 
-        width: 120
-        height: 40
-        radius: 12
-        color: buttonArea.pressed ? pressedColor : buttonColor
-
-        Text {
-            anchors.centerIn: parent
-            text: actionButton.buttonText
-            color: actionButton.labelColor
-            font.pixelSize: actionButton.labelSize
-            font.bold: true
+    function parsedResponse() {
+        if (!root.appController.lastPayload || root.appController.lastPayload.length === 0) {
+            return {};
         }
 
-        MouseArea {
-            id: buttonArea
-            anchors.fill: parent
-            onClicked: actionButton.clicked()
+        try {
+            return JSON.parse(root.appController.lastPayload);
+        } catch (error) {
+            return {};
         }
     }
 
-    component CodeSurface: Rectangle {
-        id: codeSurface
+    function viewportSummary() {
+        const response = root.parsedResponse();
+        const payload = response.payload || {};
+        if (payload.selectionResult && payload.selectionResult.summary) {
+            return payload.selectionResult.summary;
+        }
+        if (payload.renderFrame && payload.renderFrame.summary) {
+            return payload.renderFrame.summary;
+        }
+        return root.statusNote;
+    }
 
-        property alias title: titleText.text
-        property alias bodyText: bodyText.text
-        property color panelColor: "#f8faff"
-        property color borderColor: "#d7dfef"
-        property color textColor: "#2a3659"
-        property color titleColor: "#61708e"
-        property int preferredHeight: 160
+    function applyTheme(nextDarkMode) {
+        root.darkMode = nextDarkMode;
+        root.menuOpen = false;
+    }
 
-        radius: 18
-        color: panelColor
-        border.width: 1
-        border.color: borderColor
-        height: preferredHeight
-
-        Text {
-            id: titleText
-
-            anchors.left: parent.left
-            anchors.leftMargin: 16
-            anchors.top: parent.top
-            anchors.topMargin: 14
-            color: codeSurface.titleColor
-            font.pixelSize: 14
-            font.bold: true
+    function triggerHeaderAction(actionKey) {
+        if (actionKey === "importModel") {
+            root.statusNote = "Import model is a ribbon placeholder action.";
+        } else if (actionKey === "exportModel") {
+            root.statusNote = "Export model is a ribbon placeholder action.";
+        } else if (actionKey === "toggleTheme") {
+            root.applyTheme(!root.darkMode);
+        } else if (actionKey === "recordSelection") {
+            root.appController.recordSelectionSmokeTest();
+            root.statusNote = root.appController.lastSummary;
+        } else if (actionKey === "replayCommands") {
+            root.appController.replayRecordedCommands();
+            root.statusNote = root.appController.lastSummary;
+        } else if (actionKey === "clearRecordedCommands") {
+            root.appController.clearRecordedCommands();
+            root.statusNote = root.appController.lastSummary;
+        } else if (actionKey === "exportScript") {
+            exportScriptDialog.open();
+        } else if (actionKey === "focusViewport") {
+            root.statusNote = root.viewportSummary();
+        } else if (actionKey === "inspectPayload") {
+            root.statusNote = root.appController.lastPayload;
+        } else if (actionKey === "addBox") {
+            root.statusNote = "Geometry create placeholder: Box.";
+        } else if (actionKey === "addCylinder") {
+            root.statusNote = "Geometry create placeholder: Cylinder.";
+        } else if (actionKey === "addSphere") {
+            root.statusNote = "Geometry create placeholder: Sphere.";
+        } else if (actionKey === "addTorus") {
+            root.statusNote = "Geometry create placeholder: Torus.";
+        } else if (actionKey === "trim") {
+            root.statusNote = "Geometry modify placeholder: Trim.";
+        } else if (actionKey === "offset") {
+            root.statusNote = "Geometry modify placeholder: Offset.";
+        } else if (actionKey === "queryGeometry") {
+            root.statusNote = "Geometry inspect placeholder: Query.";
+        } else if (actionKey === "generateMesh") {
+            root.statusNote = "Mesh placeholder: Generate.";
+        } else if (actionKey === "smoothMesh") {
+            root.statusNote = "Mesh placeholder: Smooth.";
+        } else if (actionKey === "queryMesh") {
+            root.statusNote = "Mesh inspect placeholder: Query.";
+        } else if (actionKey === "aiSuggest") {
+            root.statusNote = "AI assist placeholder: Suggest.";
+        } else if (actionKey === "aiChat") {
+            root.statusNote = "AI assist placeholder: Chat.";
         }
 
-        Flickable {
-            anchors.fill: parent
-            anchors.margins: 14
-            anchors.topMargin: 42
-            contentWidth: width
-            contentHeight: bodyText.paintedHeight
-            clip: true
+        root.menuOpen = false;
+    }
 
-            Text {
-                id: bodyText
+    FileDialog {
+        id: exportScriptDialog
 
-                width: parent.width
-                color: codeSurface.textColor
-                font.pixelSize: 13
-                font.family: "Consolas"
-                wrapMode: Text.WrapAnywhere
+        title: "Export Recorded Script"
+        fileMode: FileDialog.SaveFile
+        currentFolder: StandardPaths.standardLocations(StandardPaths.DocumentsLocation)[0]
+        currentFile: "opengeolab_recorded.py"
+        nameFilters: ["Python files (*.py)", "All files (*)"]
+
+        onAccepted: {
+            if (root.appController.exportRecordedScript(selectedFile)) {
+                root.statusNote = root.appController.lastSummary;
+            } else {
+                root.statusNote = root.appController.lastPythonOutput;
             }
         }
     }
@@ -102,430 +252,83 @@ Window {
         gradient: Gradient {
             GradientStop {
                 position: 0.0
-                color: "#e9eadf"
+                color: appTheme.bg0
             }
             GradientStop {
-                position: 0.52
-                color: "#cfdac8"
+                position: 0.55
+                color: appTheme.bg1
             }
             GradientStop {
                 position: 1.0
-                color: "#94b0a5"
+                color: appTheme.bg2
             }
         }
     }
 
     Rectangle {
-        id: frame
-
-        anchors.fill: parent
-        anchors.margins: 26
-        radius: 28
-        color: "#f7f3ea"
+        width: 360
+        height: 360
+        radius: 96
+        anchors.right: parent.right
+        anchors.rightMargin: -90
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: -120
+        color: appTheme.tint(appTheme.accentD, appTheme.darkMode ? 0.08 : 0.05)
         border.width: 1
-        border.color: "#d6ccbf"
+        border.color: appTheme.tint(appTheme.accentD, 0.12)
+        rotation: 14
+    }
 
-        RowLayout {
+    Rectangle {
+        anchors.fill: parent
+        // anchors.margins: appTheme.shellMargin
+        radius: 20
+        color: "transparent"
+        border.width: 0
+        border.color: appTheme.shellBorder
+
+        ColumnLayout {
             anchors.fill: parent
-            anchors.margins: 16
-            spacing: 18
+            anchors.margins: appTheme.shellPadding
+            spacing: appTheme.gap
 
-            Rectangle {
-                Layout.preferredWidth: Math.max(360, frame.width * 0.31)
-                Layout.fillHeight: true
-                radius: 26
-                color: "#20322f"
-
-                Rectangle {
-                    anchors.fill: parent
-                    anchors.margins: 1
-                    radius: 25
-                    color: "transparent"
-                    border.width: 1
-                    border.color: "#35554e"
+            AppHeader {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 136
+                theme: appTheme
+                darkMode: root.darkMode
+                menuOpen: root.menuOpen
+                selectedTab: root.selectedRibbonTab
+                recordedCommandCount: root.appController.recordedCommandCount
+                ribbonTabs: root.ribbonTabs
+                ribbonGroups: root.ribbonGroupsModel[root.selectedRibbonTab]
+                onToggleMenu: root.menuOpen = !root.menuOpen
+                onSelectTab: function (tabIndex) {
+                    root.selectedRibbonTab = tabIndex;
                 }
-
-                Flickable {
-                    anchors.fill: parent
-                    anchors.margins: 24
-                    contentWidth: width
-                    contentHeight: leftColumn.implicitHeight
-                    clip: true
-
-                    Column {
-                        id: leftColumn
-
-                        width: parent.width
-                        spacing: 16
-
-                        Text {
-                            text: "OpenGeoLab"
-                            color: "#f5f0e8"
-                            font.pixelSize: 34
-                            font.bold: true
-                        }
-
-                        Text {
-                            width: parent.width
-                            wrapMode: Text.WordWrap
-                            text: "The app layer now accepts generic module + JSON requests from QML and also hosts an in-process Python API. Both entry points converge on the same command pipeline and recorded application state."
-                            color: "#c0d2c7"
-                            font.pixelSize: 17
-                            lineHeight: 1.35
-                        }
-
-                        Text {
-                            text: "Module"
-                            color: "#9fc4b6"
-                            font.pixelSize: 15
-                            font.bold: true
-                        }
-
-                        Rectangle {
-                            width: parent.width
-                            height: 46
-                            radius: 12
-                            color: "#2a3f3b"
-                            border.width: 1
-                            border.color: "#486964"
-
-                            TextInput {
-                                id: moduleInput
-
-                                anchors.fill: parent
-                                anchors.margins: 12
-                                text: "selection"
-                                color: "#f2ebe0"
-                                font.pixelSize: 18
-                                selectionColor: "#9fc4b6"
-                                selectedTextColor: "#19302b"
-                            }
-                        }
-
-                        Text {
-                            text: "Request JSON"
-                            color: "#9fc4b6"
-                            font.pixelSize: 15
-                            font.bold: true
-                        }
-
-                        Rectangle {
-                            width: parent.width
-                            height: 208
-                            radius: 18
-                            color: "#2a3f3b"
-                            border.width: 1
-                            border.color: "#486964"
-
-                            Flickable {
-                                anchors.fill: parent
-                                anchors.margins: 12
-                                contentWidth: width
-                                contentHeight: requestEditor.paintedHeight
-                                clip: true
-
-                                TextEdit {
-                                    id: requestEditor
-
-                                    width: parent.width
-                                    text: root.defaultRequestJson
-                                    color: "#f2ebe0"
-                                    font.pixelSize: 15
-                                    font.family: "Consolas"
-                                    wrapMode: TextEdit.WrapAnywhere
-                                    selectByMouse: true
-                                    selectionColor: "#9fc4b6"
-                                    selectedTextColor: "#19302b"
-                                }
-                            }
-                        }
-
-                        ActionButton {
-                            width: parent.width
-                            height: 62
-                            radius: 18
-                            buttonText: "Dispatch Service Request"
-                            buttonColor: "#9fc4b6"
-                            pressedColor: "#8fb6a6"
-                            labelColor: "#19302b"
-                            labelSize: 20
-                            onClicked: root.appController.runServiceRequest(moduleInput.text, requestEditor.text)
-                        }
-
-                        Flow {
-                            width: parent.width
-                            spacing: 12
-
-                            ActionButton {
-                                width: 150
-                                buttonText: "Replay History"
-                                buttonColor: "#eadfcb"
-                                pressedColor: "#d8d0bd"
-                                labelColor: "#40372d"
-                                labelSize: 16
-                                onClicked: root.appController.replayRecordedCommands()
-                            }
-
-                            ActionButton {
-                                width: 126
-                                buttonText: "Clear History"
-                                buttonColor: "#e3d6c8"
-                                pressedColor: "#d0c5b8"
-                                labelColor: "#40372d"
-                                labelSize: 16
-                                onClicked: root.appController.clearRecordedCommands()
-                            }
-                        }
-
-                        Rectangle {
-                            width: parent.width
-                            radius: 20
-                            color: "#2a3f3b"
-                            border.width: 1
-                            border.color: "#35554e"
-                            implicitHeight: 126
-
-                            Column {
-                                anchors.fill: parent
-                                anchors.margins: 18
-                                spacing: 10
-
-                                Text {
-                                    width: parent.width
-                                    text: root.appController.lastStatus + "  |  module: " + root.appController.lastModule
-                                    color: "#9fc4b6"
-                                    font.pixelSize: 16
-                                    font.bold: true
-                                    wrapMode: Text.WrapAnywhere
-                                }
-
-                                Text {
-                                    width: parent.width
-                                    wrapMode: Text.WordWrap
-                                    text: root.appController.lastSummary
-                                    color: "#f2ebe0"
-                                    font.pixelSize: 15
-                                    lineHeight: 1.35
-                                }
-                            }
-                        }
-
-                        Text {
-                            width: parent.width
-                            wrapMode: Text.WordWrap
-                            text: "Recorded commands: " + root.appController.recordedCommandCount + ". The UI executes through the command layer, which can replay the captured history and export a Python replay script."
-                            color: "#aac1b6"
-                            font.pixelSize: 15
-                            lineHeight: 1.35
-                        }
-                    }
+                onTriggerAction: function (actionKey) {
+                    root.triggerHeaderAction(actionKey);
                 }
             }
 
-            Rectangle {
+            RowLayout {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                radius: 26
-                color: "#fffaf2"
-                border.width: 1
-                border.color: "#d4c7b5"
+                spacing: appTheme.gap
 
-                Flickable {
-                    anchors.fill: parent
-                    anchors.margins: 24
-                    contentWidth: width
-                    contentHeight: rightColumn.implicitHeight
-                    clip: true
+                SidebarPanel {
+                    Layout.preferredWidth: 280
+                    Layout.fillHeight: true
+                    theme: appTheme
+                }
 
-                    Column {
-                        id: rightColumn
-
-                        width: parent.width
-                        spacing: 18
-
-                        Text {
-                            width: parent.width
-                            text: "Placeholder 3D Interaction Data Flow"
-                            color: "#233530"
-                            font.pixelSize: 30
-                            font.bold: true
-                            wrapMode: Text.WordWrap
-                        }
-
-                        CodeSurface {
-                            width: parent.width
-                            preferredHeight: 178
-                            panelColor: "#eef1e6"
-                            borderColor: "#ced3c6"
-                            titleColor: "#52655d"
-                            textColor: "#233530"
-                            title: "Component Response JSON"
-                            bodyText: root.appController.lastPayload
-                        }
-
-                        CodeSurface {
-                            width: parent.width
-                            preferredHeight: 146
-                            panelColor: "#f4eee1"
-                            borderColor: "#d9ccba"
-                            titleColor: "#695c4a"
-                            textColor: "#40372d"
-                            title: "Recorded Python Replay Script"
-                            bodyText: root.appController.suggestedPython
-                        }
-
-                        Rectangle {
-                            width: parent.width
-                            radius: 22
-                            color: "#edf0f7"
-                            border.width: 1
-                            border.color: "#cad2e4"
-                            implicitHeight: embeddedColumn.implicitHeight + 36
-
-                            Column {
-                                id: embeddedColumn
-
-                                anchors.left: parent.left
-                                anchors.right: parent.right
-                                anchors.top: parent.top
-                                anchors.margins: 18
-                                spacing: 14
-
-                                Text {
-                                    text: "Embedded Python Runtime"
-                                    color: "#3f4d72"
-                                    font.pixelSize: 17
-                                    font.bold: true
-                                }
-
-                                Flow {
-                                    width: parent.width
-                                    spacing: 10
-
-                                    ActionButton {
-                                        width: 108
-                                        buttonText: "Run Script"
-                                        buttonColor: "#c8d1e8"
-                                        pressedColor: "#b9c3dd"
-                                        labelColor: "#2a3659"
-                                        labelSize: 15
-                                        onClicked: root.appController.runEmbeddedPython(pythonEditor.text)
-                                    }
-
-                                    ActionButton {
-                                        width: 96
-                                        buttonText: "Record Test"
-                                        buttonColor: "#e2e8f5"
-                                        pressedColor: "#d6dfef"
-                                        labelColor: "#2a3659"
-                                        labelSize: 14
-                                        onClicked: root.appController.recordSelectionSmokeTest()
-                                    }
-
-                                    ActionButton {
-                                        width: 96
-                                        buttonText: "Replay Test"
-                                        buttonColor: "#e2e8f5"
-                                        pressedColor: "#d6dfef"
-                                        labelColor: "#2a3659"
-                                        labelSize: 14
-                                        onClicked: root.appController.replayRecordedCommands()
-                                    }
-                                }
-
-                                Rectangle {
-                                    width: parent.width
-                                    height: 44
-                                    radius: 14
-                                    color: "#f8faff"
-                                    border.width: 1
-                                    border.color: "#d7dfef"
-
-                                    TextInput {
-                                        id: pythonCommandLineInput
-
-                                        anchors.left: parent.left
-                                        anchors.leftMargin: 12
-                                        anchors.right: executeLineButton.left
-                                        anchors.rightMargin: 12
-                                        anchors.verticalCenter: parent.verticalCenter
-                                        text: root.defaultPythonCommandLine
-                                        color: "#2a3659"
-                                        font.pixelSize: 14
-                                        font.family: "Consolas"
-                                        selectionColor: "#b9c3dd"
-                                        selectedTextColor: "#24324f"
-                                        clip: true
-                                        onAccepted: root.appController.runEmbeddedPythonCommandLine(text)
-                                    }
-
-                                    ActionButton {
-                                        id: executeLineButton
-
-                                        anchors.right: parent.right
-                                        anchors.rightMargin: 7
-                                        anchors.verticalCenter: parent.verticalCenter
-                                        width: 104
-                                        height: 30
-                                        radius: 10
-                                        buttonText: "Execute Line"
-                                        buttonColor: "#d9e1f3"
-                                        pressedColor: "#cad5ec"
-                                        labelColor: "#2a3659"
-                                        labelSize: 13
-                                        onClicked: root.appController.runEmbeddedPythonCommandLine(pythonCommandLineInput.text)
-                                    }
-                                }
-
-                                RowLayout {
-                                    width: parent.width
-                                    spacing: 12
-
-                                    Rectangle {
-                                        Layout.fillWidth: true
-                                        Layout.preferredWidth: parent.width * 0.58
-                                        height: 150
-                                        radius: 16
-                                        color: "#f8faff"
-                                        border.width: 1
-                                        border.color: "#d7dfef"
-
-                                        Flickable {
-                                            anchors.fill: parent
-                                            anchors.margins: 12
-                                            contentWidth: width
-                                            contentHeight: pythonEditor.paintedHeight
-                                            clip: true
-
-                                            TextEdit {
-                                                id: pythonEditor
-
-                                                width: parent.width
-                                                text: root.defaultPythonScript
-                                                color: "#2a3659"
-                                                font.pixelSize: 14
-                                                font.family: "Consolas"
-                                                wrapMode: TextEdit.WrapAnywhere
-                                                selectByMouse: true
-                                            }
-                                        }
-                                    }
-
-                                    CodeSurface {
-                                        Layout.fillWidth: true
-                                        Layout.preferredWidth: parent.width * 0.34
-                                        preferredHeight: 150
-                                        panelColor: "#f8faff"
-                                        borderColor: "#d7dfef"
-                                        titleColor: "#61708e"
-                                        textColor: "#2a3659"
-                                        title: "stdout / stderr"
-                                        bodyText: root.appController.lastPythonOutput
-                                    }
-                                }
-                            }
-                        }
-                    }
+                ViewportPanel {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    theme: appTheme
+                    summaryText: root.viewportSummary()
+                    recordedCommandCount: root.appController.recordedCommandCount
+                    onRequestViewPage: root.selectedRibbonTab = 2
                 }
             }
         }
