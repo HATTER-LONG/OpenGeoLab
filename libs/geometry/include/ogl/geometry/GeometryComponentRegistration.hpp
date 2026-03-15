@@ -1,6 +1,6 @@
 /**
  * @file GeometryComponentRegistration.hpp
- * @brief Registers placeholder geometry services into Kangaroo ComponentFactory.
+ * @brief Registers geometry services into Kangaroo ComponentFactory.
  */
 
 #pragma once

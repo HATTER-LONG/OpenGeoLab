@@ -32,8 +32,8 @@ Rectangle {
                 width: parent.width
                 height: 320
                 theme: sidebar.theme
-                title: "Sidebar Placeholder"
-                subtitle: "Reserved for future workbench tools, properties, and workflow panels."
+                title: qsTr("Sidebar")
+                subtitle: qsTr("Reserved for future workbench tools, properties, and workflow panels.")
                 introDelay: 40
 
                 Column {
@@ -62,7 +62,7 @@ Rectangle {
                             width: parent.width - 48
                             horizontalAlignment: Text.AlignHCenter
                             wrapMode: Text.WordWrap
-                            text: "Placeholder panel\n\nFuture: model tree, property inspector, task pane."
+                            text: qsTr("Workspace panel\n\nFuture: model tree, property inspector, task pane.")
                             color: sidebar.theme.textSecondary
                             font.pixelSize: 14
                             font.family: sidebar.theme.bodyFontFamily
@@ -79,7 +79,7 @@ Rectangle {
 
                         Text {
                             anchors.centerIn: parent
-                            text: "No active tools"
+                            text: qsTr("No active tools")
                             color: sidebar.theme.textSecondary
                             font.pixelSize: 13
                             font.family: sidebar.theme.bodyFontFamily

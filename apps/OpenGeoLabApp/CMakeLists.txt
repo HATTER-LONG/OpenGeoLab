@@ -1,15 +1,49 @@
-set(opengeolab_app_headers include/ogl/app/OpenGeoLabController.hpp
+set(opengeolab_app_headers include/ogl/app/AppLogger.hpp
+                           include/ogl/app/OpenGeoLabController.hpp
                            include/ogl/app/EmbeddedPythonRuntime.hpp
+                           include/ogl/app/UiSettingsController.hpp
 )
-set(opengeolab_app_sources src/main.cpp src/OpenGeoLabController.cpp src/EmbeddedPythonRuntime.cpp)
+set(opengeolab_app_sources
+    src/main.cpp
+    src/OpenGeoLabController.cpp
+    src/EmbeddedPythonRuntime.cpp
+    src/OperationLogModel.cpp
+    src/OperationLogModel.hpp
+    src/OperationLogService.cpp
+    src/OperationLogService.hpp
+    src/QmlSpdlogSink.cpp
+    src/QmlSpdlogSink.hpp
+    src/UiSettingsController.cpp
+)
+
+set(opengeolab_app_translations translations/opengeolab_zh_CN.ts)
 set(opengeolab_app_qml
+    qml/ActionRegistry.qml
     qml/Main.qml
+    qml/RibbonConfig.qml
     qml/theme/AppTheme.qml
     qml/components/ActionButton.qml
     qml/components/AppIcon.qml
+    qml/components/AxisOptionChip.qml
     qml/components/CodePanel.qml
+    qml/components/FeaturePageBase.qml
+    qml/components/FeatureSegmentTabs.qml
+    qml/components/GeometryCreateFeaturePage.qml
+    qml/components/GeometryCreateInspectPage.qml
+    qml/components/GeometryCreateOrientationSection.qml
+    qml/components/GeometryCreatePlacementPage.qml
+    qml/components/GeometryCreatePageLogic.js
+    qml/components/GeometryCreateShapePage.qml
+    qml/components/OperationCornerOverlay.qml
+    qml/components/OperationLogEntryDelegate.qml
+    qml/components/OperationLogLevelChip.qml
+    qml/components/OperationLogPanel.qml
+    qml/components/OperationProgressOverlay.qml
+    qml/components/ParameterInputField.qml
+    qml/components/ActionFeaturePage.qml
     qml/components/RibbonTile.qml
     qml/components/SectionCard.qml
+    qml/components/StatusMessageBanner.qml
     qml/components/StatChip.qml
     qml/sections/AppHeader.qml
     qml/sections/HeaderMenuPanel.qml
@@ -33,6 +67,7 @@ set(opengeolab_app_resources
     icons/export.svg
     icons/export_record.svg
     icons/import.svg
+    icons/language.svg
     icons/light.svg
     icons/menu.svg
     icons/mesh.svg
@@ -46,7 +81,9 @@ set(opengeolab_app_resources
     icons/trim.svg
 )
 
+set_source_files_properties(qml/ActionRegistry.qml PROPERTIES QT_RESOURCE_ALIAS ActionRegistry.qml)
 set_source_files_properties(qml/Main.qml PROPERTIES QT_RESOURCE_ALIAS Main.qml)
+set_source_files_properties(qml/RibbonConfig.qml PROPERTIES QT_RESOURCE_ALIAS RibbonConfig.qml)
 set_source_files_properties(qml/theme/qmldir PROPERTIES QT_RESOURCE_ALIAS theme/qmldir)
 set_source_files_properties(qml/theme/AppTheme.qml PROPERTIES QT_RESOURCE_ALIAS theme/AppTheme.qml)
 set_source_files_properties(qml/components/qmldir PROPERTIES QT_RESOURCE_ALIAS components/qmldir)
@@ -57,13 +94,64 @@ set_source_files_properties(
   qml/components/AppIcon.qml PROPERTIES QT_RESOURCE_ALIAS components/AppIcon.qml
 )
 set_source_files_properties(
+  qml/components/AxisOptionChip.qml PROPERTIES QT_RESOURCE_ALIAS components/AxisOptionChip.qml
+)
+set_source_files_properties(
   qml/components/CodePanel.qml PROPERTIES QT_RESOURCE_ALIAS components/CodePanel.qml
+)
+set_source_files_properties(
+  qml/components/FeaturePageBase.qml PROPERTIES QT_RESOURCE_ALIAS components/FeaturePageBase.qml
+)
+set_source_files_properties(
+  qml/components/FeatureSegmentTabs.qml PROPERTIES QT_RESOURCE_ALIAS components/FeatureSegmentTabs.qml
+)
+set_source_files_properties(
+  qml/components/GeometryCreateFeaturePage.qml PROPERTIES QT_RESOURCE_ALIAS components/GeometryCreateFeaturePage.qml
+)
+set_source_files_properties(
+  qml/components/GeometryCreateInspectPage.qml PROPERTIES QT_RESOURCE_ALIAS components/GeometryCreateInspectPage.qml
+)
+set_source_files_properties(
+  qml/components/GeometryCreateOrientationSection.qml PROPERTIES QT_RESOURCE_ALIAS components/GeometryCreateOrientationSection.qml
+)
+set_source_files_properties(
+  qml/components/GeometryCreatePlacementPage.qml PROPERTIES QT_RESOURCE_ALIAS components/GeometryCreatePlacementPage.qml
+)
+set_source_files_properties(
+  qml/components/GeometryCreatePageLogic.js PROPERTIES QT_RESOURCE_ALIAS components/GeometryCreatePageLogic.js
+)
+set_source_files_properties(
+  qml/components/GeometryCreateShapePage.qml PROPERTIES QT_RESOURCE_ALIAS components/GeometryCreateShapePage.qml
+)
+set_source_files_properties(
+  qml/components/OperationCornerOverlay.qml PROPERTIES QT_RESOURCE_ALIAS components/OperationCornerOverlay.qml
+)
+set_source_files_properties(
+  qml/components/OperationLogEntryDelegate.qml PROPERTIES QT_RESOURCE_ALIAS components/OperationLogEntryDelegate.qml
+)
+set_source_files_properties(
+  qml/components/OperationLogLevelChip.qml PROPERTIES QT_RESOURCE_ALIAS components/OperationLogLevelChip.qml
+)
+set_source_files_properties(
+  qml/components/OperationLogPanel.qml PROPERTIES QT_RESOURCE_ALIAS components/OperationLogPanel.qml
+)
+set_source_files_properties(
+  qml/components/OperationProgressOverlay.qml PROPERTIES QT_RESOURCE_ALIAS components/OperationProgressOverlay.qml
+)
+set_source_files_properties(
+  qml/components/ParameterInputField.qml PROPERTIES QT_RESOURCE_ALIAS components/ParameterInputField.qml
+)
+set_source_files_properties(
+  qml/components/ActionFeaturePage.qml PROPERTIES QT_RESOURCE_ALIAS components/ActionFeaturePage.qml
 )
 set_source_files_properties(
   qml/components/RibbonTile.qml PROPERTIES QT_RESOURCE_ALIAS components/RibbonTile.qml
 )
 set_source_files_properties(
   qml/components/SectionCard.qml PROPERTIES QT_RESOURCE_ALIAS components/SectionCard.qml
+)
+set_source_files_properties(
+  qml/components/StatusMessageBanner.qml PROPERTIES QT_RESOURCE_ALIAS components/StatusMessageBanner.qml
 )
 set_source_files_properties(
   qml/components/StatChip.qml PROPERTIES QT_RESOURCE_ALIAS components/StatChip.qml
@@ -110,6 +198,13 @@ qt_add_qml_module(
   ${opengeolab_app_resources}
 )
 
+qt_add_translations(
+  TARGETS OpenGeoLabApp
+  SOURCE_TARGETS OpenGeoLabApp
+  TS_FILES ${opengeolab_app_translations}
+  IMMEDIATE_CALL
+)
+
 target_include_directories(OpenGeoLabApp PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 target_compile_definitions(OpenGeoLabApp PRIVATE Py_NO_LINK_LIB)
@@ -125,6 +220,7 @@ target_link_libraries(
   PRIVATE Kangaroo::Kangaroo
           OGL::Command
           pybind11::embed
+          Qt6::Concurrent
           Qt6::Core
           Qt6::Gui
           Qt6::Qml

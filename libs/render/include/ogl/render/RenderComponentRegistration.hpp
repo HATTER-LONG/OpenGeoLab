@@ -1,6 +1,6 @@
 /**
  * @file RenderComponentRegistration.hpp
- * @brief Registers placeholder render services into Kangaroo ComponentFactory.
+ * @brief Registers render services into Kangaroo ComponentFactory.
  */
 
 #pragma once

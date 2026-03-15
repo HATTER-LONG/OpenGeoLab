@@ -168,7 +168,7 @@ Rectangle {
                 spacing: 10
 
                 Text {
-                    text: "Render Workspace"
+                    text: qsTr("Render Workspace")
                     color: viewportPanel.theme.textPrimary
                     font.pixelSize: 18
                     font.bold: true
@@ -189,13 +189,13 @@ Rectangle {
 
                     Components.StatChip {
                         theme: viewportPanel.theme
-                        text: "Selection"
+                        text: qsTr("Selection")
                         tintColor: viewportPanel.theme.accentA
                     }
 
                     Components.StatChip {
                         theme: viewportPanel.theme
-                        text: "Recorded " + viewportPanel.recordedCommandCount
+                        text: qsTr("Recorded %1").arg(viewportPanel.recordedCommandCount)
                         tintColor: viewportPanel.theme.accentB
                     }
                 }
@@ -212,7 +212,7 @@ Rectangle {
                 width: 72
                 height: 70
                 theme: viewportPanel.theme
-                title: "View"
+                title: qsTr("View")
                 iconKind: "eye"
                 accentOne: viewportPanel.theme.accentA
                 accentTwo: viewportPanel.theme.accentC
@@ -222,7 +222,7 @@ Rectangle {
 
         Text {
             anchors.centerIn: parent
-            text: "OpenGL Viewport Placeholder"
+            text: qsTr("OpenGL Viewport")
             color: viewportPanel.theme.tint(viewportPanel.theme.textPrimary, 0.34)
             font.pixelSize: 30
             font.bold: true

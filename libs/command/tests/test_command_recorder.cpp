@@ -10,15 +10,15 @@ TEST_CASE("command recorder records replays exports and clears", "[command][smok
     OGL::Command::CommandRecorder recorder;
 
     const auto response =
-        recorder.execute({.moduleName = "selection",
-                          .params = nlohmann::json{{"operation", "pickPlaceholderEntity"},
-                                                   {"modelName", "CommandSmokeModel"},
-                                                   {"bodyCount", 3},
-                                                   {"viewportWidth", 800},
-                                                   {"viewportHeight", 600},
-                                                   {"screenX", 128},
-                                                   {"screenY", 96},
-                                                   {"source", "test"}}});
+        recorder.execute({.module = "selection",
+                          .action = "pickEntity",
+                          .param = nlohmann::json{{"modelName", "CommandSmokeModel"},
+                                                  {"bodyCount", 3},
+                                                  {"viewportWidth", 800},
+                                                  {"viewportHeight", 600},
+                                                  {"screenX", 128},
+                                                  {"screenY", 96},
+                                                  {"source", "test"}}});
 
     REQUIRE(response.success);
     REQUIRE(recorder.recordedCount() == 1);

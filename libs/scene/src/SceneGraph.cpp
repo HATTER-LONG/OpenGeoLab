@@ -1,4 +1,4 @@
-#include <ogl/scene/PlaceholderSceneGraph.hpp>
+#include <ogl/scene/SceneGraph.hpp>
 
 #include <sstream>
 #include <utility>
@@ -15,7 +15,7 @@ auto buildNodeId(const std::string& model_name, int body_index) -> std::string {
 
 namespace OGL::Scene {
 
-auto PlaceholderSceneNode::toJson() const -> nlohmann::json {
+auto SceneNode::toJson() const -> nlohmann::json {
     return {{"nodeId", nodeId},
             {"displayName", displayName},
             {"renderPrimitive", renderPrimitive},
@@ -23,28 +23,26 @@ auto PlaceholderSceneNode::toJson() const -> nlohmann::json {
             {"selectable", selectable}};
 }
 
-PlaceholderSceneGraph::PlaceholderSceneGraph(std::string scene_id,
-                                             std::string model_name,
-                                             std::vector<PlaceholderSceneNode> nodes)
+SceneGraph::SceneGraph(std::string scene_id, std::string model_name, std::vector<SceneNode> nodes)
     : m_sceneId(std::move(scene_id)), m_modelName(std::move(model_name)),
       m_nodes(std::move(nodes)) {}
 
-auto PlaceholderSceneGraph::sceneId() const -> const std::string& { return m_sceneId; }
+auto SceneGraph::sceneId() const -> const std::string& { return m_sceneId; }
 
-auto PlaceholderSceneGraph::modelName() const -> const std::string& { return m_modelName; }
+auto SceneGraph::modelName() const -> const std::string& { return m_modelName; }
 
-auto PlaceholderSceneGraph::nodes() const -> const std::vector<PlaceholderSceneNode>& {
+auto SceneGraph::nodes() const -> const std::vector<SceneNode>& {
     return m_nodes;
 }
 
-auto PlaceholderSceneGraph::summary() const -> std::string {
+auto SceneGraph::summary() const -> std::string {
     std::ostringstream stream;
-    stream << "Placeholder scene graph '" << m_sceneId << "' stabilizes " << m_nodes.size()
-           << " selectable nodes for geometry model '" << m_modelName << "'.";
+    stream << "Scene graph '" << m_sceneId << "' contains " << m_nodes.size()
+           << " selectable nodes for model '" << m_modelName << "'.";
     return stream.str();
 }
 
-auto PlaceholderSceneGraph::toJson() const -> nlohmann::json {
+auto SceneGraph::toJson() const -> nlohmann::json {
     nlohmann::json nodes_json = nlohmann::json::array();
     for(const auto& node : m_nodes) {
         nodes_json.push_back(node.toJson());
@@ -57,9 +55,8 @@ auto PlaceholderSceneGraph::toJson() const -> nlohmann::json {
             {"summary", summary()}};
 }
 
-auto buildPlaceholderSceneGraph(const OGL::Geometry::PlaceholderGeometryModel& geometry_model)
-    -> PlaceholderSceneGraph {
-    std::vector<PlaceholderSceneNode> nodes;
+auto buildSceneGraph(const OGL::Geometry::GeometryModel& geometry_model) -> SceneGraph {
+    std::vector<SceneNode> nodes;
     nodes.reserve(static_cast<std::size_t>(geometry_model.bodyCount()));
 
     for(int body_index = 1; body_index <= geometry_model.bodyCount(); ++body_index) {
@@ -71,8 +68,9 @@ auto buildPlaceholderSceneGraph(const OGL::Geometry::PlaceholderGeometryModel& g
              .selectable = true});
     }
 
-    return PlaceholderSceneGraph(geometry_model.modelName() + "::scene", geometry_model.modelName(),
-                                 std::move(nodes));
+    return SceneGraph(geometry_model.modelName() + "::scene", geometry_model.modelName(),
+                      std::move(nodes));
 }
 
 } // namespace OGL::Scene
+

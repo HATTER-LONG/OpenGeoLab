@@ -17,12 +17,16 @@ class OGL_CORE_EXPORT ComponentRequestDispatcher {
 public:
     /**
      * @brief Resolve a module service and execute its request.
-     * @param module_name Logical module identifier.
-     * @param params Request payload.
+     * @param request Structured request containing module, action, and param.
+     * @param progress_callback Optional callback for intermediate progress updates.
      * @return Structured response describing success, summary, and payload.
      */
-    static auto dispatch(const std::string& module_name, const nlohmann::json& params)
-        -> ServiceResponse;
+    static auto dispatch(const ServiceRequest& request,
+                         const ProgressCallback& progress_callback = {}) -> ServiceResponse;
+    static auto dispatch(const std::string& module,
+                         const std::string& action,
+                         const nlohmann::json& param,
+                         const ProgressCallback& progress_callback = {}) -> ServiceResponse;
 };
 
 } // namespace OGL::Core

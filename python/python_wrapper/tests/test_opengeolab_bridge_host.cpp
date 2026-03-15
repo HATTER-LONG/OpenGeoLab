@@ -72,19 +72,24 @@ TEST_CASE("python bridge module passes the smoke script and direct bridge calls"
         REQUIRE_NOTHROW(py::eval_file(testScriptPath().string()));
     }
 
-    SECTION("direct bridge call returns recorded payload") {
+    SECTION("direct bridge process returns recorded payload") {
         auto opengeolab = py::module_::import("opengeolab");
+        CHECK_FALSE(py::hasattr(opengeolab, "call"));
+        CHECK_FALSE(py::hasattr(opengeolab, "run_command"));
+        CHECK_FALSE(py::hasattr(opengeolab, "suggest_placeholder_geometry_script"));
         const auto response_text = opengeolab
-                                       .attr("call")("selection",
-                                                     R"JSON({
-  "operation": "pickPlaceholderEntity",
-  "modelName": "PythonBridgeCatch2",
-  "bodyCount": 2,
-  "viewportWidth": 960,
-  "viewportHeight": 540,
-  "screenX": 120,
-  "screenY": 96,
-  "source": "catch2-test"
+                                       .attr("process")(R"JSON({
+  "module": "selection",
+  "action": "pickEntity",
+  "param": {
+    "modelName": "PythonBridgeCatch2",
+    "bodyCount": 2,
+    "viewportWidth": 960,
+    "viewportHeight": 540,
+    "screenX": 120,
+    "screenY": 96,
+    "source": "catch2-test"
+  }
 })JSON")
                                        .cast<std::string>();
         const auto response = nlohmann::json::parse(response_text);
@@ -93,10 +98,10 @@ TEST_CASE("python bridge module passes the smoke script and direct bridge calls"
         CHECK(response["payload"].value("recordedCommandCount", 0) == 0);
         CHECK(response["payload"]["selectionResult"].value("hitCount", 0) == 1);
 
-        const auto script =
-            opengeolab.attr("OpenGeoLabPythonBridge")()
-                .attr("suggest_placeholder_geometry_script")("PythonBridgeCatch2", 2)
-                .cast<std::string>();
-        CHECK(script.find("OpenGeoLabPythonBridge") != std::string::npos);
+        auto bridge = opengeolab.attr("OpenGeoLabPythonBridge")();
+        CHECK(py::hasattr(bridge, "process"));
+        CHECK_FALSE(py::hasattr(bridge, "call"));
+        CHECK_FALSE(py::hasattr(bridge, "run_command"));
+        CHECK_FALSE(py::hasattr(bridge, "suggest_placeholder_geometry_script"));
     }
 }

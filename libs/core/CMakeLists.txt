@@ -1,6 +1,8 @@
 include(GenerateExportHeader)
 
-set(ogl_core_headers include/ogl/core/IService.hpp include/ogl/core/ComponentRequestDispatcher.hpp)
+set(ogl_core_headers include/ogl/core/IService.hpp include/ogl/core/ComponentRequestDispatcher.hpp
+                     include/ogl/core/ComponentDispatcherLogger.hpp
+)
 set(ogl_core_sources src/ComponentRequestDispatcher.cpp)
 
 add_library(ogl_core ${OPENGEOLAB_LIBRARY_TYPE} ${ogl_core_headers} ${ogl_core_sources})

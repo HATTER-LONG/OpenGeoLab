@@ -1,7 +1,9 @@
 set(opengeolab_app_test_sources
     test_embedded_python_runtime.cpp ../src/OpenGeoLabController.cpp
     ../src/EmbeddedPythonRuntime.cpp ../include/ogl/app/OpenGeoLabController.hpp
-    ../include/ogl/app/EmbeddedPythonRuntime.hpp
+    ../include/ogl/app/EmbeddedPythonRuntime.hpp ../src/OperationLogModel.cpp
+    ../src/OperationLogModel.hpp ../src/OperationLogService.cpp
+    ../src/OperationLogService.hpp ../src/QmlSpdlogSink.cpp ../src/QmlSpdlogSink.hpp
 )
 
 add_executable(opengeolab_embedded_python_smoke_test ${opengeolab_app_test_sources})

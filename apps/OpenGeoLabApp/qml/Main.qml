@@ -1,8 +1,6 @@
 pragma ComponentBehavior: Bound
 
-import QtCore
 import QtQuick
-import QtQuick.Dialogs
 import QtQuick.Layouts
 import QtQuick.Window
 
@@ -10,130 +8,11 @@ Window {
     id: root
 
     required property var appController
+    required property var uiSettingsController
     property bool darkMode: false
     property bool menuOpen: false
     property int selectedRibbonTab: 0
-    property string statusNote: appController.lastSummary.length > 0 ? appController.lastSummary : "Viewport placeholder is active. Ribbon commands stay connected to the same controller pipeline."
-
-    readonly property var ribbonTabs: ["Geometry", "Mesh", "AI"]
-    readonly property var ribbonGroupsModel: [[
-            {
-                "title": "Create",
-                "actions": [
-                    {
-                        "key": "addBox",
-                        "title": "Box",
-                        "icon": "box",
-                        "accentOne": "accentA",
-                        "accentTwo": "accentB"
-                    },
-                    {
-                        "key": "addCylinder",
-                        "title": "Cylinder",
-                        "icon": "cylinder",
-                        "accentOne": "accentA",
-                        "accentTwo": "accentB"
-                    },
-                    {
-                        "key": "addSphere",
-                        "title": "Sphere",
-                        "icon": "sphere",
-                        "accentOne": "accentA",
-                        "accentTwo": "accentB"
-                    },
-                    {
-                        "key": "addTorus",
-                        "title": "Torus",
-                        "icon": "torus",
-                        "accentOne": "accentA",
-                        "accentTwo": "accentB"
-                    }
-                ]
-            },
-            {
-                "title": "Modify",
-                "actions": [
-                    {
-                        "key": "trim",
-                        "title": "Trim",
-                        "icon": "trim",
-                        "accentOne": "accentD",
-                        "accentTwo": "accentC"
-                    },
-                    {
-                        "key": "offset",
-                        "title": "Offset",
-                        "icon": "offset",
-                        "accentOne": "accentD",
-                        "accentTwo": "accentD"
-                    }
-                ]
-            },
-            {
-                "title": "Inspect",
-                "actions": [
-                    {
-                        "key": "queryGeometry",
-                        "title": "Query",
-                        "icon": "query",
-                        "accentOne": "accentE",
-                        "accentTwo": "accentB"
-                    }
-                ]
-            }
-        ], [
-            {
-                "title": "Mesh",
-                "actions": [
-                    {
-                        "key": "generateMesh",
-                        "title": "Generate",
-                        "icon": "mesh",
-                        "accentOne": "accentB",
-                        "accentTwo": "accentA"
-                    },
-                    {
-                        "key": "smoothMesh",
-                        "title": "Smooth",
-                        "icon": "smoothMesh",
-                        "accentOne": "accentB",
-                        "accentTwo": "accentA"
-                    }
-                ]
-            },
-            {
-                "title": "Inspect",
-                "actions": [
-                    {
-                        "key": "queryMesh",
-                        "title": "Query",
-                        "icon": "query",
-                        "accentOne": "accentC",
-                        "accentTwo": "accentA"
-                    }
-                ]
-            }
-        ], [
-            {
-                "title": "Assist",
-                "actions": [
-                    {
-                        "key": "aiSuggest",
-                        "title": "Suggest",
-                        "icon": "aiSuggest",
-                        "accentOne": "accentE",
-                        "accentTwo": "accentA"
-                    },
-                    {
-                        "key": "aiChat",
-                        "title": "Chat",
-                        "icon": "aiChat",
-                        "accentOne": "accentE",
-                        "accentTwo": "accentA"
-                    }
-                ]
-            }
-        ]]
+    property string statusNote: appController.lastSummary.length > 0 ? appController.lastSummary : qsTr("Viewport is active. Ribbon commands stay connected to the same controller pipeline.")
 
     width: 1500
     height: 900
@@ -147,6 +26,33 @@ Window {
         id: appTheme
 
         darkMode: root.darkMode
+    }
+
+    ActionRegistry {
+        id: actionRegistry
+    }
+
+    RibbonConfig {
+        id: ribbonConfig
+    }
+
+    ActionFeaturePage {
+        id: actionFeaturePage
+
+        anchors.fill: parent
+        theme: appTheme
+        preferredPanelX: appTheme.shellPadding + 280 + appTheme.gap
+        preferredPanelY: appTheme.shellPadding + 136 + appTheme.gap
+    }
+
+    GeometryCreateFeaturePage {
+        id: geometryCreateFeaturePage
+
+        anchors.fill: parent
+        theme: appTheme
+        appController: root.appController
+        preferredPanelX: appTheme.shellPadding + 280 + appTheme.gap
+        preferredPanelY: appTheme.shellPadding + 136 + appTheme.gap
     }
 
     function parsedResponse() {
@@ -164,87 +70,62 @@ Window {
     function viewportSummary() {
         const response = root.parsedResponse();
         const payload = response.payload || {};
-        if (payload.selectionResult && payload.selectionResult.summary) {
-            return payload.selectionResult.summary;
-        }
-        if (payload.renderFrame && payload.renderFrame.summary) {
-            return payload.renderFrame.summary;
+        if (payload.summary) {
+            return payload.summary;
         }
         return root.statusNote;
     }
 
-    function applyTheme(nextDarkMode) {
-        root.darkMode = nextDarkMode;
+    function toggleTheme() {
+        root.darkMode = !root.darkMode;
+        root.statusNote = root.darkMode ? qsTr("Switched to dark theme.") : qsTr("Switched to light theme.");
         root.menuOpen = false;
     }
 
-    function triggerHeaderAction(actionKey) {
-        if (actionKey === "importModel") {
-            root.statusNote = "Import model is a ribbon placeholder action.";
-        } else if (actionKey === "exportModel") {
-            root.statusNote = "Export model is a ribbon placeholder action.";
-        } else if (actionKey === "toggleTheme") {
-            root.applyTheme(!root.darkMode);
-        } else if (actionKey === "recordSelection") {
-            root.appController.recordSelectionSmokeTest();
-            root.statusNote = root.appController.lastSummary;
-        } else if (actionKey === "replayCommands") {
-            root.appController.replayRecordedCommands();
-            root.statusNote = root.appController.lastSummary;
-        } else if (actionKey === "clearRecordedCommands") {
-            root.appController.clearRecordedCommands();
-            root.statusNote = root.appController.lastSummary;
-        } else if (actionKey === "exportScript") {
-            exportScriptDialog.open();
-        } else if (actionKey === "focusViewport") {
-            root.statusNote = root.viewportSummary();
-        } else if (actionKey === "inspectPayload") {
-            root.statusNote = root.appController.lastPayload;
-        } else if (actionKey === "addBox") {
-            root.statusNote = "Geometry create placeholder: Box.";
-        } else if (actionKey === "addCylinder") {
-            root.statusNote = "Geometry create placeholder: Cylinder.";
-        } else if (actionKey === "addSphere") {
-            root.statusNote = "Geometry create placeholder: Sphere.";
-        } else if (actionKey === "addTorus") {
-            root.statusNote = "Geometry create placeholder: Torus.";
-        } else if (actionKey === "trim") {
-            root.statusNote = "Geometry modify placeholder: Trim.";
-        } else if (actionKey === "offset") {
-            root.statusNote = "Geometry modify placeholder: Offset.";
-        } else if (actionKey === "queryGeometry") {
-            root.statusNote = "Geometry inspect placeholder: Query.";
-        } else if (actionKey === "generateMesh") {
-            root.statusNote = "Mesh placeholder: Generate.";
-        } else if (actionKey === "smoothMesh") {
-            root.statusNote = "Mesh placeholder: Smooth.";
-        } else if (actionKey === "queryMesh") {
-            root.statusNote = "Mesh inspect placeholder: Query.";
-        } else if (actionKey === "aiSuggest") {
-            root.statusNote = "AI assist placeholder: Suggest.";
-        } else if (actionKey === "aiChat") {
-            root.statusNote = "AI assist placeholder: Chat.";
+    function toggleLanguage() {
+        if (!root.uiSettingsController.toggleLanguage()) {
+            root.statusNote = qsTr("Failed to switch UI language.");
+            root.menuOpen = false;
+            return;
         }
 
+        if (actionFeaturePage.actionDefinition && actionFeaturePage.actionDefinition.key) {
+            actionFeaturePage.refreshAction(actionRegistry.action(actionFeaturePage.actionDefinition.key));
+        }
+        if (geometryCreateFeaturePage.actionDefinition && geometryCreateFeaturePage.actionDefinition.key) {
+            geometryCreateFeaturePage.refreshAction(actionRegistry.action(geometryCreateFeaturePage.actionDefinition.key));
+        }
+
+        root.statusNote = root.uiSettingsController.currentLanguage === "zh_CN"
+            ? qsTr("Switched to Chinese.")
+            : qsTr("Switched to English.");
         root.menuOpen = false;
     }
 
-    FileDialog {
-        id: exportScriptDialog
-
-        title: "Export Recorded Script"
-        fileMode: FileDialog.SaveFile
-        currentFolder: StandardPaths.standardLocations(StandardPaths.DocumentsLocation)[0]
-        currentFile: "opengeolab_recorded.py"
-        nameFilters: ["Python files (*.py)", "All files (*)"]
-
-        onAccepted: {
-            if (root.appController.exportRecordedScript(selectedFile)) {
-                root.statusNote = root.appController.lastSummary;
-            } else {
-                root.statusNote = root.appController.lastPythonOutput;
-            }
+    function openActionPage(actionKey) {
+        if (actionKey === "toggleTheme") {
+            root.toggleTheme();
+            return;
         }
+
+        const actionDefinition = actionRegistry.action(actionKey);
+        if (!actionDefinition) {
+            root.statusNote = qsTr("Action page is not configured for: %1.").arg(actionKey);
+            root.menuOpen = false;
+            return;
+        }
+
+        actionFeaturePage.open = false;
+        geometryCreateFeaturePage.open = false;
+
+        if (actionDefinition.workflowKind === "geometryCreate") {
+            geometryCreateFeaturePage.presentAction(actionDefinition);
+        } else {
+            actionFeaturePage.presentAction(actionDefinition);
+        }
+
+        root.statusNote = qsTr("Opened feature page: %1.").arg(actionDefinition.pageTitle);
+        root.menuOpen = false;
     }
 
     Rectangle {
@@ -298,37 +179,65 @@ Window {
                 theme: appTheme
                 darkMode: root.darkMode
                 menuOpen: root.menuOpen
+                currentLanguage: root.uiSettingsController.currentLanguage
                 selectedTab: root.selectedRibbonTab
                 recordedCommandCount: root.appController.recordedCommandCount
-                ribbonTabs: root.ribbonTabs
-                ribbonGroups: root.ribbonGroupsModel[root.selectedRibbonTab]
+                ribbonTabs: ribbonConfig.tabs
+                ribbonGroups: ribbonConfig.groupsForTab(root.selectedRibbonTab)
                 onToggleMenu: root.menuOpen = !root.menuOpen
+                onRequestThemeToggle: root.toggleTheme()
+                onRequestLanguageToggle: root.toggleLanguage()
                 onSelectTab: function (tabIndex) {
                     root.selectedRibbonTab = tabIndex;
                 }
                 onTriggerAction: function (actionKey) {
-                    root.triggerHeaderAction(actionKey);
+                    root.openActionPage(actionKey);
                 }
             }
 
-            RowLayout {
+            Item {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                spacing: appTheme.gap
 
-                SidebarPanel {
-                    Layout.preferredWidth: 280
-                    Layout.fillHeight: true
-                    theme: appTheme
+                MouseArea {
+                    anchors.fill: parent
+                    visible: root.menuOpen
+                    z: 10
+                    acceptedButtons: Qt.LeftButton
+                    cursorShape: Qt.ArrowCursor
+                    onClicked: root.menuOpen = false
                 }
 
-                ViewportPanel {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    theme: appTheme
-                    summaryText: root.viewportSummary()
-                    recordedCommandCount: root.appController.recordedCommandCount
-                    onRequestViewPage: root.selectedRibbonTab = 2
+                RowLayout {
+                    anchors.fill: parent
+                    spacing: appTheme.gap
+
+                    SidebarPanel {
+                        Layout.preferredWidth: 280
+                        Layout.fillHeight: true
+                        theme: appTheme
+                    }
+
+                    Item {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+
+                        ViewportPanel {
+                            anchors.fill: parent
+                            theme: appTheme
+                            summaryText: root.viewportSummary()
+                            recordedCommandCount: root.appController.recordedCommandCount
+                            onRequestViewPage: root.selectedRibbonTab = 2
+                        }
+
+                        OperationCornerOverlay {
+                            anchors.right: parent.right
+                            anchors.bottom: parent.bottom
+                            anchors.margins: 18
+                            theme: appTheme
+                            appController: root.appController
+                        }
+                    }
                 }
             }
         }

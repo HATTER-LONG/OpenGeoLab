@@ -1,9 +1,13 @@
 include(GenerateExportHeader)
 
-set(ogl_scene_headers include/ogl/scene/PlaceholderSceneGraph.hpp
-                      include/ogl/scene/SceneComponentRegistration.hpp
+set(ogl_scene_headers include/ogl/scene/SceneGraph.hpp
+                       include/ogl/scene/SceneComponentRegistration.hpp
+                       include/ogl/scene/SceneAction.hpp
+                       include/ogl/scene/BuildSceneAction.hpp
+                       include/ogl/scene/SceneLogger.hpp
 )
-set(ogl_scene_sources src/PlaceholderSceneGraph.cpp src/SceneComponentRegistration.cpp)
+set(ogl_scene_sources src/SceneGraph.cpp src/SceneComponentRegistration.cpp
+                      src/BuildSceneAction.cpp)
 
 add_library(ogl_scene ${OPENGEOLAB_LIBRARY_TYPE} ${ogl_scene_headers} ${ogl_scene_sources})
 add_library(OGL::Scene ALIAS ogl_scene)
@@ -45,3 +49,7 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/ DESTINATION ${CMAKE_INSTA
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/include/ogl/scene/export.hpp
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/ogl/scene
 )
+
+if(ENABLE_TEST AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/CMakeLists.txt")
+  add_subdirectory(tests)
+endif()

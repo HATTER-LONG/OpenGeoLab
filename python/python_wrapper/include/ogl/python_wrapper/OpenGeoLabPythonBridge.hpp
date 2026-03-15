@@ -22,22 +22,11 @@ public:
     OpenGeoLabPythonBridge();
 
     /**
-     * @brief Forward a high-level call into the shared command service.
-     * @param module_name Logical service module.
-     * @param params Parsed request payload.
+     * @brief Forward a high-level request object into the shared command service.
+     * @param request_json Parsed request containing module, action, and param.
      * @return JSON response suitable for UI or Python consumption.
      */
-    [[nodiscard]] auto call(const std::string& module_name, const nlohmann::json& params) const
-        -> nlohmann::json;
-
-    /**
-     * @brief Produce a ready-to-run Python snippet for the placeholder geometry request.
-     * @param model_name Placeholder model name.
-     * @param body_count Conceptual body count.
-     * @return Example Python automation script.
-     */
-    [[nodiscard]] auto suggestPlaceholderGeometryScript(const std::string& model_name,
-                                                        int body_count) const -> std::string;
+    [[nodiscard]] auto process(const nlohmann::json& request_json) const -> nlohmann::json;
 };
 
 } // namespace OGL::PythonWrapper

@@ -1,9 +1,13 @@
 include(GenerateExportHeader)
 
-set(ogl_render_headers include/ogl/render/PlaceholderRenderFrame.hpp
-                       include/ogl/render/RenderComponentRegistration.hpp
+set(ogl_render_headers include/ogl/render/RenderFrame.hpp
+                        include/ogl/render/RenderComponentRegistration.hpp
+                        include/ogl/render/RenderAction.hpp
+                        include/ogl/render/BuildFrameAction.hpp
+                        include/ogl/render/RenderLogger.hpp
 )
-set(ogl_render_sources src/PlaceholderRenderFrame.cpp src/RenderComponentRegistration.cpp)
+set(ogl_render_sources src/RenderFrame.cpp src/RenderComponentRegistration.cpp
+                       src/BuildFrameAction.cpp)
 
 add_library(ogl_render ${OPENGEOLAB_LIBRARY_TYPE} ${ogl_render_headers} ${ogl_render_sources})
 add_library(OGL::Render ALIAS ogl_render)
@@ -45,3 +49,7 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/ DESTINATION ${CMAKE_INSTA
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/include/ogl/render/export.hpp
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/ogl/render
 )
+
+if(ENABLE_TEST AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/CMakeLists.txt")
+  add_subdirectory(tests)
+endif()

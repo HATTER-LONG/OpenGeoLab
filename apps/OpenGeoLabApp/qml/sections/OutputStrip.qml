@@ -28,7 +28,7 @@ Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
             theme: outputStrip.theme
-            title: "Component Response JSON"
+            title: qsTr("Component Response JSON")
             bodyText: outputStrip.responseJson
         }
 
@@ -36,7 +36,7 @@ Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
             theme: outputStrip.theme
-            title: "Recorded Python Replay"
+            title: qsTr("Recorded Python Replay")
             bodyText: outputStrip.replayPython
         }
 
@@ -44,7 +44,7 @@ Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
             theme: outputStrip.theme
-            title: "Python Output"
+            title: qsTr("Python Output")
             bodyText: outputStrip.pythonOutput
         }
     }

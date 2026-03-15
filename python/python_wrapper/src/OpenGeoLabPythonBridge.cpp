@@ -2,30 +2,49 @@
 
 #include <ogl/command/CommandService.hpp>
 
+#include <stdexcept>
+
 namespace OGL::PythonWrapper {
+
+namespace {
+
+auto parseCommandRequest(const nlohmann::json& request_json) -> OGL::Command::CommandRequest {
+    if(!request_json.is_object()) {
+        throw std::invalid_argument("Request payload must be a JSON object.");
+    }
+
+    const std::string module = request_json.value("module", std::string{});
+    if(module.empty()) {
+        throw std::invalid_argument("Request module cannot be empty.");
+    }
+
+    const std::string action = request_json.value("action", std::string{});
+    if(action.empty()) {
+        throw std::invalid_argument("Request action cannot be empty.");
+    }
+
+    nlohmann::json param =
+        request_json.contains("param") ? request_json.at("param") : nlohmann::json::object();
+    if(param.is_null()) {
+        param = nlohmann::json::object();
+    }
+    if(!param.is_object()) {
+        throw std::invalid_argument("Request param must be a JSON object.");
+    }
+
+    return {.module = module, .action = action, .param = std::move(param)};
+}
+
+} // namespace
 
 OpenGeoLabPythonBridge::OpenGeoLabPythonBridge() = default;
 
-auto OpenGeoLabPythonBridge::call(const std::string& module_name,
-                                  const nlohmann::json& params) const -> nlohmann::json {
+auto OpenGeoLabPythonBridge::process(const nlohmann::json& request_json) const -> nlohmann::json {
+    const auto request = parseCommandRequest(request_json);
     const OGL::Command::CommandService command_service;
     return command_service
-        .execute(OGL::Command::CommandRequest{.moduleName = module_name, .params = params})
+        .execute({.module = request.module, .action = request.action, .param = request.param})
         .toJson();
-}
-
-auto OpenGeoLabPythonBridge::suggestPlaceholderGeometryScript(const std::string& model_name,
-                                                              int body_count) const -> std::string {
-    const nlohmann::json request = {
-        {"operation", "placeholderModel"},
-        {"modelName", model_name},
-        {"bodyCount", body_count},
-        {"source", "python"},
-    };
-
-    return call("geometry", request)
-        .value("payload", nlohmann::json::object())
-        .value("equivalentPython", std::string{});
 }
 
 } // namespace OGL::PythonWrapper

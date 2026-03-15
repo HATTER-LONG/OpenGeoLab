@@ -1,6 +1,6 @@
 /**
- * @file PlaceholderGeometryModel.hpp
- * @brief Placeholder geometry domain model used to validate the modular OpenGeoLab pipeline.
+ * @file GeometryModel.hpp
+ * @brief Geometry domain model used to validate the modular OpenGeoLab pipeline.
  */
 
 #pragma once
@@ -14,9 +14,9 @@
 namespace OGL::Geometry {
 
 /**
- * @brief Descriptor used to construct a placeholder geometry model.
+ * @brief Descriptor used to construct a geometry model.
  */
-struct OGL_GEOMETRY_EXPORT PlaceholderGeometryDescriptor {
+struct OGL_GEOMETRY_EXPORT GeometryDescriptor {
     std::string modelName;
     int bodyCount{1};
     std::string source;
@@ -25,23 +25,23 @@ struct OGL_GEOMETRY_EXPORT PlaceholderGeometryDescriptor {
 /**
  * @brief Lightweight stand-in for a future OCC-backed geometry model.
  */
-class OGL_GEOMETRY_EXPORT PlaceholderGeometryModel {
+class OGL_GEOMETRY_EXPORT GeometryModel {
 public:
     /**
-     * @brief Construct a placeholder model from a normalized descriptor.
+     * @brief Construct a geometry model from a normalized descriptor.
      * @param descriptor Model metadata used across UI, Python, and component layers.
      */
-    explicit PlaceholderGeometryModel(PlaceholderGeometryDescriptor descriptor);
+    explicit GeometryModel(GeometryDescriptor descriptor);
 
     /**
      * @brief Get the model name visible to upper layers.
-     * @return Stable placeholder model name.
+     * @return Stable model name.
      */
     [[nodiscard]] auto modelName() const -> const std::string&;
 
     /**
-     * @brief Get the conceptual body count carried by this placeholder.
-     * @return Placeholder body count.
+     * @brief Get the conceptual body count carried by this model.
+     * @return Conceptual body count.
      */
     [[nodiscard]] auto bodyCount() const -> int;
 
@@ -58,13 +58,13 @@ public:
     [[nodiscard]] auto summary() const -> std::string;
 
     /**
-     * @brief Serialize the placeholder model for cross-layer transport.
+     * @brief Serialize the geometry model for cross-layer transport.
      * @return JSON representation of the model.
      */
     [[nodiscard]] auto toJson() const -> nlohmann::json;
 
 private:
-    PlaceholderGeometryDescriptor m_descriptor;
+    GeometryDescriptor m_descriptor;
 };
 
 } // namespace OGL::Geometry

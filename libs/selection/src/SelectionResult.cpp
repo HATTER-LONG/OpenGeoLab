@@ -1,4 +1,4 @@
-#include <ogl/selection/PlaceholderSelectionResult.hpp>
+#include <ogl/selection/SelectionResult.hpp>
 
 #include <algorithm>
 #include <cstdlib>
@@ -7,7 +7,7 @@
 
 namespace {
 
-auto findDisplayName(const OGL::Scene::PlaceholderSceneGraph& scene_graph,
+auto findDisplayName(const OGL::Scene::SceneGraph& scene_graph,
                      const std::string& node_id) -> std::string {
     for(const auto& node : scene_graph.nodes()) {
         if(node.nodeId == node_id) {
@@ -22,34 +22,34 @@ auto findDisplayName(const OGL::Scene::PlaceholderSceneGraph& scene_graph,
 
 namespace OGL::Selection {
 
-auto PlaceholderSelectionHit::toJson() const -> nlohmann::json {
+auto SelectionHit::toJson() const -> nlohmann::json {
     return {{"nodeId", nodeId},
             {"displayName", displayName},
             {"selectionType", selectionType},
             {"hitRank", hitRank}};
 }
 
-PlaceholderSelectionResult::PlaceholderSelectionResult(std::string mode,
-                                                       std::string frame_id,
-                                                       std::vector<PlaceholderSelectionHit> hits)
+SelectionResult::SelectionResult(std::string mode,
+                                 std::string frame_id,
+                                 std::vector<SelectionHit> hits)
     : m_mode(std::move(mode)), m_frameId(std::move(frame_id)), m_hits(std::move(hits)) {}
 
-auto PlaceholderSelectionResult::mode() const -> const std::string& { return m_mode; }
+auto SelectionResult::mode() const -> const std::string& { return m_mode; }
 
-auto PlaceholderSelectionResult::frameId() const -> const std::string& { return m_frameId; }
+auto SelectionResult::frameId() const -> const std::string& { return m_frameId; }
 
-auto PlaceholderSelectionResult::hits() const -> const std::vector<PlaceholderSelectionHit>& {
+auto SelectionResult::hits() const -> const std::vector<SelectionHit>& {
     return m_hits;
 }
 
-auto PlaceholderSelectionResult::summary() const -> std::string {
+auto SelectionResult::summary() const -> std::string {
     std::ostringstream stream;
-    stream << "Placeholder " << m_mode << " selection resolved " << m_hits.size()
-           << " hit(s) from render frame '" << m_frameId << "'.";
+    stream << m_mode << " selection resolved " << m_hits.size() << " hit(s) from render frame '"
+           << m_frameId << "'.";
     return stream.str();
 }
 
-auto PlaceholderSelectionResult::toJson() const -> nlohmann::json {
+auto SelectionResult::toJson() const -> nlohmann::json {
     nlohmann::json hits_json = nlohmann::json::array();
     for(const auto& hit : m_hits) {
         hits_json.push_back(hit.toJson());
@@ -62,13 +62,13 @@ auto PlaceholderSelectionResult::toJson() const -> nlohmann::json {
             {"summary", summary()}};
 }
 
-auto evaluatePlaceholderSelection(const OGL::Scene::PlaceholderSceneGraph& scene_graph,
-                                  const OGL::Render::PlaceholderRenderFrame& render_frame,
-                                  const nlohmann::json& params) -> PlaceholderSelectionResult {
+auto evaluateSelection(const OGL::Scene::SceneGraph& scene_graph,
+                       const OGL::Render::RenderFrame& render_frame,
+                       const nlohmann::json& params) -> SelectionResult {
     const std::string mode = params.value("mode", std::string{"pick"});
     const auto& draw_items = render_frame.drawItems();
     if(draw_items.empty()) {
-        return PlaceholderSelectionResult(mode, render_frame.frameId(), {});
+        return SelectionResult(mode, render_frame.frameId(), {});
     }
 
     std::size_t start_index = 0;
@@ -87,7 +87,7 @@ auto evaluatePlaceholderSelection(const OGL::Scene::PlaceholderSceneGraph& scene
                                                static_cast<int>(draw_items.size()));
     }
 
-    std::vector<PlaceholderSelectionHit> hits;
+    std::vector<SelectionHit> hits;
     hits.reserve(selection_count);
 
     for(std::size_t offset = 0; offset < selection_count; ++offset) {
@@ -98,7 +98,7 @@ auto evaluatePlaceholderSelection(const OGL::Scene::PlaceholderSceneGraph& scene
                         .hitRank = static_cast<int>(offset + 1)});
     }
 
-    return PlaceholderSelectionResult(mode, render_frame.frameId(), std::move(hits));
+    return SelectionResult(mode, render_frame.frameId(), std::move(hits));
 }
 
 } // namespace OGL::Selection

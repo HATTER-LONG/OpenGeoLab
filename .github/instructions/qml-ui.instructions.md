@@ -53,3 +53,10 @@ applyTo: 'apps/**/*.qml,**/qmldir'
 
 - When a QML change depends on backend capabilities, align names and payloads with the C++ or Python-facing service contract.
 - QML-facing APIs should expose high-level operations such as import, cleanup, mesh generation, selection, and camera control.
+
+## Localization and UI Settings
+
+- Wrap all user-facing QML strings in `qsTr()` from the start, including ribbon labels, menu actions, placeholder pages, status text, and panel titles.
+- Treat English and Simplified Chinese as first-class UI languages. Runtime language switching should flow through an app-level controller that can trigger QML retranslation, rather than through ad hoc per-component string state.
+- Keep theme and language controls together in the header pop menu workspace section. When both are present, place the language switch entry directly below the theme switch entry so appearance and localization settings stay discoverable.
+- When introducing new QML files with translatable strings, keep the app CMake QML file list and translation source list explicit so `lupdate` / `lrelease` continue to cover the full UI surface.

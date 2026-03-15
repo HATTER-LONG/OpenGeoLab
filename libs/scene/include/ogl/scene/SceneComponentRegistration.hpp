@@ -1,6 +1,6 @@
 /**
  * @file SceneComponentRegistration.hpp
- * @brief Registers placeholder scene services into Kangaroo ComponentFactory.
+ * @brief Registers scene services into Kangaroo ComponentFactory.
  */
 
 #pragma once

@@ -9,11 +9,15 @@ Rectangle {
     required property AppTheme theme
     property string title: ""
     property string bodyText: ""
+    property int minimumBodyHeight: 120
+    property int maximumBodyHeight: 260
+    readonly property int bodyHeight: Math.min(maximumBodyHeight, Math.max(minimumBodyHeight, codeText.paintedHeight + 24))
 
     radius: theme.radiusMedium
     color: theme.surfaceMuted
     border.width: 1
     border.color: theme.borderSubtle
+    implicitHeight: titleLabel.implicitHeight + bodyHeight + 48
 
     Column {
         anchors.fill: parent
@@ -21,6 +25,8 @@ Rectangle {
         spacing: 10
 
         Text {
+            id: titleLabel
+
             text: panel.title
             color: panel.theme.textSecondary
             font.pixelSize: 13
@@ -30,7 +36,7 @@ Rectangle {
 
         Rectangle {
             width: parent.width
-            height: parent.height - 34
+            height: panel.bodyHeight
             radius: panel.theme.radiusSmall
             color: panel.theme.tint(panel.theme.surface, panel.theme.darkMode ? 0.64 : 0.9)
             border.width: 1
@@ -47,7 +53,7 @@ Rectangle {
                     id: codeText
 
                     width: parent.width
-                    text: panel.bodyText && panel.bodyText.length > 0 ? panel.bodyText : "No output yet."
+                    text: panel.bodyText && panel.bodyText.length > 0 ? panel.bodyText : qsTr("No output yet.")
                     color: panel.theme.textPrimary
                     font.pixelSize: 12
                     font.family: panel.theme.monoFontFamily

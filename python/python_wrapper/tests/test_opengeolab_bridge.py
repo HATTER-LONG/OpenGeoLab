@@ -4,11 +4,11 @@ import opengeolab
 
 
 def main() -> int:
-    response_text = opengeolab.call(
-        "selection",
-        json.dumps(
-            {
-                "operation": "pickPlaceholderEntity",
+    response_text = opengeolab.process(
+        {
+            "module": "selection",
+            "action": "pickEntity",
+            "param": {
                 "modelName": "PythonSmokeModel",
                 "bodyCount": 3,
                 "viewportWidth": 1024,
@@ -16,13 +16,13 @@ def main() -> int:
                 "screenX": 144,
                 "screenY": 96,
                 "source": "python-test",
-            }
-        ),
+            },
+        }
     )
     response = json.loads(response_text)
 
     if not response.get("success", False):
-        raise RuntimeError(f"selection call failed: {response_text}")
+        raise RuntimeError(f"selection request failed: {response_text}")
 
     payload = response.get("payload", {})
     scene_graph = payload.get("sceneGraph", {})
@@ -37,12 +37,6 @@ def main() -> int:
 
     if selection_result.get("hitCount") != 1:
         raise AssertionError(f"unexpected hitCount: {selection_result}")
-
-    script = opengeolab.OpenGeoLabPythonBridge().suggest_placeholder_geometry_script(
-        "PythonSmokeModel", 2
-    )
-    if "opengeolab.OpenGeoLabPythonBridge" not in script:
-        raise AssertionError("expected exported script to reference OpenGeoLabPythonBridge")
 
     print(payload.get("summary", ""))
     return 0

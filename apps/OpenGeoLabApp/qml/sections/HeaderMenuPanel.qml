@@ -11,6 +11,9 @@ Rectangle {
     required property AppTheme theme
     required property bool darkMode
     required property bool menuOpen
+    property string currentLanguage: "en_US"
+    signal requestThemeToggle
+    signal requestLanguageToggle
     signal triggerAction(string actionKey)
 
     visible: panel.menuOpen
@@ -18,7 +21,7 @@ Rectangle {
     x: 0
     y: 34
     width: 248
-    radius: 18
+    radius: 14
     color: panel.theme.surface
     border.width: 1
     border.color: panel.theme.borderSubtle
@@ -47,7 +50,7 @@ Rectangle {
         spacing: 10
 
         Text {
-            text: "Workspace"
+            text: qsTr("Workspace")
             color: panel.theme.textSecondary
             font.pixelSize: 12
             font.bold: true
@@ -72,7 +75,7 @@ Rectangle {
                 Components.ActionButton {
                     theme: panel.theme
                     width: parent.width
-                    buttonText: "Import Model"
+                    buttonText: qsTr("Import Model")
                     iconKind: "import"
                     leftAligned: true
                     buttonColor: panel.theme.tint(panel.theme.accentA, panel.theme.darkMode ? 0.2 : 0.11)
@@ -83,7 +86,7 @@ Rectangle {
                 Components.ActionButton {
                     theme: panel.theme
                     width: parent.width
-                    buttonText: "Export Model"
+                    buttonText: qsTr("Export Model")
                     iconKind: "export"
                     leftAligned: true
                     buttonColor: panel.theme.tint(panel.theme.accentA, panel.theme.darkMode ? 0.2 : 0.11)
@@ -94,13 +97,25 @@ Rectangle {
                 Components.ActionButton {
                     theme: panel.theme
                     width: parent.width
-                    buttonText: panel.darkMode ? "Switch to Light" : "Switch to Dark"
+                    buttonText: panel.darkMode ? qsTr("Switch to Light") : qsTr("Switch to Dark")
                     iconKind: panel.darkMode ? "lightTheme" : "darkTheme"
                     leftAligned: true
                     buttonColor: panel.theme.tint(panel.theme.accentA, panel.theme.darkMode ? 0.18 : 0.1)
                     pressedColor: panel.theme.tint(panel.theme.accentA, panel.theme.darkMode ? 0.28 : 0.16)
                     hoverBorderColor: panel.theme.tint(panel.theme.accentA, panel.theme.darkMode ? 0.58 : 0.34)
-                    onClicked: panel.triggerAction("toggleTheme")
+                    onClicked: panel.requestThemeToggle()
+                }
+
+                Components.ActionButton {
+                    theme: panel.theme
+                    width: parent.width
+                    buttonText: panel.currentLanguage === "zh_CN" ? qsTr("Switch to English") : qsTr("Switch to Chinese")
+                    iconKind: "language"
+                    leftAligned: true
+                    buttonColor: panel.theme.tint(panel.theme.accentE, panel.theme.darkMode ? 0.18 : 0.1)
+                    pressedColor: panel.theme.tint(panel.theme.accentE, panel.theme.darkMode ? 0.28 : 0.16)
+                    hoverBorderColor: panel.theme.tint(panel.theme.accentE, panel.theme.darkMode ? 0.58 : 0.34)
+                    onClicked: panel.requestLanguageToggle()
                 }
             }
         }
@@ -112,7 +127,7 @@ Rectangle {
         }
 
         Text {
-            text: "Script Recorder"
+            text: qsTr("Script Recorder")
             color: panel.theme.textSecondary
             font.pixelSize: 12
             font.bold: true
@@ -137,7 +152,7 @@ Rectangle {
                 Components.ActionButton {
                     theme: panel.theme
                     width: parent.width
-                    buttonText: "Start Script Record"
+                    buttonText: qsTr("Start Script Record")
                     iconKind: "record"
                     leftAligned: true
                     buttonColor: panel.theme.tint(panel.theme.accentB, panel.theme.darkMode ? 0.2 : 0.11)
@@ -148,7 +163,7 @@ Rectangle {
                 Components.ActionButton {
                     theme: panel.theme
                     width: parent.width
-                    buttonText: "Replay Script"
+                    buttonText: qsTr("Replay Script")
                     iconKind: "replay"
                     leftAligned: true
                     buttonColor: panel.theme.tint(panel.theme.accentB, panel.theme.darkMode ? 0.2 : 0.11)
@@ -159,7 +174,7 @@ Rectangle {
                 Components.ActionButton {
                     theme: panel.theme
                     width: parent.width
-                    buttonText: "Export Record"
+                    buttonText: qsTr("Export Record")
                     iconKind: "exportRecord"
                     leftAligned: true
                     buttonColor: panel.theme.tint(panel.theme.accentB, panel.theme.darkMode ? 0.2 : 0.11)
@@ -170,7 +185,7 @@ Rectangle {
                 Components.ActionButton {
                     theme: panel.theme
                     width: parent.width
-                    buttonText: "Clear Script History"
+                    buttonText: qsTr("Clear Script History")
                     iconKind: "clear"
                     leftAligned: true
                     buttonColor: panel.theme.tint(panel.theme.accentB, panel.theme.darkMode ? 0.2 : 0.11)

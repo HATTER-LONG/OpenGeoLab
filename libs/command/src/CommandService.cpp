@@ -11,7 +11,7 @@
 
 namespace {
 
-void ensurePlaceholderServicesRegistered() {
+void ensureModuleServicesRegistered() {
     static std::once_flag once;
     std::call_once(once, []() {
         OGL::Geometry::registerGeometryComponents();
@@ -36,7 +36,7 @@ auto collectRequests(const std::vector<OGL::Command::CommandRecordEntry>& histor
 namespace OGL::Command {
 
 auto CommandRequest::toJson() const -> nlohmann::json {
-    return {{"moduleName", moduleName}, {"params", params}};
+    return {{"module", module}, {"action", action}, {"param", param}};
 }
 
 auto CommandRecordEntry::toJson() const -> nlohmann::json {
@@ -48,22 +48,28 @@ auto ReplayReport::toJson() const -> nlohmann::json {
         {"replayedCount", replayedCount}, {"successCount", successCount}, {"responses", responses}};
 }
 
-CommandService::CommandService() { ensurePlaceholderServicesRegistered(); }
+CommandService::CommandService() { ensureModuleServicesRegistered(); }
 
-auto CommandService::execute(const CommandRequest& request) const -> OGL::Core::ServiceResponse {
-    return OGL::Core::ComponentRequestDispatcher::dispatch(request.moduleName, request.params);
+auto CommandService::execute(const CommandRequest& request,
+                             const OGL::Core::ProgressCallback& progress_callback) const
+    -> OGL::Core::ServiceResponse {
+    return OGL::Core::ComponentRequestDispatcher::dispatch(
+        {.module = request.module, .action = request.action, .param = request.param},
+        progress_callback);
 }
 
 auto CommandService::exportPythonScript(const std::vector<CommandRequest>& requests)
     -> std::string {
     std::ostringstream script;
+    script << "import json\n";
     script << "import opengeolab\n\n";
     script << "bridge = opengeolab.OpenGeoLabPythonBridge()\n\n";
 
     for(std::size_t index = 0; index < requests.size(); ++index) {
         const auto& request = requests[index];
-        script << "result_" << (index + 1) << " = bridge.call(\"" << request.moduleName
-               << "\", R\"JSON(" << request.params.dump(2) << ")JSON\")\n";
+        script << "request_" << (index + 1) << " = json.loads(r'''" << request.toJson().dump(2)
+               << "''')\n";
+        script << "result_" << (index + 1) << " = bridge.process(request_" << (index + 1) << ")\n";
         script << "print(result_" << (index + 1) << ")\n\n";
     }
 
@@ -76,8 +82,10 @@ auto CommandService::exportPythonScript(const std::vector<CommandRequest>& reque
 
 CommandRecorder::CommandRecorder() = default;
 
-auto CommandRecorder::execute(const CommandRequest& request) -> OGL::Core::ServiceResponse {
-    const auto response = m_commandService.execute(request);
+auto CommandRecorder::execute(const CommandRequest& request,
+                              const OGL::Core::ProgressCallback& progress_callback)
+    -> OGL::Core::ServiceResponse {
+    const auto response = m_commandService.execute(request, progress_callback);
     if(response.success) {
         m_history.push_back(
             {.sequence = m_nextSequence++, .request = request, .response = response.toJson()});

@@ -1,6 +1,6 @@
 /**
  * @file SelectionComponentRegistration.hpp
- * @brief Registers placeholder selection services into Kangaroo ComponentFactory.
+ * @brief Registers selection services into Kangaroo ComponentFactory.
  */
 
 #pragma once

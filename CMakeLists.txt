@@ -165,7 +165,7 @@ set(OpenCASCADE_LIBS
     TKernel
 )
 
-find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui Qml Quick OpenGL)
+find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui Qml Quick OpenGL LinguistTools)
 qt_standard_project_setup(REQUIRES 6.8)
 
 find_package(gmsh REQUIRED)

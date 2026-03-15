@@ -14,11 +14,14 @@ Rectangle {
     required property bool darkMode
     required property bool menuOpen
     required property int selectedTab
+    property string currentLanguage: "en_US"
     property int recordedCommandCount: 0
     property var ribbonTabs: []
     property var ribbonGroups: []
     property int ribbonButtonWidth: 68
     signal toggleMenu
+    signal requestThemeToggle
+    signal requestLanguageToggle
     signal selectTab(int index)
     signal triggerAction(string actionKey)
 
@@ -184,6 +187,9 @@ Rectangle {
         theme: header.theme
         darkMode: header.darkMode
         menuOpen: header.menuOpen
+        currentLanguage: header.currentLanguage
+        onRequestThemeToggle: header.requestThemeToggle()
+        onRequestLanguageToggle: header.requestLanguageToggle()
         onTriggerAction: function (actionKey) {
             header.triggerAction(actionKey);
         }

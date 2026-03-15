@@ -1,9 +1,24 @@
 include(GenerateExportHeader)
 
-set(ogl_geometry_headers include/ogl/geometry/PlaceholderGeometryModel.hpp
+set(ogl_geometry_headers include/ogl/geometry/GeometryModel.hpp
                          include/ogl/geometry/GeometryComponentRegistration.hpp
+                         include/ogl/geometry/GeometryAction.hpp
+                         include/ogl/geometry/InspectModelAction.hpp
+                         include/ogl/geometry/CreateBoxAction.hpp
+                         include/ogl/geometry/CreateCylinderAction.hpp
+                         include/ogl/geometry/CreateSphereAction.hpp
+                         include/ogl/geometry/CreateTorusAction.hpp
+                         include/ogl/geometry/GeometryLogger.hpp
 )
-set(ogl_geometry_sources src/PlaceholderGeometryModel.cpp src/GeometryComponentRegistration.cpp)
+set(ogl_geometry_sources
+    src/GeometryModel.cpp
+    src/GeometryComponentRegistration.cpp
+    src/InspectModelAction.cpp
+    src/CreateBoxAction.cpp
+    src/CreateCylinderAction.cpp
+    src/CreateSphereAction.cpp
+    src/CreateTorusAction.cpp
+)
 
 add_library(ogl_geometry ${OPENGEOLAB_LIBRARY_TYPE} ${ogl_geometry_headers} ${ogl_geometry_sources})
 add_library(OGL::Geometry ALIAS ogl_geometry)
@@ -49,3 +64,4 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/include/ogl/geometry/export.hpp
 if(ENABLE_TEST AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/CMakeLists.txt")
   add_subdirectory(tests)
 endif()
+

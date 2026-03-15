@@ -1,85 +1,107 @@
 #include <ogl/render/RenderComponentRegistration.hpp>
 
 #include <ogl/core/IService.hpp>
-#include <ogl/geometry/PlaceholderGeometryModel.hpp>
-#include <ogl/render/PlaceholderRenderFrame.hpp>
-#include <ogl/scene/PlaceholderSceneGraph.hpp>
+#include <ogl/render/BuildFrameAction.hpp>
+#include <ogl/render/RenderAction.hpp>
+#include <ogl/render/RenderLogger.hpp>
 
 #include <kangaroo/util/component_factory.hpp>
-#include <kangaroo/util/logger_factory.hpp>
 
+#include <algorithm>
 #include <mutex>
 #include <sstream>
+#include <string>
+#include <vector>
 
 namespace {
 
-auto renderLogger() {
-    static auto logger = Kangaroo::Util::LoggerFactory::createLogger("OpenGeoLab.Render");
-    return logger;
+auto supportedRenderActions() -> std::vector<std::string> {
+    return {OGL::Render::BuildFrameAction::actionName()};
 }
 
-auto buildRenderEquivalentPython(const nlohmann::json& params) -> std::string {
-    std::ostringstream script;
-    script << "import opengeolab\n\n";
-    script << "bridge = opengeolab.OpenGeoLabPythonBridge()\n";
-    script << "result = bridge.call(\"render\", R\"JSON(" << params.dump(2) << ")JSON\")\n";
-    script << "print(result)";
-    return script.str();
+auto supportedRenderActionSummary() -> std::string {
+    auto action_names = supportedRenderActions();
+    std::sort(action_names.begin(), action_names.end());
+
+    std::ostringstream stream;
+    for(std::size_t index = 0; index < action_names.size(); ++index) {
+        if(index > 0) {
+            stream << ", ";
+        }
+        stream << action_names[index];
+    }
+
+    return stream.str();
 }
 
-auto buildGeometryModel(const nlohmann::json& params) -> OGL::Geometry::PlaceholderGeometryModel {
-    return OGL::Geometry::PlaceholderGeometryModel(
-        {.modelName = params.value("modelName", std::string{"Bracket_A01"}),
-         .bodyCount = params.value("bodyCount", 3),
-         .source = params.value("source", std::string{"render-service"})});
+auto unsupportedRenderActionResponse(const OGL::Core::ServiceRequest& request)
+    -> OGL::Core::ServiceResponse {
+    return {
+        .success = false,
+        .module = request.module,
+        .action = request.action,
+        .message = "Unsupported render action. Registered actions: " +
+                   supportedRenderActionSummary() + ".",
+        .payload = nlohmann::json::object(),
+    };
 }
 
-class PlaceholderRenderService final : public OGL::Core::IService {
+class RenderService final : public OGL::Core::IService {
 public:
-    auto processRequest(const std::string& module_name, const nlohmann::json& params)
+    auto processRequest(const OGL::Core::ServiceRequest& request,
+                        const OGL::Core::ProgressCallback& progress_callback)
         -> OGL::Core::ServiceResponse override {
-        const std::string operation_name = params.value("operation", std::string{"unknown"});
-        if(module_name != "render") {
-            return {.success = false,
-                    .moduleName = module_name,
-                    .operationName = operation_name,
-                    .message = "Placeholder render service only accepts the render module.",
-                    .payload = nlohmann::json::object()};
+        if(request.module != "render") {
+            return {
+                .success = false,
+                .module = request.module,
+                .action = request.action,
+                .message = "Render service only accepts the render module.",
+                .payload = nlohmann::json::object(),
+            };
         }
 
-        if(operation_name != "buildPlaceholderFrame") {
-            return {.success = false,
-                    .moduleName = module_name,
-                    .operationName = operation_name,
-                    .message = "Unsupported render operation. Use buildPlaceholderFrame.",
-                    .payload = nlohmann::json::object()};
+        const auto action_id = request.action;
+        const auto supported_actions = supportedRenderActions();
+        if(std::find(supported_actions.begin(), supported_actions.end(), action_id) ==
+           supported_actions.end()) {
+            return unsupportedRenderActionResponse(request);
         }
 
-        const auto geometry_model = buildGeometryModel(params);
-        const auto scene_graph = OGL::Scene::buildPlaceholderSceneGraph(geometry_model);
-        const auto render_frame = OGL::Render::buildPlaceholderRenderFrame(scene_graph, params);
+        try {
+            auto action = g_ComponentFactory.createObjectWithID<OGL::Render::RenderActionFactory>(
+                action_id);
+            if(!action) {
+                return {
+                    .success = false,
+                    .module = request.module,
+                    .action = request.action,
+                    .message = "Render action factory resolved a null action instance.",
+                    .payload = nlohmann::json::object(),
+                };
+            }
 
-        auto logger = renderLogger();
-        logger->info("Built placeholder render frame frameId={} drawItemCount={}",
-                     render_frame.frameId(), render_frame.drawItems().size());
-
-        return {.success = true,
-                .moduleName = module_name,
-                .operationName = operation_name,
-                .message = "Placeholder render frame assembled from scene graph.",
-                .payload = {{"componentId", "render"},
-                            {"geometryModel", geometry_model.toJson()},
-                            {"sceneGraph", scene_graph.toJson()},
-                            {"renderFrame", render_frame.toJson()},
-                            {"summary", render_frame.summary()},
-                            {"equivalentPython", buildRenderEquivalentPython(params)}}};
+            OGL_RENDER_LOG_INFO("Dispatching render action={} through pluggable action component",
+                                request.action);
+            return action->execute(request, progress_callback);
+        } catch(const std::exception& ex) {
+            OGL_RENDER_LOG_ERROR("Render action={} failed during dispatch error={}", request.action,
+                                 ex.what());
+            return {
+                .success = false,
+                .module = request.module,
+                .action = request.action,
+                .message = ex.what(),
+                .payload = nlohmann::json::object(),
+            };
+        }
     }
 };
 
 class RenderServiceFactory final : public OGL::Core::IServiceSingletonFactory {
 public:
     auto instance() const -> tObjectSharedPtr override {
-        static auto service = std::make_shared<PlaceholderRenderService>();
+        static auto service = std::make_shared<RenderService>();
         return service;
     }
 };
@@ -91,9 +113,11 @@ namespace OGL::Render {
 void registerRenderComponents() {
     static std::once_flag once;
     std::call_once(once, []() {
-        auto logger = renderLogger();
         g_ComponentFactory.registInstanceFactoryWithID<RenderServiceFactory>("render");
-        logger->info("Registered render component factory for placeholder render-frame pipeline");
+        g_ComponentFactory.registFactoryWithID<BuildFrameActionFactory>(
+            BuildFrameAction::actionName());
+        OGL_RENDER_LOG_INFO("Registered render service '{}' with actions: {}", "render",
+                            supportedRenderActionSummary());
     });
 }
 

@@ -1,107 +1,111 @@
 #include <ogl/selection/SelectionComponentRegistration.hpp>
 
 #include <ogl/core/IService.hpp>
-#include <ogl/geometry/PlaceholderGeometryModel.hpp>
-#include <ogl/render/PlaceholderRenderFrame.hpp>
-#include <ogl/scene/PlaceholderSceneGraph.hpp>
-#include <ogl/selection/PlaceholderSelectionResult.hpp>
+#include <ogl/selection/BoxSelectAction.hpp>
+#include <ogl/selection/PickEntityAction.hpp>
+#include <ogl/selection/SelectionAction.hpp>
+#include <ogl/selection/SelectionLogger.hpp>
 
 #include <kangaroo/util/component_factory.hpp>
-#include <kangaroo/util/logger_factory.hpp>
 
+#include <algorithm>
 #include <mutex>
 #include <sstream>
+#include <string>
+#include <vector>
 
 namespace {
 
-auto selectionLogger() {
-    static auto logger = Kangaroo::Util::LoggerFactory::createLogger("OpenGeoLab.Selection");
-    return logger;
+auto supportedSelectionActions() -> std::vector<std::string> {
+    return {OGL::Selection::BoxSelectAction::actionName(),
+            OGL::Selection::PickEntityAction::actionName()};
 }
 
-auto buildSelectionEquivalentPython(const nlohmann::json& params) -> std::string {
-    std::ostringstream script;
-    script << "import opengeolab\n\n";
-    script << "bridge = opengeolab.OpenGeoLabPythonBridge()\n";
-    script << "result = bridge.call(\"selection\", R\"JSON(" << params.dump(2) << ")JSON\")\n";
-    script << "print(result)";
-    return script.str();
-}
+auto supportedSelectionActionSummary() -> std::string {
+    auto action_names = supportedSelectionActions();
+    std::sort(action_names.begin(), action_names.end());
 
-auto buildGeometryModel(const nlohmann::json& params) -> OGL::Geometry::PlaceholderGeometryModel {
-    return OGL::Geometry::PlaceholderGeometryModel(
-        {.modelName = params.value("modelName", std::string{"Bracket_A01"}),
-         .bodyCount = params.value("bodyCount", 3),
-         .source = params.value("source", std::string{"selection-service"})});
-}
-
-auto normalizeSelectionParams(const std::string& operation_name, const nlohmann::json& params)
-    -> nlohmann::json {
-    nlohmann::json normalized = params;
-    if(operation_name == "boxSelectPlaceholder") {
-        normalized["mode"] = "box";
-        if(!normalized.contains("selectionCount")) {
-            normalized["selectionCount"] = 2;
+    std::ostringstream stream;
+    for(std::size_t index = 0; index < action_names.size(); ++index) {
+        if(index > 0) {
+            stream << ", ";
         }
-    } else {
-        normalized["mode"] = "pick";
+        stream << action_names[index];
     }
-    return normalized;
+
+    return stream.str();
 }
 
-class PlaceholderSelectionService final : public OGL::Core::IService {
+auto unsupportedSelectionActionResponse(const OGL::Core::ServiceRequest& request)
+    -> OGL::Core::ServiceResponse {
+    return {
+        .success = false,
+        .module = request.module,
+        .action = request.action,
+        .message = "Unsupported selection action. Registered actions: " +
+                   supportedSelectionActionSummary() + ".",
+        .payload = nlohmann::json::object(),
+    };
+}
+
+class SelectionService final : public OGL::Core::IService {
 public:
-    auto processRequest(const std::string& module_name, const nlohmann::json& params)
+    auto processRequest(const OGL::Core::ServiceRequest& request,
+                        const OGL::Core::ProgressCallback& progress_callback)
         -> OGL::Core::ServiceResponse override {
-        const std::string operation_name = params.value("operation", std::string{"unknown"});
-        if(module_name != "selection") {
-            return {.success = false,
-                    .moduleName = module_name,
-                    .operationName = operation_name,
-                    .message = "Placeholder selection service only accepts the selection module.",
-                    .payload = nlohmann::json::object()};
+        if(request.module != "selection") {
+            return {
+                .success = false,
+                .module = request.module,
+                .action = request.action,
+                .message = "Selection service only accepts the selection module.",
+                .payload = nlohmann::json::object(),
+            };
         }
 
-        if(operation_name != "pickPlaceholderEntity" && operation_name != "boxSelectPlaceholder") {
-            return {.success = false,
-                    .moduleName = module_name,
-                    .operationName = operation_name,
-                    .message = "Unsupported selection operation. Use pickPlaceholderEntity or "
-                               "boxSelectPlaceholder.",
-                    .payload = nlohmann::json::object()};
+        const auto action_id = request.action;
+        const auto supported_actions = supportedSelectionActions();
+        if(std::find(supported_actions.begin(), supported_actions.end(), action_id) ==
+           supported_actions.end()) {
+            return unsupportedSelectionActionResponse(request);
         }
 
-        const auto normalized_params = normalizeSelectionParams(operation_name, params);
-        const auto geometry_model = buildGeometryModel(normalized_params);
-        const auto scene_graph = OGL::Scene::buildPlaceholderSceneGraph(geometry_model);
-        const auto render_frame =
-            OGL::Render::buildPlaceholderRenderFrame(scene_graph, normalized_params);
-        const auto selection_result = OGL::Selection::evaluatePlaceholderSelection(
-            scene_graph, render_frame, normalized_params);
+        try {
+            auto action =
+                g_ComponentFactory.createObjectWithID<OGL::Selection::SelectionActionFactory>(
+                    action_id);
+            if(!action) {
+                return {
+                    .success = false,
+                    .module = request.module,
+                    .action = request.action,
+                    .message = "Selection action factory resolved a null action instance.",
+                    .payload = nlohmann::json::object(),
+                };
+            }
 
-        auto logger = selectionLogger();
-        logger->info("Resolved placeholder selection mode={} hitCount={}", selection_result.mode(),
-                     selection_result.hits().size());
-
-        return {
-            .success = true,
-            .moduleName = module_name,
-            .operationName = operation_name,
-            .message = "Placeholder selection completed through geometry, scene, and render data.",
-            .payload = {{"componentId", "selection"},
-                        {"geometryModel", geometry_model.toJson()},
-                        {"sceneGraph", scene_graph.toJson()},
-                        {"renderFrame", render_frame.toJson()},
-                        {"selectionResult", selection_result.toJson()},
-                        {"summary", selection_result.summary()},
-                        {"equivalentPython", buildSelectionEquivalentPython(normalized_params)}}};
+            OGL_SELECTION_LOG_INFO(
+                "Dispatching selection action={} through pluggable action component",
+                request.action);
+            return action->execute(request, progress_callback);
+        } catch(const std::exception& ex) {
+            OGL_SELECTION_LOG_ERROR("Selection action={} failed during dispatch error={}",
+                                    request.action, ex.what());
+            return {
+                .success = false,
+                .module = request.module,
+                .action = request.action,
+                .message = ex.what(),
+                .payload = nlohmann::json::object(),
+            };
+        }
     }
 };
 
 class SelectionServiceFactory final : public OGL::Core::IServiceSingletonFactory {
 public:
     auto instance() const -> tObjectSharedPtr override {
-        static auto service = std::make_shared<PlaceholderSelectionService>();
+        static auto service = std::make_shared<SelectionService>();
         return service;
     }
 };
@@ -113,9 +117,13 @@ namespace OGL::Selection {
 void registerSelectionComponents() {
     static std::once_flag once;
     std::call_once(once, []() {
-        auto logger = selectionLogger();
         g_ComponentFactory.registInstanceFactoryWithID<SelectionServiceFactory>("selection");
-        logger->info("Registered selection component factory for placeholder interaction pipeline");
+        g_ComponentFactory.registFactoryWithID<PickEntityActionFactory>(
+            PickEntityAction::actionName());
+        g_ComponentFactory.registFactoryWithID<BoxSelectActionFactory>(
+            BoxSelectAction::actionName());
+        OGL_SELECTION_LOG_INFO("Registered selection service '{}' with actions: {}", "selection",
+                               supportedSelectionActionSummary());
     });
 }
 

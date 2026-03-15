@@ -1,81 +1,107 @@
 #include <ogl/scene/SceneComponentRegistration.hpp>
 
 #include <ogl/core/IService.hpp>
-#include <ogl/geometry/PlaceholderGeometryModel.hpp>
-#include <ogl/scene/PlaceholderSceneGraph.hpp>
+#include <ogl/scene/BuildSceneAction.hpp>
+#include <ogl/scene/SceneAction.hpp>
+#include <ogl/scene/SceneLogger.hpp>
 
 #include <kangaroo/util/component_factory.hpp>
-#include <kangaroo/util/logger_factory.hpp>
 
+#include <algorithm>
 #include <mutex>
 #include <sstream>
+#include <string>
+#include <vector>
 
 namespace {
 
-auto sceneLogger() {
-    static auto logger = Kangaroo::Util::LoggerFactory::createLogger("OpenGeoLab.Scene");
-    return logger;
+auto supportedSceneActions() -> std::vector<std::string> {
+    return {OGL::Scene::BuildSceneAction::actionName()};
 }
 
-auto buildSceneEquivalentPython(const nlohmann::json& params) -> std::string {
-    std::ostringstream script;
-    script << "import opengeolab\n\n";
-    script << "bridge = opengeolab.OpenGeoLabPythonBridge()\n";
-    script << "result = bridge.call(\"scene\", R\"JSON(" << params.dump(2) << ")JSON\")\n";
-    script << "print(result)";
-    return script.str();
+auto supportedSceneActionSummary() -> std::string {
+    auto action_names = supportedSceneActions();
+    std::sort(action_names.begin(), action_names.end());
+
+    std::ostringstream stream;
+    for(std::size_t index = 0; index < action_names.size(); ++index) {
+        if(index > 0) {
+            stream << ", ";
+        }
+        stream << action_names[index];
+    }
+
+    return stream.str();
 }
 
-auto buildGeometryModel(const nlohmann::json& params) -> OGL::Geometry::PlaceholderGeometryModel {
-    return OGL::Geometry::PlaceholderGeometryModel(
-        {.modelName = params.value("modelName", std::string{"Bracket_A01"}),
-         .bodyCount = params.value("bodyCount", 3),
-         .source = params.value("source", std::string{"scene-service"})});
+auto unsupportedSceneActionResponse(const OGL::Core::ServiceRequest& request)
+    -> OGL::Core::ServiceResponse {
+    return {
+        .success = false,
+        .module = request.module,
+        .action = request.action,
+        .message = "Unsupported scene action. Registered actions: " +
+                   supportedSceneActionSummary() + ".",
+        .payload = nlohmann::json::object(),
+    };
 }
 
-class PlaceholderSceneService final : public OGL::Core::IService {
+class SceneService final : public OGL::Core::IService {
 public:
-    auto processRequest(const std::string& module_name, const nlohmann::json& params)
+    auto processRequest(const OGL::Core::ServiceRequest& request,
+                        const OGL::Core::ProgressCallback& progress_callback)
         -> OGL::Core::ServiceResponse override {
-        const std::string operation_name = params.value("operation", std::string{"unknown"});
-        if(module_name != "scene") {
-            return {.success = false,
-                    .moduleName = module_name,
-                    .operationName = operation_name,
-                    .message = "Placeholder scene service only accepts the scene module.",
-                    .payload = nlohmann::json::object()};
+        if(request.module != "scene") {
+            return {
+                .success = false,
+                .module = request.module,
+                .action = request.action,
+                .message = "Scene service only accepts the scene module.",
+                .payload = nlohmann::json::object(),
+            };
         }
 
-        if(operation_name != "buildPlaceholderScene") {
-            return {.success = false,
-                    .moduleName = module_name,
-                    .operationName = operation_name,
-                    .message = "Unsupported scene operation. Use buildPlaceholderScene.",
-                    .payload = nlohmann::json::object()};
+        const auto action_id = request.action;
+        const auto supported_actions = supportedSceneActions();
+        if(std::find(supported_actions.begin(), supported_actions.end(), action_id) ==
+           supported_actions.end()) {
+            return unsupportedSceneActionResponse(request);
         }
 
-        const auto geometry_model = buildGeometryModel(params);
-        const auto scene_graph = OGL::Scene::buildPlaceholderSceneGraph(geometry_model);
-        auto logger = sceneLogger();
-        logger->info("Built placeholder scene graph sceneId={} nodeCount={}", scene_graph.sceneId(),
-                     scene_graph.nodes().size());
+        try {
+            auto action = g_ComponentFactory.createObjectWithID<OGL::Scene::SceneActionFactory>(
+                action_id);
+            if(!action) {
+                return {
+                    .success = false,
+                    .module = request.module,
+                    .action = request.action,
+                    .message = "Scene action factory resolved a null action instance.",
+                    .payload = nlohmann::json::object(),
+                };
+            }
 
-        return {.success = true,
-                .moduleName = module_name,
-                .operationName = operation_name,
-                .message = "Placeholder scene graph assembled from geometry model.",
-                .payload = {{"componentId", "scene"},
-                            {"geometryModel", geometry_model.toJson()},
-                            {"sceneGraph", scene_graph.toJson()},
-                            {"summary", scene_graph.summary()},
-                            {"equivalentPython", buildSceneEquivalentPython(params)}}};
+            OGL_SCENE_LOG_INFO("Dispatching scene action={} through pluggable action component",
+                               request.action);
+            return action->execute(request, progress_callback);
+        } catch(const std::exception& ex) {
+            OGL_SCENE_LOG_ERROR("Scene action={} failed during dispatch error={}", request.action,
+                                ex.what());
+            return {
+                .success = false,
+                .module = request.module,
+                .action = request.action,
+                .message = ex.what(),
+                .payload = nlohmann::json::object(),
+            };
+        }
     }
 };
 
 class SceneServiceFactory final : public OGL::Core::IServiceSingletonFactory {
 public:
     auto instance() const -> tObjectSharedPtr override {
-        static auto service = std::make_shared<PlaceholderSceneService>();
+        static auto service = std::make_shared<SceneService>();
         return service;
     }
 };
@@ -87,9 +113,11 @@ namespace OGL::Scene {
 void registerSceneComponents() {
     static std::once_flag once;
     std::call_once(once, []() {
-        auto logger = sceneLogger();
         g_ComponentFactory.registInstanceFactoryWithID<SceneServiceFactory>("scene");
-        logger->info("Registered scene component factory for placeholder scene graph pipeline");
+        g_ComponentFactory.registFactoryWithID<BuildSceneActionFactory>(
+            BuildSceneAction::actionName());
+        OGL_SCENE_LOG_INFO("Registered scene service '{}' with actions: {}", "scene",
+                           supportedSceneActionSummary());
     });
 }
 

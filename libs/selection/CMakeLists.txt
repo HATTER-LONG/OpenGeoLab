@@ -1,9 +1,14 @@
 include(GenerateExportHeader)
 
-set(ogl_selection_headers include/ogl/selection/PlaceholderSelectionResult.hpp
-                          include/ogl/selection/SelectionComponentRegistration.hpp
+set(ogl_selection_headers include/ogl/selection/SelectionResult.hpp
+                           include/ogl/selection/SelectionComponentRegistration.hpp
+                           include/ogl/selection/SelectionAction.hpp
+                           include/ogl/selection/PickEntityAction.hpp
+                           include/ogl/selection/BoxSelectAction.hpp
+                           include/ogl/selection/SelectionLogger.hpp
 )
-set(ogl_selection_sources src/PlaceholderSelectionResult.cpp src/SelectionComponentRegistration.cpp)
+set(ogl_selection_sources src/SelectionResult.cpp src/SelectionComponentRegistration.cpp
+                          src/PickEntityAction.cpp src/BoxSelectAction.cpp)
 
 add_library(
   ogl_selection ${OPENGEOLAB_LIBRARY_TYPE} ${ogl_selection_headers} ${ogl_selection_sources}

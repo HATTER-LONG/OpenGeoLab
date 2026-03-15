@@ -1,0 +1,7 @@
+add_executable(opengeolab_render_smoke_test test_render.cpp)
+
+target_compile_features(opengeolab_render_smoke_test PRIVATE cxx_std_20)
+
+target_link_libraries(opengeolab_render_smoke_test PRIVATE Catch2::Catch2WithMain ogl_render)
+
+add_test(NAME opengeolab_render_smoke_test COMMAND opengeolab_render_smoke_test)

@@ -6,36 +6,40 @@ namespace py = pybind11;
 
 namespace {
 
-auto parseJsonOrEmpty(const std::string& params_json) -> nlohmann::json {
-    if(params_json.empty()) {
+auto parsePythonJsonArgument(const py::object& value) -> nlohmann::json {
+    if(value.is_none()) {
         return nlohmann::json::object();
     }
-    return nlohmann::json::parse(params_json);
+
+    if(py::isinstance<py::str>(value)) {
+        const auto params_json = value.cast<std::string>();
+        return params_json.empty() ? nlohmann::json::object() : nlohmann::json::parse(params_json);
+    }
+
+    const auto json_module = py::module_::import("json");
+    return nlohmann::json::parse(json_module.attr("dumps")(value).cast<std::string>());
 }
 
 } // namespace
 
 PYBIND11_MODULE(opengeolab, module) {
-    module.doc() = "OpenGeoLab placeholder Python bridge for modular component routing";
+    module.doc() = "OpenGeoLab Python bridge for modular component routing";
 
     py::class_<OGL::PythonWrapper::OpenGeoLabPythonBridge>(module, "OpenGeoLabPythonBridge")
         .def(py::init<>())
         .def(
-            "call",
+            "process",
             [](const OGL::PythonWrapper::OpenGeoLabPythonBridge& bridge,
-               const std::string& module_name, const std::string& params_json) {
-                return bridge.call(module_name, parseJsonOrEmpty(params_json)).dump(2);
+               const py::object& request) {
+                return bridge.process(parsePythonJsonArgument(request)).dump(2);
             },
-            py::arg("module_name"), py::arg("params_json") = "{}")
-        .def("suggest_placeholder_geometry_script",
-             &OGL::PythonWrapper::OpenGeoLabPythonBridge::suggestPlaceholderGeometryScript,
-             py::arg("model_name") = "Bracket_A01", py::arg("body_count") = 3);
+            py::arg("request"));
 
     module.def(
-        "call",
-        [](const std::string& module_name, const std::string& params_json) {
+        "process",
+        [](const py::object& request) {
             OGL::PythonWrapper::OpenGeoLabPythonBridge bridge;
-            return bridge.call(module_name, parseJsonOrEmpty(params_json)).dump(2);
+            return bridge.process(parsePythonJsonArgument(request)).dump(2);
         },
-        py::arg("module_name"), py::arg("params_json") = "{}");
+        py::arg("request"));
 }

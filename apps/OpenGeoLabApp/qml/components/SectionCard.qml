@@ -12,6 +12,7 @@ Rectangle {
     property int introDelay: 0
     default property alias contentData: contentColumn.data
 
+    implicitHeight: cardColumn.implicitHeight + 32
     radius: theme.radiusMedium
     color: theme.surfaceMuted
     border.width: 1
@@ -58,6 +59,8 @@ Rectangle {
     }
 
     Column {
+        id: cardColumn
+
         anchors.fill: parent
         anchors.margins: 16
         spacing: 12

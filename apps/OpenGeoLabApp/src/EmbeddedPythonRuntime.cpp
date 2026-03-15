@@ -7,6 +7,8 @@
 #include <ogl/app/OpenGeoLabController.hpp>
 
 #include <QCoreApplication>
+#include <QDir>
+#include <QFileInfo>
 
 #include <nlohmann/json.hpp>
 
@@ -53,6 +55,25 @@ auto buildExecutionGlobals() -> py::dict {
     return globals;
 }
 
+void prependSysPathIfExists(const QString& path) {
+    const QString normalized_path = QDir::cleanPath(path);
+    const QFileInfo candidate_info(normalized_path);
+    if(!candidate_info.exists()) {
+        return;
+    }
+
+    auto sys = py::module_::import("sys");
+    py::list sys_path = sys.attr("path");
+    const std::string path_value = normalized_path.toStdString();
+    for(const auto& entry : sys_path) {
+        if(py::str(entry).cast<std::string>() == path_value) {
+            return;
+        }
+    }
+
+    sys_path.attr("insert")(0, path_value);
+}
+
 struct ActiveControllerScope {
     explicit ActiveControllerScope(OGL::App::OpenGeoLabController& controller)
         : previous(active_controller_instance) {
@@ -72,20 +93,12 @@ void ensureEmbeddedInterpreterStarted() {
 PYBIND11_EMBEDDED_MODULE(opengeolab_app, module) {
     module.doc() = "Embedded OpenGeoLab application control API";
 
-    const auto call_command = [](const std::string& module_name, const py::object& params) {
-        return toPythonJson(activeController().executeCommand(
-            module_name, parsePythonJsonArgument(params), "embedded-python"));
+    const auto process_request = [](const py::object& request) {
+        return toPythonJson(
+            activeController().executeCommand(parsePythonJsonArgument(request), "embedded-python"));
     };
 
-    module.def("call", call_command, py::arg("module_name"), py::arg("params") = py::dict());
-    module.def("run_command", call_command, py::arg("module_name"), py::arg("params") = py::dict());
-
-    module.def("replay_commands",
-               []() { return toPythonJson(activeController().replayRecordedCommandsJson()); });
-    module.def("clear_commands",
-               []() { return toPythonJson(activeController().clearRecordedCommandsJson()); });
-    module.def("get_state",
-               []() { return toPythonJson(activeController().applicationStateJson()); });
+    module.def("process", process_request, py::arg("request"));
 }
 
 } // namespace
@@ -96,17 +109,24 @@ class EmbeddedPythonRuntime::Impl {
 public:
     explicit Impl(OpenGeoLabController& controller) : m_controller(controller) {
         ensureEmbeddedInterpreterStarted();
-        auto sys = py::module_::import("sys");
-        sys.attr("path").attr("insert")(0, QCoreApplication::applicationDirPath().toStdString());
+        py::gil_scoped_acquire gil;
+        const QString application_dir = QCoreApplication::applicationDirPath();
+        prependSysPathIfExists(application_dir);
+        prependSysPathIfExists(QDir(application_dir).filePath(QStringLiteral("../lib/python")));
+        m_replGlobals = std::make_unique<py::dict>(buildExecutionGlobals());
     }
 
-    ~Impl() = default;
+    ~Impl() {
+        py::gil_scoped_acquire gil;
+        m_replGlobals.reset();
+    }
 
     auto executeScript(const std::string& script) -> std::string {
         ActiveControllerScope active_scope(m_controller);
         std::ostringstream output;
 
         try {
+            py::gil_scoped_acquire gil;
             auto sys = py::module_::import("sys");
             py::scoped_ostream_redirect stdout_redirect(output, sys.attr("stdout"));
             py::scoped_estream_redirect stderr_redirect(output, sys.attr("stderr"));
@@ -125,15 +145,15 @@ public:
         std::string expression_result;
 
         try {
+            py::gil_scoped_acquire gil;
             auto sys = py::module_::import("sys");
             auto builtins = py::module_::import("builtins");
             py::scoped_ostream_redirect stdout_redirect(output, sys.attr("stdout"));
             py::scoped_estream_redirect stderr_redirect(output, sys.attr("stderr"));
-            py::dict globals = buildExecutionGlobals();
 
             try {
                 auto code = builtins.attr("compile")(command_line, "<opengeolab-cli>", "eval");
-                py::object value = builtins.attr("eval")(code, globals, globals);
+                py::object value = builtins.attr("eval")(code, *m_replGlobals, *m_replGlobals);
                 if(!value.is_none()) {
                     expression_result = py::repr(value).cast<std::string>();
                 }
@@ -144,7 +164,7 @@ public:
 
                 PyErr_Clear();
                 auto code = builtins.attr("compile")(command_line, "<opengeolab-cli>", "exec");
-                builtins.attr("exec")(code, globals, globals);
+                builtins.attr("exec")(code, *m_replGlobals, *m_replGlobals);
             }
         } catch(const py::error_already_set& error) {
             output << error.what();
@@ -155,6 +175,7 @@ public:
 
 private:
     OpenGeoLabController& m_controller;
+    std::unique_ptr<py::dict> m_replGlobals;
 };
 
 EmbeddedPythonRuntime::EmbeddedPythonRuntime(OpenGeoLabController& controller)

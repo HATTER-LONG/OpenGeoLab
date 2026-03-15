@@ -16,8 +16,9 @@
 namespace OGL::Command {
 
 struct OGL_COMMAND_EXPORT CommandRequest {
-    std::string moduleName;
-    nlohmann::json params = nlohmann::json::object();
+    std::string module;
+    std::string action;
+    nlohmann::json param = nlohmann::json::object();
 
     [[nodiscard]] auto toJson() const -> nlohmann::json;
 };
@@ -42,7 +43,9 @@ class OGL_COMMAND_EXPORT CommandService {
 public:
     CommandService();
 
-    [[nodiscard]] auto execute(const CommandRequest& request) const -> OGL::Core::ServiceResponse;
+    [[nodiscard]] auto execute(const CommandRequest& request,
+                               const OGL::Core::ProgressCallback& progress_callback = {}) const
+        -> OGL::Core::ServiceResponse;
 
     [[nodiscard]] static auto exportPythonScript(const std::vector<CommandRequest>& requests)
         -> std::string;
@@ -52,7 +55,9 @@ class OGL_COMMAND_EXPORT CommandRecorder {
 public:
     CommandRecorder();
 
-    auto execute(const CommandRequest& request) -> OGL::Core::ServiceResponse;
+    auto execute(const CommandRequest& request,
+                 const OGL::Core::ProgressCallback& progress_callback = {})
+        -> OGL::Core::ServiceResponse;
     [[nodiscard]] auto replayAll() const -> ReplayReport;
     void clear();
 

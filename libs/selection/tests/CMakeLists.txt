@@ -1,4 +1,4 @@
-add_executable(opengeolab_selection_smoke_test test_placeholder_selection.cpp)
+add_executable(opengeolab_selection_smoke_test test_selection.cpp)
 
 target_compile_features(opengeolab_selection_smoke_test PRIVATE cxx_std_20)
 
