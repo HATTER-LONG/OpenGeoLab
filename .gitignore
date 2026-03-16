@@ -88,9 +88,11 @@ CMakeLists.txt.user*
 .cache
 
 .qmlls.ini
+/docs/superpowers/
 
 openglunderqml
 __cmake_*
 *.vs
 
 out
+.worktrees/

@@ -31,8 +31,10 @@ applyTo: '**/*.md,libs/**/*.{h,hpp,c,cc,cpp,cxx},apps/**/*.{h,hpp,c,cc,cpp,cxx},
 - Keep repository docs actionable.
 - Use tables or short lists when describing module responsibilities, dependency rules, or workflow steps.
 - When documenting architecture, distinguish current implementation from target architecture if the repository is still evolving.
+- When documenting service APIs or workflow entry points, use the canonical `{ module, action, param }` request envelope and clarify whether the example targets QML/controller, embedded Python, or the external pybind bridge.
+- Update bilingual or paired docs together when both files describe the same architecture snapshot.
 
 ## Examples
 
-- Examples should reflect OpenGeoLab workflows such as geometry import, mesh generation, command replay, or Python automation.
+- Examples should reflect OpenGeoLab workflows such as geometry create/inspect, scene/render/selection requests, command replay/export, or Python automation through `process(request)`.
 - Favor realistic snippets over generic placeholder code.

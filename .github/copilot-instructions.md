@@ -20,10 +20,10 @@ applyTo: '**'
 
 ## `ask_user` 调用要求
 
+- 你要给我一项用户输入的选择项
 - 问题必须与当前任务上下文直接相关
 - 问题必须具体、可操作，不要问泛泛的"还需要什么帮助"
 - 可以提供选项供用户选择，降低用户输入成本
-- 需要一项用户输入的选择项
 
 ## 项目概况
 
@@ -60,23 +60,28 @@ OpenGeoLab 是一个面向 CAE 前处理场景的软件平台，目标能力包�
 - `libs/command`
 - `python/python_wrapper`
 
-当前已经落地两条占位链路：
+当前已经稳定的几条主链路：
 
-- geometry：QML UI -> app controller -> Python bridge -> Kangaroo component -> geometry lib
-- interaction：selection request -> geometry -> scene -> render -> selection
+- QML request：`ActionRegistry` / `RibbonConfig` / feature page -> `OpenGeoLabController` -> `CommandRecorder` / `CommandService` -> `ComponentRequestDispatcher` -> `<module>` service -> `<action>` factory
+- embedded Python：`opengeolab_app.process(request)` -> `OpenGeoLabController` -> 同一条 command / dispatcher / module-action 链路
+- external Python：`opengeolab.process(request)` 或 `OpenGeoLabPythonBridge.process(request)` -> `CommandService` -> 同一条 module-action 链路
+- runtime feedback：module/app logger -> `QmlSpdlogSink` -> `OperationLogService` / `OperationLogModel` -> Activity Center Events / Command Line
 
 遗留的顶层 `include/`、`src/`、`test/` 结构不再是新增代码落点。新增实现应继续收敛到现有模块目录，避免把临时过渡方案固化成长期耦合。
 
 ## 架构约束
 
-- 所有功能模块优先通过 Kangaroo ComponentFactory 暴露服务能力。
-- 用户可见操作优先走命令系统，支持 undo / redo 和脚本记录。
+- 所有功能模块优先通过 Kangaroo ComponentFactory 暴露 service 与 action factory；新增用户可见能力优先落到 concrete action。
+- service 请求统一使用 `{ module, action, param }` JSON 信封，`param` 必须是 object。
+- 用户可见操作优先走命令系统；当前至少保持 record / replay / export 一致性，并为后续 undo / redo 预留契约。
 - 渲染层不得直接依赖几何内核或网格内核；需要通过中间 RenderData 或等价转换层。
 - 避免循环依赖，尤其是 render、scene、geometry、mesh 之间。
 - 公共头文件放在 `libs/<module>/include/ogl/<module>/`。
 - 模块内单元测试放在 `libs/<module>/tests/`，仅跨模块场景保留顶层集成测试目录。
 - 首方库需要兼容静态库与动态库构建，公共 API 必须通过导出头处理 Windows/MSVC 符号导出。
-- Python 接口暴露高层操作，不泄漏底层 OCC / Gmsh 细节到脚本层。
+- `OpenGeoLabController` 只保留通用 request 接口；QML 负责组装业务 JSON，不在 controller 中继续堆业务专用槽函数。
+- Activity / operation log 统一走 module logger + QML sink 管线，不要绕开 `ModuleLogger` / `AppLogger` 自建散乱日志出口。
+- Python 接口优先暴露 `process(request)` 形式的高层操作，不泄漏底层 OCC / Gmsh 细节到脚本层。
 - 几何、网格、场景、选择、命令各模块的职责边界必须明确，不要混写。
 
 ## 编码与交互期望
@@ -84,6 +89,8 @@ OpenGeoLab 是一个面向 CAE 前处理场景的软件平台，目标能力包�
 - 优先修复根因，不做仅掩盖问题的表面补丁。
 - 保持实现可测试、可脚本化、可供 LLM 组合调用。
 - 新增公共 API 时同时考虑 C++ 调用者、QML 调用者、Python 调用者的边界。
+- 新增 QML 行为时优先更新 `ActionRegistry.qml`、`RibbonConfig.qml`、feature page 与 sidecar JS 逻辑，而不是把业务拼装塞回 `Main.qml`。
+- 新增 QML 页面、组件、脚本、图标或翻译字符串时，连同 app CMake、`qmldir` 和 translation TS 列表一起更新。
 - C++ 样式与命名以仓库根目录 `.clang-format` 和 `.clang-tidy` 为准。
 - C++ 命名空间使用大驼峰，例如 `OGL::Geometry`、`OGL::Render`。
 - 类的私有成员使用 `m_` + `camelBack`，struct 与其他公共数据成员保持 `camelBack`，不加 `m_` 前缀。
@@ -107,7 +114,7 @@ OpenGeoLab 是一个面向 CAE 前处理场景的软件平台，目标能力包�
 - 非平凡提交应补充正文，至少说明为什么改，以及关键约束或兼容性影响。
 - 避免无信息量提交信息，例如 `update files`、`fix bug`、`wip`、`temp`。
 - 示例：`refactor(architecture): split app and libs into modular subprojects`
-- 示例：`feat(selection): add placeholder screen-picking response model`
+- 示例：`feat(selection): add pick and box-select action components`
 
 ## 参考路径级 Instructions
 

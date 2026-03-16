@@ -31,7 +31,10 @@ applyTo: '**/CMakeLists.txt,cmake/**/*.cmake,cmake/**/*.cmake.in'
 
 - Use Qt target APIs consistently for executable and QML module setup.
 - Keep QML file lists explicit enough to make packaging and deploy behavior obvious.
+- Keep `QT_RESOURCE_ALIAS` entries explicit for new top-level QML files, components, sections, and helper JS files so the packaged module layout matches imports.
+- When adding shared QML components or sections, update the corresponding `qmldir` files alongside the app CMake lists.
 - When changing QML modules, also review install rules and deploy script behavior.
+- Keep translation source lists explicit and wire them through `qt_add_translations()` so `lupdate` / `lrelease` continue to cover the full QML surface.
 - Ensure new runtime dependencies are covered by install rules on supported platforms.
 - Changes to QML resources, plugins, or shared libraries must consider deployed layout, not only local builds.
 - Windows-specific runtime packaging changes should be reviewed with dependency copy behavior in mind.
