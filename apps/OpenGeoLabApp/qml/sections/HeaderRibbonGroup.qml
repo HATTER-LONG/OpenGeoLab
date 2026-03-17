@@ -17,22 +17,6 @@ Item {
 
     readonly property int actionCount: groupData.actions ? groupData.actions.length : 0
 
-    function accentColor(name) {
-        if (name === "accentB") {
-            return theme.accentB;
-        }
-        if (name === "accentC") {
-            return theme.accentC;
-        }
-        if (name === "accentD") {
-            return theme.accentD;
-        }
-        if (name === "accentE") {
-            return theme.accentE;
-        }
-        return theme.accentA;
-    }
-
     width: Math.max(actionRow.implicitWidth + 20, actionCount * buttonSize + 20)
     height: parent ? parent.height : implicitHeight
 
@@ -64,8 +48,7 @@ Item {
                     theme: groupRoot.theme
                     title: modelData.title
                     iconKind: modelData.icon
-                    accentOne: groupRoot.accentColor(modelData.accentOne)
-                    accentTwo: groupRoot.accentColor(modelData.accentTwo)
+                    accentPair: groupRoot.theme.resolveRibbonAccentPair(modelData.accentOne)
                     onClicked: groupRoot.triggerAction(modelData.key)
                 }
             }

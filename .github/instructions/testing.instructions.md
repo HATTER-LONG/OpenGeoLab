@@ -32,7 +32,7 @@ applyTo: 'libs/**/tests/**/*,**/*test*.{c,cc,cpp,cxx,py}'
 ## Build Integration
 
 - Respect the existing `ENABLE_TEST` switch.
-- Place unit and smoke tests next to the owning library in `libs/<module>/tests/`.
+- Place unit tests next to the owning library in `libs/<module>/tests/`.
 - Do not force tests to require the full application startup path unless the scenario genuinely needs it.
 
 ## Validation

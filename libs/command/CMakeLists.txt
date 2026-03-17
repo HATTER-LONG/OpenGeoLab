@@ -1,7 +1,8 @@
 include(GenerateExportHeader)
 
-set(ogl_command_headers include/ogl/command/CommandService.hpp)
-set(ogl_command_sources src/CommandService.cpp)
+set(ogl_command_headers include/ogl/command/CommandService.hpp
+                        include/ogl/command/RequestProtocol.hpp)
+set(ogl_command_sources src/CommandService.cpp src/RequestProtocol.cpp)
 
 add_library(ogl_command ${OPENGEOLAB_LIBRARY_TYPE} ${ogl_command_headers} ${ogl_command_sources})
 add_library(OGL::Command ALIAS ogl_command)

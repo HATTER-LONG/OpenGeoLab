@@ -1,10 +1,18 @@
-add_executable(opengeolab_python_smoke_test_host test_opengeolab_bridge_host.cpp)
+ogl_add_catch2_test(opengeolab_python_test_host
+  SOURCES test_opengeolab_bridge_host.cpp
+  LINKS   nlohmann_json::nlohmann_json pybind11::embed
+  CTEST_NAME opengeolab_python_test
+)
 
-target_compile_features(opengeolab_python_smoke_test_host PRIVATE cxx_std_20)
-target_compile_definitions(opengeolab_python_smoke_test_host PRIVATE Py_NO_LINK_LIB)
+ogl_add_catch2_test(opengeolab_python_interop_test
+  SOURCES test_python_json_interop.cpp
+  LINKS   OGL::PythonInterop pybind11::embed
+)
+
 target_compile_definitions(
-  opengeolab_python_smoke_test_host
-  PRIVATE OPENGEOLAB_PYTHON_TEST_MODULE_DIR="$<TARGET_FILE_DIR:opengeolab>"
+  opengeolab_python_test_host
+  PRIVATE Py_NO_LINK_LIB
+          OPENGEOLAB_PYTHON_TEST_MODULE_DIR="$<TARGET_FILE_DIR:opengeolab>"
           OPENGEOLAB_PYTHON_TEST_SCRIPT_PATH="${CMAKE_CURRENT_SOURCE_DIR}/test_opengeolab_bridge.py"
 )
 
@@ -14,14 +22,13 @@ if(NOT MSVC)
 endif()
 
 target_link_options(
-  opengeolab_python_smoke_test_host PRIVATE ${opengeolab_python_test_no_defaultlib_option}
+  opengeolab_python_test_host PRIVATE ${opengeolab_python_test_no_defaultlib_option}
 )
 
-target_link_libraries(
-  opengeolab_python_smoke_test_host PRIVATE Catch2::Catch2WithMain nlohmann_json::nlohmann_json
-                                            pybind11::embed
+target_compile_definitions(opengeolab_python_interop_test PRIVATE Py_NO_LINK_LIB)
+target_link_options(
+  opengeolab_python_interop_test PRIVATE ${opengeolab_python_test_no_defaultlib_option}
 )
 
-add_test(NAME opengeolab_python_smoke_test COMMAND opengeolab_python_smoke_test_host)
-
-set_target_properties(opengeolab_python_smoke_test_host PROPERTIES FOLDER python)
+set_target_properties(opengeolab_python_test_host PROPERTIES FOLDER python)
+set_target_properties(opengeolab_python_interop_test PROPERTIES FOLDER python)

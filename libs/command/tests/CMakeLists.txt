@@ -1,7 +1,9 @@
-add_executable(opengeolab_command_smoke_test test_command_recorder.cpp)
+ogl_add_catch2_test(opengeolab_command_test
+  SOURCES test_command.cpp
+  LINKS   ogl_command
+)
 
-target_compile_features(opengeolab_command_smoke_test PRIVATE cxx_std_20)
-
-target_link_libraries(opengeolab_command_smoke_test PRIVATE Catch2::Catch2WithMain ogl_command)
-
-add_test(NAME opengeolab_command_smoke_test COMMAND opengeolab_command_smoke_test)
+ogl_add_catch2_test(opengeolab_command_protocol_test
+  SOURCES test_request_protocol.cpp
+  LINKS   ogl_command
+)

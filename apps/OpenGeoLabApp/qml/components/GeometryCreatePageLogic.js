@@ -1,48 +1,50 @@
 .pragma library
 
-function allFields(pageState) {
+function allFields(positionFields, dimensionFields) {
     const fields = [];
-    if (pageState.positionFields) {
-        fields.push(...pageState.positionFields);
+    if (positionFields) {
+        fields.push(...positionFields);
     }
-    if (pageState.dimensionFields) {
-        fields.push(...pageState.dimensionFields);
+    if (dimensionFields) {
+        fields.push(...dimensionFields);
     }
     return fields;
 }
 
-function resetForm(pageState) {
-    const nextRequestSpec = pageState.requestSpec;
+function createInitialFormValues(requestSpec, positionFields, dimensionFields) {
     const nextValues = {
-        "modelName": nextRequestSpec ? nextRequestSpec.defaultName : ""
+        "modelName": requestSpec && requestSpec.defaultName ? requestSpec.defaultName : ""
     };
-    for (const field of allFields(pageState)) {
+    for (const field of allFields(positionFields, dimensionFields)) {
         nextValues[field.key] = field.defaultValue;
     }
-    pageState.formValues = nextValues;
-    pageState.axisValue = nextRequestSpec && nextRequestSpec.defaultAxis ? nextRequestSpec.defaultAxis : "Z";
+    return nextValues;
 }
 
-function fieldValue(pageState, fieldKey) {
-    if (!pageState.formValues || pageState.formValues[fieldKey] === undefined || pageState.formValues[fieldKey] === null) {
+function defaultAxis(requestSpec) {
+    return requestSpec && requestSpec.defaultAxis ? requestSpec.defaultAxis : "Z";
+}
+
+function fieldValue(formValues, fieldKey) {
+    if (!formValues || formValues[fieldKey] === undefined || formValues[fieldKey] === null) {
         return "";
     }
-    return String(pageState.formValues[fieldKey]);
+    return String(formValues[fieldKey]);
 }
 
-function setFieldValue(pageState, fieldKey, nextValue) {
-    const nextValues = Object.assign({}, pageState.formValues || {});
+function withFieldValue(formValues, fieldKey, nextValue) {
+    const nextValues = Object.assign({}, formValues || {});
     nextValues[fieldKey] = nextValue;
-    pageState.formValues = nextValues;
+    return nextValues;
 }
 
-function numericValue(pageState, fieldKey, fallbackValue) {
-    const parsedValue = Number(fieldValue(pageState, fieldKey));
+function numericValue(formValues, fieldKey, fallbackValue) {
+    const parsedValue = Number(fieldValue(formValues, fieldKey));
     return isFinite(parsedValue) ? parsedValue : fallbackValue;
 }
 
-function validateField(pageState, field) {
-    const rawValue = fieldValue(pageState, field.key).trim();
+function validateField(formValues, field) {
+    const rawValue = fieldValue(formValues, field.key).trim();
     const parsedValue = Number(rawValue);
     if (rawValue.length === 0 || !isFinite(parsedValue)) {
         return {
@@ -76,8 +78,8 @@ function assignPath(target, path, value) {
     current[path[path.length - 1]] = value;
 }
 
-function validateShapeSpecific(pageState, param) {
-    if (!pageState.requestSpec) {
+function validateShapeSpecific(requestSpec, param) {
+    if (!requestSpec) {
         return {
             "success": false,
             "fieldKey": "",
@@ -85,7 +87,7 @@ function validateShapeSpecific(pageState, param) {
         };
     }
 
-    if (pageState.requestSpec.shapeType === "torus" && param.minorRadius >= param.majorRadius) {
+    if (requestSpec.shapeType === "torus" && param.minorRadius >= param.majorRadius) {
         return {
             "success": false,
             "fieldKey": "minorRadius",
@@ -98,8 +100,8 @@ function validateShapeSpecific(pageState, param) {
     };
 }
 
-function buildValidatedRequest(pageState) {
-    if (!pageState.requestSpec) {
+function buildValidatedRequest(input) {
+    if (!input.requestSpec) {
         return {
             "success": false,
             "fieldKey": "",
@@ -107,26 +109,25 @@ function buildValidatedRequest(pageState) {
         };
     }
 
+    const trimmedModelName = fieldValue(input.formValues, "modelName").trim();
     const param = {
-        "modelName": fieldValue(pageState, "modelName").trim().length > 0
-            ? fieldValue(pageState, "modelName").trim()
-            : pageState.requestSpec.defaultName,
-        "source": pageState.requestSource
+        "modelName": trimmedModelName.length > 0 ? trimmedModelName : input.requestSpec.defaultName,
+        "source": input.requestSource
     };
 
-    for (const field of allFields(pageState)) {
-        const fieldResult = validateField(pageState, field);
+    for (const field of allFields(input.positionFields, input.dimensionFields)) {
+        const fieldResult = validateField(input.formValues, field);
         if (!fieldResult.success) {
             return fieldResult;
         }
         assignPath(param, field.path || [field.key], fieldResult.value);
     }
 
-    if (pageState.supportsAxis) {
-        param.axis = pageState.axisValue;
+    if (input.supportsAxis) {
+        param.axis = input.axisValue;
     }
 
-    const shapeValidation = validateShapeSpecific(pageState, param);
+    const shapeValidation = validateShapeSpecific(input.requestSpec, param);
     if (!shapeValidation.success) {
         return shapeValidation;
     }
@@ -134,20 +135,25 @@ function buildValidatedRequest(pageState) {
     return {
         "success": true,
         "request": {
-            "module": pageState.requestSpec.module,
-            "action": pageState.requestSpec.action,
+            "module": input.requestSpec.module,
+            "action": input.requestSpec.action,
             "param": param
         }
     };
 }
 
-function advisoryMessage(pageState) {
-    if (!pageState.requestSpec || pageState.requestSpec.shapeType !== "torus") {
+function requestJson(input) {
+    const result = buildValidatedRequest(input);
+    return result.success ? JSON.stringify(result.request) : "";
+}
+
+function advisoryMessage(requestSpec, formValues) {
+    if (!requestSpec || requestSpec.shapeType !== "torus") {
         return "";
     }
 
-    const majorRadius = numericValue(pageState, "majorRadius", NaN);
-    const minorRadius = numericValue(pageState, "minorRadius", NaN);
+    const majorRadius = numericValue(formValues, "majorRadius", NaN);
+    const minorRadius = numericValue(formValues, "minorRadius", NaN);
     if (!isFinite(majorRadius) || !isFinite(minorRadius)) {
         return "";
     }
@@ -161,15 +167,15 @@ function formatNumber(value) {
     return isFinite(value) ? value.toFixed(3) : "0.000";
 }
 
-function derivedMetrics(pageState) {
-    if (!pageState.requestSpec) {
+function derivedMetrics(requestSpec, formValues) {
+    if (!requestSpec) {
         return [];
     }
 
-    if (pageState.requestSpec.shapeType === "box") {
-        const sizeX = numericValue(pageState, "sizeX", 0.0);
-        const sizeY = numericValue(pageState, "sizeY", 0.0);
-        const sizeZ = numericValue(pageState, "sizeZ", 0.0);
+    if (requestSpec.shapeType === "box") {
+        const sizeX = numericValue(formValues, "sizeX", 0.0);
+        const sizeY = numericValue(formValues, "sizeY", 0.0);
+        const sizeZ = numericValue(formValues, "sizeZ", 0.0);
         const diagonal = Math.sqrt(sizeX * sizeX + sizeY * sizeY + sizeZ * sizeZ);
         return [
             {
@@ -185,9 +191,9 @@ function derivedMetrics(pageState) {
         ];
     }
 
-    if (pageState.requestSpec.shapeType === "cylinder") {
-        const radius = numericValue(pageState, "radius", 0.0);
-        const height = numericValue(pageState, "height", 0.0);
+    if (requestSpec.shapeType === "cylinder") {
+        const radius = numericValue(formValues, "radius", 0.0);
+        const height = numericValue(formValues, "height", 0.0);
         return [
             {
                 "label": qsTr("Volume"),
@@ -202,8 +208,8 @@ function derivedMetrics(pageState) {
         ];
     }
 
-    if (pageState.requestSpec.shapeType === "sphere") {
-        const radius = numericValue(pageState, "radius", 0.0);
+    if (requestSpec.shapeType === "sphere") {
+        const radius = numericValue(formValues, "radius", 0.0);
         return [
             {
                 "label": qsTr("Volume"),
@@ -223,8 +229,8 @@ function derivedMetrics(pageState) {
         ];
     }
 
-    const majorRadius = numericValue(pageState, "majorRadius", 0.0);
-    const minorRadius = numericValue(pageState, "minorRadius", 0.0);
+    const majorRadius = numericValue(formValues, "majorRadius", 0.0);
+    const minorRadius = numericValue(formValues, "minorRadius", 0.0);
     return [
         {
             "label": qsTr("Volume"),

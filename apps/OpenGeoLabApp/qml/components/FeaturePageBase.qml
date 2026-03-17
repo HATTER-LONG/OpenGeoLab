@@ -24,7 +24,7 @@ Item {
     property int minPanelHeight: 320
     property real preferredPanelX: -1
     property real preferredPanelY: -1
-    readonly property color accentColor: resolveAccentColor(accentName)
+    readonly property color accentColor: theme.resolveAccentColor(accentName)
     readonly property int panelMargin: theme.shellPadding
     readonly property int availablePanelWidth: Math.max(240, width - panelMargin * 2)
     readonly property int availablePanelHeight: Math.max(220, height - panelMargin * 2)
@@ -45,22 +45,6 @@ Item {
         const maxY = Math.max(panelMargin, height - panelHeight - panelMargin);
         panelX = Math.max(panelMargin, Math.min(maxX, panelX));
         panelY = Math.max(panelMargin, Math.min(maxY, panelY));
-    }
-
-    function resolveAccentColor(name) {
-        if (name === "accentB") {
-            return theme.accentB;
-        }
-        if (name === "accentC") {
-            return theme.accentC;
-        }
-        if (name === "accentD") {
-            return theme.accentD;
-        }
-        if (name === "accentE") {
-            return theme.accentE;
-        }
-        return theme.accentA;
     }
 
     function present() {

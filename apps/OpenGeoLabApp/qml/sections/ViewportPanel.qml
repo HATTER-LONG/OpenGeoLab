@@ -214,8 +214,7 @@ Rectangle {
                 theme: viewportPanel.theme
                 title: qsTr("View")
                 iconKind: "eye"
-                accentOne: viewportPanel.theme.accentA
-                accentTwo: viewportPanel.theme.accentC
+                accentPair: viewportPanel.theme.resolveRibbonAccentPair("accentA")
                 onClicked: viewportPanel.requestViewPage()
             }
         }

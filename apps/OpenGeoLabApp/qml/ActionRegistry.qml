@@ -3,6 +3,46 @@ pragma ComponentBehavior: Bound
 import QtQml
 
 QtObject {
+    function cloneValue(value) {
+        if (Array.isArray(value)) {
+            return value.map(function (entry) {
+                return cloneValue(entry);
+            });
+        }
+        if (value && typeof value === "object") {
+            const clone = {};
+            for (const key in value) {
+                clone[key] = cloneValue(value[key]);
+            }
+            return clone;
+        }
+        return value;
+    }
+
+    function isNonEmptyString(value) {
+        return typeof value === "string" && value.trim().length > 0;
+    }
+
+    function isObject(value) {
+        return value && typeof value === "object" && !Array.isArray(value);
+    }
+
+    function isValidPathSegment(segment) {
+        return isNonEmptyString(segment) && /^[A-Za-z_][A-Za-z0-9_]*$/.test(segment);
+    }
+
+    function isValidPath(path) {
+        if (!Array.isArray(path) || path.length === 0) {
+            return false;
+        }
+        for (let index = 0; index < path.length; ++index) {
+            if (!isValidPathSegment(path[index])) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     function createField(key, label, defaultValue, unit, positiveOnly, accent, path) {
         return {
             "key": key,
@@ -15,7 +55,15 @@ QtObject {
         };
     }
 
-    function createGeometryRequestSpec(action, shapeType, defaultName, positionTitle, positionFields, dimensionTitle, dimensionFields, axisOptions, defaultAxis) {
+    function createGeometryRequestSpec(action,
+                                       shapeType,
+                                       defaultName,
+                                       positionTitle,
+                                       positionFields,
+                                       dimensionTitle,
+                                       dimensionFields,
+                                       axisOptions,
+                                       defaultAxis) {
         return {
             "module": "geometry",
             "action": action,
@@ -30,8 +78,20 @@ QtObject {
         };
     }
 
-    function createAction(pageTitle, sectionTitle, icon, accent, summary, nextMilestone, focusPoints, workflowKind, requestSpec) {
+    function createActionDefinition(key,
+                                    ribbonTitle,
+                                    pageTitle,
+                                    sectionTitle,
+                                    icon,
+                                    accent,
+                                    summary,
+                                    nextMilestone,
+                                    focusPoints,
+                                    workflowKind,
+                                    requestSpec) {
         return {
+            "key": key,
+            "ribbonTitle": ribbonTitle,
             "pageTitle": pageTitle,
             "sectionTitle": sectionTitle,
             "icon": icon,
@@ -40,12 +100,190 @@ QtObject {
             "nextMilestone": nextMilestone,
             "focusPoints": focusPoints,
             "workflowKind": workflowKind || "generic",
-            "requestSpec": requestSpec || null
+            "requestSpec": requestSpec === undefined ? null : requestSpec
         };
     }
 
-    readonly property var actionDefinitions: ({
-        "importModel": createAction(
+    function validateField(field, fieldCollectionName, actionKey, index) {
+        const errors = [];
+        if (!isObject(field)) {
+            errors.push(qsTr("Field %1[%2] must be an object.").arg(fieldCollectionName).arg(index));
+            return errors;
+        }
+        if (!isNonEmptyString(field.key)) {
+            errors.push(qsTr("Field %1[%2] is missing a non-empty key.").arg(fieldCollectionName).arg(index));
+        }
+        if (!isNonEmptyString(field.label)) {
+            errors.push(qsTr("Field %1[%2] is missing a non-empty label.").arg(fieldCollectionName).arg(index));
+        }
+        if (!isValidPath(field.path)) {
+            errors.push(qsTr("Action '%1' field %2[%3] must use a non-empty object-key path.")
+                        .arg(actionKey)
+                        .arg(fieldCollectionName)
+                        .arg(index));
+        }
+        return errors;
+    }
+
+    function validateGeometryRequestSpec(actionKey, requestSpec) {
+        const errors = [];
+        if (!isObject(requestSpec)) {
+            return {
+                "errors": [qsTr("Action '%1' must provide a geometryCreate requestSpec object.")
+                            .arg(actionKey)],
+                "normalized": null
+            };
+        }
+
+        if (!isNonEmptyString(requestSpec.module)) {
+            errors.push(qsTr("Action '%1' requestSpec.module must be a non-empty string.").arg(actionKey));
+        }
+        if (!isNonEmptyString(requestSpec.action)) {
+            errors.push(qsTr("Action '%1' requestSpec.action must be a non-empty string.").arg(actionKey));
+        }
+        if (!isNonEmptyString(requestSpec.shapeType)) {
+            errors.push(qsTr("Action '%1' requestSpec.shapeType must be a non-empty string.").arg(actionKey));
+        }
+        if (!isNonEmptyString(requestSpec.defaultName)) {
+            errors.push(qsTr("Action '%1' requestSpec.defaultName must be a non-empty string.").arg(actionKey));
+        }
+        if (!isNonEmptyString(requestSpec.positionTitle)) {
+            errors.push(qsTr("Action '%1' requestSpec.positionTitle must be a non-empty string.").arg(actionKey));
+        }
+        if (!isNonEmptyString(requestSpec.dimensionTitle)) {
+            errors.push(qsTr("Action '%1' requestSpec.dimensionTitle must be a non-empty string.").arg(actionKey));
+        }
+        if (!Array.isArray(requestSpec.positionFields) || requestSpec.positionFields.length === 0) {
+            errors.push(qsTr("Action '%1' requestSpec.positionFields must contain at least one field.")
+                        .arg(actionKey));
+        }
+        if (!Array.isArray(requestSpec.dimensionFields) || requestSpec.dimensionFields.length === 0) {
+            errors.push(qsTr("Action '%1' requestSpec.dimensionFields must contain at least one field.")
+                        .arg(actionKey));
+        }
+
+        const positionFields = Array.isArray(requestSpec.positionFields) ? requestSpec.positionFields : [];
+        for (let index = 0; index < positionFields.length; ++index) {
+            errors.push.apply(errors, validateField(positionFields[index], "positionFields", actionKey, index));
+        }
+
+        const dimensionFields = Array.isArray(requestSpec.dimensionFields) ? requestSpec.dimensionFields : [];
+        for (let index = 0; index < dimensionFields.length; ++index) {
+            errors.push.apply(errors, validateField(dimensionFields[index], "dimensionFields", actionKey, index));
+        }
+
+        const axisOptions = Array.isArray(requestSpec.axisOptions) ? requestSpec.axisOptions : [];
+        for (let index = 0; index < axisOptions.length; ++index) {
+            if (!isNonEmptyString(axisOptions[index])) {
+                errors.push(qsTr("Action '%1' requestSpec.axisOptions[%2] must be a non-empty string.")
+                            .arg(actionKey)
+                            .arg(index));
+            }
+        }
+        if (axisOptions.length > 0 && axisOptions.indexOf(requestSpec.defaultAxis) === -1) {
+            errors.push(qsTr("Action '%1' requestSpec.defaultAxis must be present in axisOptions.")
+                        .arg(actionKey));
+        }
+
+        return {
+            "errors": errors,
+            "normalized": cloneValue({
+                "module": requestSpec.module,
+                "action": requestSpec.action,
+                "shapeType": requestSpec.shapeType,
+                "defaultName": requestSpec.defaultName,
+                "positionTitle": requestSpec.positionTitle,
+                "positionFields": positionFields,
+                "dimensionTitle": requestSpec.dimensionTitle,
+                "dimensionFields": dimensionFields,
+                "axisOptions": axisOptions,
+                "defaultAxis": requestSpec.defaultAxis
+            })
+        };
+    }
+
+    function validateActionDefinition(definition) {
+        const normalized = cloneValue(definition);
+        const errors = [];
+
+        if (!isNonEmptyString(normalized.key)) {
+            throw new Error("ActionRegistry requires every action definition to declare a non-empty key.");
+        }
+        if (!isNonEmptyString(normalized.ribbonTitle)) {
+            errors.push(qsTr("Action '%1' is missing a ribbonTitle.").arg(normalized.key));
+        }
+        if (!isNonEmptyString(normalized.pageTitle)) {
+            errors.push(qsTr("Action '%1' is missing a pageTitle.").arg(normalized.key));
+        }
+        if (!isNonEmptyString(normalized.sectionTitle)) {
+            errors.push(qsTr("Action '%1' is missing a sectionTitle.").arg(normalized.key));
+        }
+        if (!isNonEmptyString(normalized.icon)) {
+            errors.push(qsTr("Action '%1' is missing an icon.").arg(normalized.key));
+        }
+        if (!isNonEmptyString(normalized.accent)) {
+            errors.push(qsTr("Action '%1' is missing an accent.").arg(normalized.key));
+        }
+        if (!isNonEmptyString(normalized.summary)) {
+            errors.push(qsTr("Action '%1' is missing a summary.").arg(normalized.key));
+        }
+        if (!isNonEmptyString(normalized.nextMilestone)) {
+            errors.push(qsTr("Action '%1' is missing nextMilestone.").arg(normalized.key));
+        }
+        if (!Array.isArray(normalized.focusPoints) || normalized.focusPoints.length === 0) {
+            errors.push(qsTr("Action '%1' must provide at least one focus point.").arg(normalized.key));
+        }
+
+        if (normalized.workflowKind === "generic") {
+            if (normalized.requestSpec !== null) {
+                errors.push(qsTr("Action '%1' uses workflowKind 'generic' and must not provide requestSpec.")
+                            .arg(normalized.key));
+            }
+            normalized.requestSpec = null;
+        } else if (normalized.workflowKind === "geometryCreate") {
+            const validation = validateGeometryRequestSpec(normalized.key, normalized.requestSpec);
+            errors.push.apply(errors, validation.errors);
+            normalized.requestSpec = validation.normalized;
+        } else {
+            errors.push(qsTr("Action '%1' uses unsupported workflowKind '%2'.")
+                        .arg(normalized.key)
+                        .arg(normalized.workflowKind));
+        }
+
+        normalized.configError = errors.length > 0 ? errors.join(" ") : "";
+        return normalized;
+    }
+
+    function buildCatalogState(rawCatalog) {
+        const orderedDefinitions = [];
+        const lookup = {};
+        const seenKeys = {};
+
+        for (let index = 0; index < rawCatalog.length; ++index) {
+            const definition = rawCatalog[index];
+            if (!definition || !isNonEmptyString(definition.key)) {
+                throw new Error("ActionRegistry requires non-empty action keys in every catalog entry.");
+            }
+            if (seenKeys[definition.key]) {
+                throw new Error("ActionRegistry duplicate action key: " + definition.key);
+            }
+            seenKeys[definition.key] = true;
+
+            const validatedDefinition = validateActionDefinition(definition);
+            orderedDefinitions.push(validatedDefinition);
+            lookup[validatedDefinition.key] = validatedDefinition;
+        }
+
+        return {
+            "orderedDefinitions": orderedDefinitions,
+            "lookup": lookup
+        };
+    }
+
+    readonly property var rawCatalog: [
+        createActionDefinition(
+            "importModel",
+            qsTr("Import"),
             qsTr("Import Model"),
             qsTr("Workspace"),
             "import",
@@ -54,7 +292,9 @@ QtObject {
             qsTr("Planned later: source selection, format options, import diagnostics, and scene insertion preview."),
             [qsTr("Source file"), qsTr("Format options"), qsTr("Import diagnostics")]
         ),
-        "exportModel": createAction(
+        createActionDefinition(
+            "exportModel",
+            qsTr("Export"),
             qsTr("Export Model"),
             qsTr("Workspace"),
             "export",
@@ -63,7 +303,9 @@ QtObject {
             qsTr("Planned later: export scope, target format, version options, and result logging."),
             [qsTr("Selection scope"), qsTr("Target format"), qsTr("Export log")]
         ),
-        "toggleTheme": createAction(
+        createActionDefinition(
+            "toggleTheme",
+            qsTr("Theme"),
             qsTr("Theme Settings"),
             qsTr("Workspace"),
             "darkTheme",
@@ -72,7 +314,9 @@ QtObject {
             qsTr("Planned later: light and dark switching, contrast tuning, and persisted appearance preferences."),
             [qsTr("Theme preset"), qsTr("Contrast balance"), qsTr("Preference persistence")]
         ),
-        "recordSelection": createAction(
+        createActionDefinition(
+            "recordSelection",
+            qsTr("Record"),
             qsTr("Script Recorder"),
             qsTr("Script Recorder"),
             "record",
@@ -81,7 +325,9 @@ QtObject {
             qsTr("Planned later: session start/stop, event timeline review, and recorder diagnostics."),
             [qsTr("Capture actions"), qsTr("Timeline preview"), qsTr("Session notes")]
         ),
-        "replayCommands": createAction(
+        createActionDefinition(
+            "replayCommands",
+            qsTr("Replay"),
             qsTr("Replay Script"),
             qsTr("Script Recorder"),
             "replay",
@@ -90,7 +336,9 @@ QtObject {
             qsTr("Planned later: replay target selection, step control, and execution trace output."),
             [qsTr("Replay target"), qsTr("Step control"), qsTr("Execution trace")]
         ),
-        "exportScript": createAction(
+        createActionDefinition(
+            "exportScript",
+            qsTr("Export"),
             qsTr("Export Record"),
             qsTr("Script Recorder"),
             "exportRecord",
@@ -99,7 +347,9 @@ QtObject {
             qsTr("Planned later: script preview, destination selection, and export validation feedback."),
             [qsTr("Script preview"), qsTr("Destination path"), qsTr("Automation output")]
         ),
-        "clearRecordedCommands": createAction(
+        createActionDefinition(
+            "clearRecordedCommands",
+            qsTr("Clear"),
             qsTr("Clear Script History"),
             qsTr("Script Recorder"),
             "clear",
@@ -108,7 +358,9 @@ QtObject {
             qsTr("Planned later: clear-scope confirmation, snapshot backup, and post-clear recorder state."),
             [qsTr("History scope"), qsTr("Safety check"), qsTr("Recorder reset")]
         ),
-        "focusViewport": createAction(
+        createActionDefinition(
+            "focusViewport",
+            qsTr("Focus"),
             qsTr("Focus Viewport"),
             qsTr("Viewport Utilities"),
             "eye",
@@ -117,7 +369,9 @@ QtObject {
             qsTr("Planned later: camera focus targets, framing presets, and context-sensitive viewport feedback."),
             [qsTr("View framing"), qsTr("Selection focus"), qsTr("Camera state")]
         ),
-        "inspectPayload": createAction(
+        createActionDefinition(
+            "inspectPayload",
+            qsTr("Inspect"),
             qsTr("Inspect Payload"),
             qsTr("Viewport Utilities"),
             "query",
@@ -126,7 +380,9 @@ QtObject {
             qsTr("Planned later: structured payload tree, render packet inspection, and raw-response browsing."),
             [qsTr("Payload tree"), qsTr("Render data"), qsTr("Selection summary")]
         ),
-        "addBox": createAction(
+        createActionDefinition(
+            "addBox",
+            qsTr("Box"),
             qsTr("Create Box"),
             qsTr("Geometry / Create"),
             "box",
@@ -153,7 +409,9 @@ QtObject {
                 ]
             )
         ),
-        "addCylinder": createAction(
+        createActionDefinition(
+            "addCylinder",
+            qsTr("Cylinder"),
             qsTr("Create Cylinder"),
             qsTr("Geometry / Create"),
             "cylinder",
@@ -181,7 +439,9 @@ QtObject {
                 "Z"
             )
         ),
-        "addSphere": createAction(
+        createActionDefinition(
+            "addSphere",
+            qsTr("Sphere"),
             qsTr("Create Sphere"),
             qsTr("Geometry / Create"),
             "sphere",
@@ -206,7 +466,9 @@ QtObject {
                 ]
             )
         ),
-        "addTorus": createAction(
+        createActionDefinition(
+            "addTorus",
+            qsTr("Torus"),
             qsTr("Create Torus"),
             qsTr("Geometry / Create"),
             "torus",
@@ -234,7 +496,9 @@ QtObject {
                 "Z"
             )
         ),
-        "trim": createAction(
+        createActionDefinition(
+            "trim",
+            qsTr("Trim"),
             qsTr("Trim Geometry"),
             qsTr("Geometry / Modify"),
             "trim",
@@ -243,7 +507,9 @@ QtObject {
             qsTr("Planned later: target selection, trimming options, preview, and undo-friendly command execution."),
             [qsTr("Target selection"), qsTr("Trim options"), qsTr("Undo support")]
         ),
-        "offset": createAction(
+        createActionDefinition(
+            "offset",
+            qsTr("Offset"),
             qsTr("Offset Geometry"),
             qsTr("Geometry / Modify"),
             "offset",
@@ -252,7 +518,9 @@ QtObject {
             qsTr("Planned later: offset distance input, direction control, preview, and command replay integration."),
             [qsTr("Offset distance"), qsTr("Direction control"), qsTr("Preview result")]
         ),
-        "queryGeometry": createAction(
+        createActionDefinition(
+            "queryGeometry",
+            qsTr("Query"),
             qsTr("Geometry Query"),
             qsTr("Geometry / Inspect"),
             "query",
@@ -261,7 +529,9 @@ QtObject {
             qsTr("Planned later: entity picking, property tables, and structured result panels."),
             [qsTr("Entity picking"), qsTr("Property table"), qsTr("Result panel")]
         ),
-        "generateMesh": createAction(
+        createActionDefinition(
+            "generateMesh",
+            qsTr("Generate"),
             qsTr("Generate Mesh"),
             qsTr("Mesh / Generate"),
             "mesh",
@@ -270,7 +540,9 @@ QtObject {
             qsTr("Planned later: mesh size controls, algorithm presets, progress feedback, and mesh result preview."),
             [qsTr("Mesh size"), qsTr("Algorithm preset"), qsTr("Progress feedback")]
         ),
-        "smoothMesh": createAction(
+        createActionDefinition(
+            "smoothMesh",
+            qsTr("Smooth"),
             qsTr("Smooth Mesh"),
             qsTr("Mesh / Generate"),
             "smoothMesh",
@@ -279,7 +551,9 @@ QtObject {
             qsTr("Planned later: smoothing strategy selection, iteration control, and before/after quality feedback."),
             [qsTr("Smoothing strategy"), qsTr("Iteration control"), qsTr("Quality feedback")]
         ),
-        "queryMesh": createAction(
+        createActionDefinition(
+            "queryMesh",
+            qsTr("Query"),
             qsTr("Mesh Query"),
             qsTr("Mesh / Inspect"),
             "query",
@@ -288,7 +562,9 @@ QtObject {
             qsTr("Planned later: mesh picking, quality metrics, and issue-focused diagnostic panels."),
             [qsTr("Mesh picking"), qsTr("Quality metrics"), qsTr("Diagnostic panel")]
         ),
-        "aiSuggest": createAction(
+        createActionDefinition(
+            "aiSuggest",
+            qsTr("Suggest"),
             qsTr("AI Suggest"),
             qsTr("AI / Assist"),
             "aiSuggest",
@@ -297,7 +573,9 @@ QtObject {
             qsTr("Planned later: context-aware suggestions, intent shortcuts, and guided workflow recommendations."),
             [qsTr("Context hints"), qsTr("Intent shortcuts"), qsTr("Workflow recommendations")]
         ),
-        "aiChat": createAction(
+        createActionDefinition(
+            "aiChat",
+            qsTr("Chat"),
             qsTr("AI Chat"),
             qsTr("AI / Assist"),
             "aiChat",
@@ -306,25 +584,14 @@ QtObject {
             qsTr("Planned later: threaded chat history, model context injection, and command-oriented responses."),
             [qsTr("Threaded history"), qsTr("Model context"), qsTr("Actionable replies")]
         )
-    })
+    ]
+
+    readonly property var catalogState: buildCatalogState(rawCatalog)
+    readonly property var actionDefinitions: catalogState.orderedDefinitions
+    readonly property var actionLookup: catalogState.lookup
 
     function action(actionKey) {
-        const definition = actionDefinitions[actionKey];
-        if (!definition) {
-            return null;
-        }
-
-        return {
-            "key": actionKey,
-            "pageTitle": definition.pageTitle,
-            "sectionTitle": definition.sectionTitle,
-            "icon": definition.icon,
-            "accent": definition.accent,
-            "summary": definition.summary,
-            "nextMilestone": definition.nextMilestone,
-            "focusPoints": definition.focusPoints,
-            "workflowKind": definition.workflowKind,
-            "requestSpec": definition.requestSpec
-        };
+        const definition = actionLookup[actionKey];
+        return definition ? cloneValue(definition) : null;
     }
 }

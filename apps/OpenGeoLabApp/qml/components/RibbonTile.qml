@@ -9,8 +9,9 @@ Rectangle {
     required property AppTheme theme
     property string title: ""
     property string iconKind: "menu"
-    property color accentOne: theme.accentA
-    property color accentTwo: theme.accentB
+    required property var accentPair
+    readonly property color accentPrimary: accentPair.primary
+    readonly property color accentSecondary: accentPair.secondary
     readonly property color iconPrimaryColor: theme.textPrimary
     signal clicked
 
@@ -19,7 +20,7 @@ Rectangle {
     radius: 14
     color: mouseArea.pressed ? theme.tint(theme.surfaceStrong, theme.darkMode ? 0.94 : 0.98) : (mouseArea.containsMouse ? theme.tint(theme.surfaceMuted, theme.darkMode ? 0.9 : 0.96) : theme.tint(theme.surface, theme.darkMode ? 0.3 : 0.66))
     border.width: 1
-    border.color: mouseArea.containsMouse ? theme.tint(tile.accentOne, theme.darkMode ? 0.62 : 0.34) : theme.tint(theme.borderSubtle, theme.darkMode ? 0.88 : 0.72)
+    border.color: mouseArea.containsMouse ? tile.accentSecondary : theme.tint(theme.borderSubtle, theme.darkMode ? 0.88 : 0.72)
     scale: mouseArea.pressed ? 0.97 : (mouseArea.containsMouse ? 1.014 : 1.0)
 
     Behavior on color {
@@ -40,7 +41,7 @@ Rectangle {
         radius: parent.radius
         color: "transparent"
         border.width: mouseArea.containsMouse ? 1 : 0
-        border.color: tile.theme.tint(tile.accentTwo, tile.theme.darkMode ? 0.3 : 0.22)
+        border.color: tile.theme.tint(tile.accentSecondary, tile.theme.darkMode ? 0.3 : 0.22)
     }
 
     Rectangle {
@@ -57,15 +58,15 @@ Rectangle {
         bottomLeftRadius: 0
         bottomRightRadius: 0
         border.width: 1
-        border.color: tile.theme.tint(tile.accentTwo, mouseArea.containsMouse ? (tile.theme.darkMode ? 0.4 : 0.24) : (tile.theme.darkMode ? 0.24 : 0.14))
+        border.color: tile.theme.tint(tile.accentSecondary, mouseArea.containsMouse ? (tile.theme.darkMode ? 0.4 : 0.24) : (tile.theme.darkMode ? 0.24 : 0.14))
         gradient: Gradient {
             GradientStop {
                 position: 0.0
-                color: tile.theme.tint(tile.accentOne, mouseArea.containsMouse ? (tile.theme.darkMode ? 0.22 : 0.16) : (tile.theme.darkMode ? 0.14 : 0.1))
+                color: tile.theme.tint(tile.accentPrimary, mouseArea.containsMouse ? (tile.theme.darkMode ? 0.22 : 0.16) : (tile.theme.darkMode ? 0.14 : 0.1))
             }
             GradientStop {
                 position: 1.0
-                color: tile.theme.tint(tile.accentTwo, mouseArea.containsMouse ? (tile.theme.darkMode ? 0.18 : 0.12) : (tile.theme.darkMode ? 0.1 : 0.07))
+                color: tile.theme.tint(tile.accentSecondary, mouseArea.containsMouse ? (tile.theme.darkMode ? 0.18 : 0.12) : (tile.theme.darkMode ? 0.1 : 0.07))
             }
         }
     }
@@ -89,7 +90,7 @@ Rectangle {
                     anchors.centerIn: parent
                     color: tile.theme.tint(tile.theme.surface, tile.theme.darkMode ? 0.82 : 0.95)
                     border.width: 1
-                    border.color: tile.theme.tint(tile.accentOne, tile.theme.darkMode ? 0.44 : 0.24)
+                    border.color: tile.theme.tint(tile.accentPrimary, tile.theme.darkMode ? 0.44 : 0.24)
 
                     Rectangle {
                         anchors.fill: parent
@@ -97,7 +98,7 @@ Rectangle {
                         radius: 11
                         color: "transparent"
                         border.width: mouseArea.containsMouse ? 1 : 0
-                        border.color: tile.theme.tint(tile.accentTwo, tile.theme.darkMode ? 0.3 : 0.16)
+                        border.color: tile.theme.tint(tile.accentSecondary, tile.theme.darkMode ? 0.3 : 0.16)
                     }
 
                     AppIcon {

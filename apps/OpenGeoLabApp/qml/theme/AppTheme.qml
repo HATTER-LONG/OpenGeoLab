@@ -45,4 +45,26 @@ QtObject {
     function tint(colorValue, alphaValue) {
         return Qt.rgba(colorValue.r, colorValue.g, colorValue.b, alphaValue);
     }
+
+    function resolveAccentColor(name) {
+        if (name === "accentB") {
+            return accentB;
+        }
+        if (name === "accentC") {
+            return accentC;
+        }
+        if (name === "accentD") {
+            return accentD;
+        }
+        if (name === "accentE") {
+            return accentE;
+        }
+            return accentA;
+    }
+
+    function resolveRibbonAccentPair(name) {
+        const primaryColor = resolveAccentColor(name);
+        const secondaryColor = tint(primaryColor, darkMode ? 0.62 : 0.34);
+        return { primary: primaryColor, secondary: secondaryColor };
+    }
 }

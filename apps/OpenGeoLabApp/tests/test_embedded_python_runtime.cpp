@@ -24,7 +24,7 @@ namespace {
 
 auto ensureCoreApplication() -> QCoreApplication& {
     static int argc = 1;
-    static char app_name[] = "opengeolab_embedded_python_smoke_test";
+    static char app_name[] = "opengeolab_embedded_python_test";
     static char* argv[] = {app_name, nullptr};
     static QCoreApplication app(argc, argv);
     return app;
@@ -48,7 +48,7 @@ auto recordSelectionForTest(OGL::App::OpenGeoLabController& controller,
 
 } // namespace
 
-TEST_CASE("embedded python runtime drives the command recorder", "[app][python][smoke]") {
+TEST_CASE("embedded python runtime drives the command recorder", "[app][python]") {
     static_cast<void>(ensureCoreApplication());
 
     OGL::App::OpenGeoLabController controller;
@@ -93,8 +93,8 @@ TEST_CASE("embedded python command line evaluates expressions and statements",
     const auto recorded_response = recordSelectionForTest(controller);
     REQUIRE(recorded_response.value("success", false));
     CHECK(recorded_response.contains("summary"));
-    CHECK_FALSE(recorded_response.value("payload", nlohmann::json::object())
-                    .contains("equivalentPython"));
+    CHECK_FALSE(
+        recorded_response.value("payload", nlohmann::json::object()).contains("equivalentPython"));
     REQUIRE(controller.recordedCommandCount() == 1);
 
     controller.runEmbeddedPythonCommandLine(QStringLiteral(
@@ -109,6 +109,9 @@ TEST_CASE("embedded python command line evaluates expressions and statements",
         "'viewportHeight': 600, 'screenX': 96, 'screenY': 48}})"));
     CHECK(controller.lastPythonOutput().trimmed().contains(
         QStringLiteral("Python command completed without stdout/stderr.")));
+
+    controller.runEmbeddedPythonCommandLine(QStringLiteral("print('embedded-cli-tail')"));
+    CHECK(controller.lastPythonOutput().contains(QStringLiteral("embedded-cli-tail")));
     CHECK(controller.recordedCommandCount() == 3);
 }
 
@@ -328,6 +331,69 @@ TEST_CASE("recorder property signals can query cached state without re-locking",
     CHECK(count_signal_seen);
     CHECK(commands_signal_seen);
     CHECK(controller.recordedCommandCount() == 1);
+}
+
+TEST_CASE("controller invalid envelopes update visible request and failure state",
+          "[app][protocol][invalid]") {
+    static_cast<void>(ensureCoreApplication());
+
+    OGL::App::OpenGeoLabController controller;
+
+    SECTION("runServiceRequest echoes invalid request text and failure summary") {
+        const QString invalid_request = QStringLiteral(R"JSON({
+  "action": "buildScene",
+  "param": {}
+})JSON");
+
+        CHECK_FALSE(controller.runServiceRequest(invalid_request));
+        CHECK(controller.lastRequest().contains(QStringLiteral("\"action\": \"buildScene\"")));
+        CHECK(controller.lastSummary() == QStringLiteral("Request module cannot be empty."));
+        CHECK(controller.lastResponse().contains(QStringLiteral("\"success\": false")));
+        CHECK(controller.operationState() == QStringLiteral("error"));
+    }
+
+    SECTION("submitServiceRequest rejects invalid request and preserves request echo") {
+        int emitted_request_id = 0;
+        bool emitted_success = true;
+        QObject::connect(&controller, &OGL::App::OpenGeoLabController::serviceRequestFinished,
+                         &controller,
+                         [&emitted_request_id, &emitted_success](int requestId, bool success) {
+                             emitted_request_id = requestId;
+                             emitted_success = success;
+                         });
+
+        const QString invalid_request = QStringLiteral(R"JSON({
+  "module": "scene",
+  "action": "",
+  "param": null
+})JSON");
+
+        CHECK(controller.submitServiceRequest(invalid_request) < 0);
+        CHECK(controller.lastRequest().contains(QStringLiteral("\"module\": \"scene\"")));
+        CHECK(controller.lastSummary() == QStringLiteral("Request action cannot be empty."));
+        CHECK(controller.operationState() == QStringLiteral("error"));
+        CHECK(emitted_request_id == -1);
+        CHECK_FALSE(emitted_success);
+    }
+}
+
+TEST_CASE("embedded python normalizes missing param the same way as controller",
+          "[app][python][protocol]") {
+    static_cast<void>(ensureCoreApplication());
+
+    OGL::App::OpenGeoLabController controller;
+
+    REQUIRE(controller.runServiceRequest(
+        QStringLiteral(R"JSON({"module":"scene","action":"buildScene"})JSON")));
+    CHECK(controller.lastResponse().contains(QStringLiteral("\"success\": true")));
+
+    controller.runEmbeddedPython(QStringLiteral(
+        "import opengeolab_app\n"
+        "result = opengeolab_app.process({'module': 'scene', 'action': 'buildScene'})\n"
+        "print(result['success'])\n"));
+    CHECK(controller.lastModule() == QStringLiteral("scene"));
+    CHECK(controller.lastAction() == QStringLiteral("buildScene"));
+    CHECK(controller.lastResponse().contains(QStringLiteral("\"success\": true")));
 }
 
 TEST_CASE("controller activity logs carry visible source metadata", "[app][logging][controller]") {

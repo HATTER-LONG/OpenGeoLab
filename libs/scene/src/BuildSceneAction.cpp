@@ -1,38 +1,13 @@
 #include <ogl/scene/BuildSceneAction.hpp>
 
+#include <ogl/core/ActionExecutionUtilities.hpp>
 #include <ogl/geometry/GeometryModel.hpp>
 #include <ogl/scene/SceneGraph.hpp>
 #include <ogl/scene/SceneLogger.hpp>
 
-#include <sstream>
+#include <optional>
 
 namespace {
-
-auto reportProgress(const OGL::Core::ProgressCallback& progress_callback,
-                    double progress,
-                    const std::string& message) -> bool {
-    return !progress_callback || progress_callback(progress, message);
-}
-
-auto cancellationResponse(const OGL::Core::ServiceRequest& request, const std::string& message)
-    -> OGL::Core::ServiceResponse {
-    return {.success = false,
-            .module = request.module,
-            .action = request.action,
-            .message = message,
-            .payload = nlohmann::json::object()};
-}
-
-auto buildSceneEquivalentPython(const OGL::Core::ServiceRequest& request) -> std::string {
-    std::ostringstream script;
-    script << "import json\n";
-    script << "import opengeolab\n\n";
-    script << "bridge = opengeolab.OpenGeoLabPythonBridge()\n";
-    script << "request = json.loads(r'''" << request.toJson().dump(2) << "''')\n";
-    script << "result = bridge.process(request)\n";
-    script << "print(result)";
-    return script.str();
-}
 
 auto buildGeometryModel(const nlohmann::json& param) -> OGL::Geometry::GeometryModel {
     return OGL::Geometry::GeometryModel(
@@ -48,35 +23,43 @@ namespace OGL::Scene {
 auto BuildSceneAction::execute(const OGL::Core::ServiceRequest& request,
                                const OGL::Core::ProgressCallback& progress_callback)
     -> OGL::Core::ServiceResponse {
-    if(!reportProgress(progress_callback, 0.25, "Preparing geometry model for scene graph...")) {
-        return cancellationResponse(request, "Scene graph construction was cancelled.");
+    OGL::Core::ServiceResponse early_response;
+    std::optional<OGL::Geometry::GeometryModel> geometry_model;
+    std::optional<OGL::Scene::SceneGraph> scene_graph;
+
+    if(!OGL::Core::runProgressStage(
+           request, progress_callback, 0.25, "Preparing geometry model for scene graph...",
+           "Scene graph construction was cancelled.",
+           [&]() { geometry_model = buildGeometryModel(request.param); }, early_response)) {
+        return early_response;
     }
 
-    const auto geometry_model = buildGeometryModel(request.param);
-
-    if(!reportProgress(progress_callback, 0.7, "Building scene graph nodes...")) {
-        return cancellationResponse(request, "Scene graph construction was cancelled.");
+    if(!OGL::Core::runProgressStage(
+           request, progress_callback, 0.7, "Building scene graph nodes...",
+           "Scene graph construction was cancelled.",
+           [&]() {
+               scene_graph = buildSceneGraph(*geometry_model);
+               OGL_SCENE_LOG_INFO("Built scene graph sceneId={} nodeCount={}",
+                                  scene_graph->sceneId(), scene_graph->nodes().size());
+           },
+           early_response)) {
+        return early_response;
     }
 
-    const auto scene_graph = buildSceneGraph(geometry_model);
-    OGL_SCENE_LOG_INFO("Built scene graph sceneId={} nodeCount={}", scene_graph.sceneId(),
-                       scene_graph.nodes().size());
-
-    reportProgress(progress_callback, 0.95, "Scene graph completed.");
+    OGL::Core::reportProgress(progress_callback, 0.95, "Scene graph completed.");
 
     return {.success = true,
             .module = request.module,
             .action = request.action,
             .message = "Scene graph assembled from geometry model.",
             .payload = {
-                {"sceneGraph", scene_graph.toJson()},
-                {"summary", scene_graph.summary()},
+                {"sceneGraph", scene_graph->toJson()},
+                {"summary", scene_graph->summary()},
                 {"equivalentPython",
-                 buildSceneEquivalentPython({.module = request.module,
-                                             .action = BuildSceneAction::actionName(),
-                                             .param = request.param})},
+                 OGL::Core::buildEquivalentPythonSnippet({.module = request.module,
+                                                          .action = BuildSceneAction::actionName(),
+                                                          .param = request.param})},
             }};
 }
 
 } // namespace OGL::Scene
-

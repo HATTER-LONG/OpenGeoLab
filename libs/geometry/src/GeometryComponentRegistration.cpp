@@ -1,6 +1,6 @@
 #include <ogl/geometry/GeometryComponentRegistration.hpp>
 
-#include <ogl/core/IService.hpp>
+#include <ogl/core/ActionServiceRegistration.hpp>
 #include <ogl/geometry/CreateBoxAction.hpp>
 #include <ogl/geometry/CreateCylinderAction.hpp>
 #include <ogl/geometry/CreateSphereAction.hpp>
@@ -11,9 +11,7 @@
 
 #include <kangaroo/util/component_factory.hpp>
 
-#include <algorithm>
 #include <mutex>
-#include <sstream>
 #include <string>
 #include <vector>
 
@@ -27,93 +25,44 @@ auto supportedGeometryActions() -> std::vector<std::string> {
             OGL::Geometry::InspectModelAction::actionName()};
 }
 
-auto supportedGeometryActionSummary() -> std::string {
-    auto action_names = supportedGeometryActions();
-    std::sort(action_names.begin(), action_names.end());
-
-    std::ostringstream stream;
-    for(std::size_t index = 0; index < action_names.size(); ++index) {
-        if(index > 0) {
-            stream << ", ";
-        }
-        stream << action_names[index];
+struct GeometryLoggerHooks {
+    void onRegistered(const std::string& moduleName, const std::string& sortedActions) const {
+        OGL_GEOMETRY_LOG_INFO("Registered geometry service '{}' with actions: {}", moduleName,
+                              sortedActions);
     }
-    return stream.str();
-}
 
-auto unsupportedGeometryActionResponse(const OGL::Core::ServiceRequest& request)
-    -> OGL::Core::ServiceResponse {
-    return {
-        .success = false,
-        .module = request.module,
-        .action = request.action,
-        .message = "Unsupported geometry action. Registered actions: " +
-                   supportedGeometryActionSummary() + ".",
-        .payload = nlohmann::json::object(),
-    };
-}
+    void onDispatch(const std::string&, const std::string& actionName) const {
+        OGL_GEOMETRY_LOG_INFO("Dispatching geometry action={} through pluggable action component",
+                              actionName);
+    }
 
-class GeometryService final : public OGL::Core::IService {
-public:
-    auto processRequest(const OGL::Core::ServiceRequest& request,
-                        const OGL::Core::ProgressCallback& progress_callback)
-        -> OGL::Core::ServiceResponse override {
-        if(request.module != "geometry") {
-            return {
-                .success = false,
-                .module = request.module,
-                .action = request.action,
-                .message = "Geometry service only accepts the geometry module.",
-                .payload = nlohmann::json::object(),
-            };
-        }
+    void onFactoryNull(const std::string& moduleName, const std::string& actionName) const {
+        OGL_GEOMETRY_LOG_ERROR("{} action factory resolved a null action instance for action={}.",
+                               moduleName, actionName);
+    }
 
-        const auto action_id = request.action;
-        const auto supported_actions = supportedGeometryActions();
-        if(std::find(supported_actions.begin(), supported_actions.end(), action_id) ==
-           supported_actions.end()) {
-            return unsupportedGeometryActionResponse(request);
-        }
-
-        try {
-            auto action =
-                g_ComponentFactory.createObjectWithID<OGL::Geometry::GeometryActionFactory>(
-                    action_id);
-            if(!action) {
-                return {
-                    .success = false,
-                    .module = request.module,
-                    .action = request.action,
-                    .message = "Geometry action factory resolved a null action instance.",
-                    .payload = nlohmann::json::object(),
-                };
-            }
-
-            OGL_GEOMETRY_LOG_INFO(
-                "Dispatching geometry action={} through pluggable action component",
-                request.action);
-            return action->execute(request, progress_callback);
-        } catch(const std::exception& ex) {
-            OGL_GEOMETRY_LOG_ERROR("Geometry action={} failed during dispatch error={}",
-                                   request.action, ex.what());
-            return {
-                .success = false,
-                .module = request.module,
-                .action = request.action,
-                .message = ex.what(),
-                .payload = nlohmann::json::object(),
-            };
-        }
+    void
+    onError(const std::string&, const std::string& actionName, const std::string& errorText) const {
+        OGL_GEOMETRY_LOG_ERROR("Geometry action={} failed during dispatch error={}", actionName,
+                               errorText);
     }
 };
 
-class GeometryServiceFactory final : public OGL::Core::IServiceSingletonFactory {
-public:
-    auto instance() const -> tObjectSharedPtr override {
-        static auto service = std::make_shared<GeometryService>();
-        return service;
-    }
-};
+auto makeGeometryServiceRegistrationSpec()
+    -> OGL::Core::ActionServiceRegistrationSpec<OGL::Geometry::GeometryAction,
+                                                GeometryLoggerHooks> {
+    return {.moduleName = "geometry",
+            .supportedActions = supportedGeometryActions(),
+            .createActionById =
+                [](const std::string& actionId) -> std::shared_ptr<OGL::Geometry::GeometryAction> {
+                return g_ComponentFactory.createObjectWithID<OGL::Geometry::GeometryActionFactory>(
+                    actionId);
+            },
+            .loggerHooks = {}};
+}
+
+using GeometryServiceFactory =
+    OGL::Core::ActionServiceFactory<OGL::Geometry::GeometryAction, GeometryLoggerHooks>;
 
 } // namespace
 
@@ -122,7 +71,8 @@ namespace OGL::Geometry {
 void registerGeometryComponents() {
     static std::once_flag once;
     std::call_once(once, []() {
-        g_ComponentFactory.registInstanceFactoryWithID<GeometryServiceFactory>("geometry");
+        OGL::Core::registerActionService<GeometryServiceFactory>(
+            makeGeometryServiceRegistrationSpec());
         g_ComponentFactory.registFactoryWithID<InspectModelActionFactory>(
             InspectModelAction::actionName());
         g_ComponentFactory.registFactoryWithID<CreateBoxActionFactory>(
@@ -133,9 +83,6 @@ void registerGeometryComponents() {
             CreateSphereAction::actionName());
         g_ComponentFactory.registFactoryWithID<CreateTorusActionFactory>(
             CreateTorusAction::actionName());
-
-        OGL_GEOMETRY_LOG_INFO("Registered geometry service '{}' with actions: {}", "geometry",
-                              supportedGeometryActionSummary());
     });
 }
 

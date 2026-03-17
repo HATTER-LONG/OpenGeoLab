@@ -10,18 +10,19 @@
 #include <QObject>
 #include <QString>
 
-#include <ogl/command/CommandService.hpp>
-
 #include <nlohmann/json.hpp>
 
 #include <memory>
-#include <mutex>
 #include <source_location>
+#include <string>
 
 namespace OGL::App {
 
-class EmbeddedPythonRuntime;
 class OperationLogService;
+class OpenGeoLabRequestExecutor;
+class OpenGeoLabFeedbackCoordinator;
+class OpenGeoLabAutomationFacade;
+struct ControllerStateDelta;
 
 /**
  * @brief Thin application controller exposing generic protocol requests to QML and Python.
@@ -52,10 +53,6 @@ class OpenGeoLabController : public QObject {
                    hasUnreadOperationLogsChanged)
 
 public:
-    /**
-     * @brief Construct the UI-facing controller.
-     * @param parent Optional QObject parent.
-     */
     explicit OpenGeoLabController(QObject* parent = nullptr);
     ~OpenGeoLabController() override;
 
@@ -85,11 +82,6 @@ public:
     auto clearRecordedCommandsJson() -> nlohmann::json;
     [[nodiscard]] auto applicationStateJson() const -> nlohmann::json;
 
-    /**
-     * @brief Execute a generic request whose JSON contains module, action, and param.
-     * @param request_json Full request payload string passed from QML.
-     * @return True when the request finishes successfully.
-     */
     Q_INVOKABLE bool runServiceRequest(const QString& request_json);
     Q_INVOKABLE int submitServiceRequest(const QString& request_json);
     Q_INVOKABLE void markOperationLogSeen();
@@ -99,6 +91,10 @@ public:
     Q_INVOKABLE bool exportRecordedScript(const QString& file_path);
     Q_INVOKABLE void runEmbeddedPython(const QString& script);
     Q_INVOKABLE void runEmbeddedPythonCommandLine(const QString& command_line);
+    Q_INVOKABLE void postUiNotice(int level,
+                                  const QString& source,
+                                  const QString& message,
+                                  const QString& detail = QString());
 
 signals:
     void lastModuleChanged();
@@ -121,17 +117,10 @@ signals:
     void hasUnreadOperationLogsChanged();
 
 private:
-    auto executeParsedCommand(OGL::Command::CommandRequest request, const std::string& source)
-        -> nlohmann::json;
-    auto performCommandRequest(OGL::Command::CommandRequest request,
-                               const std::string& source,
-                               const OGL::Core::ProgressCallback& progress_callback)
-        -> nlohmann::json;
-    void beginOperation(const QString& scope, const QString& message);
-    void completeOperation(bool success,
-                           const QString& scope,
-                           const QString& message,
-                           const QString& detail = QString());
+    auto executeRequestEnvelope(const nlohmann::json& request_json,
+                                const QString& source,
+                                bool failIfAsyncActive) -> nlohmann::json;
+    void applyStateDelta(const ControllerStateDelta& delta);
     void appendOperationLog(int level,
                             const QString& source,
                             const QString& message,
@@ -142,13 +131,11 @@ private:
                               const QString& message,
                               const QString& state);
     void resetOperationFeed();
-    void updateFromResponse(const nlohmann::json& response);
-    void setLastRequestText(const nlohmann::json& request_json);
-    void updateRecorderState();
 
     std::unique_ptr<OperationLogService> m_operationLogService;
-    std::unique_ptr<OGL::Command::CommandRecorder> m_commandRecorder;
-    std::unique_ptr<EmbeddedPythonRuntime> m_embeddedPythonRuntime;
+    std::unique_ptr<OpenGeoLabRequestExecutor> m_requestExecutor;
+    std::unique_ptr<OpenGeoLabFeedbackCoordinator> m_feedbackCoordinator;
+    std::unique_ptr<OpenGeoLabAutomationFacade> m_automationFacade;
     QString m_lastModule;
     QString m_lastAction;
     QString m_lastRequest;
@@ -165,9 +152,6 @@ private:
     QString m_operationMessage;
     QString m_operationState = QStringLiteral("idle");
     bool m_suppressUiActivity = false;
-    bool m_asyncServiceRequestActive = false;
-    int m_nextAsyncRequestId = 1;
-    mutable std::mutex m_commandExecutionMutex;
 };
 
 } // namespace OGL::App

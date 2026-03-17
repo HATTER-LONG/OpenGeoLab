@@ -193,6 +193,8 @@ if(ENABLE_TEST)
     "CATCH_BUILD_TESTING OFF"
     "CATCH_INSTALL_DOCS OFF"
   )
+
+  include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/testing.cmake)
 endif()
 
 add_subdirectory(libs)

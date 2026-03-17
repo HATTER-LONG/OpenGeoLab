@@ -4,48 +4,29 @@
 #include <pybind11/eval.h>
 #include <pybind11/iostream.h>
 
-#include <ogl/app/OpenGeoLabController.hpp>
+#include <ogl/python_wrapper/PythonJsonInterop.hpp>
 
 #include <QCoreApplication>
 #include <QDir>
 #include <QFileInfo>
 
-#include <nlohmann/json.hpp>
-
 #include <sstream>
 #include <stdexcept>
+#include <utility>
 
 namespace py = pybind11;
 
 namespace {
 
-OGL::App::OpenGeoLabController* active_controller_instance = nullptr;
+OGL::App::EmbeddedPythonRuntime::ProcessRequestHandler* active_process_request_handler = nullptr;
 
-auto activeController() -> OGL::App::OpenGeoLabController& {
-    if(active_controller_instance == nullptr) {
+auto activeProcessRequestHandler() -> OGL::App::EmbeddedPythonRuntime::ProcessRequestHandler& {
+    if(active_process_request_handler == nullptr) {
         throw std::runtime_error(
-            "No active OpenGeoLab controller is bound to the embedded Python runtime.");
+            "No active OpenGeoLab request handler is bound to the embedded Python runtime.");
     }
 
-    return *active_controller_instance;
-}
-
-auto parsePythonJsonArgument(const py::object& value) -> nlohmann::json {
-    if(value.is_none()) {
-        return nlohmann::json::object();
-    }
-
-    if(py::isinstance<py::str>(value)) {
-        const auto params_json = value.cast<std::string>();
-        return params_json.empty() ? nlohmann::json::object() : nlohmann::json::parse(params_json);
-    }
-
-    const auto json_module = py::module_::import("json");
-    return nlohmann::json::parse(json_module.attr("dumps")(value).cast<std::string>());
-}
-
-auto toPythonJson(const nlohmann::json& value) -> py::object {
-    return py::module_::import("json").attr("loads")(value.dump());
+    return *active_process_request_handler;
 }
 
 auto buildExecutionGlobals() -> py::dict {
@@ -55,34 +36,65 @@ auto buildExecutionGlobals() -> py::dict {
     return globals;
 }
 
+class PythonIoCapture {
+public:
+    PythonIoCapture()
+        : m_stdoutHandle(py::module_::import("io").attr("StringIO")()),
+          m_stderrHandle(py::module_::import("io").attr("StringIO")()),
+          m_stdoutRedirect(
+              py::module_::import("contextlib").attr("redirect_stdout")(m_stdoutHandle)),
+          m_stderrRedirect(
+              py::module_::import("contextlib").attr("redirect_stderr")(m_stderrHandle)) {
+        m_stdoutRedirect.attr("__enter__")();
+        m_stderrRedirect.attr("__enter__")();
+    }
+
+    ~PythonIoCapture() {
+        m_stderrRedirect.attr("__exit__")(py::none(), py::none(), py::none());
+        m_stdoutRedirect.attr("__exit__")(py::none(), py::none(), py::none());
+    }
+
+    auto capturedText() const -> std::string {
+        return m_stdoutHandle.attr("getvalue")().cast<std::string>() +
+               m_stderrHandle.attr("getvalue")().cast<std::string>();
+    }
+
+private:
+    py::object m_stdoutHandle;
+    py::object m_stderrHandle;
+    py::object m_stdoutRedirect;
+    py::object m_stderrRedirect;
+};
+
 void prependSysPathIfExists(const QString& path) {
-    const QString normalized_path = QDir::cleanPath(path);
-    const QFileInfo candidate_info(normalized_path);
-    if(!candidate_info.exists()) {
+    const QString normalizedPath = QDir::cleanPath(path);
+    const QFileInfo candidateInfo(normalizedPath);
+    if(!candidateInfo.exists()) {
         return;
     }
 
     auto sys = py::module_::import("sys");
-    py::list sys_path = sys.attr("path");
-    const std::string path_value = normalized_path.toStdString();
-    for(const auto& entry : sys_path) {
-        if(py::str(entry).cast<std::string>() == path_value) {
+    py::list sysPath = sys.attr("path");
+    const std::string pathValue = normalizedPath.toStdString();
+    for(const auto& entry : sysPath) {
+        if(py::str(entry).cast<std::string>() == pathValue) {
             return;
         }
     }
 
-    sys_path.attr("insert")(0, path_value);
+    sysPath.attr("insert")(0, pathValue);
 }
 
-struct ActiveControllerScope {
-    explicit ActiveControllerScope(OGL::App::OpenGeoLabController& controller)
-        : previous(active_controller_instance) {
-        active_controller_instance = &controller;
+struct ActiveRequestHandlerScope {
+    explicit ActiveRequestHandlerScope(
+        OGL::App::EmbeddedPythonRuntime::ProcessRequestHandler& processRequest)
+        : previous(active_process_request_handler) {
+        active_process_request_handler = &processRequest;
     }
 
-    ~ActiveControllerScope() { active_controller_instance = previous; }
+    ~ActiveRequestHandlerScope() { active_process_request_handler = previous; }
 
-    OGL::App::OpenGeoLabController* previous;
+    OGL::App::EmbeddedPythonRuntime::ProcessRequestHandler* previous;
 };
 
 void ensureEmbeddedInterpreterStarted() {
@@ -93,12 +105,12 @@ void ensureEmbeddedInterpreterStarted() {
 PYBIND11_EMBEDDED_MODULE(opengeolab_app, module) {
     module.doc() = "Embedded OpenGeoLab application control API";
 
-    const auto process_request = [](const py::object& request) {
-        return toPythonJson(
-            activeController().executeCommand(parsePythonJsonArgument(request), "embedded-python"));
+    const auto processRequest = [](const py::object& request) {
+        return OGL::PythonWrapper::toPythonJson(
+            activeProcessRequestHandler()(OGL::PythonWrapper::parsePythonJsonArgument(request)));
     };
 
-    module.def("process", process_request, py::arg("request"));
+    module.def("process", processRequest, py::arg("request"));
 }
 
 } // namespace
@@ -107,12 +119,13 @@ namespace OGL::App {
 
 class EmbeddedPythonRuntime::Impl {
 public:
-    explicit Impl(OpenGeoLabController& controller) : m_controller(controller) {
+    explicit Impl(ProcessRequestHandler processRequestHandler)
+        : m_processRequestHandler(std::move(processRequestHandler)) {
         ensureEmbeddedInterpreterStarted();
         py::gil_scoped_acquire gil;
-        const QString application_dir = QCoreApplication::applicationDirPath();
-        prependSysPathIfExists(application_dir);
-        prependSysPathIfExists(QDir(application_dir).filePath(QStringLiteral("../lib/python")));
+        const QString applicationDir = QCoreApplication::applicationDirPath();
+        prependSysPathIfExists(applicationDir);
+        prependSysPathIfExists(QDir(applicationDir).filePath(QStringLiteral("../lib/python")));
         m_replGlobals = std::make_unique<py::dict>(buildExecutionGlobals());
     }
 
@@ -122,40 +135,34 @@ public:
     }
 
     auto executeScript(const std::string& script) -> std::string {
-        ActiveControllerScope active_scope(m_controller);
-        std::ostringstream output;
+        ActiveRequestHandlerScope activeScope(m_processRequestHandler);
+        py::gil_scoped_acquire gil;
+        PythonIoCapture capture;
 
         try {
-            py::gil_scoped_acquire gil;
-            auto sys = py::module_::import("sys");
-            py::scoped_ostream_redirect stdout_redirect(output, sys.attr("stdout"));
-            py::scoped_estream_redirect stderr_redirect(output, sys.attr("stderr"));
             py::dict globals = buildExecutionGlobals();
             py::exec(script, globals);
         } catch(const py::error_already_set& error) {
-            output << error.what();
+            return capture.capturedText() + error.what();
         }
 
-        return output.str();
+        return capture.capturedText();
     }
 
-    auto executeCommandLine(const std::string& command_line) -> std::string {
-        ActiveControllerScope active_scope(m_controller);
-        std::ostringstream output;
-        std::string expression_result;
+    auto executeCommandLine(const std::string& commandLine) -> std::string {
+        ActiveRequestHandlerScope activeScope(m_processRequestHandler);
+        py::gil_scoped_acquire gil;
+        PythonIoCapture capture;
+        std::string expressionResult;
 
         try {
-            py::gil_scoped_acquire gil;
-            auto sys = py::module_::import("sys");
             auto builtins = py::module_::import("builtins");
-            py::scoped_ostream_redirect stdout_redirect(output, sys.attr("stdout"));
-            py::scoped_estream_redirect stderr_redirect(output, sys.attr("stderr"));
 
             try {
-                auto code = builtins.attr("compile")(command_line, "<opengeolab-cli>", "eval");
+                auto code = builtins.attr("compile")(commandLine, "<opengeolab-cli>", "eval");
                 py::object value = builtins.attr("eval")(code, *m_replGlobals, *m_replGlobals);
                 if(!value.is_none()) {
-                    expression_result = py::repr(value).cast<std::string>();
+                    expressionResult = py::repr(value).cast<std::string>();
                 }
             } catch(py::error_already_set& error) {
                 if(!error.matches(PyExc_SyntaxError)) {
@@ -163,23 +170,23 @@ public:
                 }
 
                 PyErr_Clear();
-                auto code = builtins.attr("compile")(command_line, "<opengeolab-cli>", "exec");
+                auto code = builtins.attr("compile")(commandLine, "<opengeolab-cli>", "exec");
                 builtins.attr("exec")(code, *m_replGlobals, *m_replGlobals);
             }
         } catch(const py::error_already_set& error) {
-            output << error.what();
+            return capture.capturedText() + error.what();
         }
 
-        return expression_result.empty() ? output.str() : expression_result;
+        return expressionResult.empty() ? capture.capturedText() : expressionResult;
     }
 
 private:
-    OpenGeoLabController& m_controller;
+    ProcessRequestHandler m_processRequestHandler;
     std::unique_ptr<py::dict> m_replGlobals;
 };
 
-EmbeddedPythonRuntime::EmbeddedPythonRuntime(OpenGeoLabController& controller)
-    : m_impl(std::make_unique<Impl>(controller)) {}
+EmbeddedPythonRuntime::EmbeddedPythonRuntime(ProcessRequestHandler processRequestHandler)
+    : m_impl(std::make_unique<Impl>(std::move(processRequestHandler))) {}
 
 EmbeddedPythonRuntime::~EmbeddedPythonRuntime() = default;
 
@@ -187,8 +194,8 @@ auto EmbeddedPythonRuntime::executeScript(const std::string& script) -> std::str
     return m_impl->executeScript(script);
 }
 
-auto EmbeddedPythonRuntime::executeCommandLine(const std::string& command_line) -> std::string {
-    return m_impl->executeCommandLine(command_line);
+auto EmbeddedPythonRuntime::executeCommandLine(const std::string& commandLine) -> std::string {
+    return m_impl->executeCommandLine(commandLine);
 }
 
 } // namespace OGL::App

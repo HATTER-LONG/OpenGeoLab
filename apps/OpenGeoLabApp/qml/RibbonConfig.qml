@@ -7,127 +7,29 @@ QtObject {
     readonly property var groupsModel: [[
             {
                 "title": qsTr("Create"),
-                "actions": [
-                    {
-                        "key": "addBox",
-                        "title": qsTr("Box"),
-                        "icon": "box",
-                        "accentOne": "accentA",
-                        "accentTwo": "accentB"
-                    },
-                    {
-                        "key": "addCylinder",
-                        "title": qsTr("Cylinder"),
-                        "icon": "cylinder",
-                        "accentOne": "accentA",
-                        "accentTwo": "accentB"
-                    },
-                    {
-                        "key": "addSphere",
-                        "title": qsTr("Sphere"),
-                        "icon": "sphere",
-                        "accentOne": "accentA",
-                        "accentTwo": "accentB"
-                    },
-                    {
-                        "key": "addTorus",
-                        "title": qsTr("Torus"),
-                        "icon": "torus",
-                        "accentOne": "accentA",
-                        "accentTwo": "accentB"
-                    }
-                ]
+                "actionKeys": ["addBox", "addCylinder", "addSphere", "addTorus"]
             },
             {
                 "title": qsTr("Modify"),
-                "actions": [
-                    {
-                        "key": "trim",
-                        "title": qsTr("Trim"),
-                        "icon": "trim",
-                        "accentOne": "accentD",
-                        "accentTwo": "accentC"
-                    },
-                    {
-                        "key": "offset",
-                        "title": qsTr("Offset"),
-                        "icon": "offset",
-                        "accentOne": "accentD",
-                        "accentTwo": "accentD"
-                    }
-                ]
+                "actionKeys": ["trim", "offset"]
             },
             {
                 "title": qsTr("Inspect"),
-                "actions": [
-                    {
-                        "key": "queryGeometry",
-                        "title": qsTr("Query"),
-                        "icon": "query",
-                        "accentOne": "accentE",
-                        "accentTwo": "accentB"
-                    }
-                ]
+                "actionKeys": ["queryGeometry"]
             }
         ], [
             {
                 "title": qsTr("Mesh"),
-                "actions": [
-                    {
-                        "key": "generateMesh",
-                        "title": qsTr("Generate"),
-                        "icon": "mesh",
-                        "accentOne": "accentB",
-                        "accentTwo": "accentA"
-                    },
-                    {
-                        "key": "smoothMesh",
-                        "title": qsTr("Smooth"),
-                        "icon": "smoothMesh",
-                        "accentOne": "accentB",
-                        "accentTwo": "accentA"
-                    }
-                ]
+                "actionKeys": ["generateMesh", "smoothMesh"]
             },
             {
                 "title": qsTr("Inspect"),
-                "actions": [
-                    {
-                        "key": "queryMesh",
-                        "title": qsTr("Query"),
-                        "icon": "query",
-                        "accentOne": "accentC",
-                        "accentTwo": "accentA"
-                    }
-                ]
+                "actionKeys": ["queryMesh"]
             }
         ], [
             {
                 "title": qsTr("Assist"),
-                "actions": [
-                    {
-                        "key": "aiSuggest",
-                        "title": qsTr("Suggest"),
-                        "icon": "aiSuggest",
-                        "accentOne": "accentE",
-                        "accentTwo": "accentA"
-                    },
-                    {
-                        "key": "aiChat",
-                        "title": qsTr("Chat"),
-                        "icon": "aiChat",
-                        "accentOne": "accentE",
-                        "accentTwo": "accentA"
-                    }
-                ]
+                "actionKeys": ["aiSuggest", "aiChat"]
             }
         ]]
-
-    function groupsForTab(tabIndex) {
-        if (tabIndex < 0 || tabIndex >= groupsModel.length) {
-            return [];
-        }
-
-        return groupsModel[tabIndex];
-    }
 }

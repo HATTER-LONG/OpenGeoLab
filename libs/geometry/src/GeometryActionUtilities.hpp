@@ -1,10 +1,10 @@
 #pragma once
 
+#include <ogl/core/ActionExecutionUtilities.hpp>
 #include <ogl/geometry/GeometryLogger.hpp>
 #include <ogl/geometry/GeometryModel.hpp>
 
 #include <algorithm>
-#include <sstream>
 #include <string>
 
 namespace OGL::Geometry::Internal {
@@ -29,8 +29,7 @@ inline auto vectorValue(const nlohmann::json& object, const char* key, double fa
     return fallback;
 }
 
-inline auto buildDescriptor(const nlohmann::json& param)
-    -> OGL::Geometry::GeometryDescriptor {
+inline auto buildDescriptor(const nlohmann::json& param) -> OGL::Geometry::GeometryDescriptor {
     return {
         .modelName = param.value("modelName", std::string{"Bracket_A01"}),
         .bodyCount = param.value("bodyCount", 3),
@@ -125,19 +124,11 @@ inline auto normalizeTorusParam(const GeometryCreateSpec& create_spec, const nlo
 }
 
 inline auto buildEquivalentPython(const OGL::Core::ServiceRequest& request) -> std::string {
-    std::ostringstream script;
-    script << "import json\n";
-    script << "import opengeolab\n\n";
-    script << "bridge = opengeolab.OpenGeoLabPythonBridge()\n";
-    script << "request = json.loads(r'''" << request.toJson().dump(2) << "''')\n";
-    script << "result = bridge.process(request)\n";
-    script << "print(result)";
-    return script.str();
+    return OGL::Core::buildEquivalentPythonSnippet(request);
 }
 
 inline auto buildCreateSummary(const GeometryCreateSpec& create_spec,
-                               const OGL::Geometry::GeometryModel& model)
-    -> std::string {
+                               const OGL::Geometry::GeometryModel& model) -> std::string {
     return create_spec.shapeType + " request accepted for '" + model.modelName() + "' via " +
            model.source() + ".";
 }
@@ -186,18 +177,13 @@ inline auto buildInspectResponse(const OGL::Core::ServiceRequest& request,
 
 inline auto cancellationResponse(const OGL::Core::ServiceRequest& request,
                                  const std::string& message) -> OGL::Core::ServiceResponse {
-    return {.success = false,
-            .module = request.module,
-            .action = request.action,
-            .message = message,
-            .payload = nlohmann::json::object()};
+    return OGL::Core::buildCancellationResponse(request, message);
 }
 
 inline auto reportProgress(const OGL::Core::ProgressCallback& progress_callback,
                            double progress,
                            const std::string& message) -> bool {
-    return !progress_callback || progress_callback(progress, message);
+    return OGL::Core::reportProgress(progress_callback, progress, message);
 }
 
 } // namespace OGL::Geometry::Internal
-

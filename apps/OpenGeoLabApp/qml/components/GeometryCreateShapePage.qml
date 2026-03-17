@@ -23,14 +23,12 @@ Item {
         SectionCard {
             Layout.fillWidth: true
             theme: root.theme
-            title: qsTr("Shape Parameters")
-            subtitle: root.pageState.supportsAxis
-                ? qsTr("Define the primitive name and dimensions before confirming the creation direction.")
-                : qsTr("Define the primitive name and dimension values before execution.")
+            title: root.pageState.dimensionTitle
+            subtitle: qsTr("Define the primitive name and driving dimensions before execution.")
 
             GridLayout {
                 width: parent.width
-                columns: 3
+                columns: Math.max(1, Math.min(3, root.pageState.dimensionFields.length))
                 columnSpacing: 10
                 rowSpacing: 8
 
@@ -39,10 +37,12 @@ Item {
                     Layout.columnSpan: 3
                     theme: root.theme
                     label: qsTr("Model Name")
-                    value: root.pageState.modelNameValue
-                    placeholderText: root.pageState.requestSpec ? root.pageState.requestSpec.defaultName : ""
+                    value: root.pageState.fieldValue("modelName")
+                    placeholderText: root.pageState.requestSpec && root.pageState.requestSpec.defaultName ? root.pageState.requestSpec.defaultName : ""
+                    accentColor: root.theme.resolveAccentColor(root.pageState.accentName)
+                    showAccentMarker: true
                     onValueEdited: function (nextValue) {
-                        root.pageState.modelNameValue = nextValue;
+                        root.pageState.setEditedFieldValue("modelName", nextValue);
                     }
                 }
 
@@ -59,20 +59,15 @@ Item {
                         unit: modelData.unit
                         numeric: true
                         invalid: root.pageState.invalidFieldKey === modelData.key
+                        accentColor: root.theme.resolveAccentColor(modelData.accent ? modelData.accent : root.pageState.accentName)
+                        showAccentMarker: true
+                        placeholderText: modelData.defaultValue
                         onValueEdited: function (nextValue) {
                             root.pageState.setEditedFieldValue(modelData.key, nextValue);
                         }
                     }
                 }
             }
-        }
-
-        GeometryCreateOrientationSection {
-            Layout.fillWidth: true
-            theme: root.theme
-            pageState: root.pageState
-            title: qsTr("Direction")
-            subtitle: qsTr("Keep the creation axis visible on the setup page so directional primitives do not lose that control.")
         }
     }
 }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <ogl/core/ActionExecutionUtilities.hpp>
 #include <ogl/core/IService.hpp>
 #include <ogl/geometry/GeometryModel.hpp>
 #include <ogl/render/RenderFrame.hpp>
@@ -7,7 +8,7 @@
 #include <ogl/selection/SelectionLogger.hpp>
 #include <ogl/selection/SelectionResult.hpp>
 
-#include <sstream>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -17,32 +18,20 @@ namespace OGL::Selection::Internal {
 inline auto reportProgress(const OGL::Core::ProgressCallback& progress_callback,
                            double progress,
                            const std::string& message) -> bool {
-    return !progress_callback || progress_callback(progress, message);
+    return OGL::Core::reportProgress(progress_callback, progress, message);
 }
 
 inline auto cancellationResponse(const OGL::Core::ServiceRequest& request,
                                  const std::string& message) -> OGL::Core::ServiceResponse {
-    return {.success = false,
-            .module = request.module,
-            .action = request.action,
-            .message = message,
-            .payload = nlohmann::json::object()};
+    return OGL::Core::buildCancellationResponse(request, message);
 }
 
 inline auto buildSelectionEquivalentPython(const OGL::Core::ServiceRequest& request)
     -> std::string {
-    std::ostringstream script;
-    script << "import json\n";
-    script << "import opengeolab\n\n";
-    script << "bridge = opengeolab.OpenGeoLabPythonBridge()\n";
-    script << "request = json.loads(r'''" << request.toJson().dump(2) << "''')\n";
-    script << "result = bridge.process(request)\n";
-    script << "print(result)";
-    return script.str();
+    return OGL::Core::buildEquivalentPythonSnippet(request);
 }
 
-inline auto buildGeometryModel(const nlohmann::json& param)
-    -> OGL::Geometry::GeometryModel {
+inline auto buildGeometryModel(const nlohmann::json& param) -> OGL::Geometry::GeometryModel {
     return OGL::Geometry::GeometryModel(
         {.modelName = param.value("modelName", std::string{"Bracket_A01"}),
          .bodyCount = param.value("bodyCount", 3),
@@ -69,30 +58,46 @@ inline auto buildSelectionResponse(const OGL::Core::ServiceRequest& request,
                                    nlohmann::json normalized_param,
                                    const OGL::Core::ProgressCallback& progress_callback)
     -> OGL::Core::ServiceResponse {
-    if(!reportProgress(progress_callback, 0.2, "Building scene graph for selection...")) {
-        return cancellationResponse(request, "Selection request was cancelled.");
+    OGL::Core::ServiceResponse early_response;
+    std::optional<OGL::Geometry::GeometryModel> geometry_model;
+    std::optional<OGL::Scene::SceneGraph> scene_graph;
+    std::optional<OGL::Render::RenderFrame> render_frame;
+    std::optional<OGL::Selection::SelectionResult> selection_result;
+
+    if(!OGL::Core::runProgressStage(
+           request, progress_callback, 0.2, "Building scene graph for selection...",
+           "Selection request was cancelled.",
+           [&]() {
+               geometry_model = buildGeometryModel(normalized_param);
+               scene_graph = OGL::Scene::buildSceneGraph(*geometry_model);
+           },
+           early_response)) {
+        return early_response;
     }
 
-    const auto geometry_model = buildGeometryModel(normalized_param);
-    const auto scene_graph = OGL::Scene::buildSceneGraph(geometry_model);
-
-    if(!reportProgress(progress_callback, 0.55, "Building render frame for selection...")) {
-        return cancellationResponse(request, "Selection request was cancelled.");
+    if(!OGL::Core::runProgressStage(
+           request, progress_callback, 0.55, "Building render frame for selection...",
+           "Selection request was cancelled.",
+           [&]() { render_frame = OGL::Render::buildRenderFrame(*scene_graph, normalized_param); },
+           early_response)) {
+        return early_response;
     }
 
-    const auto render_frame = OGL::Render::buildRenderFrame(scene_graph, normalized_param);
-
-    if(!reportProgress(progress_callback, 0.85, "Evaluating selection hits...")) {
-        return cancellationResponse(request, "Selection request was cancelled.");
+    if(!OGL::Core::runProgressStage(
+           request, progress_callback, 0.85, "Evaluating selection hits...",
+           "Selection request was cancelled.",
+           [&]() {
+               selection_result =
+                   OGL::Selection::evaluateSelection(*scene_graph, *render_frame, normalized_param);
+           },
+           early_response)) {
+        return early_response;
     }
-
-    const auto selection_result = OGL::Selection::evaluateSelection(scene_graph, render_frame,
-                                                                    normalized_param);
 
     OGL_SELECTION_LOG_INFO("Resolved selection action={} mode={} hitCount={}", canonical_action,
-                           selection_result.mode(), selection_result.hits().size());
+                           selection_result->mode(), selection_result->hits().size());
 
-    const auto completion_message = selection_result.mode() == "box"
+    const auto completion_message = selection_result->mode() == "box"
                                         ? std::string{"Box selection completed."}
                                         : std::string{"Pick selection completed."};
     reportProgress(progress_callback, 0.95, completion_message);
@@ -102,10 +107,10 @@ inline auto buildSelectionResponse(const OGL::Core::ServiceRequest& request,
             .action = request.action,
             .message = "Selection completed through geometry, scene, and render data.",
             .payload = {
-                {"sceneGraph", scene_graph.toJson()},
-                {"renderFrame", render_frame.toJson()},
-                {"selectionResult", selection_result.toJson()},
-                {"summary", selection_result.summary()},
+                {"sceneGraph", scene_graph->toJson()},
+                {"renderFrame", render_frame->toJson()},
+                {"selectionResult", selection_result->toJson()},
+                {"summary", selection_result->summary()},
                 {"equivalentPython",
                  buildSelectionEquivalentPython({.module = request.module,
                                                  .action = std::string{canonical_action},
@@ -114,4 +119,3 @@ inline auto buildSelectionResponse(const OGL::Core::ServiceRequest& request,
 }
 
 } // namespace OGL::Selection::Internal
-

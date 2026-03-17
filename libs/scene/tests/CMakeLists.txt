@@ -1,7 +1,4 @@
-add_executable(opengeolab_scene_smoke_test test_scene.cpp)
-
-target_compile_features(opengeolab_scene_smoke_test PRIVATE cxx_std_20)
-
-target_link_libraries(opengeolab_scene_smoke_test PRIVATE Catch2::Catch2WithMain ogl_scene)
-
-add_test(NAME opengeolab_scene_smoke_test COMMAND opengeolab_scene_smoke_test)
+ogl_add_catch2_test(opengeolab_scene_test
+  SOURCES test_scene_graph.cpp test_scene_actions.cpp
+  LINKS   ogl_scene
+)

@@ -4,6 +4,23 @@ find_package(
   REQUIRED
 )
 
+set(opengeolab_python_interop_headers include/ogl/python_wrapper/PythonJsonInterop.hpp)
+set(opengeolab_python_interop_sources src/PythonJsonInterop.cpp)
+
+add_library(
+  opengeolab_python_interop STATIC ${opengeolab_python_interop_headers}
+                                ${opengeolab_python_interop_sources}
+)
+add_library(OGL::PythonInterop ALIAS opengeolab_python_interop)
+
+target_compile_features(opengeolab_python_interop PUBLIC cxx_std_20)
+
+target_include_directories(opengeolab_python_interop PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+target_link_libraries(
+  opengeolab_python_interop PUBLIC nlohmann_json::nlohmann_json pybind11::pybind11
+)
+
 set(opengeolab_python_bridge_headers include/ogl/python_wrapper/OpenGeoLabPythonBridge.hpp)
 set(opengeolab_python_bridge_sources src/OpenGeoLabPythonBridge.cpp)
 
@@ -17,7 +34,9 @@ target_compile_features(opengeolab_python_bridge PUBLIC cxx_std_20)
 
 target_include_directories(opengeolab_python_bridge PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-target_link_libraries(opengeolab_python_bridge PUBLIC OGL::Command nlohmann_json::nlohmann_json)
+target_link_libraries(
+  opengeolab_python_bridge PUBLIC OGL::Command OGL::PythonInterop nlohmann_json::nlohmann_json
+)
 
 pybind11_add_module(opengeolab MODULE src/module.cpp)
 
@@ -37,7 +56,9 @@ install(
   RUNTIME DESTINATION ${CMAKE_INSTALL_LIBDIR}/python
 )
 
-set_target_properties(opengeolab_python_bridge opengeolab PROPERTIES FOLDER python)
+set_target_properties(
+  opengeolab_python_interop opengeolab_python_bridge opengeolab PROPERTIES FOLDER python
+)
 
 if(ENABLE_TEST AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/CMakeLists.txt")
   add_subdirectory(tests)

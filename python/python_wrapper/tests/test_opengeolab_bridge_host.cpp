@@ -1,4 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <pybind11/embed.h>
 #include <pybind11/eval.h>
@@ -63,12 +64,12 @@ void configurePythonPaths() {
 
 } // namespace
 
-TEST_CASE("python bridge module passes the smoke script and direct bridge calls",
-          "[python][bridge][smoke]") {
+TEST_CASE("python bridge module passes the validation script and direct bridge calls",
+          "[python][bridge]") {
     auto interpreter = std::make_unique<py::scoped_interpreter>();
     configurePythonPaths();
 
-    SECTION("python smoke script succeeds") {
+    SECTION("python validation script succeeds") {
         REQUIRE_NOTHROW(py::eval_file(testScriptPath().string()));
     }
 
@@ -103,5 +104,34 @@ TEST_CASE("python bridge module passes the smoke script and direct bridge calls"
         CHECK_FALSE(py::hasattr(bridge, "call"));
         CHECK_FALSE(py::hasattr(bridge, "run_command"));
         CHECK_FALSE(py::hasattr(bridge, "suggest_placeholder_geometry_script"));
+    }
+
+    SECTION("external python normalizes missing and null param") {
+        auto opengeolab = py::module_::import("opengeolab");
+
+        const auto missing_param_response = nlohmann::json::parse(
+            opengeolab.attr("process")(R"JSON({"module":"scene","action":"buildScene"})JSON")
+                .cast<std::string>());
+        REQUIRE(missing_param_response.value("success", false));
+
+        const auto null_param_response = nlohmann::json::parse(
+            opengeolab
+                .attr("process")(R"JSON({"module":"scene","action":"buildScene","param":null})JSON")
+                .cast<std::string>());
+        REQUIRE(null_param_response.value("success", false));
+        CHECK(null_param_response["payload"]["sceneGraph"].value("nodeCount", 0) ==
+              missing_param_response["payload"]["sceneGraph"].value("nodeCount", -1));
+        CHECK(null_param_response["payload"]["sceneGraph"].value("sceneId", std::string{}) ==
+              missing_param_response["payload"]["sceneGraph"].value("sceneId", std::string{}));
+    }
+
+    SECTION("external python rejects invalid envelopes with shared protocol message") {
+        auto opengeolab = py::module_::import("opengeolab");
+        py::dict invalid_request;
+        invalid_request["action"] = "buildScene";
+
+        REQUIRE_THROWS_WITH(
+            opengeolab.attr("process")(invalid_request),
+            Catch::Matchers::ContainsSubstring("Request module cannot be empty."));
     }
 }

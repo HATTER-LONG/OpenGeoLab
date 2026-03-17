@@ -12,7 +12,7 @@ Window {
     property bool darkMode: false
     property bool menuOpen: false
     property int selectedRibbonTab: 0
-    property string statusNote: appController.lastSummary.length > 0 ? appController.lastSummary : qsTr("Viewport is active. Ribbon commands stay connected to the same controller pipeline.")
+    property string localStatusNote: ""
 
     width: 1500
     height: 900
@@ -36,6 +36,15 @@ Window {
         id: ribbonConfig
     }
 
+    RibbonModelAdapter {
+        id: ribbonModelAdapter
+
+        ribbonConfig: ribbonConfig
+        actionRegistry: actionRegistry
+        appController: root.appController
+        reloadToken: root.uiSettingsController.currentLanguage
+    }
+
     ActionFeaturePage {
         id: actionFeaturePage
 
@@ -55,77 +64,77 @@ Window {
         preferredPanelY: appTheme.shellPadding + 136 + appTheme.gap
     }
 
-    function parsedResponse() {
-        if (!root.appController.lastPayload || root.appController.lastPayload.length === 0) {
-            return {};
-        }
+    ActionWorkflowRouter {
+        id: workflowRouter
 
-        try {
-            return JSON.parse(root.appController.lastPayload);
-        } catch (error) {
-            return {};
-        }
+        actionRegistry: actionRegistry
+        appController: root.appController
+        actionFeaturePage: actionFeaturePage
+        geometryCreateFeaturePage: geometryCreateFeaturePage
     }
 
-    function viewportSummary() {
-        const response = root.parsedResponse();
-        const payload = response.payload || {};
-        if (payload.summary) {
-            return payload.summary;
-        }
-        return root.statusNote;
+    ViewportSummaryAdapter {
+        id: viewportSummaryAdapter
+
+        appController: root.appController
+        fallbackSummary: root.localStatusNote
     }
 
     function toggleTheme() {
         root.darkMode = !root.darkMode;
-        root.statusNote = root.darkMode ? qsTr("Switched to dark theme.") : qsTr("Switched to light theme.");
+        root.localStatusNote = root.darkMode ? qsTr("Switched to dark theme.") : qsTr("Switched to light theme.");
         root.menuOpen = false;
     }
 
     function toggleLanguage() {
         if (!root.uiSettingsController.toggleLanguage()) {
-            root.statusNote = qsTr("Failed to switch UI language.");
+            root.localStatusNote = qsTr("Failed to switch UI language.");
             root.menuOpen = false;
             return;
         }
 
-        if (actionFeaturePage.actionDefinition && actionFeaturePage.actionDefinition.key) {
-            actionFeaturePage.refreshAction(actionRegistry.action(actionFeaturePage.actionDefinition.key));
-        }
-        if (geometryCreateFeaturePage.actionDefinition && geometryCreateFeaturePage.actionDefinition.key) {
-            geometryCreateFeaturePage.refreshAction(actionRegistry.action(geometryCreateFeaturePage.actionDefinition.key));
-        }
-
-        root.statusNote = root.uiSettingsController.currentLanguage === "zh_CN"
+        workflowRouter.refreshOpenAction();
+        root.localStatusNote = root.uiSettingsController.currentLanguage === "zh_CN"
             ? qsTr("Switched to Chinese.")
             : qsTr("Switched to English.");
         root.menuOpen = false;
     }
 
-    function openActionPage(actionKey) {
+    function handleActionTrigger(actionKey) {
         if (actionKey === "toggleTheme") {
             root.toggleTheme();
             return;
         }
 
-        const actionDefinition = actionRegistry.action(actionKey);
-        if (!actionDefinition) {
-            root.statusNote = qsTr("Action page is not configured for: %1.").arg(actionKey);
-            root.menuOpen = false;
-            return;
+        const opened = workflowRouter.openAction(actionKey);
+        if (opened) {
+            const actionDefinition = actionRegistry.action(actionKey);
+            if (actionDefinition) {
+                root.localStatusNote = qsTr("Opened feature page: %1.").arg(actionDefinition.pageTitle);
+            }
         }
 
-        actionFeaturePage.open = false;
-        geometryCreateFeaturePage.open = false;
-
-        if (actionDefinition.workflowKind === "geometryCreate") {
-            geometryCreateFeaturePage.presentAction(actionDefinition);
-        } else {
-            actionFeaturePage.presentAction(actionDefinition);
-        }
-
-        root.statusNote = qsTr("Opened feature page: %1.").arg(actionDefinition.pageTitle);
         root.menuOpen = false;
+    }
+
+    Connections {
+        target: root.appController
+
+        function onLastSummaryChanged() {
+            if (root.appController.lastSummary.length > 0) {
+                root.localStatusNote = "";
+            }
+        }
+    }
+
+    Connections {
+        target: root.appController.operationLogModel
+
+        function onRowsInserted(parent, first, last) {
+            if (root.localStatusNote.length > 0) {
+                root.localStatusNote = "";
+            }
+        }
     }
 
     Rectangle {
@@ -162,7 +171,6 @@ Window {
 
     Rectangle {
         anchors.fill: parent
-        // anchors.margins: appTheme.shellMargin
         radius: 20
         color: "transparent"
         border.width: 0
@@ -182,8 +190,8 @@ Window {
                 currentLanguage: root.uiSettingsController.currentLanguage
                 selectedTab: root.selectedRibbonTab
                 recordedCommandCount: root.appController.recordedCommandCount
-                ribbonTabs: ribbonConfig.tabs
-                ribbonGroups: ribbonConfig.groupsForTab(root.selectedRibbonTab)
+                ribbonTabs: ribbonModelAdapter.tabs
+                ribbonGroups: ribbonModelAdapter.groupsForTab(root.selectedRibbonTab)
                 onToggleMenu: root.menuOpen = !root.menuOpen
                 onRequestThemeToggle: root.toggleTheme()
                 onRequestLanguageToggle: root.toggleLanguage()
@@ -191,7 +199,7 @@ Window {
                     root.selectedRibbonTab = tabIndex;
                 }
                 onTriggerAction: function (actionKey) {
-                    root.openActionPage(actionKey);
+                    root.handleActionTrigger(actionKey);
                 }
             }
 
@@ -225,7 +233,7 @@ Window {
                         ViewportPanel {
                             anchors.fill: parent
                             theme: appTheme
-                            summaryText: root.viewportSummary()
+                            summaryText: viewportSummaryAdapter.summaryText
                             recordedCommandCount: root.appController.recordedCommandCount
                             onRequestViewPage: root.selectedRibbonTab = 2
                         }

@@ -5,20 +5,22 @@
 
 #pragma once
 
+#include <nlohmann/json.hpp>
+
+#include <functional>
 #include <memory>
 #include <string>
 
 namespace OGL::App {
 
-class OpenGeoLabController;
-
 /**
- * @brief Owns the embedded interpreter and executes scripts against the active application
- * controller.
+ * @brief Owns the embedded interpreter and executes scripts against a request-processing callback.
  */
 class EmbeddedPythonRuntime {
 public:
-    explicit EmbeddedPythonRuntime(OpenGeoLabController& controller);
+    using ProcessRequestHandler = std::function<nlohmann::json(const nlohmann::json&)>;
+
+    explicit EmbeddedPythonRuntime(ProcessRequestHandler processRequestHandler);
     ~EmbeddedPythonRuntime();
 
     EmbeddedPythonRuntime(const EmbeddedPythonRuntime&) = delete;
@@ -35,10 +37,10 @@ public:
 
     /**
      * @brief Execute one line of Python as a REPL-style expression or statement.
-     * @param command_line Python expression or statement.
+     * @param commandLine Python expression or statement.
      * @return Captured expression result or combined stdout and stderr.
      */
-    auto executeCommandLine(const std::string& command_line) -> std::string;
+    auto executeCommandLine(const std::string& commandLine) -> std::string;
 
 private:
     class Impl;

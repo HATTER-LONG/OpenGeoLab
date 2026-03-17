@@ -40,7 +40,7 @@ Item {
 
                         theme: root.theme
                         label: modelData
-                        accentColor: root.pageState.axisAccentColor(modelData)
+                        accentColor: root.theme.resolveAccentColor(root.pageState.axisAccentName(modelData))
                         selected: root.pageState.axisValue === modelData
                         onClicked: root.pageState.axisValue = modelData
                     }
@@ -50,7 +50,7 @@ Item {
             StatChip {
                 theme: root.theme
                 text: qsTr("Current axis %1").arg(root.pageState.axisValue)
-                tintColor: root.pageState.axisAccentColor(root.pageState.axisValue)
+                tintColor: root.theme.resolveAccentColor(root.pageState.axisAccentName(root.pageState.axisValue))
             }
         }
     }

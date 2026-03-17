@@ -1,7 +1,9 @@
 include(GenerateExportHeader)
 
 set(ogl_core_headers include/ogl/core/IService.hpp include/ogl/core/ComponentRequestDispatcher.hpp
-                     include/ogl/core/ComponentDispatcherLogger.hpp
+                      include/ogl/core/ComponentDispatcherLogger.hpp
+                      include/ogl/core/ActionExecutionUtilities.hpp
+                      include/ogl/core/ActionServiceRegistration.hpp
 )
 set(ogl_core_sources src/ComponentRequestDispatcher.cpp)
 
@@ -41,3 +43,7 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/ DESTINATION ${CMAKE_INSTA
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/include/ogl/core/export.hpp
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/ogl/core
 )
+
+if(ENABLE_TEST AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/CMakeLists.txt")
+  add_subdirectory(tests)
+endif()

@@ -6,6 +6,13 @@ set(opengeolab_app_headers include/ogl/app/AppLogger.hpp
 set(opengeolab_app_sources
     src/main.cpp
     src/OpenGeoLabController.cpp
+    src/OpenGeoLabControllerEvents.hpp
+    src/OpenGeoLabFeedbackCoordinator.cpp
+    src/OpenGeoLabFeedbackCoordinator.hpp
+    src/OpenGeoLabRequestExecutor.cpp
+    src/OpenGeoLabRequestExecutor.hpp
+    src/OpenGeoLabAutomationFacade.cpp
+    src/OpenGeoLabAutomationFacade.hpp
     src/EmbeddedPythonRuntime.cpp
     src/OperationLogModel.cpp
     src/OperationLogModel.hpp
@@ -23,6 +30,7 @@ set(opengeolab_app_qml
     qml/RibbonConfig.qml
     qml/theme/AppTheme.qml
     qml/components/ActionButton.qml
+    qml/components/ActionWorkflowRouter.qml
     qml/components/AppIcon.qml
     qml/components/AxisOptionChip.qml
     qml/components/CodePanel.qml
@@ -30,21 +38,29 @@ set(opengeolab_app_qml
     qml/components/FeatureSegmentTabs.qml
     qml/components/GeometryCreateFeaturePage.qml
     qml/components/GeometryCreateInspectPage.qml
+    qml/components/GeometryCreateMetricsSection.qml
     qml/components/GeometryCreateOrientationSection.qml
     qml/components/GeometryCreatePlacementPage.qml
     qml/components/GeometryCreatePageLogic.js
+    qml/components/GeometryCreatePageState.qml
     qml/components/GeometryCreateShapePage.qml
     qml/components/OperationCornerOverlay.qml
+    qml/components/OperationCommandLineTab.qml
     qml/components/OperationLogEntryDelegate.qml
+    qml/components/OperationLogEventsTab.qml
+    qml/components/OperationLogFilterPanel.qml
     qml/components/OperationLogLevelChip.qml
     qml/components/OperationLogPanel.qml
+    qml/components/OperationTerminalTranscript.qml
     qml/components/OperationProgressOverlay.qml
     qml/components/ParameterInputField.qml
     qml/components/ActionFeaturePage.qml
+    qml/components/RibbonModelAdapter.qml
     qml/components/RibbonTile.qml
     qml/components/SectionCard.qml
     qml/components/StatusMessageBanner.qml
     qml/components/StatChip.qml
+    qml/components/ViewportSummaryAdapter.qml
     qml/sections/AppHeader.qml
     qml/sections/HeaderMenuPanel.qml
     qml/sections/HeaderRibbonGroup.qml
@@ -88,6 +104,9 @@ set_source_files_properties(qml/theme/qmldir PROPERTIES QT_RESOURCE_ALIAS theme/
 set_source_files_properties(qml/theme/AppTheme.qml PROPERTIES QT_RESOURCE_ALIAS theme/AppTheme.qml)
 set_source_files_properties(qml/components/qmldir PROPERTIES QT_RESOURCE_ALIAS components/qmldir)
 set_source_files_properties(
+  qml/components/ActionWorkflowRouter.qml PROPERTIES QT_RESOURCE_ALIAS components/ActionWorkflowRouter.qml
+)
+set_source_files_properties(
   qml/components/ActionButton.qml PROPERTIES QT_RESOURCE_ALIAS components/ActionButton.qml
 )
 set_source_files_properties(
@@ -112,6 +131,9 @@ set_source_files_properties(
   qml/components/GeometryCreateInspectPage.qml PROPERTIES QT_RESOURCE_ALIAS components/GeometryCreateInspectPage.qml
 )
 set_source_files_properties(
+  qml/components/GeometryCreateMetricsSection.qml PROPERTIES QT_RESOURCE_ALIAS components/GeometryCreateMetricsSection.qml
+)
+set_source_files_properties(
   qml/components/GeometryCreateOrientationSection.qml PROPERTIES QT_RESOURCE_ALIAS components/GeometryCreateOrientationSection.qml
 )
 set_source_files_properties(
@@ -121,19 +143,34 @@ set_source_files_properties(
   qml/components/GeometryCreatePageLogic.js PROPERTIES QT_RESOURCE_ALIAS components/GeometryCreatePageLogic.js
 )
 set_source_files_properties(
+  qml/components/GeometryCreatePageState.qml PROPERTIES QT_RESOURCE_ALIAS components/GeometryCreatePageState.qml
+)
+set_source_files_properties(
   qml/components/GeometryCreateShapePage.qml PROPERTIES QT_RESOURCE_ALIAS components/GeometryCreateShapePage.qml
 )
 set_source_files_properties(
   qml/components/OperationCornerOverlay.qml PROPERTIES QT_RESOURCE_ALIAS components/OperationCornerOverlay.qml
 )
 set_source_files_properties(
+  qml/components/OperationCommandLineTab.qml PROPERTIES QT_RESOURCE_ALIAS components/OperationCommandLineTab.qml
+)
+set_source_files_properties(
   qml/components/OperationLogEntryDelegate.qml PROPERTIES QT_RESOURCE_ALIAS components/OperationLogEntryDelegate.qml
+)
+set_source_files_properties(
+  qml/components/OperationLogEventsTab.qml PROPERTIES QT_RESOURCE_ALIAS components/OperationLogEventsTab.qml
+)
+set_source_files_properties(
+  qml/components/OperationLogFilterPanel.qml PROPERTIES QT_RESOURCE_ALIAS components/OperationLogFilterPanel.qml
 )
 set_source_files_properties(
   qml/components/OperationLogLevelChip.qml PROPERTIES QT_RESOURCE_ALIAS components/OperationLogLevelChip.qml
 )
 set_source_files_properties(
   qml/components/OperationLogPanel.qml PROPERTIES QT_RESOURCE_ALIAS components/OperationLogPanel.qml
+)
+set_source_files_properties(
+  qml/components/OperationTerminalTranscript.qml PROPERTIES QT_RESOURCE_ALIAS components/OperationTerminalTranscript.qml
 )
 set_source_files_properties(
   qml/components/OperationProgressOverlay.qml PROPERTIES QT_RESOURCE_ALIAS components/OperationProgressOverlay.qml
@@ -143,6 +180,9 @@ set_source_files_properties(
 )
 set_source_files_properties(
   qml/components/ActionFeaturePage.qml PROPERTIES QT_RESOURCE_ALIAS components/ActionFeaturePage.qml
+)
+set_source_files_properties(
+  qml/components/RibbonModelAdapter.qml PROPERTIES QT_RESOURCE_ALIAS components/RibbonModelAdapter.qml
 )
 set_source_files_properties(
   qml/components/RibbonTile.qml PROPERTIES QT_RESOURCE_ALIAS components/RibbonTile.qml
@@ -155,6 +195,9 @@ set_source_files_properties(
 )
 set_source_files_properties(
   qml/components/StatChip.qml PROPERTIES QT_RESOURCE_ALIAS components/StatChip.qml
+)
+set_source_files_properties(
+  qml/components/ViewportSummaryAdapter.qml PROPERTIES QT_RESOURCE_ALIAS components/ViewportSummaryAdapter.qml
 )
 set_source_files_properties(qml/sections/qmldir PROPERTIES QT_RESOURCE_ALIAS sections/qmldir)
 set_source_files_properties(
@@ -219,6 +262,7 @@ target_link_libraries(
   OpenGeoLabApp
   PRIVATE Kangaroo::Kangaroo
           OGL::Command
+          OGL::PythonInterop
           pybind11::embed
           Qt6::Concurrent
           Qt6::Core
