@@ -1,0 +1,7 @@
+{
+    "cmake.sourceDirectory": "${workspaceFolder}",
+    "cmake.environment": {
+        "CPM_SOURCE_CACHE": "${workspaceFolder}/cpm_modules"
+    },
+    "cmake.generator": "Ninja",
+}
