@@ -186,7 +186,7 @@ endif ()
 
 add_subdirectory(src/libs/geometry)
 
-# add_subdirectory(src/libs/command)
+add_subdirectory(src/libs/command)
 
 add_subdirectory(src/libs/python)
 
