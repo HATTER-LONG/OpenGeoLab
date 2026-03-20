@@ -1,4 +1,7 @@
-qt_add_executable(opengeolab_app src/main.cpp)
+qt_add_executable(opengeolab_app
+                  src/main.cpp
+                  src/process_service.cpp
+                  include/opengeolab/app/process_service.hpp)
 
 target_compile_features(opengeolab_app PRIVATE cxx_std_20)
 target_include_directories(opengeolab_app
@@ -6,6 +9,7 @@ target_include_directories(opengeolab_app
 target_link_libraries(
     opengeolab_app
     PRIVATE Qt6::Core
+            Qt6::Concurrent
             Qt6::Gui
             Qt6::Qml
             Qt6::Quick
@@ -15,7 +19,9 @@ target_link_libraries(
 
 qt_add_qml_module(
     opengeolab_app URI OpenGeoLab.App VERSION 1.0
-    # QML_FILES resource/qml/Main.qml
+    QML_FILES resource/qml/Main.qml
+              resource/qml/ActionButton.qml
+              resource/qml/ResponsePanel.qml
 )
 
 if (NOT TARGET opengeolab_pywrapper)
