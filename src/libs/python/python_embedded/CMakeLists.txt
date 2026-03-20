@@ -27,4 +27,11 @@ target_compile_definitions(
     PRIVATE OPENGEOLAB_PYTHON_HOME="${OPENGEOLAB_PYTHON_HOME_CMAKE}"
             OPENGEOLAB_PYTHON_EXECUTABLE="${OPENGEOLAB_PYTHON_EXECUTABLE_CMAKE}"
 )
+if (DEFINED OPENGEOLAB_PYVENV_SITE_PACKAGES)
+    file(TO_CMAKE_PATH "${OPENGEOLAB_PYVENV_SITE_PACKAGES}" _pyvenv_site_cmake)
+    target_compile_definitions(
+        opengeolab_python_embed
+        PRIVATE OPENGEOLAB_PYVENV_SITE_PACKAGES="${_pyvenv_site_cmake}"
+    )
+endif ()
 opengeolab_copy_runtime_dlls(opengeolab_python_embed)

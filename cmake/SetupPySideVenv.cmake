@@ -1,0 +1,69 @@
+# SetupPySideVenv.cmake
+# Creates a build-local Python venv and installs PySide6 with strict Qt version matching.
+
+# Extract Qt6 major.minor version
+set(OPENGEOLAB_QT_MAJOR ${Qt6_VERSION_MAJOR})
+set(OPENGEOLAB_QT_MINOR ${Qt6_VERSION_MINOR})
+set(PYSIDE6_REQUIRED_VERSION "${OPENGEOLAB_QT_MAJOR}.${OPENGEOLAB_QT_MINOR}")
+
+set(OPENGEOLAB_PYVENV_DIR "${CMAKE_BINARY_DIR}/pyvenv")
+
+# Create venv only if not already present
+if(NOT EXISTS "${OPENGEOLAB_PYVENV_DIR}/pyvenv.cfg")
+  message(STATUS "Creating Python venv at ${OPENGEOLAB_PYVENV_DIR}...")
+  execute_process(
+    COMMAND "${Python3_EXECUTABLE}" -m venv "${OPENGEOLAB_PYVENV_DIR}"
+    RESULT_VARIABLE venv_result)
+  if(NOT venv_result EQUAL 0)
+    message(FATAL_ERROR "Failed to create Python venv (exit code ${venv_result})")
+  endif()
+endif()
+
+# pip install PySide6 with strict major.minor matching
+set(PYVENV_PIP "${OPENGEOLAB_PYVENV_DIR}/Scripts/pip.exe")
+
+# Check if PySide6 is already installed with correct version
+execute_process(
+  COMMAND "${PYVENV_PIP}" show PySide6
+  OUTPUT_VARIABLE pyside_info
+  ERROR_QUIET
+  RESULT_VARIABLE pip_show_result)
+
+set(_need_install TRUE)
+if(pip_show_result EQUAL 0)
+  string(REGEX MATCH "Version: ([0-9]+)\\.([0-9]+)" _pyside_match "${pyside_info}")
+  if("${CMAKE_MATCH_1}.${CMAKE_MATCH_2}" STREQUAL "${PYSIDE6_REQUIRED_VERSION}")
+    set(_need_install FALSE)
+    message(STATUS "PySide6 ${CMAKE_MATCH_1}.${CMAKE_MATCH_2}.x already installed, skipping.")
+  endif()
+endif()
+
+if(_need_install)
+  message(STATUS "Installing PySide6==${PYSIDE6_REQUIRED_VERSION}.* into venv...")
+  execute_process(
+    COMMAND "${PYVENV_PIP}" install "PySide6==${PYSIDE6_REQUIRED_VERSION}.*" --quiet
+    RESULT_VARIABLE pip_result)
+  if(NOT pip_result EQUAL 0)
+    message(FATAL_ERROR
+            "Failed to install PySide6==${PYSIDE6_REQUIRED_VERSION}.* (exit code ${pip_result})")
+  endif()
+
+  # Verify installed version
+  execute_process(
+    COMMAND "${PYVENV_PIP}" show PySide6
+    OUTPUT_VARIABLE pyside_verify_info)
+  string(REGEX MATCH "Version: ([0-9]+)\\.([0-9]+)" _verify_match "${pyside_verify_info}")
+  if(NOT "${CMAKE_MATCH_1}.${CMAKE_MATCH_2}" STREQUAL "${PYSIDE6_REQUIRED_VERSION}")
+    message(FATAL_ERROR
+            "PySide6 version mismatch! "
+            "Expected ${PYSIDE6_REQUIRED_VERSION}.x but got ${CMAKE_MATCH_1}.${CMAKE_MATCH_2}.x. "
+            "Qt version is ${Qt6_VERSION}.")
+  endif()
+  message(STATUS "PySide6 ${CMAKE_MATCH_1}.${CMAKE_MATCH_2}.x installed successfully.")
+endif()
+
+# Export venv site-packages path for compile definitions
+set(OPENGEOLAB_PYVENV_SITE_PACKAGES "${OPENGEOLAB_PYVENV_DIR}/Lib/site-packages"
+    CACHE PATH "Path to PySide6 venv site-packages" FORCE)
+
+# TODO: Cross-platform support — Linux/macOS use bin/pip and lib/python3.x/site-packages

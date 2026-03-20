@@ -68,8 +68,8 @@ set(OPENGEOLAB_DOCTEST_VERSION 2.4.12)
 set(OPENGEOLAB_NLOHMANN_JSON_VERSION 3.12.0)
 set(PYBIND11_FINDPYTHON ON)
 
-find_package(Qt6 6.9 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2
-                                         Widgets)
+find_package(Qt6 6.9 REQUIRED COMPONENTS Concurrent Core Gui Qml Quick
+                                         QuickControls2 Widgets)
 if (QT_KNOWN_POLICY_QTP0004)
     qt_policy(SET QTP0004 NEW)
 endif ()
@@ -77,6 +77,8 @@ qt_standard_project_setup(REQUIRES 6.9)
 
 find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module
                                          Development.Embed)
+
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/SetupPySideVenv.cmake)
 
 opengeolab_resolve_package(
     fmt

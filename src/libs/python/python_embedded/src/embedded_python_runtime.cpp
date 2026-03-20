@@ -96,7 +96,7 @@ buildModuleSearchPaths(const std::filesystem::path& python_home,
                        const std::filesystem::path& runtime_root,
                        const std::filesystem::path& plugin_root) {
     std::vector<std::filesystem::path> search_paths;
-    search_paths.reserve(8);
+    search_paths.reserve(9);
     search_paths.emplace_back(python_home / ("python" + std::to_string(PY_MAJOR_VERSION) +
                                              std::to_string(PY_MINOR_VERSION) + ".zip"));
     search_paths.emplace_back(python_home / "DLLs");
@@ -106,6 +106,9 @@ buildModuleSearchPaths(const std::filesystem::path& python_home,
     search_paths.emplace_back(plugin_root);
     search_paths.emplace_back(python_home);
     search_paths.emplace_back(python_home / "Lib" / "site-packages");
+#ifdef OPENGEOLAB_PYVENV_SITE_PACKAGES
+    search_paths.emplace_back(OPENGEOLAB_PYVENV_SITE_PACKAGES);
+#endif
     return search_paths;
 }
 
