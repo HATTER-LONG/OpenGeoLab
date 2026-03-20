@@ -34,12 +34,22 @@ constexpr auto DEFAULT_PYTHON_EXECUTABLE = "";
 #endif
 
 [[nodiscard]] std::filesystem::path environmentPath(const char* variable_name) {
+#ifdef _WIN32
+    char* raw_value = nullptr;
+    std::size_t len = 0;
+    if(_dupenv_s(&raw_value, &len, variable_name) != 0 || raw_value == nullptr) {
+        return {};
+    }
+    std::filesystem::path result(raw_value);
+    std::free(raw_value);
+    return result;
+#else
     const char* raw_value = std::getenv(variable_name);
     if(raw_value == nullptr || std::string_view(raw_value).empty()) {
         return {};
     }
-
     return std::filesystem::path(raw_value);
+#endif
 }
 
 [[nodiscard]] std::filesystem::path compiledPath(const char* value) {

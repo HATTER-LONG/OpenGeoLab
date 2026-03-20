@@ -26,11 +26,11 @@ opengeolab_copy_runtime_dlls(ogl_command)
 
 if(OPENGEOLAB_BUILD_TESTS)
   opengeolab_add_doctest_test(
-      ogl_command_command_dispatcher_test
+      ogl_command_test
       SOURCES
       tests/command_dispatcher_test.cpp
       LINKS
       OpenGeoLab::Command
       CTEST_NAME
-      ogl_command_command_dispatcher_test)
+      ogl_command_test)
 endif()

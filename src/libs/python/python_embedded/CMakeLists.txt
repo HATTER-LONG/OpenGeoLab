@@ -22,16 +22,23 @@ opengeolab_add_module(
     # OpenGeoLab::Command
     pybind11::embed
     Python3::Python)
+# Suppress pyconfig.h auto-link pragma: #pragma comment(lib, "python3XX.lib").
+# pybind11 defines Py_NO_LINK_LIB, but CPython's pyconfig.h does not honor it.
+# MS_NO_COREDLL prevents MS_COREDLL → pragma block skipped.
+# Py_ENABLE_SHARED preserves __declspec(dllimport) for the Python C API.
+# CMake's Python3::Python target already handles correct library linking.
+# PUBLIC because any consumer that transitively includes Python headers needs this.
 target_compile_definitions(
     opengeolab_python_embed
+    PUBLIC $<$<PLATFORM_ID:Windows>:MS_NO_COREDLL>
+           $<$<PLATFORM_ID:Windows>:Py_ENABLE_SHARED>
     PRIVATE OPENGEOLAB_PYTHON_HOME="${OPENGEOLAB_PYTHON_HOME_CMAKE}"
             OPENGEOLAB_PYTHON_EXECUTABLE="${OPENGEOLAB_PYTHON_EXECUTABLE_CMAKE}"
 )
 if (DEFINED OPENGEOLAB_PYVENV_SITE_PACKAGES)
-    file(TO_CMAKE_PATH "${OPENGEOLAB_PYVENV_SITE_PACKAGES}" _pyvenv_site_cmake)
     target_compile_definitions(
         opengeolab_python_embed
-        PRIVATE OPENGEOLAB_PYVENV_SITE_PACKAGES="${_pyvenv_site_cmake}"
+        PRIVATE OPENGEOLAB_PYVENV_SITE_PACKAGES="${OPENGEOLAB_PYVENV_SITE_PACKAGES}"
     )
 endif ()
 opengeolab_copy_runtime_dlls(opengeolab_python_embed)

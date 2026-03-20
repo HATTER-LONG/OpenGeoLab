@@ -85,10 +85,27 @@ if (QT_KNOWN_POLICY_QTP0004)
 endif ()
 qt_standard_project_setup(REQUIRES 6.9)
 
+# PySide6 (pip) ships release Qt DLLs (Qt6Core.dll without 'd' suffix).
+# Debug builds load Qt6Cored.dll, causing two separate Qt singletons and
+# breaking QApplication.instance() in PySide6. Default OFF for Debug builds.
+# For multi-config generators CMAKE_BUILD_TYPE is empty; users must set this
+# option explicitly when they intend to build Debug configurations.
+set(_pyside6_default ON)
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(_pyside6_default OFF)
+endif()
+option(OPENGEOLAB_ENABLE_PYSIDE6
+       "Enable PySide6 venv setup and plugin support" ${_pyside6_default})
+unset(_pyside6_default)
+
 find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module
                                          Development.Embed)
 
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/SetupPySideVenv.cmake)
+if(OPENGEOLAB_ENABLE_PYSIDE6)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/SetupPySideVenv.cmake)
+else()
+    message(STATUS "PySide6 venv disabled (OPENGEOLAB_ENABLE_PYSIDE6=OFF)")
+endif()
 
 opengeolab_resolve_package(
     fmt
