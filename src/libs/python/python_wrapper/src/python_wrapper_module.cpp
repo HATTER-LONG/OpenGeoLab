@@ -5,6 +5,9 @@
 
 #include <opengeolab/command/bounding_box_command.hpp>
 #include <opengeolab/command/command_dispatcher.hpp>
+#include <opengeolab/command/get_stored_bbox_command.hpp>
+#include <opengeolab/command/set_points_command.hpp>
+#include <opengeolab/geometry/point_store.hpp>
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -16,13 +19,19 @@
 namespace Py = pybind11;
 using OpenGeoLab::Command::BoundingBoxCommand;
 using OpenGeoLab::Command::CommandDispatcher;
+using OpenGeoLab::Command::GetStoredBBoxCommand;
+using OpenGeoLab::Command::SetPointsCommand;
+using OpenGeoLab::Geometry::PointStore;
 
 PYBIND11_MODULE(opengeolab_pywrapper, module) {
     module.doc() = "OpenGeoLab JSON process bridge";
 
     static auto dispatcher = [] {
+        auto point_store = std::make_shared<PointStore>();
         CommandDispatcher command_dispatcher;
         command_dispatcher.registerCommand(std::make_unique<BoundingBoxCommand>());
+        command_dispatcher.registerCommand(std::make_unique<SetPointsCommand>(point_store));
+        command_dispatcher.registerCommand(std::make_unique<GetStoredBBoxCommand>(point_store));
         return command_dispatcher;
     }();
 

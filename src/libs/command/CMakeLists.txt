@@ -1,11 +1,15 @@
 set(command_sources
     src/command_dispatcher.cpp
-    src/bounding_box_command.cpp)
+    src/bounding_box_command.cpp
+    src/set_points_command.cpp
+    src/get_stored_bbox_command.cpp)
 
 set(command_public_headers
     include/opengeolab/command/command_interface.hpp
     include/opengeolab/command/command_dispatcher.hpp
-    include/opengeolab/command/bounding_box_command.hpp)
+    include/opengeolab/command/bounding_box_command.hpp
+    include/opengeolab/command/set_points_command.hpp
+    include/opengeolab/command/get_stored_bbox_command.hpp)
 
 opengeolab_add_module(
     ogl_command

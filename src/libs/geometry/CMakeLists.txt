@@ -1,8 +1,9 @@
-set(geometry_sources src/bounding_box_calculator.cpp)
+set(geometry_sources src/bounding_box_calculator.cpp src/point_store.cpp)
 
 set(geometry_public_headers
     include/opengeolab/geometry/bounding_box.hpp
-    include/opengeolab/geometry/bounding_box_calculator.hpp)
+    include/opengeolab/geometry/bounding_box_calculator.hpp
+    include/opengeolab/geometry/point_store.hpp)
 
 opengeolab_add_module(
     ogl_geometry
