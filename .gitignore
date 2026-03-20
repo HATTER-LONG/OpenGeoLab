@@ -97,3 +97,4 @@ __cmake_*
 out
 .worktrees/
 **/temp/**
+/pyvenv/

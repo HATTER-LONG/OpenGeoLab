@@ -21,14 +21,14 @@
 #endif
 
 int main(int argc, char* argv[]) {
-#if defined(_WIN32) && defined(OPENGEOLAB_QT_PREFIX)
+#if defined(_WIN32) && defined(OPENGEOLAB_QT_BIN_DIR)
     // Insert the correct Qt bin directory into the DLL search order BEFORE
     // QApplication is created.  SetDllDirectoryW makes LoadLibrary search this
     // directory right after the application directory and before system/PATH.
     // Without this, Qt plugins' transitive dependencies (e.g. Qt6QuickLayouts)
     // would resolve from a different Qt version on PATH (Qt Creator ships its
     // own Qt 6.x).
-    SetDllDirectoryW(OPENGEOLAB_QT_PREFIX);
+    SetDllDirectoryW(std::filesystem::path(OPENGEOLAB_QT_BIN_DIR).wstring().c_str());
 #endif
 
     QApplication app(argc, argv);

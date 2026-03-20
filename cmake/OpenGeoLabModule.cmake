@@ -113,12 +113,14 @@ function (opengeolab_copy_runtime_dlls target)
         return()
     endif ()
 
+    # Use a cmake -P script to handle the possibly-empty DLL list gracefully.
+    # $<TARGET_RUNTIME_DLLS> may be empty for targets without runtime deps.
     add_custom_command(
         TARGET ${target}
         POST_BUILD
         COMMAND
             ${CMAKE_COMMAND}
-            -Druntime_dlls=$<JOIN:$<TARGET_RUNTIME_DLLS:${target}>,|>
+            "-Druntime_dlls=$<JOIN:$<TARGET_RUNTIME_DLLS:${target}>,;>"
             -Dtarget_dir=$<TARGET_FILE_DIR:${target}>
             -P "${OPENGEOLAB_MODULE_CMAKE_DIR}/copy_runtime_dlls.cmake"
         COMMAND_EXPAND_LISTS VERBATIM)
