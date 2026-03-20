@@ -4,12 +4,25 @@
 
 #include <chrono>
 #include <cstddef>
+#include <cstdint>
+#include <stdexcept>
 
 namespace OpenGeoLab::Command {
 
+namespace {
+constexpr std::size_t kMaxPointCount = 100'000'000;
+constexpr std::size_t kDefaultPointCount = 1'000'000;
+} // namespace
+
 auto BoundingBoxCommand::execute(const nlohmann::json& payload) -> CommandResult {
-    const std::size_t point_count =
-        payload.value("pointCount", static_cast<std::size_t>(1'000'000));
+    if (payload.contains("pointCount") && payload["pointCount"].is_number_integer()
+        && payload["pointCount"].get<std::int64_t>() < 0) {
+        throw std::invalid_argument("pointCount must be non-negative");
+    }
+    const std::size_t point_count = payload.value("pointCount", kDefaultPointCount);
+    if (point_count == 0 || point_count > kMaxPointCount) {
+        throw std::invalid_argument("pointCount must be in range [1, 100000000]");
+    }
     const unsigned int seed = payload.value("seed", 42U);
 
     const auto start_time = std::chrono::steady_clock::now();

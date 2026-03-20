@@ -105,11 +105,26 @@ def _launch_plugin_ui(request: dict) -> dict:
     }
 
 
+def _capabilities_response(request: dict) -> dict:
+    return {
+        "protocolVersion": PROTOCOL_VERSION,
+        "requestId": request.get("requestId", "generated-request"),
+        "ok": True,
+        "action": "capabilities.query",
+        "summary": "Runtime capabilities reported.",
+        "result": _python_capabilities(),
+        "diagnostics": {"runtime": _python_capabilities()},
+        "errors": [],
+    }
+
+
 def process(request_json: str) -> str:
     request = json.loads(request_json)
     action = request.get("action", "")
 
-    if action == "plugins.list":
+    if action == "capabilities.query":
+        response = _capabilities_response(request)
+    elif action == "plugins.list":
         response = _plugins_response(request)
     elif action == "plugins.invoke_ui":
         response = _launch_plugin_ui(request)
