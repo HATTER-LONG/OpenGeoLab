@@ -19,21 +19,20 @@ struct EmbeddedPythonRuntime::Impl {
     Py::object processFunction;
 };
 
-namespace {
-
 #ifdef OPENGEOLAB_PYTHON_HOME
-constexpr auto DEFAULT_PYTHON_HOME = OPENGEOLAB_PYTHON_HOME;
+static constexpr auto DEFAULT_PYTHON_HOME = OPENGEOLAB_PYTHON_HOME;
 #else
-constexpr auto DEFAULT_PYTHON_HOME = "";
+static constexpr auto DEFAULT_PYTHON_HOME = "";
 #endif
 
 #ifdef OPENGEOLAB_PYTHON_EXECUTABLE
-constexpr auto DEFAULT_PYTHON_EXECUTABLE = OPENGEOLAB_PYTHON_EXECUTABLE;
+static constexpr auto DEFAULT_PYTHON_EXECUTABLE = OPENGEOLAB_PYTHON_EXECUTABLE;
 #else
-constexpr auto DEFAULT_PYTHON_EXECUTABLE = "";
+static constexpr auto DEFAULT_PYTHON_EXECUTABLE = "";
 #endif
 
-[[nodiscard]] std::filesystem::path environmentPath(const char* variable_name) {
+// NOLINTBEGIN(misc-use-anonymous-namespace)
+[[nodiscard]] static std::filesystem::path environmentPath(const char* variable_name) {
 #ifdef _WIN32
     char* raw_value = nullptr;
     std::size_t len = 0;
@@ -52,7 +51,7 @@ constexpr auto DEFAULT_PYTHON_EXECUTABLE = "";
 #endif
 }
 
-[[nodiscard]] std::filesystem::path compiledPath(const char* value) {
+[[nodiscard]] static std::filesystem::path compiledPath(const char* value) {
     if(value == nullptr || std::string_view(value).empty()) {
         return {};
     }
@@ -60,7 +59,7 @@ constexpr auto DEFAULT_PYTHON_EXECUTABLE = "";
     return std::filesystem::path(value);
 }
 
-[[nodiscard]] std::filesystem::path resolvePythonHome() {
+[[nodiscard]] static std::filesystem::path resolvePythonHome() {
     if(const auto configured_home = environmentPath("OPENGEOLAB_PYTHON_HOME");
        !configured_home.empty()) {
         return configured_home;
@@ -73,7 +72,7 @@ constexpr auto DEFAULT_PYTHON_EXECUTABLE = "";
     return compiledPath(DEFAULT_PYTHON_HOME);
 }
 
-[[nodiscard]] std::filesystem::path
+[[nodiscard]] static std::filesystem::path
 resolvePythonExecutable(const std::filesystem::path& python_home) {
     if(const auto configured_executable = environmentPath("OPENGEOLAB_PYTHON_EXECUTABLE");
        !configured_executable.empty()) {
@@ -92,15 +91,15 @@ resolvePythonExecutable(const std::filesystem::path& python_home) {
 #endif
 }
 
-[[nodiscard]] std::wstring toWideString(const std::filesystem::path& path) {
+[[nodiscard]] static std::wstring toWideString(const std::filesystem::path& path) {
     return path.wstring();
 }
 
-[[nodiscard]] std::string pathToString(const std::filesystem::path& path) {
+[[nodiscard]] static std::string pathToString(const std::filesystem::path& path) {
     return path.empty() ? std::string("<empty>") : path.string();
 }
 
-[[nodiscard]] std::vector<std::filesystem::path>
+[[nodiscard]] static std::vector<std::filesystem::path>
 buildModuleSearchPaths(const std::filesystem::path& python_home,
                        const std::filesystem::path& application_root,
                        const std::filesystem::path& runtime_root,
@@ -122,7 +121,7 @@ buildModuleSearchPaths(const std::filesystem::path& python_home,
     return search_paths;
 }
 
-void throwPythonStatusError(const std::string& context, const PyStatus& status) {
+static void throwPythonStatusError(const std::string& context, const PyStatus& status) {
     if(PyStatus_IsError(status) != 0 && status.err_msg != nullptr) {
         throw std::runtime_error(context + ": " + status.err_msg);
     }
@@ -130,10 +129,10 @@ void throwPythonStatusError(const std::string& context, const PyStatus& status) 
     throw std::runtime_error(context + ": CPython reported an unknown initialization error.");
 }
 
-void setConfigString(PyConfig& config,
-                     wchar_t** destination,
-                     const std::filesystem::path& value,
-                     const char* description) {
+static void setConfigString(PyConfig& config,
+                            wchar_t** destination,
+                            const std::filesystem::path& value,
+                            const char* description) {
     const std::wstring wide_value = toWideString(value);
     const PyStatus status = PyConfig_SetString(&config, destination, wide_value.c_str());
     if(PyStatus_Exception(status) != 0) {
@@ -142,7 +141,7 @@ void setConfigString(PyConfig& config,
     }
 }
 
-void appendModuleSearchPath(PyConfig& config, const std::filesystem::path& path) {
+static void appendModuleSearchPath(PyConfig& config, const std::filesystem::path& path) {
     if(path.empty() || !std::filesystem::exists(path)) {
         return;
     }
@@ -155,7 +154,7 @@ void appendModuleSearchPath(PyConfig& config, const std::filesystem::path& path)
     }
 }
 
-[[nodiscard]] std::string
+[[nodiscard]] static std::string
 describeInitializationContext(const std::filesystem::path& python_home,
                               const std::filesystem::path& python_executable,
                               const std::filesystem::path& application_root,
@@ -169,8 +168,7 @@ describeInitializationContext(const std::filesystem::path& python_home,
            << ", pluginRoot=" << pathToString(plugin_root);
     return stream.str();
 }
-
-} // namespace
+// NOLINTEND(misc-use-anonymous-namespace)
 
 EmbeddedPythonRuntime::EmbeddedPythonRuntime(std::filesystem::path application_root,
                                              std::filesystem::path runtime_root,
@@ -214,7 +212,9 @@ void EmbeddedPythonRuntime::initialize() {
 
         m_impl = std::make_unique<Impl>(&config);
 
-        Py::gil_scoped_acquire acquire;
+        const Py::gil_scoped_acquire acquire;
+        // Mutated through item assignment below to populate os.environ for the runtime.
+        // NOLINTNEXTLINE(misc-const-correctness)
         Py::dict environment_map = Py::module_::import("os").attr("environ");
         environment_map["OPENGEOLAB_APPLICATION_ROOT"] = m_applicationRoot.string();
         environment_map["OPENGEOLAB_RUNTIME_ROOT"] = m_runtimeRoot.string();
@@ -240,7 +240,7 @@ void EmbeddedPythonRuntime::initialize() {
 
 std::string EmbeddedPythonRuntime::process(std::string_view request_json) {
     try {
-        Py::gil_scoped_acquire acquire;
+        const Py::gil_scoped_acquire acquire;
         return Py::cast<std::string>(m_impl->processFunction(Py::str(request_json)));
     } catch(const Py::error_already_set& error) {
         throw std::runtime_error(error.what());

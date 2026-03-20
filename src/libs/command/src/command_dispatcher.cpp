@@ -7,6 +7,7 @@ namespace OpenGeoLab::Command {
 
 static constexpr std::string_view PROTOCOL_VERSION = "1.0";
 
+// NOLINTNEXTLINE(misc-use-anonymous-namespace,readability-function-size)
 static auto makeResponse(const nlohmann::json& request_id,
                          const nlohmann::json& action,
                          bool ok,

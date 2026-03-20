@@ -10,17 +10,17 @@
 namespace OpenGeoLab::Command {
 
 namespace {
-constexpr std::size_t kMaxPointCount = 100'000'000;
-constexpr std::size_t kDefaultPointCount = 1'000'000;
+constexpr std::size_t MAX_POINT_COUNT = 100'000'000;
+constexpr std::size_t DEFAULT_POINT_COUNT = 1'000'000;
 } // namespace
 
 auto BoundingBoxCommand::execute(const nlohmann::json& payload) -> CommandResult {
-    if (payload.contains("pointCount") && payload["pointCount"].is_number_integer()
-        && payload["pointCount"].get<std::int64_t>() < 0) {
+    if(payload.contains("pointCount") && payload["pointCount"].is_number_integer() &&
+       payload["pointCount"].get<std::int64_t>() < 0) {
         throw std::invalid_argument("pointCount must be non-negative");
     }
-    const std::size_t point_count = payload.value("pointCount", kDefaultPointCount);
-    if (point_count == 0 || point_count > kMaxPointCount) {
+    const std::size_t point_count = payload.value("pointCount", DEFAULT_POINT_COUNT);
+    if(point_count == 0 || point_count > MAX_POINT_COUNT) {
         throw std::invalid_argument("pointCount must be in range [1, 100000000]");
     }
     const unsigned int seed = payload.value("seed", 42U);

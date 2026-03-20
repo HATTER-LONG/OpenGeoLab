@@ -8,18 +8,18 @@ SetPointsCommand::SetPointsCommand(std::shared_ptr<Geometry::PointStore> store)
     : store_(std::move(store)) {}
 
 auto SetPointsCommand::execute(const nlohmann::json& payload) -> CommandResult {
-    if (!payload.contains("points") || !payload["points"].is_array()) {
+    if(!payload.contains("points") || !payload["points"].is_array()) {
         return {.ok = false, .summary = "Missing or invalid 'points' array.", .result = {}};
     }
 
     const auto& json_points = payload["points"];
-    if (json_points.empty()) {
+    if(json_points.empty()) {
         return {.ok = false, .summary = "Points array must not be empty.", .result = {}};
     }
 
     std::vector<Geometry::Point3D> points;
     points.reserve(json_points.size());
-    for (const auto& item : json_points) {
+    for(const auto& item : json_points) {
         points.push_back({
             .x = item.value("x", 0.0),
             .y = item.value("y", 0.0),

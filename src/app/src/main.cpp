@@ -64,6 +64,6 @@ int main(int argc, char* argv[]) {
     // while the main thread is blocked in app.exec().
     // When app.exec() returns, `release` destructor re-acquires GIL automatically,
     // ensuring scoped_interpreter can safely destruct.
-    pybind11::gil_scoped_release release;
+    const pybind11::gil_scoped_release release;
     return app.exec();
 }

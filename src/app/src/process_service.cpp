@@ -28,8 +28,7 @@ void ProcessService::submitRequest(const QString& request_json) {
     // runs a nested event loop, keeping the UI responsive while blocked.
     if(action.startsWith("plugins.invoke_ui")) {
         try {
-            auto response =
-                QString::fromStdString(m_runtime.process(request_json.toStdString()));
+            auto response = QString::fromStdString(m_runtime.process(request_json.toStdString()));
             const auto response_doc = QJsonDocument::fromJson(response.toUtf8());
             if(response_doc.object().value("ok").toBool(false)) {
                 emit responseReady(request_id, response);

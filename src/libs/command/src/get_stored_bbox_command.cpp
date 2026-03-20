@@ -8,7 +8,7 @@ GetStoredBBoxCommand::GetStoredBBoxCommand(std::shared_ptr<Geometry::PointStore>
     : store_(std::move(store)) {}
 
 auto GetStoredBBoxCommand::execute(const nlohmann::json& /*payload*/) -> CommandResult {
-    if (store_->empty()) {
+    if(store_->empty()) {
         return {
             .ok = false,
             .summary = "No points stored yet. Use geometry.set_points first.",
