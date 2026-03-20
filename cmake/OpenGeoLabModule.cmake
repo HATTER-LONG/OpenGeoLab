@@ -3,6 +3,8 @@ include(CMakeParseArguments)
 include(GenerateExportHeader)
 include(GNUInstallDirs)
 
+set(OPENGEOLAB_MODULE_CMAKE_DIR "${CMAKE_CURRENT_LIST_DIR}")
+
 function (opengeolab_add_module target)
     set(options)
     set(oneValueArgs ALIAS_NAME)
@@ -114,7 +116,10 @@ function (opengeolab_copy_runtime_dlls target)
     add_custom_command(
         TARGET ${target}
         POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                $<TARGET_RUNTIME_DLLS:${target}> $<TARGET_FILE_DIR:${target}>
+        COMMAND
+            ${CMAKE_COMMAND}
+            -Druntime_dlls=$<JOIN:$<TARGET_RUNTIME_DLLS:${target}>,|>
+            -Dtarget_dir=$<TARGET_FILE_DIR:${target}>
+            -P "${OPENGEOLAB_MODULE_CMAKE_DIR}/copy_runtime_dlls.cmake"
         COMMAND_EXPAND_LISTS VERBATIM)
 endfunction ()

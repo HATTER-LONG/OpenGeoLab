@@ -184,7 +184,7 @@ if (OPENGEOLAB_BUILD_TESTS)
         "DOCTEST_NO_INSTALL ON")
 endif ()
 
-# add_subdirectory(src/libs/geometry)
+add_subdirectory(src/libs/geometry)
 
 # add_subdirectory(src/libs/command)
 
