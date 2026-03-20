@@ -34,7 +34,7 @@ def _bridge_type():
     from PySide6.QtCore import QObject, Signal, Slot  # type: ignore
 
     class _Bridge(QObject):
-        response_ready = Signal(str)
+        responseReady = Signal(str)
 
         @Slot(str)
         def process_request(self, request_json: str) -> None:
@@ -43,10 +43,10 @@ def _bridge_type():
 
             try:
                 result = opengeolab_pywrapper.process(request_json)
-                self.response_ready.emit(result)
+                self.responseReady.emit(result)
             except Exception as exc:
                 error_response = json.dumps({"ok": False, "message": str(exc)})
-                self.response_ready.emit(error_response)
+                self.responseReady.emit(error_response)
 
     return _Bridge
 
