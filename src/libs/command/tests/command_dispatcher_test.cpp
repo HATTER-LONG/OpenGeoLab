@@ -1,18 +1,33 @@
 #include <doctest/doctest.h>
 
-#include <opengeolab/command/bounding_box_command.hpp>
-#include <opengeolab/command/command_dispatcher.hpp>
 #include <nlohmann/json.hpp>
+#include <opengeolab/command/command_dispatcher.hpp>
 
-#include <memory>
 #include <algorithm>
+#include <memory>
 
 namespace OpenGeoLab::Command {
 namespace {
 
+/// @brief Lightweight mock for CommandDispatcher tests.
+class MockCommand final : public ICommand {
+public:
+    [[nodiscard]] auto actionName() const noexcept -> std::string_view override {
+        return "mock.action";
+    }
+
+    [[nodiscard]] auto execute(const nlohmann::json& payload) -> CommandResult override {
+        return CommandResult{
+            .ok = true,
+            .summary = "Mock executed.",
+            .result = {{"echo", payload}},
+        };
+    }
+};
+
 TEST_CASE("CommandDispatcher reports registered actions") {
     CommandDispatcher dispatcher;
-    dispatcher.registerCommand(std::make_unique<BoundingBoxCommand>());
+    dispatcher.registerCommand(std::make_unique<MockCommand>());
 
     std::vector<std::string> actions;
     for(const std::string_view action : dispatcher.registeredActions()) {
@@ -21,7 +36,7 @@ TEST_CASE("CommandDispatcher reports registered actions") {
     std::ranges::sort(actions);
 
     REQUIRE(actions.size() == 1);
-    CHECK(actions.front() == "geometry.bounding_box");
+    CHECK(actions.front() == "mock.action");
 }
 
 TEST_CASE("CommandDispatcher returns error payload for unknown action") {
@@ -38,23 +53,20 @@ TEST_CASE("CommandDispatcher returns error payload for unknown action") {
     CHECK(response.at("errors").is_array());
 }
 
-TEST_CASE("CommandDispatcher executes bounding box command") {
+TEST_CASE("CommandDispatcher executes registered mock command") {
     CommandDispatcher dispatcher;
-    dispatcher.registerCommand(std::make_unique<BoundingBoxCommand>());
+    dispatcher.registerCommand(std::make_unique<MockCommand>());
 
     const auto response = nlohmann::json::parse(dispatcher.dispatch(
-        R"({"requestId":"req-2","action":"geometry.bounding_box","payload":{"pointCount":32,"seed":7}})"));
+        R"({"requestId":"req-2","action":"mock.action","payload":{"key":"value"}})"));
 
     REQUIRE(response.at("ok") == true);
     CHECK(response.at("protocolVersion") == "1.0");
     CHECK(response.at("requestId") == "req-2");
-    CHECK(response.at("action") == "geometry.bounding_box");
-    CHECK(response.at("summary") == "Computed bounding box.");
+    CHECK(response.at("action") == "mock.action");
+    CHECK(response.at("summary") == "Mock executed.");
     REQUIRE(response.at("result").is_object());
-    CHECK(response.at("result").at("pointCount") == 32);
-    CHECK(response.at("result").at("elapsedMs").is_number());
-    CHECK(response.at("result").at("min").is_object());
-    CHECK(response.at("result").at("max").is_object());
+    CHECK(response.at("result").at("echo") == nlohmann::json{{"key", "value"}});
 }
 
 } // namespace

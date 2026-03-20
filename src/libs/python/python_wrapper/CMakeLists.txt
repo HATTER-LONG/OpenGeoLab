@@ -6,7 +6,9 @@ target_compile_definitions(
     opengeolab_pywrapper
     PRIVATE $<$<PLATFORM_ID:Windows>:MS_NO_COREDLL>
             $<$<PLATFORM_ID:Windows>:Py_ENABLE_SHARED>)
-target_link_libraries(opengeolab_pywrapper PRIVATE OpenGeoLab::Command pybind11::pybind11)
+target_link_libraries(
+    opengeolab_pywrapper PRIVATE OpenGeoLab::Command OpenGeoLab::Geometry Kangaroo::Kangaroo
+                                 pybind11::pybind11)
 set_target_properties(
     opengeolab_pywrapper
     PROPERTIES FOLDER "python"

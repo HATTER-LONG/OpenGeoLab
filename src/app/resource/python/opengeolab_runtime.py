@@ -141,8 +141,16 @@ def process(request_json: str) -> str:
     elif action == "plugins.invoke_ui":
         response = _launch_plugin_ui(request)
     else:
+        # Ensure the request has a "module" field for ModuleDispatcher.
+        # Backward compatibility: split "geometry.bounding_box" into
+        # module="geometry", action="bounding_box".
+        if "module" not in request and "." in action:
+            module, _, short_action = action.partition(".")
+            request["module"] = module
+            request["action"] = short_action
+
         wrapper = _import_backend_wrapper()
-        response = json.loads(wrapper.process(request_json))
+        response = json.loads(wrapper.process(json.dumps(request)))
         response.setdefault("diagnostics", {})
         response["diagnostics"]["runtime"] = _python_capabilities()
 

@@ -6,17 +6,23 @@
 #pragma once
 
 #include <opengeolab/command/command_export.hpp>
+#include <opengeolab/command/module_service_interface.hpp>
 
 #include <kangaroo/util/plugin_component_factory.hpp>
 
+#include <memory>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <vector>
 
 namespace OpenGeoLab::Command {
 
 /**
  * @brief Routes protocol requests to registered module services.
+ *
+ * Caches resolved module services to keep Kangaroo singletons alive
+ * across dispatch calls (the factory uses weak_ptr internally).
  */
 class OPENGEOLAB_COMMAND_EXPORT ModuleDispatcher {
 public:
@@ -28,7 +34,8 @@ public:
 
     /**
      * @brief Dispatches a JSON request string and returns a JSON response string.
-     * @param request_json Request envelope containing module, action, payload, and optional requestId.
+     * @param request_json Request envelope containing module, action, payload, and optional
+     * requestId.
      * @return Serialized JSON response following the module command protocol envelope.
      */
     [[nodiscard]] auto dispatch(std::string_view request_json) -> std::string;
@@ -40,11 +47,12 @@ public:
     [[nodiscard]] auto registeredModules() const -> std::vector<std::string>;
 
 private:
-    void rememberModuleName(std::string_view module_name);
+    [[nodiscard]] auto resolveModule(const std::string& module_name)
+        -> std::shared_ptr<IModuleService>;
 
-private:
     Kangaroo::Util::PluginComponentFactory& m_factory;
     std::vector<std::string> m_registeredModules;
+    std::unordered_map<std::string, std::shared_ptr<IModuleService>> m_moduleCache;
 };
 
 } // namespace OpenGeoLab::Command

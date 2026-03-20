@@ -1,9 +1,20 @@
-set(geometry_sources src/bounding_box_calculator.cpp src/point_store.cpp)
+set(geometry_sources
+    src/bounding_box_calculator.cpp
+    src/point_store.cpp
+    src/bounding_box_action.cpp
+    src/set_points_action.cpp
+    src/get_stored_bbox_action.cpp
+    src/geometry_module.cpp
+    src/geometry_registration.cpp)
 
 set(geometry_public_headers
     include/opengeolab/geometry/bounding_box.hpp
     include/opengeolab/geometry/bounding_box_calculator.hpp
-    include/opengeolab/geometry/point_store.hpp)
+    include/opengeolab/geometry/point_store.hpp
+    include/opengeolab/geometry/bounding_box_action.hpp
+    include/opengeolab/geometry/set_points_action.hpp
+    include/opengeolab/geometry/get_stored_bbox_action.hpp
+    include/opengeolab/geometry/geometry_module.hpp)
 
 opengeolab_add_module(
     ogl_geometry
@@ -12,7 +23,11 @@ opengeolab_add_module(
     SOURCES
     ${geometry_sources}
     PUBLIC_HEADERS
-    ${geometry_public_headers})
+    ${geometry_public_headers}
+    PUBLIC_LINKS
+    OpenGeoLab::Command
+    Kangaroo::Kangaroo
+    nlohmann_json::nlohmann_json)
 opengeolab_copy_runtime_dlls(ogl_geometry)
 
 if(OPENGEOLAB_BUILD_TESTS)
@@ -24,4 +39,15 @@ if(OPENGEOLAB_BUILD_TESTS)
       OpenGeoLab::Geometry
       CTEST_NAME
       ogl_geometry_test)
+
+  opengeolab_add_doctest_test(
+      ogl_geometry_module_test
+      SOURCES
+      tests/geometry_module_test.cpp
+      LINKS
+      OpenGeoLab::Geometry
+      OpenGeoLab::Command
+      Kangaroo::Kangaroo
+      CTEST_NAME
+      ogl_geometry_module_test)
 endif()
