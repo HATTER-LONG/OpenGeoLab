@@ -5,21 +5,11 @@
 
 #pragma once
 
-#include <nlohmann/json.hpp>
+#include <opengeolab/command/command_result.hpp>
 
-#include <string>
 #include <string_view>
 
 namespace OpenGeoLab::Command {
-
-/**
- * @brief Describes the outcome of a command execution.
- */
-struct CommandResult {
-    bool ok{true};
-    std::string summary;
-    nlohmann::json result;
-};
 
 /**
  * @brief Defines the interface implemented by JSON-dispatchable commands.

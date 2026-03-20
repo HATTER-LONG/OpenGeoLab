@@ -2,10 +2,10 @@
 
 #include <opengeolab/command/bounding_box_command.hpp>
 #include <opengeolab/command/command_dispatcher.hpp>
+#include <nlohmann/json.hpp>
 
+#include <memory>
 #include <algorithm>
-#include <string>
-#include <vector>
 
 namespace OpenGeoLab::Command {
 namespace {
