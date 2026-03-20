@@ -46,3 +46,65 @@ TEST_CASE("BackendDispatcher computes box metrics")
         response.at("result").at("metrics").at("surfaceArea").get<double>() == doctest::Approx(52.0)
     );
 }
+
+TEST_CASE("BackendDispatcher describes box selection with replay metadata")
+{
+    const auto response = processRequest({
+        {"protocolVersion", "1.0"},
+        {"requestId", "test-box-selection"},
+        {"source", "doctest"},
+        {"action", "selection.box.describe"},
+        {"payload",
+         {{"viewport",
+           {{"viewportId", "mainViewport"},
+            {"width", 1280},
+            {"height", 720},
+            {"camera", {{"distance", 8.0}, {"azimuthDeg", 30.0}, {"elevationDeg", 20.0}}}}},
+          {"rectangle", {{"left", 50}, {"top", 70}, {"right", 500}, {"bottom", 350}}},
+          {"entityKinds", {"edge", "face"}}}},
+        {"context", nlohmann::json::object()}
+    });
+
+    CHECK(response.at("ok").get<bool>());
+    CHECK(response.at("result").at("selectionMode").get<std::string>() == "box");
+    CHECK(response.at("result").at("replayBoundary").at("headlessReady").get<bool>());
+}
+
+TEST_CASE("BackendDispatcher exports replayable Python script")
+{
+    const nlohmann::json operations = nlohmann::json::array(
+        {nlohmann::json {
+             {"kind", "camera.orbit"},
+             {"view",
+              {{"viewportId", "mainViewport"},
+               {"width", 1280},
+               {"height", 720},
+               {"camera", {{"distance", 9.0}, {"azimuthDeg", 25.0}, {"elevationDeg", 18.0}}}}}
+         },
+         nlohmann::json {
+             {"kind", "selection.box"},
+             {"selection",
+              {{"viewport",
+                {{"viewportId", "mainViewport"},
+                 {"width", 1280},
+                 {"height", 720},
+                 {"camera", {{"distance", 9.0}, {"azimuthDeg", 25.0}, {"elevationDeg", 18.0}}}}},
+               {"rectangle", {{"left", 40}, {"top", 60}, {"right", 420}, {"bottom", 280}}},
+               {"entityKinds", {"edge", "face"}}}}
+         }}
+    );
+
+    const auto response = processRequest({
+        {"protocolVersion", "1.0"},
+        {"requestId", "test-python-export"},
+        {"source", "doctest"},
+        {"action", "interaction.export.python"},
+        {"payload", {{"operations", operations}}},
+        {"context", nlohmann::json::object()}
+    });
+
+    CHECK(response.at("ok").get<bool>());
+    const auto script = response.at("result").at("script").get<std::string>();
+    CHECK(script.find("restore_viewport") != std::string::npos);
+    CHECK(script.find("box_select") != std::string::npos);
+}

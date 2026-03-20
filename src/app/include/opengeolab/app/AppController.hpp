@@ -43,7 +43,11 @@ public:
     Q_INVOKABLE void sendRequest();
     Q_INVOKABLE void loadPingExample();
     Q_INVOKABLE void loadGeometryExample();
+    Q_INVOKABLE void loadViewportExample();
     Q_INVOKABLE void loadSnapshotExample();
+    Q_INVOKABLE void loadSelectionPickExample();
+    Q_INVOKABLE void loadBoxSelectionExample();
+    Q_INVOKABLE void loadReplayExportExample();
     Q_INVOKABLE void loadPluginExample();
 
 signals:

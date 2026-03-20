@@ -3,6 +3,8 @@
 
 #include <QCoreApplication>
 #include <QDir>
+#include <QJsonArray>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonParseError>
@@ -40,6 +42,42 @@ namespace
     }
 
     return QStringLiteral("data:%1;base64,%2").arg(mime_type, base64_data);
+}
+
+[[nodiscard]] QJsonObject createViewportPayload()
+{
+    return {
+        {"viewportId", QStringLiteral("mainViewport")},
+        {"width", 1280},
+        {"height", 720},
+        {"projection", QStringLiteral("perspective")},
+        {"cameraModel", QStringLiteral("orbit")},
+        {"camera",
+         QJsonObject {
+             {"target", QJsonObject {{"x", 0.0}, {"y", 0.0}, {"z", 0.0}}},
+             {"distance", 8.5},
+             {"azimuthDeg", 35.0},
+             {"elevationDeg", 25.0},
+             {"rollDeg", 0.0}
+         }}
+    };
+}
+
+[[nodiscard]] QJsonObject createBoxSelectionPayload()
+{
+    return {
+        {"viewport", createViewportPayload()},
+        {"rectangle",
+         QJsonObject {
+             {"left", 120},
+             {"top", 100},
+             {"right", 620},
+             {"bottom", 420}
+         }},
+        {"entityKinds", QJsonArray {QStringLiteral("edge"), QStringLiteral("face")}},
+        {"replace", true},
+        {"visibleOnly", true}
+    };
 }
 
 }  // namespace
@@ -138,14 +176,80 @@ void AppController::loadGeometryExample()
     );
 }
 
-void AppController::loadSnapshotExample()
+void AppController::loadViewportExample()
 {
     setRequestText(
         createExampleRequest(
+            QStringLiteral("render.viewport.describe"),
+            createViewportPayload()
+        )
+    );
+}
+
+void AppController::loadSnapshotExample()
+{
+    auto payload = createViewportPayload();
+    payload.insert(QStringLiteral("reason"), QStringLiteral("qml-preview"));
+
+    setRequestText(
+        createExampleRequest(
             QStringLiteral("render.snapshot.capture"),
+            payload
+        )
+    );
+}
+
+void AppController::loadSelectionPickExample()
+{
+    auto payload = createViewportPayload();
+    payload.insert(QStringLiteral("screenX"), 480);
+    payload.insert(QStringLiteral("screenY"), 260);
+    payload.insert(QStringLiteral("entityKinds"), QJsonArray {QStringLiteral("face")});
+
+    setRequestText(
+        createExampleRequest(
+            QStringLiteral("selection.pick.describe"),
+            payload
+        )
+    );
+}
+
+void AppController::loadBoxSelectionExample()
+{
+    setRequestText(
+        createExampleRequest(
+            QStringLiteral("selection.box.describe"),
+            createBoxSelectionPayload()
+        )
+    );
+}
+
+void AppController::loadReplayExportExample()
+{
+    setRequestText(
+        createExampleRequest(
+            QStringLiteral("interaction.export.python"),
             QJsonObject {
-                {"viewportId", QStringLiteral("mainViewport")},
-                {"reason", QStringLiteral("qml-preview")}
+                {"operations",
+                 QJsonArray {
+                     QJsonObject {
+                         {"kind", QStringLiteral("camera.orbit")},
+                         {"view", createViewportPayload()}
+                     },
+                     QJsonObject {
+                         {"kind", QStringLiteral("selection.box")},
+                         {"selection", createBoxSelectionPayload()},
+                         {"result",
+                          QJsonObject {
+                              {"selectionCount", 2},
+                              {"entityIds",
+                               QJsonArray {
+                                   QStringLiteral("box://demo/0#Edge1"),
+                                   QStringLiteral("box://demo/0#Face1")
+                               }}
+                          }}
+                     }
+                 }}
             }
         )
     );

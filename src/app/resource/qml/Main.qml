@@ -79,8 +79,28 @@ ApplicationWindow {
                             }
 
                             Button {
+                                text: "Viewport"
+                                onClicked: appController.loadViewportExample()
+                            }
+
+                            Button {
                                 text: "Snapshot"
                                 onClicked: appController.loadSnapshotExample()
+                            }
+
+                            Button {
+                                text: "Pick"
+                                onClicked: appController.loadSelectionPickExample()
+                            }
+
+                            Button {
+                                text: "Box Select"
+                                onClicked: appController.loadBoxSelectionExample()
+                            }
+
+                            Button {
+                                text: "Replay Export"
+                                onClicked: appController.loadReplayExportExample()
                             }
 
                             Button {
@@ -130,7 +150,7 @@ ApplicationWindow {
                             anchors.margins: 8
                             width: parent.width - 16
                             wrapMode: Text.WordWrap
-                            text: "The skeleton keeps one JSON process envelope for QML, embedded Python, external Python callers, and future LLM tools. It already reserves hooks for render snapshots, selection descriptions, diagnostics, and plugin metadata."
+                            text: "The skeleton now treats viewport state, semantic selection, and interaction recording as separate layers. Replay-oriented flows export camera restore + selection commands instead of raw mouse gestures, so the same protocol can grow toward headless automation."
                         }
                     }
                 }

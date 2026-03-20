@@ -1,10 +1,12 @@
 #include <opengeolab/command/BackendDispatcher.hpp>
 #include <opengeolab/command/JsonProtocol.hpp>
 #include <opengeolab/geometry/GeometryService.hpp>
+#include <opengeolab/interaction/InteractionRecorder.hpp>
+#include <opengeolab/render/RenderService.hpp>
+#include <opengeolab/selection/SelectionService.hpp>
 
 #include <fmt/format.h>
 
-#include <algorithm>
 #include <stdexcept>
 
 namespace OpenGeoLab::Command
@@ -13,10 +15,6 @@ namespace OpenGeoLab::Command
 namespace
 {
 
-constexpr std::string_view PLACEHOLDER_PNG_BASE64 {
-    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+c1ioAAAAASUVORK5CYII="
-};
-
 [[nodiscard]] nlohmann::json makeCapabilities()
 {
     return {
@@ -24,24 +22,14 @@ constexpr std::string_view PLACEHOLDER_PNG_BASE64 {
         {"entrypoints",
          {{"qml", true}, {"embeddedPython", true}, {"pyWrapperModule", true}, {"externalLlm", true}}},
         {"render",
-         {{"snapshot", true},
-          {"selectionIntrospection", true},
-          {"implementation", "placeholder-freecad-inspired-contract"}}},
+         {{"snapshot", true}, {"viewportDescription", true}, {"cameraStateRecording", true}}},
+        {"selection",
+         {{"pickDescription", true}, {"boxDescription", true}, {"headlessQuery", true}}},
+        {"interaction",
+         {{"recordOperation", true}, {"exportPython", true}, {"replayPlan", true}}},
         {"plugins",
          {{"pythonDiscovery", true}, {"pyside6UiMetadata", true}, {"launchUiAction", true}}},
         {"supportedActions", BackendDispatcher::supportedActions()}
-    };
-}
-
-[[nodiscard]] nlohmann::json makePlaceholderSnapshot()
-{
-    return {
-        {"mimeType", "image/png"},
-        {"encoding", "base64"},
-        {"width", 1},
-        {"height", 1},
-        {"data", PLACEHOLDER_PNG_BASE64},
-        {"summary", "Placeholder viewport snapshot used to validate the protocol end-to-end."}
     };
 }
 
@@ -78,11 +66,14 @@ constexpr std::string_view PLACEHOLDER_PNG_BASE64 {
     response.result = {
         {"request",
          {{"protocolVersion", PROCESS_PROTOCOL_VERSION},
-          {"requestId", "string"},
-          {"source", "qml-shell|python-plugin|llm"},
-          {"action", "system.ping|geometry.box.describe|render.snapshot.capture|selection.pick.describe"},
-          {"payload", "json object"},
-          {"context", "json object"}}},
+           {"requestId", "string"},
+           {"source", "qml-shell|python-plugin|llm"},
+           {"action",
+            "system.ping|geometry.box.describe|render.viewport.describe|render.snapshot.capture|"
+            "selection.pick.describe|selection.box.describe|interaction.record.operation|"
+            "interaction.export.python|interaction.replay.describe"},
+           {"payload", "json object"},
+           {"context", "json object"}}},
         {"response",
          {{"protocolVersion", PROCESS_PROTOCOL_VERSION},
           {"requestId", "string"},
@@ -105,38 +96,66 @@ constexpr std::string_view PLACEHOLDER_PNG_BASE64 {
     return response;
 }
 
+[[nodiscard]] ResponseEnvelope handleViewportDescription(const RequestEnvelope& request)
+{
+    auto response = makeBaseResponse(request);
+    response.ok = true;
+    response.summary = "Viewport state normalized for replay.";
+    response.result = OpenGeoLab::Render::RenderService::describeViewport(request.payload);
+    return response;
+}
+
 [[nodiscard]] ResponseEnvelope handleSnapshot(const RequestEnvelope& request)
 {
     auto response = makeBaseResponse(request);
     response.ok = true;
     response.summary = "Placeholder render snapshot generated.";
-    response.result = {
-        {"snapshot", makePlaceholderSnapshot()},
-        {"viewport",
-         {{"renderer", "placeholder"},
-          {"cameraModel", "orbit"},
-          {"selectionMode", "single-pick"},
-          {"futureHooks", {"syncScene", "boxSelect", "gpuSnapshot"}}}}
-    };
+    response.result = OpenGeoLab::Render::RenderService::captureSnapshot(request.payload);
     return response;
 }
 
 [[nodiscard]] ResponseEnvelope handleSelectionPick(const RequestEnvelope& request)
 {
-    const int screen_x = request.payload.value("screenX", 0);
-    const int screen_y = request.payload.value("screenY", 0);
-
     auto response = makeBaseResponse(request);
     response.ok = true;
-    response.summary = "Placeholder selection payload returned.";
-    response.result = {
-        {"screenPosition", {{"x", screen_x}, {"y", screen_y}}},
-        {"worldPosition", {{"x", 0.0}, {"y", 0.0}, {"z", 0.0}}},
-        {"hit", {{"entityId", "box://demo/0"}, {"subElement", "Face1"}, {"confidence", 0.0}}},
-        {"selectionIntent",
-         {{"style", "single-pick"},
-          {"inspiredBy", "FreeCAD unified selection root + application-level selection state"}}}
-    };
+    response.summary = "Selection pick query normalized.";
+    response.result = OpenGeoLab::Selection::SelectionService::describePick(request.payload);
+    return response;
+}
+
+[[nodiscard]] ResponseEnvelope handleSelectionBox(const RequestEnvelope& request)
+{
+    auto response = makeBaseResponse(request);
+    response.ok = true;
+    response.summary = "Selection box query normalized.";
+    response.result = OpenGeoLab::Selection::SelectionService::describeBoxSelection(request.payload);
+    return response;
+}
+
+[[nodiscard]] ResponseEnvelope handleRecordOperation(const RequestEnvelope& request)
+{
+    auto response = makeBaseResponse(request);
+    response.ok = true;
+    response.summary = "Interaction operations normalized for recording.";
+    response.result = OpenGeoLab::Interaction::InteractionRecorder::recordOperation(request.payload);
+    return response;
+}
+
+[[nodiscard]] ResponseEnvelope handleExportPython(const RequestEnvelope& request)
+{
+    auto response = makeBaseResponse(request);
+    response.ok = true;
+    response.summary = "Replay-oriented Python script generated.";
+    response.result = OpenGeoLab::Interaction::InteractionRecorder::exportPythonScript(request.payload);
+    return response;
+}
+
+[[nodiscard]] ResponseEnvelope handleReplayPlan(const RequestEnvelope& request)
+{
+    auto response = makeBaseResponse(request);
+    response.ok = true;
+    response.summary = "Replay plan generated.";
+    response.result = OpenGeoLab::Interaction::InteractionRecorder::describeReplayPlan(request.payload);
     return response;
 }
 
@@ -165,12 +184,32 @@ constexpr std::string_view PLACEHOLDER_PNG_BASE64 {
         return handleGeometryBox(request);
     }
 
+    if (request.action == "render.viewport.describe") {
+        return handleViewportDescription(request);
+    }
+
     if (request.action == "render.snapshot.capture") {
         return handleSnapshot(request);
     }
 
     if (request.action == "selection.pick.describe") {
         return handleSelectionPick(request);
+    }
+
+    if (request.action == "selection.box.describe") {
+        return handleSelectionBox(request);
+    }
+
+    if (request.action == "interaction.record.operation") {
+        return handleRecordOperation(request);
+    }
+
+    if (request.action == "interaction.export.python") {
+        return handleExportPython(request);
+    }
+
+    if (request.action == "interaction.replay.describe") {
+        return handleReplayPlan(request);
     }
 
     return makeUnsupportedActionResponse(request);
@@ -226,8 +265,13 @@ std::vector<std::string> BackendDispatcher::supportedActions()
         "system.ping",
         "protocol.describe",
         "geometry.box.describe",
+        "render.viewport.describe",
         "render.snapshot.capture",
-        "selection.pick.describe"
+        "selection.pick.describe",
+        "selection.box.describe",
+        "interaction.record.operation",
+        "interaction.export.python",
+        "interaction.replay.describe"
     };
 }
 

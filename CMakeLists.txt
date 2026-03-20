@@ -200,6 +200,9 @@ if(OPENGEOLAB_BUILD_TESTS)
 endif()
 
 add_subdirectory(src/libs/geometry)
+add_subdirectory(src/libs/render)
+add_subdirectory(src/libs/selection)
+add_subdirectory(src/libs/interaction)
 add_subdirectory(src/libs/command)
 add_subdirectory(src/libs/python)
 

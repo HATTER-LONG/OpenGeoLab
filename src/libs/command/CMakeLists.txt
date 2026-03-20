@@ -19,6 +19,9 @@ opengeolab_add_module(
     fmt::fmt
     nlohmann_json::nlohmann_json
     OpenGeoLab::Geometry
+    OpenGeoLab::Render
+    OpenGeoLab::Selection
+    OpenGeoLab::Interaction
 )
 
 if(OPENGEOLAB_BUILD_TESTS)
