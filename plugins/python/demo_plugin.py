@@ -45,9 +45,9 @@ def launch_ui() -> dict:
     dialog.setWindowTitle("OpenGeoLab Demo Plugin")
     dialog.setText("PySide6 plugin UI hook reached the running Qt application.")
     dialog.setStandardButtons(QtWidgets.QMessageBox.StandardButton.Ok)
-    dialog.show()
+    dialog.exec()
 
     return {
         "ok": True,
-        "message": "PySide6 demo dialog was shown.",
+        "message": "PySide6 demo dialog was shown and dismissed by user.",
     }
