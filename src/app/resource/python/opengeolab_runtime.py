@@ -4,9 +4,21 @@ import importlib
 import json
 import os
 import pkgutil
+import sys
 import traceback
 from pathlib import Path
 
+# ---------------------------------------------------------------------------
+# On Windows, register the host application directory as a DLL search path
+# BEFORE any PySide6 import.  This ensures that the Qt DLLs already loaded
+# by the C++ host take priority over PySide6's bundled copies, preventing
+# duplicate Qt singletons (two QCoreApplication statics).
+# FreeCAD uses the same technique in FreeCADInit.py.
+# ---------------------------------------------------------------------------
+if sys.platform == "win32":
+    _app_root = os.environ.get("OPENGEOLAB_APPLICATION_ROOT", "")
+    if _app_root and os.path.isdir(_app_root):
+        os.add_dll_directory(_app_root)
 
 PROTOCOL_VERSION = "1.0"
 

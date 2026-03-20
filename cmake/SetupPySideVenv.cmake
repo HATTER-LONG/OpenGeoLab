@@ -65,18 +65,12 @@ if(_need_install)
 endif()
 
 # ---------------------------------------------------------------------------
-# Strip PySide6's bundled Qt DLLs so it MUST use the host application's Qt.
-# This prevents loading two separate Qt instances (Debug vs Release, or
-# different patch versions) which would cause QApplication.instance() to
-# return None in the embedded context.
+# Ensure the host application's Qt DLLs take priority over PySide6's bundled
+# copies. We do NOT strip PySide6's Qt DLLs (they serve as fallback and are
+# needed when PySide6 modules load before the host app's Qt). Instead, the
+# embedded runtime adds the application directory to os.add_dll_directory()
+# before importing PySide6, so the already-loaded host Qt wins.
 # ---------------------------------------------------------------------------
-set(_pyside6_pkg_dir "${OPENGEOLAB_PYVENV_DIR}/Lib/site-packages/PySide6")
-file(GLOB _pyside6_qt_dlls "${_pyside6_pkg_dir}/Qt6*.dll")
-list(LENGTH _pyside6_qt_dlls _qt_dll_count)
-if(_qt_dll_count GREATER 0)
-  message(STATUS "Stripping ${_qt_dll_count} bundled Qt DLLs from PySide6 venv...")
-  file(REMOVE ${_pyside6_qt_dlls})
-endif()
 
 # ---------------------------------------------------------------------------
 # Copy python3.dll (stable ABI shim) to the runtime output directory.
