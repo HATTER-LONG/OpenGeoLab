@@ -1,5 +1,7 @@
 # SetupPySideVenv.cmake
-# Creates a build-local Python venv and installs PySide6 with strict Qt version matching.
+# Creates a build-local Python venv, installs PySide6 with strict Qt version matching,
+# strips PySide6's bundled Qt DLLs to force use of the host application's Qt,
+# and copies python3.dll (stable ABI) needed by shiboken6.
 
 # Extract Qt6 major.minor version
 set(OPENGEOLAB_QT_MAJOR ${Qt6_VERSION_MAJOR})
@@ -60,6 +62,35 @@ if(_need_install)
             "Qt version is ${Qt6_VERSION}.")
   endif()
   message(STATUS "PySide6 ${CMAKE_MATCH_1}.${CMAKE_MATCH_2}.x installed successfully.")
+endif()
+
+# ---------------------------------------------------------------------------
+# Strip PySide6's bundled Qt DLLs so it MUST use the host application's Qt.
+# This prevents loading two separate Qt instances (Debug vs Release, or
+# different patch versions) which would cause QApplication.instance() to
+# return None in the embedded context.
+# ---------------------------------------------------------------------------
+set(_pyside6_pkg_dir "${OPENGEOLAB_PYVENV_DIR}/Lib/site-packages/PySide6")
+file(GLOB _pyside6_qt_dlls "${_pyside6_pkg_dir}/Qt6*.dll")
+list(LENGTH _pyside6_qt_dlls _qt_dll_count)
+if(_qt_dll_count GREATER 0)
+  message(STATUS "Stripping ${_qt_dll_count} bundled Qt DLLs from PySide6 venv...")
+  file(REMOVE ${_pyside6_qt_dlls})
+endif()
+
+# ---------------------------------------------------------------------------
+# Copy python3.dll (stable ABI shim) to the runtime output directory.
+# shiboken6.abi3.dll depends on python3.dll, which is not a direct link
+# dependency of any CMake target and thus not captured by TARGET_RUNTIME_DLLS.
+# ---------------------------------------------------------------------------
+cmake_path(GET Python3_EXECUTABLE PARENT_PATH _python_home)
+set(_python3_dll "${_python_home}/python3.dll")
+if(EXISTS "${_python3_dll}")
+  file(COPY "${_python3_dll}" DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
+  message(STATUS "Copied python3.dll to ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
+else()
+  message(WARNING "python3.dll not found at ${_python3_dll} — "
+                  "shiboken6 (PySide6) may fail to load at runtime.")
 endif()
 
 # Export venv site-packages path for compile definitions

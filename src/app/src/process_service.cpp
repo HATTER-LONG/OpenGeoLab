@@ -14,10 +14,10 @@ ProcessService::ProcessService(OpenGeoLab::Python::EmbeddedPythonRuntime& runtim
 
 bool ProcessService::isBusy() const { return m_pendingCount.load(std::memory_order_relaxed) > 0; }
 
-void ProcessService::submitRequest(const QString& requestJson) {
+void ProcessService::submitRequest(const QString& request_json) {
     // Record hook: if (m_recorder) m_recorder->onRequest(requestJson);
 
-    const auto doc = QJsonDocument::fromJson(requestJson.toUtf8());
+    const auto doc = QJsonDocument::fromJson(request_json.toUtf8());
     const QString request_id = doc.object().value("requestId").toString("unknown");
 
     m_pendingCount.fetch_add(1, std::memory_order_relaxed);
@@ -46,7 +46,7 @@ void ProcessService::submitRequest(const QString& requestJson) {
         watcher->deleteLater();
     });
 
-    watcher->setFuture(QtConcurrent::run([this, json = requestJson.toStdString()]() -> QString {
+    watcher->setFuture(QtConcurrent::run([this, json = request_json.toStdString()]() -> QString {
         return QString::fromStdString(m_runtime.process(json));
     }));
 }
