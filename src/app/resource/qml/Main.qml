@@ -48,6 +48,13 @@ ApplicationWindow {
             }
 
             ActionButton {
+                label: "启动 QML 插件窗口"
+                actionName: "plugins.invoke_ui"
+                payload: "{\"plugin\":\"qml_demo_plugin\"}"
+                onRequest: (json) => processService.submitRequest(json)
+            }
+
+            ActionButton {
                 label: "Geometry 包围盒 (随机)"
                 actionName: "geometry.bounding_box"
                 payload: "{\"pointCount\":1000000}"
