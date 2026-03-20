@@ -13,6 +13,7 @@
 #include <QCoreApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
+#include <QQuickStyle>
 
 #include <filesystem>
 
@@ -29,13 +30,15 @@ int main(int argc, char* argv[]) {
     // This is a compile-time path; for deployment use windeployqt instead.
     {
         const auto qt_bin = std::filesystem::path(OPENGEOLAB_QT_BIN_DIR);
-        if (std::filesystem::is_directory(qt_bin)) {
+        if(std::filesystem::is_directory(qt_bin)) {
             SetDllDirectoryW(qt_bin.wstring().c_str());
         }
     }
 #endif
 
     QApplication app(argc, argv);
+    QApplication::setStyle("Fusion");
+    QQuickStyle::setStyle("Fusion");
 
     const auto app_dir = QCoreApplication::applicationDirPath().toStdString();
     const auto runtime_dir = std::filesystem::path(app_dir) / "python";
