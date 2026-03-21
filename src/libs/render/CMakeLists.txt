@@ -38,4 +38,12 @@ if(OPENGEOLAB_BUILD_TESTS)
       OpenGeoLab::Render
       CTEST_NAME
       ogl_camera_state_test)
+  opengeolab_add_doctest_test(
+      ogl_navigation_controller_test
+      SOURCES
+      tests/navigation_controller_test.cpp
+      LINKS
+      OpenGeoLab::Render
+      CTEST_NAME
+      ogl_navigation_controller_test)
 endif()
