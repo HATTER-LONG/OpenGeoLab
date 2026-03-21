@@ -88,6 +88,10 @@ auto ModuleDispatcher::getRecordedRequests() const -> const std::vector<std::str
 
 void ModuleDispatcher::clearRecording() { m_recorder.clear(); }
 
+void ModuleDispatcher::recordEntry(std::string_view request_json) {
+    m_recorder.record(request_json);
+}
+
 auto ModuleDispatcher::resolveModule(const std::string& module_name)
     -> std::shared_ptr<IModuleService> {
     auto it = m_moduleCache.find(module_name);

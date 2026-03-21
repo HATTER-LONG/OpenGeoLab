@@ -41,4 +41,8 @@ PYBIND11_MODULE(opengeolab_pywrapper, module) {
         []() -> const std::vector<std::string>& { return dispatcher.getRecordedRequests(); },
         Py::return_value_policy::copy);
     module.def("clear_recording", []() { dispatcher.clearRecording(); });
+    module.def(
+        "record_entry",
+        [](const std::string& request_json) { dispatcher.recordEntry(request_json); },
+        Py::arg("request_json"));
 }

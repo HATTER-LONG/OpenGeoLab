@@ -295,8 +295,12 @@ def _handle_recording_replay(request: dict) -> dict:
         )
 
     wrapper = _import_backend_wrapper()
-    was_recording = wrapper.is_recording()
-    if was_recording:
+    if wrapper.is_recording():
+        wrapper.record_entry(
+            json.dumps(
+                {"module": "recording", "action": "replay", "payload": {"path": str(script_path)}}
+            )
+        )
         wrapper.stop_recording()
 
     try:

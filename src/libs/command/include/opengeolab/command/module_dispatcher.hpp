@@ -77,6 +77,13 @@ public:
      */
     void clearRecording();
 
+    /**
+     * @brief Directly appends an entry to the recording buffer.
+     * @param request_json Serialized JSON to record (e.g. a synthetic annotation).
+     * @note Only appends when recording is active.
+     */
+    void recordEntry(std::string_view request_json);
+
 private:
     [[nodiscard]] auto resolveModule(const std::string& module_name)
         -> std::shared_ptr<IModuleService>;
