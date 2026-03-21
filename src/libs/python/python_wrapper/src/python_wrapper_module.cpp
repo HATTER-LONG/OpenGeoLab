@@ -4,6 +4,7 @@
  */
 
 #include <opengeolab/command/module_dispatcher.hpp>
+#include <opengeolab/command/module_registry.hpp>
 
 #include <kangaroo/util/plugin_component_factory.hpp>
 #include <pybind11/pybind11.h>
@@ -12,18 +13,15 @@
 #include <string>
 #include <vector>
 
-// Force-load module DLLs so their static-init registration lambdas execute.
-// Without an explicit symbol reference the linker omits unused DLL imports.
-extern "C" void ogl_geometry_force_load();
-#pragma comment(linker, "/INCLUDE:ogl_geometry_force_load")
-
 namespace Py = pybind11;
 
 PYBIND11_MODULE(opengeolab_pywrapper, module) {
     module.doc() = "OpenGeoLab JSON process bridge";
 
-    static auto dispatcher =
-        OpenGeoLab::Command::ModuleDispatcher(Kangaroo::Util::PluginComponentFactory::instance());
+    auto& factory = Kangaroo::Util::PluginComponentFactory::instance();
+    OpenGeoLab::Command::registerAllModules(factory);
+
+    static auto dispatcher = OpenGeoLab::Command::ModuleDispatcher(factory);
 
     module.def(
         "process",

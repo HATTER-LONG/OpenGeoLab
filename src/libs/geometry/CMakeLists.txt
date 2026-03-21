@@ -14,7 +14,8 @@ set(geometry_public_headers
     include/opengeolab/geometry/bounding_box_action.hpp
     include/opengeolab/geometry/set_points_action.hpp
     include/opengeolab/geometry/get_stored_bbox_action.hpp
-    include/opengeolab/geometry/geometry_module.hpp)
+    include/opengeolab/geometry/geometry_module.hpp
+    include/opengeolab/geometry/geometry_registration.hpp)
 
 opengeolab_add_module(
     ogl_geometry

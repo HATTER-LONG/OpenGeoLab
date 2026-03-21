@@ -1,7 +1,9 @@
 /**
  * @file geometry_registration.cpp
- * @brief Registers geometry module services and action factories at static initialization time.
+ * @brief Implements explicit registration of geometry module services and action factories.
  */
+
+#include <opengeolab/geometry/geometry_registration.hpp>
 
 #include <opengeolab/base/registration_helper.hpp>
 #include <opengeolab/geometry/bounding_box_action.hpp>
@@ -14,49 +16,31 @@
 #include <memory>
 #include <utility>
 
-// Exported anchor symbol — referencing it from consumers forces the linker to
-// import ogl_geometry, which triggers the static registration lambda below.
-extern "C" OPENGEOLAB_GEOMETRY_EXPORT void ogl_geometry_force_load() noexcept {}
+namespace OpenGeoLab::Geometry {
 
-namespace {
-
-[[maybe_unused]] const bool kRegistered = []() {
-    auto& factory = Kangaroo::Util::PluginComponentFactory::instance();
-
-    OpenGeoLab::Base::registerModule<OpenGeoLab::Geometry::GeometryModule>(factory, "geometry");
-    OpenGeoLab::Base::registerAction<OpenGeoLab::Geometry::BoundingBoxAction>(
-        factory, "geometry.bounding_box");
-    OpenGeoLab::Base::registerAction<OpenGeoLab::Geometry::SetPointsAction>(
+void registerGeometryModule(Kangaroo::Util::PluginComponentFactory& factory) {
+    Base::registerModule<GeometryModule>(factory, "geometry");
+    Base::registerAction<BoundingBoxAction>(factory, "geometry.bounding_box");
+    Base::registerAction<SetPointsAction>(
         factory, "geometry.set_points",
         [](void*, Kangaroo::Util::ComponentCreateRequest request) noexcept -> void* {
             if(request.m_data == nullptr) {
                 return nullptr;
             }
-
-            auto store = *static_cast<const std::shared_ptr<OpenGeoLab::Geometry::PointStore>*>(
-                request.m_data);
-            return new OpenGeoLab::Geometry::SetPointsAction(std::move(store));
+            auto store = *static_cast<const std::shared_ptr<PointStore>*>(request.m_data);
+            return new SetPointsAction(std::move(store));
         },
-        [](void*, void* object) noexcept {
-            delete static_cast<OpenGeoLab::Geometry::SetPointsAction*>(object);
-        });
-
-    OpenGeoLab::Base::registerAction<OpenGeoLab::Geometry::GetStoredBBoxAction>(
+        [](void*, void* object) noexcept { delete static_cast<SetPointsAction*>(object); });
+    Base::registerAction<GetStoredBBoxAction>(
         factory, "geometry.get_stored_bbox",
         [](void*, Kangaroo::Util::ComponentCreateRequest request) noexcept -> void* {
             if(request.m_data == nullptr) {
                 return nullptr;
             }
-
-            auto store = *static_cast<const std::shared_ptr<OpenGeoLab::Geometry::PointStore>*>(
-                request.m_data);
-            return new OpenGeoLab::Geometry::GetStoredBBoxAction(std::move(store));
+            auto store = *static_cast<const std::shared_ptr<PointStore>*>(request.m_data);
+            return new GetStoredBBoxAction(std::move(store));
         },
-        [](void*, void* object) noexcept {
-            delete static_cast<OpenGeoLab::Geometry::GetStoredBBoxAction*>(object);
-        });
+        [](void*, void* object) noexcept { delete static_cast<GetStoredBBoxAction*>(object); });
+}
 
-    return true;
-}();
-
-} // namespace
+} // namespace OpenGeoLab::Geometry

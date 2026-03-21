@@ -1,9 +1,10 @@
-set(command_sources src/command_dispatcher.cpp src/module_dispatcher.cpp)
+set(command_sources src/command_dispatcher.cpp src/module_dispatcher.cpp src/module_registry.cpp)
 
 set(command_public_headers
     include/opengeolab/command/module_dispatcher.hpp
     include/opengeolab/command/command_interface.hpp
-    include/opengeolab/command/command_dispatcher.hpp)
+    include/opengeolab/command/command_dispatcher.hpp
+    include/opengeolab/command/module_registry.hpp)
 
 opengeolab_add_module(
     ogl_command
@@ -15,6 +16,7 @@ opengeolab_add_module(
     ${command_public_headers}
     PUBLIC_LINKS
     OpenGeoLab::Base
+    OpenGeoLab::Geometry
     Kangaroo::Kangaroo
     nlohmann_json::nlohmann_json)
 opengeolab_copy_runtime_dlls(ogl_command)

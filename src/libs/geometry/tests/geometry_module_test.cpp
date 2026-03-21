@@ -2,8 +2,7 @@
 
 #include <opengeolab/base/module_service_interface.hpp>
 #include <opengeolab/command/module_dispatcher.hpp>
-#include <opengeolab/geometry/geometry_module.hpp>
-#include <opengeolab/geometry/point_store.hpp>
+#include <opengeolab/geometry/geometry_registration.hpp>
 
 #include <kangaroo/util/plugin_component_factory.hpp>
 #include <nlohmann/json.hpp>
@@ -13,11 +12,10 @@
 namespace OpenGeoLab::Geometry {
 namespace {
 
-/// Force ogl_geometry DLL load so static registrations execute.
-/// The volatile variable prevents the optimizer from discarding the DLL reference.
-static volatile bool kForceLoad = [] {
-    PointStore store;
-    return store.empty();
+/// Register geometry module once for all test cases in this file.
+static const bool kRegistered = [] {
+    registerGeometryModule(Kangaroo::Util::PluginComponentFactory::instance());
+    return true;
 }();
 
 TEST_CASE("Geometry module registers with factory on load") {
