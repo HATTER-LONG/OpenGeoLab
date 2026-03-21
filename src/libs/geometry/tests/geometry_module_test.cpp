@@ -13,7 +13,7 @@ namespace OpenGeoLab::Geometry {
 namespace {
 
 /// Register geometry module once for all test cases in this file.
-static const bool kRegistered = [] {
+static const bool REGISTERED = [] {  // NOLINT(cert-err58-cpp)
     registerGeometryModule(Kangaroo::Util::PluginComponentFactory::instance());
     return true;
 }();

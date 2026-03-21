@@ -6,7 +6,7 @@
 
 namespace OpenGeoLab::Base {
 
-auto makeResponse(const nlohmann::json& requestId,
+auto makeResponse(const nlohmann::json& request_id,
                   const nlohmann::json& module,
                   const nlohmann::json& action,
                   bool ok,
@@ -14,7 +14,7 @@ auto makeResponse(const nlohmann::json& requestId,
                   const nlohmann::json& result,
                   const nlohmann::json& errors) -> std::string {
     return nlohmann::json{{"protocolVersion", kProtocolVersion},
-                          {"requestId", requestId},
+                          {"requestId", request_id},
                           {"ok", ok},
                           {"module", module},
                           {"action", action},
@@ -24,14 +24,14 @@ auto makeResponse(const nlohmann::json& requestId,
         .dump();
 }
 
-auto makeResponse(const nlohmann::json& requestId,
+auto makeResponse(const nlohmann::json& request_id,
                   const nlohmann::json& action,
                   bool ok,
                   std::string_view summary,
                   const nlohmann::json& result,
                   const nlohmann::json& errors) -> std::string {
     return nlohmann::json{{"protocolVersion", kProtocolVersion},
-                          {"requestId", requestId},
+                          {"requestId", request_id},
                           {"ok", ok},
                           {"action", action},
                           {"summary", summary},
@@ -40,18 +40,18 @@ auto makeResponse(const nlohmann::json& requestId,
         .dump();
 }
 
-auto makeErrorResponse(const nlohmann::json& requestId,
+auto makeErrorResponse(const nlohmann::json& request_id,
                        const nlohmann::json& module,
                        const nlohmann::json& action,
                        std::string_view message) -> std::string {
-    return makeResponse(requestId, module, action, false, message, nlohmann::json::object(),
+    return makeResponse(request_id, module, action, false, message, nlohmann::json::object(),
                         nlohmann::json::array({makeErrorItem(message)}));
 }
 
-auto makeErrorResponse(const nlohmann::json& requestId,
+auto makeErrorResponse(const nlohmann::json& request_id,
                        const nlohmann::json& action,
                        std::string_view message) -> std::string {
-    return makeResponse(requestId, action, false, message, nlohmann::json::object(),
+    return makeResponse(request_id, action, false, message, nlohmann::json::object(),
                         nlohmann::json::array({message}));
 }
 
