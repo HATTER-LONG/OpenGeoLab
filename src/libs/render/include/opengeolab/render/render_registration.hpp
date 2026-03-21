@@ -13,7 +13,15 @@ class PluginComponentFactory;
 
 namespace OpenGeoLab::Render {
 
-// TODO: implementation in later tasks
+/**
+ * @brief Registers render module services and actions with the given factory.
+ *
+ * Registers RenderModule as a singleton, plus all render actions
+ * (camera.get_state, camera.set_state, camera.view_all, scene.add_box,
+ * scene.describe) as transient entries with SceneManager injection.
+ *
+ * @param factory Component factory receiving the registrations.
+ */
 OPENGEOLAB_RENDER_EXPORT void
 registerRenderModule(Kangaroo::Util::PluginComponentFactory& factory);
 
