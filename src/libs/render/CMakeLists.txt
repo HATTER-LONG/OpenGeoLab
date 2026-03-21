@@ -1,0 +1,30 @@
+set(render_sources
+    src/camera_state.cpp
+    src/scene_manager.cpp
+    src/navigation_controller.cpp
+    src/event_translator.cpp
+    src/render_module.cpp
+    src/render_registration.cpp)
+
+set(render_public_headers
+    include/opengeolab/render/camera_state.hpp
+    include/opengeolab/render/scene_manager.hpp
+    include/opengeolab/render/navigation_controller.hpp
+    include/opengeolab/render/event_translator.hpp
+    include/opengeolab/render/render_module.hpp
+    include/opengeolab/render/render_registration.hpp)
+
+opengeolab_add_module(
+    ogl_render
+    ALIAS_NAME
+    Render
+    SOURCES
+    ${render_sources}
+    PUBLIC_HEADERS
+    ${render_public_headers}
+    PUBLIC_LINKS
+    Coin::Coin
+    OpenGeoLab::Base
+    nlohmann_json::nlohmann_json
+    Kangaroo::Kangaroo)
+opengeolab_copy_runtime_dlls(ogl_render)

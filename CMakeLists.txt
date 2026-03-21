@@ -226,6 +226,8 @@ add_subdirectory(src/libs/base)
 
 add_subdirectory(src/libs/geometry)
 
+add_subdirectory(src/libs/render)
+
 add_subdirectory(src/libs/command)
 
 add_subdirectory(src/libs/python)
