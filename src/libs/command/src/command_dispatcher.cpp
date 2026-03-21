@@ -1,30 +1,14 @@
 #include <opengeolab/command/command_dispatcher.hpp>
 
+#include <opengeolab/base/protocol_constants.hpp>
+#include <opengeolab/base/response_builder.hpp>
+
 #include <stdexcept>
 #include <utility>
 
 namespace OpenGeoLab::Command {
 
-static constexpr std::string_view PROTOCOL_VERSION = "1.0";
-
-// NOLINTNEXTLINE(misc-use-anonymous-namespace,readability-function-size)
-static auto makeResponse(const nlohmann::json& request_id,
-                         const nlohmann::json& action,
-                         bool ok,
-                         std::string_view summary,
-                         const nlohmann::json& result,
-                         const nlohmann::json& errors) -> std::string {
-    return nlohmann::json{
-        {"protocolVersion", PROTOCOL_VERSION},
-        {"requestId", request_id},
-        {"ok", ok},
-        {"action", action},
-        {"summary", summary},
-        {"result", result},
-        {"errors", errors},
-    }
-        .dump();
-}
+using OpenGeoLab::Base::CommandResult;
 
 void CommandDispatcher::registerCommand(std::unique_ptr<ICommand> command) {
     if(command == nullptr) {
@@ -46,28 +30,25 @@ auto CommandDispatcher::dispatch(std::string_view request_json) -> std::string {
         action = request.contains("action") ? request.at("action") : nlohmann::json(nullptr);
 
         if(!action.is_string()) {
-            return makeResponse(request_id, action, false, "Request action must be a string.",
-                                nlohmann::json::object(),
-                                nlohmann::json::array({"Request action must be a string."}));
+            return Base::makeErrorResponse(request_id, action, "Request action must be a string.");
         }
 
         const std::string action_name = action.get<std::string>();
         const auto command_iterator = m_commands.find(action_name);
         if(command_iterator == m_commands.end()) {
             const std::string summary = "Unknown action: " + action_name;
-            return makeResponse(request_id, action_name, false, summary, nlohmann::json::object(),
-                                nlohmann::json::array({summary}));
+            return Base::makeErrorResponse(request_id, action_name, summary);
         }
 
         const nlohmann::json payload =
             request.contains("payload") ? request.at("payload") : nlohmann::json::object();
         const CommandResult command_result = command_iterator->second->execute(payload);
 
-        return makeResponse(request_id, action_name, command_result.ok, command_result.summary,
-                            command_result.result, nlohmann::json::array());
+        return Base::makeResponse(request_id, action_name, command_result.ok,
+                                  command_result.summary, command_result.result,
+                                  nlohmann::json::array());
     } catch(const std::exception& exception) {
-        return makeResponse(request_id, action, false, exception.what(), nlohmann::json::object(),
-                            nlohmann::json::array({exception.what()}));
+        return Base::makeErrorResponse(request_id, action, exception.what());
     }
 }
 

@@ -5,11 +5,13 @@
 
 #pragma once
 
-#include <opengeolab/command/command_result.hpp>
+#include <opengeolab/base/command_result.hpp>
 
 #include <string_view>
 
 namespace OpenGeoLab::Command {
+
+using OpenGeoLab::Base::CommandResult;
 
 /**
  * @brief Defines the interface implemented by JSON-dispatchable commands.

@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include <opengeolab/command/module_service_interface.hpp>
+#include <opengeolab/base/module_service_interface.hpp>
 #include <opengeolab/geometry/geometry_export.hpp>
 #include <opengeolab/geometry/point_store.hpp>
 
@@ -21,14 +21,14 @@ namespace OpenGeoLab::Geometry {
 /**
  * @brief Routes geometry actions through the plugin component factory.
  */
-class OPENGEOLAB_GEOMETRY_EXPORT GeometryModule : public Command::IModuleService {
+class OPENGEOLAB_GEOMETRY_EXPORT GeometryModule : public Base::IModuleService {
 public:
     explicit GeometryModule(Kangaroo::Util::PluginComponentFactory& factory);
     ~GeometryModule() override;
 
     [[nodiscard]] auto moduleName() const noexcept -> std::string_view override;
     [[nodiscard]] auto dispatch(std::string_view action, const nlohmann::json& payload)
-        -> Command::CommandResult override;
+        -> Base::CommandResult override;
     [[nodiscard]] auto supportedActions() const -> std::vector<std::string> override;
 
 private:

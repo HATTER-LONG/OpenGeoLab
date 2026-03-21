@@ -1,7 +1,7 @@
 #include <doctest/doctest.h>
 
+#include <opengeolab/base/module_service_interface.hpp>
 #include <opengeolab/command/module_dispatcher.hpp>
-#include <opengeolab/command/module_service_interface.hpp>
 
 #include <kangaroo/util/plugin_component_factory.hpp>
 #include <nlohmann/json.hpp>
@@ -18,8 +18,8 @@ public:
     [[nodiscard]] auto moduleName() const noexcept -> std::string_view override { return "mock"; }
 
     [[nodiscard]] auto dispatch(std::string_view /*action*/, const nlohmann::json& /*payload*/)
-        -> CommandResult override {
-        return CommandResult{true, "mock ok", nlohmann::json{{"value", 42}}};
+        -> Base::CommandResult override {
+        return Base::CommandResult{true, "mock ok", nlohmann::json{{"value", 42}}};
     }
 
     [[nodiscard]] auto supportedActions() const -> std::vector<std::string> override {
@@ -47,8 +47,8 @@ TEST_CASE("ModuleDispatcher returns error for unknown module") {
     Kangaroo::Util::PluginComponentFactory factory;
     ModuleDispatcher dispatcher(factory);
 
-    const auto response = nlohmann::json::parse(
-        dispatcher.dispatch(R"({"module":"nonexistent","action":"test","requestId":"1","payload":{}})"));
+    const auto response = nlohmann::json::parse(dispatcher.dispatch(
+        R"({"module":"nonexistent","action":"test","requestId":"1","payload":{}})"));
 
     CHECK(response.at("protocolVersion") == "1.0");
     CHECK(response.at("requestId") == "1");
@@ -68,7 +68,8 @@ TEST_CASE("ModuleDispatcher routes to registered mock module") {
     registration.m_interfaceId = "OpenGeoLab.IModuleService";
     registration.m_moduleName = "mock";
     registration.m_lifetime = Kangaroo::Util::ComponentFactoryLifetime::Singleton;
-    registration.m_createComponent = [](void*, Kangaroo::Util::ComponentCreateRequest) noexcept -> void* {
+    registration.m_createComponent = [](void*,
+                                        Kangaroo::Util::ComponentCreateRequest) noexcept -> void* {
         return new MockModuleService();
     };
     registration.m_destroyComponent = [](void*, void* object) noexcept {

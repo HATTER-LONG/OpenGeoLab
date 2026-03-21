@@ -5,14 +5,14 @@
 
 #pragma once
 
-#include <opengeolab/command/command_result.hpp>
+#include <opengeolab/base/command_result.hpp>
 
 #include <kangaroo/util/plugin_component_factory.hpp>
 #include <nlohmann/json_fwd.hpp>
 
 #include <string_view>
 
-namespace OpenGeoLab::Command {
+namespace OpenGeoLab::Base {
 
 /**
  * @brief Defines the interface implemented by command actions exposed from a module.
@@ -35,8 +35,8 @@ public:
     [[nodiscard]] virtual auto execute(const nlohmann::json& payload) -> CommandResult = 0;
 };
 
-} // namespace OpenGeoLab::Command
+} // namespace OpenGeoLab::Base
 
-template <> struct Kangaroo::Util::PluginComponentInterfaceId<OpenGeoLab::Command::IAction> {
+template <> struct Kangaroo::Util::PluginComponentInterfaceId<OpenGeoLab::Base::IAction> {
     static constexpr const char* VALUE = "OpenGeoLab.IAction";
 };

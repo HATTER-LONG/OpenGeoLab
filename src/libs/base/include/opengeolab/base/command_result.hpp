@@ -9,7 +9,7 @@
 
 #include <string>
 
-namespace OpenGeoLab::Command {
+namespace OpenGeoLab::Base {
 
 /**
  * @brief Describes the outcome of a command execution.
@@ -20,4 +20,4 @@ struct CommandResult {
     nlohmann::json result;
 };
 
-} // namespace OpenGeoLab::Command
+} // namespace OpenGeoLab::Base

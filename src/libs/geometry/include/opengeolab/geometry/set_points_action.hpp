@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include <opengeolab/command/action_interface.hpp>
+#include <opengeolab/base/action_interface.hpp>
 #include <opengeolab/geometry/geometry_export.hpp>
 
 #include <memory>
@@ -18,7 +18,7 @@ class PointStore;
 /**
  * @brief Stores caller-provided 3-D points and returns the resulting bounding box.
  */
-class OPENGEOLAB_GEOMETRY_EXPORT SetPointsAction : public Command::IAction {
+class OPENGEOLAB_GEOMETRY_EXPORT SetPointsAction : public Base::IAction {
 public:
     /// @param store Shared point store that persists across requests.
     explicit SetPointsAction(std::shared_ptr<PointStore> store);
@@ -28,7 +28,7 @@ public:
      * @param payload JSON object containing a "points" array of {x, y, z} objects.
      * @return Stored point count and computed bounding box.
      */
-    [[nodiscard]] auto execute(const nlohmann::json& payload) -> Command::CommandResult override;
+    [[nodiscard]] auto execute(const nlohmann::json& payload) -> Base::CommandResult override;
 
     /// @return The string literal "set_points".
     [[nodiscard]] auto actionName() const noexcept -> std::string_view override;

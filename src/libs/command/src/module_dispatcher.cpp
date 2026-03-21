@@ -1,5 +1,8 @@
 #include <opengeolab/command/module_dispatcher.hpp>
 
+#include <opengeolab/base/protocol_constants.hpp>
+#include <opengeolab/base/response_builder.hpp>
+
 #include <nlohmann/json.hpp>
 
 #include <exception>
@@ -7,41 +10,8 @@
 #include <utility>
 
 namespace OpenGeoLab::Command {
-namespace {
 
-constexpr std::string_view PROTOCOL_VERSION = "1.0";
-
-auto makeErrorItem(std::string_view message) -> nlohmann::json {
-    return nlohmann::json{{"message", message}};
-}
-
-auto makeResponse(const nlohmann::json& request_id,
-                  const nlohmann::json& module,
-                  const nlohmann::json& action,
-                  bool ok,
-                  std::string_view summary,
-                  const nlohmann::json& result,
-                  const nlohmann::json& errors) -> std::string {
-    return nlohmann::json{{"protocolVersion", PROTOCOL_VERSION},
-                          {"requestId", request_id},
-                          {"ok", ok},
-                          {"module", module},
-                          {"action", action},
-                          {"summary", summary},
-                          {"result", result},
-                          {"errors", errors}}
-        .dump();
-}
-
-auto makeErrorResponse(const nlohmann::json& request_id,
-                       const nlohmann::json& module,
-                       const nlohmann::json& action,
-                       std::string_view message) -> std::string {
-    return makeResponse(request_id, module, action, false, message, nlohmann::json::object(),
-                        nlohmann::json::array({makeErrorItem(message)}));
-}
-
-} // namespace
+using OpenGeoLab::Base::CommandResult;
 
 ModuleDispatcher::ModuleDispatcher(Kangaroo::Util::PluginComponentFactory& factory)
     : m_factory(factory) {}
@@ -54,8 +24,8 @@ auto ModuleDispatcher::dispatch(std::string_view request_json) -> std::string {
     try {
         const nlohmann::json request = nlohmann::json::parse(request_json);
         if(!request.is_object()) {
-            return makeErrorResponse(request_id, module, action,
-                                     "Request envelope must be a JSON object.");
+            return Base::makeErrorResponse(request_id, module, action,
+                                           "Request envelope must be a JSON object.");
         }
 
         request_id =
@@ -65,15 +35,16 @@ auto ModuleDispatcher::dispatch(std::string_view request_json) -> std::string {
 
         if(!module.is_string()) {
             if(module.is_null()) {
-                return makeErrorResponse(request_id, module, action, "Missing 'module' field");
+                return Base::makeErrorResponse(request_id, module, action,
+                                               "Missing 'module' field");
             }
-            return makeErrorResponse(request_id, module, action,
-                                     "Request module must be a string.");
+            return Base::makeErrorResponse(request_id, module, action,
+                                           "Request module must be a string.");
         }
 
         if(!action.is_string()) {
-            return makeErrorResponse(request_id, module, action,
-                                     "Request action must be a string.");
+            return Base::makeErrorResponse(request_id, module, action,
+                                           "Request action must be a string.");
         }
 
         const auto payload =
@@ -84,17 +55,18 @@ auto ModuleDispatcher::dispatch(std::string_view request_json) -> std::string {
         auto module_service = resolveModule(module_name);
         if(module_service == nullptr) {
             const std::string message = "Unknown module: " + module_name;
-            return makeErrorResponse(request_id, module_name, action_name, message);
+            return Base::makeErrorResponse(request_id, module_name, action_name, message);
         }
 
         const CommandResult command_result = module_service->dispatch(action_name, payload);
 
-        return makeResponse(request_id, module_name, action_name, command_result.ok,
-                            command_result.summary, command_result.result, nlohmann::json::array());
+        return Base::makeResponse(request_id, module_name, action_name, command_result.ok,
+                                  command_result.summary, command_result.result,
+                                  nlohmann::json::array());
     } catch(const nlohmann::json::exception& exception) {
-        return makeErrorResponse(request_id, module, action, exception.what());
+        return Base::makeErrorResponse(request_id, module, action, exception.what());
     } catch(const std::exception& exception) {
-        return makeErrorResponse(request_id, module, action, exception.what());
+        return Base::makeErrorResponse(request_id, module, action, exception.what());
     }
 }
 

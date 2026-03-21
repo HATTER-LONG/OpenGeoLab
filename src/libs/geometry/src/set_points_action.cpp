@@ -21,7 +21,7 @@ auto boundingBoxJson(const BoundingBox& bounding_box) -> nlohmann::json {
 
 SetPointsAction::SetPointsAction(std::shared_ptr<PointStore> store) : store_(std::move(store)) {}
 
-auto SetPointsAction::execute(const nlohmann::json& payload) -> Command::CommandResult {
+auto SetPointsAction::execute(const nlohmann::json& payload) -> Base::CommandResult {
     if(!payload.contains("points") || !payload["points"].is_array()) {
         return {
             .ok = false,
@@ -52,7 +52,7 @@ auto SetPointsAction::execute(const nlohmann::json& payload) -> Command::Command
     store_->setPoints(points);
 
     const auto bounding_box = BoundingBoxCalculator::compute(points);
-    return Command::CommandResult{
+    return Base::CommandResult{
         .ok = true,
         .summary = "Points stored successfully.",
         .result =

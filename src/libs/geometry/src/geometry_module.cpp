@@ -1,6 +1,6 @@
 #include <opengeolab/geometry/geometry_module.hpp>
 
-#include <opengeolab/command/action_interface.hpp>
+#include <opengeolab/base/action_interface.hpp>
 
 #include <nlohmann/json.hpp>
 
@@ -16,15 +16,15 @@ GeometryModule::~GeometryModule() = default;
 auto GeometryModule::moduleName() const noexcept -> std::string_view { return "geometry"; }
 
 auto GeometryModule::dispatch(std::string_view action, const nlohmann::json& payload)
-    -> Command::CommandResult {
+    -> Base::CommandResult {
     const auto factory_module_name = std::string(moduleName()) + "." + std::string(action);
     const auto request = Kangaroo::Util::ComponentCreateRequest::from(m_pointStore);
 
     try {
-        auto action_ptr = m_factory.create<Command::IAction>(factory_module_name, request);
+        auto action_ptr = m_factory.create<Base::IAction>(factory_module_name, request);
         return action_ptr->execute(payload);
     } catch(const Kangaroo::Util::ComponentFactoryNotRegisteredEx&) {
-        return Command::CommandResult{
+        return Base::CommandResult{
             .ok = false,
             .summary = "Unknown action: " + std::string(action),
             .result = nlohmann::json::object(),

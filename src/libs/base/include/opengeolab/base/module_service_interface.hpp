@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include <opengeolab/command/command_result.hpp>
+#include <opengeolab/base/command_result.hpp>
 
 #include <kangaroo/util/plugin_component_factory.hpp>
 #include <nlohmann/json_fwd.hpp>
@@ -14,7 +14,7 @@
 #include <string_view>
 #include <vector>
 
-namespace OpenGeoLab::Command {
+namespace OpenGeoLab::Base {
 
 /**
  * @brief Defines the interface implemented by command modules that route named actions.
@@ -45,8 +45,8 @@ public:
     [[nodiscard]] virtual auto supportedActions() const -> std::vector<std::string> = 0;
 };
 
-} // namespace OpenGeoLab::Command
+} // namespace OpenGeoLab::Base
 
-template <> struct Kangaroo::Util::PluginComponentInterfaceId<OpenGeoLab::Command::IModuleService> {
+template <> struct Kangaroo::Util::PluginComponentInterfaceId<OpenGeoLab::Base::IModuleService> {
     static constexpr const char* VALUE = "OpenGeoLab.IModuleService";
 };

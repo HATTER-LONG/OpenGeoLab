@@ -25,7 +25,7 @@ opengeolab_add_module(
     PUBLIC_HEADERS
     ${geometry_public_headers}
     PUBLIC_LINKS
-    OpenGeoLab::Command
+    OpenGeoLab::Base
     Kangaroo::Kangaroo
     nlohmann_json::nlohmann_json)
 opengeolab_copy_runtime_dlls(ogl_geometry)

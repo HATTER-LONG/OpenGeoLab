@@ -23,7 +23,7 @@ auto boundingBoxJson(const BoundingBox& bounding_box) -> nlohmann::json {
 
 } // namespace
 
-auto BoundingBoxAction::execute(const nlohmann::json& payload) -> Command::CommandResult {
+auto BoundingBoxAction::execute(const nlohmann::json& payload) -> Base::CommandResult {
     if(payload.contains("pointCount") && payload["pointCount"].is_number_integer() &&
        payload["pointCount"].get<std::int64_t>() < 0) {
         throw std::invalid_argument("pointCount must be non-negative");
@@ -43,7 +43,7 @@ auto BoundingBoxAction::execute(const nlohmann::json& payload) -> Command::Comma
         std::chrono::duration<double, std::milli>(end_time - start_time).count();
     const auto bounding_box_json = boundingBoxJson(bounding_box);
 
-    return Command::CommandResult{
+    return Base::CommandResult{
         .ok = true,
         .summary = "Computed bounding box.",
         .result =

@@ -5,8 +5,8 @@
 
 #pragma once
 
+#include <opengeolab/base/module_service_interface.hpp>
 #include <opengeolab/command/command_export.hpp>
-#include <opengeolab/command/module_service_interface.hpp>
 
 #include <kangaroo/util/plugin_component_factory.hpp>
 
@@ -17,6 +17,8 @@
 #include <vector>
 
 namespace OpenGeoLab::Command {
+
+using OpenGeoLab::Base::IModuleService;
 
 /**
  * @brief Routes protocol requests to registered module services.

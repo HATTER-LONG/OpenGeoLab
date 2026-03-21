@@ -21,7 +21,7 @@ auto boundingBoxJson(const BoundingBox& bounding_box) -> nlohmann::json {
 GetStoredBBoxAction::GetStoredBBoxAction(std::shared_ptr<PointStore> store)
     : store_(std::move(store)) {}
 
-auto GetStoredBBoxAction::execute(const nlohmann::json& /*payload*/) -> Command::CommandResult {
+auto GetStoredBBoxAction::execute(const nlohmann::json& /*payload*/) -> Base::CommandResult {
     if(store_->empty()) {
         return {
             .ok = false,
@@ -33,7 +33,7 @@ auto GetStoredBBoxAction::execute(const nlohmann::json& /*payload*/) -> Command:
     const auto points = store_->points();
     const auto bounding_box = BoundingBoxCalculator::compute(points);
 
-    return Command::CommandResult{
+    return Base::CommandResult{
         .ok = true,
         .summary = "Stored bounding box computed.",
         .result =

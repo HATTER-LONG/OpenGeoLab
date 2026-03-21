@@ -1,7 +1,7 @@
 #include <doctest/doctest.h>
 
+#include <opengeolab/base/module_service_interface.hpp>
 #include <opengeolab/command/module_dispatcher.hpp>
-#include <opengeolab/command/module_service_interface.hpp>
 #include <opengeolab/geometry/geometry_module.hpp>
 #include <opengeolab/geometry/point_store.hpp>
 
@@ -22,7 +22,7 @@ static volatile bool kForceLoad = [] {
 
 TEST_CASE("Geometry module registers with factory on load") {
     auto& factory = Kangaroo::Util::PluginComponentFactory::instance();
-    auto module = factory.getSharedInstance<Command::IModuleService>("geometry");
+    auto module = factory.getSharedInstance<Base::IModuleService>("geometry");
 
     REQUIRE(module != nullptr);
     CHECK(module->moduleName() == "geometry");
