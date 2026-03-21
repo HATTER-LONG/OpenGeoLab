@@ -61,6 +61,57 @@ TEST_CASE("ModuleDispatcher returns error for unknown module") {
     CHECK(response.at("errors").at(0).at("message") == "Unknown module: nonexistent");
 }
 
+TEST_CASE("ModuleDispatcher records requests when dispatch runs with recording enabled") {
+    Kangaroo::Util::PluginComponentFactory factory;
+    ModuleDispatcher dispatcher(factory);
+
+    dispatcher.startRecording();
+    static_cast<void>(dispatcher.dispatch(
+        R"({"module":"nonexistent","action":"test","requestId":"1","payload":{}})"));
+
+    REQUIRE(dispatcher.isRecording());
+    const auto& recorded_requests = dispatcher.getRecordedRequests();
+    REQUIRE(recorded_requests.size() == 1);
+    CHECK(recorded_requests.front() ==
+          R"({"module":"nonexistent","action":"test","requestId":"1","payload":{}})");
+}
+
+TEST_CASE("ModuleDispatcher does not record requests when dispatch runs with recording disabled") {
+    Kangaroo::Util::PluginComponentFactory factory;
+    ModuleDispatcher dispatcher(factory);
+
+    static_cast<void>(dispatcher.dispatch(
+        R"({"module":"nonexistent","action":"test","requestId":"1","payload":{}})"));
+
+    CHECK_FALSE(dispatcher.isRecording());
+    CHECK(dispatcher.getRecordedRequests().empty());
+}
+
+TEST_CASE("ModuleDispatcher does not record requests when JSON parsing fails") {
+    Kangaroo::Util::PluginComponentFactory factory;
+    ModuleDispatcher dispatcher(factory);
+
+    dispatcher.startRecording();
+    static_cast<void>(dispatcher.dispatch("not json"));
+
+    REQUIRE(dispatcher.isRecording());
+    CHECK(dispatcher.getRecordedRequests().empty());
+}
+
+TEST_CASE("ModuleDispatcher does not record requests when module or action validation fails") {
+    Kangaroo::Util::PluginComponentFactory factory;
+    ModuleDispatcher dispatcher(factory);
+
+    dispatcher.startRecording();
+    static_cast<void>(
+        dispatcher.dispatch(R"({"module":123,"action":"test","requestId":"1","payload":{}})"));
+    static_cast<void>(
+        dispatcher.dispatch(R"({"module":"mock","action":123,"requestId":"2","payload":{}})"));
+
+    REQUIRE(dispatcher.isRecording());
+    CHECK(dispatcher.getRecordedRequests().empty());
+}
+
 TEST_CASE("ModuleDispatcher routes to registered mock module") {
     Kangaroo::Util::PluginComponentFactory factory;
 

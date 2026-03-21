@@ -52,6 +52,8 @@ auto ModuleDispatcher::dispatch(std::string_view request_json) -> std::string {
         const std::string module_name = module.get<std::string>();
         const std::string action_name = action.get<std::string>();
 
+        m_recorder.record(request_json);
+
         auto module_service = resolveModule(module_name);
         if(module_service == nullptr) {
             const std::string message = "Unknown module: " + module_name;
@@ -73,6 +75,18 @@ auto ModuleDispatcher::dispatch(std::string_view request_json) -> std::string {
 auto ModuleDispatcher::registeredModules() const -> std::vector<std::string> {
     return m_registeredModules;
 }
+
+void ModuleDispatcher::startRecording() { m_recorder.start(); }
+
+void ModuleDispatcher::stopRecording() { m_recorder.stop(); }
+
+auto ModuleDispatcher::isRecording() const noexcept -> bool { return m_recorder.isRecording(); }
+
+auto ModuleDispatcher::getRecordedRequests() const -> const std::vector<std::string>& {
+    return m_recorder.get();
+}
+
+void ModuleDispatcher::clearRecording() { m_recorder.clear(); }
 
 auto ModuleDispatcher::resolveModule(const std::string& module_name)
     -> std::shared_ptr<IModuleService> {

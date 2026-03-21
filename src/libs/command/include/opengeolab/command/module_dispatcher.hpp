@@ -7,6 +7,7 @@
 
 #include <opengeolab/base/module_service_interface.hpp>
 #include <opengeolab/command/command_export.hpp>
+#include <opengeolab/command/request_recorder.hpp>
 
 #include <kangaroo/util/plugin_component_factory.hpp>
 
@@ -48,11 +49,40 @@ public:
      */
     [[nodiscard]] auto registeredModules() const -> std::vector<std::string>;
 
+    /**
+     * @brief Starts recording dispatched requests.
+     * @note Preserves any previously recorded requests in the buffer.
+     */
+    void startRecording();
+
+    /**
+     * @brief Stops recording dispatched requests.
+     */
+    void stopRecording();
+
+    /**
+     * @brief Reports whether request recording is currently enabled.
+     * @return True when validated requests are appended to the recording buffer.
+     */
+    [[nodiscard]] auto isRecording() const noexcept -> bool;
+
+    /**
+     * @brief Returns the recorded request buffer.
+     * @return Immutable reference to recorded serialized request envelopes.
+     */
+    [[nodiscard]] auto getRecordedRequests() const -> const std::vector<std::string>&;
+
+    /**
+     * @brief Clears all recorded requests without changing recording state.
+     */
+    void clearRecording();
+
 private:
     [[nodiscard]] auto resolveModule(const std::string& module_name)
         -> std::shared_ptr<IModuleService>;
 
     Kangaroo::Util::PluginComponentFactory& m_factory;
+    RequestRecorder m_recorder;
     std::vector<std::string> m_registeredModules;
     std::unordered_map<std::string, std::shared_ptr<IModuleService>> m_moduleCache;
 };
