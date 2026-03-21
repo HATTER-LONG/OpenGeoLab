@@ -22,6 +22,7 @@ opengeolab_add_module(
     PUBLIC_LINKS
     OpenGeoLab::Base
     OpenGeoLab::Geometry
+    OpenGeoLab::Render
     Kangaroo::Kangaroo
     nlohmann_json::nlohmann_json)
 opengeolab_copy_runtime_dlls(ogl_command)

@@ -7,11 +7,13 @@
 #include <opengeolab/command/module_registry.hpp>
 
 #include <opengeolab/geometry/geometry_registration.hpp>
+#include <opengeolab/render/render_registration.hpp>
 
 namespace OpenGeoLab::Command {
 
 void registerAllModules(Kangaroo::Util::PluginComponentFactory& factory) {
     Geometry::registerGeometryModule(factory);
+    Render::registerRenderModule(factory);
 }
 
 } // namespace OpenGeoLab::Command
