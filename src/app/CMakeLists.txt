@@ -15,13 +15,18 @@ target_link_libraries(
             Qt6::Quick
             Qt6::QuickControls2
             Qt6::Widgets
-            OpenGeoLab::Python)
+            Qt6::OpenGL
+            OpenGeoLab::Python
+            OpenGeoLab::Render
+            Coin::Coin)
 
 qt_add_qml_module(
     opengeolab_app URI OpenGeoLab.App VERSION 1.0
     QML_FILES resource/qml/Main.qml
               resource/qml/ActionButton.qml
               resource/qml/ResponsePanel.qml
+    SOURCES src/coin_quick_item.cpp
+            include/opengeolab/app/coin_quick_item.hpp
 )
 
 if (NOT TARGET opengeolab_pywrapper)

@@ -14,6 +14,8 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQuickStyle>
+#include <QQuickWindow>
+#include <QSGRendererInterface>
 
 #include <filesystem>
 
@@ -36,6 +38,7 @@ int main(int argc, char* argv[]) {
     }
 #endif
 
+    QQuickWindow::setGraphicsApi(QSGRendererInterface::OpenGL);
     QApplication app(argc, argv);
     QApplication::setStyle("Fusion");
     QQuickStyle::setStyle("Fusion");
