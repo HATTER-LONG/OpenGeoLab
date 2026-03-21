@@ -28,3 +28,14 @@ opengeolab_add_module(
     nlohmann_json::nlohmann_json
     Kangaroo::Kangaroo)
 opengeolab_copy_runtime_dlls(ogl_render)
+
+if(OPENGEOLAB_BUILD_TESTS)
+  opengeolab_add_doctest_test(
+      ogl_camera_state_test
+      SOURCES
+      tests/camera_state_test.cpp
+      LINKS
+      OpenGeoLab::Render
+      CTEST_NAME
+      ogl_camera_state_test)
+endif()
