@@ -76,6 +76,25 @@ ApplicationWindow {
                 actionName: "get_stored_bbox"
                 onRequest: (json) => processService.submitRequest(json)
             }
+
+            ActionButton {
+                label: "开始录制"
+                actionName: "recording.start"
+                onRequest: (json) => processService.submitRequest(json)
+            }
+
+            ActionButton {
+                label: "停止录制"
+                actionName: "recording.stop"
+                onRequest: (json) => processService.submitRequest(json)
+            }
+
+            ActionButton {
+                label: "导出脚本"
+                actionName: "recording.export"
+                payload: "{\"path\": \"session.py\"}"
+                onRequest: (json) => processService.submitRequest(json)
+            }
         }
 
         BusyIndicator {
