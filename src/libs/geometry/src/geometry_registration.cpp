@@ -14,6 +14,10 @@
 #include <memory>
 #include <utility>
 
+// Exported anchor symbol — referencing it from consumers forces the linker to
+// import ogl_geometry, which triggers the static registration lambda below.
+extern "C" OPENGEOLAB_GEOMETRY_EXPORT void ogl_geometry_force_load() noexcept {}
+
 namespace {
 
 [[maybe_unused]] const bool kRegistered = []() {

@@ -12,6 +12,11 @@
 #include <string>
 #include <vector>
 
+// Force-load module DLLs so their static-init registration lambdas execute.
+// Without an explicit symbol reference the linker omits unused DLL imports.
+extern "C" void ogl_geometry_force_load();
+#pragma comment(linker, "/INCLUDE:ogl_geometry_force_load")
+
 namespace Py = pybind11;
 
 PYBIND11_MODULE(opengeolab_pywrapper, module) {
