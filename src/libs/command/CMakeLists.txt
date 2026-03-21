@@ -1,10 +1,15 @@
-set(command_sources src/command_dispatcher.cpp src/module_dispatcher.cpp src/module_registry.cpp)
+set(command_sources
+    src/command_dispatcher.cpp
+    src/module_dispatcher.cpp
+    src/module_registry.cpp
+    src/request_recorder.cpp)
 
 set(command_public_headers
     include/opengeolab/command/module_dispatcher.hpp
     include/opengeolab/command/command_interface.hpp
     include/opengeolab/command/command_dispatcher.hpp
-    include/opengeolab/command/module_registry.hpp)
+    include/opengeolab/command/module_registry.hpp
+    include/opengeolab/command/request_recorder.hpp)
 
 opengeolab_add_module(
     ogl_command
@@ -40,4 +45,13 @@ if (OPENGEOLAB_BUILD_TESTS)
         Kangaroo::Kangaroo
         CTEST_NAME
         ogl_module_dispatcher_test)
+
+    opengeolab_add_doctest_test(
+        ogl_request_recorder_test
+        SOURCES
+        tests/request_recorder_test.cpp
+        LINKS
+        OpenGeoLab::Command
+        CTEST_NAME
+        ogl_request_recorder_test)
 endif ()
