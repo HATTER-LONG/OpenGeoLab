@@ -194,6 +194,15 @@ opengeolab_resolve_package(
     GIT_TAG
     v${OPENGEOLAB_NLOHMANN_JSON_VERSION})
 
+# Coin3D: pre-built external installation (no Boost dependency on master)
+# Set Coin_DIR or CMAKE_PREFIX_PATH to the install location.
+set(LOCAL_COIN3D_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../coin-install")
+if(EXISTS "${LOCAL_COIN3D_PATH}")
+    list(APPEND CMAKE_PREFIX_PATH "${LOCAL_COIN3D_PATH}")
+endif()
+find_package(Coin REQUIRED)
+message(STATUS "Found Coin3D: ${Coin_DIR}")
+
 if (OPENGEOLAB_BUILD_TESTS)
     include(CTest)
     include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/testing.cmake)
