@@ -20,6 +20,16 @@ ApplicationWindow {
             SplitView.fillHeight: true
 
             Component.onCompleted: viewAll()
+
+            onNavigationFinished: (cameraJson) => {
+                let req = {
+                    module: "render",
+                    action: "camera.set_state",
+                    requestId: "nav-" + Date.now(),
+                    payload: JSON.parse(cameraJson)
+                };
+                processService.submitRequest(JSON.stringify(req));
+            }
         }
 
         ColumnLayout {
@@ -123,6 +133,35 @@ ApplicationWindow {
                             label: "回放脚本"
                             actionName: "recording.replay"
                             payload: "{\"path\": \"session.py\"}"
+                            onRequest: (json) => processService.submitRequest(json)
+                        }
+
+                        ActionButton {
+                            label: "获取相机状态"
+                            moduleName: "render"
+                            actionName: "camera.get_state"
+                            onRequest: (json) => processService.submitRequest(json)
+                        }
+
+                        ActionButton {
+                            label: "添加 Box"
+                            moduleName: "render"
+                            actionName: "scene.add_box"
+                            payload: '{"sizeX":3,"sizeY":2,"sizeZ":1}'
+                            onRequest: (json) => processService.submitRequest(json)
+                        }
+
+                        ActionButton {
+                            label: "描述场景"
+                            moduleName: "render"
+                            actionName: "scene.describe"
+                            onRequest: (json) => processService.submitRequest(json)
+                        }
+
+                        ActionButton {
+                            label: "View All"
+                            moduleName: "render"
+                            actionName: "camera.view_all"
                             onRequest: (json) => processService.submitRequest(json)
                         }
                     }
