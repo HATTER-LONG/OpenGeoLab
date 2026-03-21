@@ -33,4 +33,12 @@ PYBIND11_MODULE(opengeolab_pywrapper, module) {
     module.def("protocol_version", []() { return "1.0"; });
 
     module.def("registered_modules", []() { return dispatcher.registeredModules(); });
+    module.def("start_recording", []() { dispatcher.startRecording(); });
+    module.def("stop_recording", []() { dispatcher.stopRecording(); });
+    module.def("is_recording", []() { return dispatcher.isRecording(); });
+    module.def(
+        "get_recorded_requests",
+        []() -> const std::vector<std::string>& { return dispatcher.getRecordedRequests(); },
+        Py::return_value_policy::copy);
+    module.def("clear_recording", []() { dispatcher.clearRecording(); });
 }
