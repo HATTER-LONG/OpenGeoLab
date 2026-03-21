@@ -95,6 +95,13 @@ ApplicationWindow {
                 payload: "{\"path\": \"session.py\"}"
                 onRequest: (json) => processService.submitRequest(json)
             }
+
+            ActionButton {
+                label: "回放脚本"
+                actionName: "recording.replay"
+                payload: "{\"path\": \"session.py\"}"
+                onRequest: (json) => processService.submitRequest(json)
+            }
         }
 
         BusyIndicator {

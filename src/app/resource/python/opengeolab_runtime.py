@@ -183,8 +183,11 @@ def _generate_script(requests: list[str]) -> str:
 
         lines.append("")
         lines.append(f"    # [{index}] {module_name} / {action_name}")
-        request_str = json.dumps(clean_request, ensure_ascii=False)
-        lines.append(f"    result = json.loads(process({request_str!r}))")
+        formatted_json = json.dumps(clean_request, indent=4, ensure_ascii=False)
+        lines.append('    result = json.loads(process("""')
+        for json_line in formatted_json.splitlines():
+            lines.append(f"        {json_line}")
+        lines.append('    """))')
         lines.append(
             f"    print(f\"[{index}] {module_name}.{action_name}: ok={{result.get('ok')}}\")"
         )
