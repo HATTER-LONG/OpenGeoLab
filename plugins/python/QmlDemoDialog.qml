@@ -145,7 +145,8 @@ ApplicationWindow {
                     addPoint(x3, y3, z3);
 
                     const requestJson = JSON.stringify({
-                        "action": "geometry.set_points",
+                        "module": "geometry",
+                        "action": "set_points",
                         "payload": {
                             "points": points
                         }
@@ -161,7 +162,8 @@ ApplicationWindow {
 
                 onClicked: {
                     const requestJson = JSON.stringify({
-                        "action": "geometry.get_stored_bbox"
+                        "module": "geometry",
+                        "action": "get_stored_bbox"
                     });
                     bridge.process_request(requestJson);
                 }
@@ -173,7 +175,8 @@ ApplicationWindow {
 
                 onClicked: {
                     const requestJson = JSON.stringify({
-                        "action": "geometry.bounding_box",
+                        "module": "geometry",
+                        "action": "bounding_box",
                         "payload": {
                             "pointCount": 1000000
                         }

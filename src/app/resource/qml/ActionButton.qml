@@ -5,6 +5,7 @@ import QtQuick.Layouts
 Button {
     id: root
 
+    property string moduleName: ""
     property string actionName: ""
     property string label: "Action"
     property string payload: "{}"
@@ -18,11 +19,14 @@ Button {
     Layout.preferredHeight: 40
 
     onClicked: {
-        const requestJson = JSON.stringify({
+        let request = {
             action: root.actionName,
             requestId: "qml-" + Date.now(),
             payload: JSON.parse(root.payload)
-        })
-        root.request(requestJson)
+        };
+        if (root.moduleName !== "") {
+            request.module = root.moduleName;
+        }
+        root.request(JSON.stringify(request));
     }
 }

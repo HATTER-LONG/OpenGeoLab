@@ -56,21 +56,24 @@ ApplicationWindow {
 
             ActionButton {
                 label: "Geometry 包围盒 (随机)"
-                actionName: "geometry.bounding_box"
+                moduleName: "geometry"
+                actionName: "bounding_box"
                 payload: "{\"pointCount\":1000000}"
                 onRequest: (json) => processService.submitRequest(json)
             }
 
             ActionButton {
                 label: "Set Points → C++"
-                actionName: "geometry.set_points"
+                moduleName: "geometry"
+                actionName: "set_points"
                 payload: "{\"points\":[{\"x\":1,\"y\":2,\"z\":3},{\"x\":-10,\"y\":20,\"z\":0},{\"x\":100,\"y\":-50,\"z\":25}]}"
                 onRequest: (json) => processService.submitRequest(json)
             }
 
             ActionButton {
                 label: "Get Stored BBox ← C++"
-                actionName: "geometry.get_stored_bbox"
+                moduleName: "geometry"
+                actionName: "get_stored_bbox"
                 onRequest: (json) => processService.submitRequest(json)
             }
         }

@@ -20,7 +20,10 @@ class PointStore;
  */
 class OPENGEOLAB_GEOMETRY_EXPORT SetPointsAction : public Base::IAction {
 public:
-    /// @param store Shared point store that persists across requests.
+    /**
+     * @brief Constructs the action with a reference to the shared point store.
+     * @param store Shared pointer to the point storage used for persistence.
+     */
     explicit SetPointsAction(std::shared_ptr<PointStore> store);
 
     /**

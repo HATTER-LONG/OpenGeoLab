@@ -24,8 +24,8 @@ namespace OpenGeoLab::Geometry {
 class OPENGEOLAB_GEOMETRY_EXPORT PointStore {
 public:
     /**
-     * @brief Replaces the stored points with the provided collection.
-     * @param points New point data (moved in).
+     * @brief Replaces the stored points with the given collection.
+     * @param points Vector of 3-D points to store.
      */
     void setPoints(std::vector<Point3D> points);
 
@@ -35,10 +35,16 @@ public:
      */
     [[nodiscard]] auto points() const -> std::vector<Point3D>;
 
-    /// Returns the number of currently stored points.
+    /**
+     * @brief Returns the number of currently stored points.
+     * @return Count of stored points.
+     */
     [[nodiscard]] auto size() const -> std::size_t;
 
-    /// Returns true when no points are stored.
+    /**
+     * @brief Returns true when no points are stored.
+     * @return True when the store is empty.
+     */
     [[nodiscard]] auto empty() const -> bool;
 
 private:

@@ -142,8 +142,9 @@ def process(request_json: str) -> str:
         response = _launch_plugin_ui(request)
     else:
         # Ensure the request has a "module" field for ModuleDispatcher.
-        # Backward compatibility: split "geometry.bounding_box" into
-        # module="geometry", action="bounding_box".
+        # DEPRECATED backward compatibility: split "geometry.bounding_box" into
+        # module="geometry", action="bounding_box". All callers should use the
+        # explicit module+action format directly.
         if "module" not in request and "." in action:
             module, _, short_action = action.partition(".")
             request["module"] = module

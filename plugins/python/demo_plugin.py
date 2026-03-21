@@ -28,32 +28,37 @@ def describe_plugin() -> dict:
 
 
 def _call_geometry(point_count: int = 1_000_000, seed: int = 42) -> dict:
-    """Invoke geometry.bounding_box through the full C++ command pipeline."""
+    """Invoke geometry bounding_box through the full C++ module pipeline."""
     import opengeolab_pywrapper  # type: ignore
 
     request = json.dumps({
-        "action": "geometry.bounding_box",
+        "module": "geometry",
+        "action": "bounding_box",
         "payload": {"pointCount": point_count, "seed": seed},
     })
     return json.loads(opengeolab_pywrapper.process(request))
 
 
 def _set_points(points: list[dict]) -> dict:
-    """Store explicit points in the C++ PointStore via geometry.set_points."""
+    """Store explicit points in the C++ PointStore via geometry set_points."""
     import opengeolab_pywrapper  # type: ignore
 
     request = json.dumps({
-        "action": "geometry.set_points",
+        "module": "geometry",
+        "action": "set_points",
         "payload": {"points": points},
     })
     return json.loads(opengeolab_pywrapper.process(request))
 
 
 def _get_stored_bbox() -> dict:
-    """Read back the bounding box of stored points via geometry.get_stored_bbox."""
+    """Read back the bounding box of stored points via geometry get_stored_bbox."""
     import opengeolab_pywrapper  # type: ignore
 
-    request = json.dumps({"action": "geometry.get_stored_bbox"})
+    request = json.dumps({
+        "module": "geometry",
+        "action": "get_stored_bbox",
+    })
     return json.loads(opengeolab_pywrapper.process(request))
 
 

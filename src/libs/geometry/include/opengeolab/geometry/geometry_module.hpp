@@ -23,7 +23,13 @@ namespace OpenGeoLab::Geometry {
  */
 class OPENGEOLAB_GEOMETRY_EXPORT GeometryModule : public Base::IModuleService {
 public:
+    /**
+     * @brief Constructs the geometry module with factory-based action dispatch.
+     * @param factory Plugin component factory for resolving action instances.
+     */
     explicit GeometryModule(Kangaroo::Util::PluginComponentFactory& factory);
+
+    /// @brief Destroys the geometry module and releases action resources.
     ~GeometryModule() override;
 
     [[nodiscard]] auto moduleName() const noexcept -> std::string_view override;
