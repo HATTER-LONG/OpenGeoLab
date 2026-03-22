@@ -66,6 +66,12 @@ Rectangle {
                     cursorShape: Qt.PointingHandCursor
                     onClicked: root.model.clear()
                 }
+
+                ToolTip {
+                    visible: clearArea.containsMouse
+                    delay: 600
+                    text: qsTr("Clear")
+                }
             }
         }
 

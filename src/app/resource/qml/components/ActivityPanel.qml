@@ -15,10 +15,26 @@ Rectangle {
     height: root.currentTab === 0 ? 400 : 500
     implicitHeight: height
     radius: root.theme.radiusLarge
-    color: root.theme.tint(root.theme.surface, root.theme.darkMode ? 0.96 : 0.98)
-    border.width: 1
-    border.color: root.theme.borderSubtle
-    clip: true
+    color: "transparent"
+    clip: false
+
+    Rectangle {
+        id: shadowRect
+        anchors.fill: panelBody
+        anchors.margins: -2
+        radius: panelBody.radius + 2
+        color: root.theme.tint(root.theme.shell, root.theme.darkMode ? 0.18 : 0.08)
+    }
+
+    Rectangle {
+        id: panelBody
+        anchors.fill: parent
+        radius: root.theme.radiusLarge
+        color: root.theme.tint(root.theme.surface, root.theme.darkMode ? 0.96 : 0.98)
+        border.width: 1
+        border.color: root.theme.borderSubtle
+        clip: true
+    }
 
     ListModel { id: mockLogModel }
     ListModel { id: mockTerminalModel }
@@ -60,10 +76,14 @@ Rectangle {
         interval: 200
         repeat: false
         onTriggered: {
-            try {
-                const parsed = JSON.parse(text);
-                root.appendTerminalEntry("response", JSON.stringify({ status: "ok", echo: parsed }, null, 2));
-            } catch (e) {
+            if (text.trimStart().startsWith("{")) {
+                try {
+                    const parsed = JSON.parse(text);
+                    root.appendTerminalEntry("response", JSON.stringify({ status: "ok", echo: parsed }, null, 2));
+                } catch (e) {
+                    root.appendTerminalEntry("error", e.toString());
+                }
+            } else {
                 root.appendTerminalEntry("response", qsTr("Command executed: ") + text);
             }
         }

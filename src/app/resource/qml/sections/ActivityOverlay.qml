@@ -23,6 +23,24 @@ Item {
     readonly property color progressColor: root.progressStatus === "Done" ? root.theme.success
                                                    : (root.progressStatus === "Failed" ? root.theme.danger : root.theme.accentA)
 
+    Timer {
+        id: progressHideTimer
+        repeat: false
+        onTriggered: root.progress = -1
+    }
+
+    onProgressStatusChanged: {
+        if (root.progressStatus === "Done") {
+            progressHideTimer.interval = 3000;
+            progressHideTimer.restart();
+        } else if (root.progressStatus === "Failed") {
+            progressHideTimer.interval = 6000;
+            progressHideTimer.restart();
+        } else {
+            progressHideTimer.stop();
+        }
+    }
+
     ColumnLayout {
         id: overlayColumn
 
@@ -58,12 +76,16 @@ Item {
             id: activityPanel
 
             Layout.fillWidth: true
+            Layout.topMargin: root.activityOpen ? 0 : 10
             visible: root.activityOpen
             opacity: root.activityOpen ? 1 : 0
             theme: root.theme
             onCloseRequested: root.activityOpen = false
 
             Behavior on opacity {
+                NumberAnimation { duration: 180; easing.type: Easing.OutQuad }
+            }
+            Behavior on Layout.topMargin {
                 NumberAnimation { duration: 180; easing.type: Easing.OutQuad }
             }
         }

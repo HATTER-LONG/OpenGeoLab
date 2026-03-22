@@ -227,6 +227,12 @@ Rectangle {
                         cursorShape: Qt.PointingHandCursor
                         onClicked: root.submitInput()
                     }
+
+                    ToolTip {
+                        visible: runMouseArea.containsMouse
+                        delay: 600
+                        text: qsTr("Run")
+                    }
                 }
             }
         }

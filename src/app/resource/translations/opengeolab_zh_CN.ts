@@ -264,6 +264,10 @@
             <source>Type a command...</source>
             <translation>输入命令...</translation>
         </message>
+        <message>
+            <source>Run</source>
+            <translation>运行</translation>
+        </message>
     </context>
     <context>
         <name>LogEventsView</name>
@@ -294,6 +298,10 @@
         <message>
             <source>tid %1</source>
             <translation>线程 %1</translation>
+        </message>
+        <message>
+            <source>Clear</source>
+            <translation>清除</translation>
         </message>
         <message>
             <source> · %1:%2</source>
