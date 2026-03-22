@@ -31,6 +31,7 @@ qt_add_qml_module(
     resource/qml/sections/HeaderRibbonGroup.qml
     resource/qml/sections/SidebarPanel.qml
     resource/qml/sections/ViewportPanel.qml
+    resource/qml/sections/ActivityOverlay.qml
     resource/qml/components/AppIcon.qml
     resource/qml/components/ActionButton.qml
     resource/qml/components/RibbonTile.qml
