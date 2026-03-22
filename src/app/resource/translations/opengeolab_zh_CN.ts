@@ -104,7 +104,7 @@
         </message>
     </context>
     <context>
-        <name>HeaderMenuPanel</name>
+        <name>MenuConfig</name>
         <message>
             <source>Workspace</source>
             <translation>工作区</translation>
@@ -116,22 +116,6 @@
         <message>
             <source>Export Model</source>
             <translation>导出模型</translation>
-        </message>
-        <message>
-            <source>Switch to Light</source>
-            <translation>切换到浅色</translation>
-        </message>
-        <message>
-            <source>Switch to Dark</source>
-            <translation>切换到深色</translation>
-        </message>
-        <message>
-            <source>Switch to English</source>
-            <translation>切换到英文</translation>
-        </message>
-        <message>
-            <source>Switch to Chinese</source>
-            <translation>切换到中文</translation>
         </message>
         <message>
             <source>Script Recorder</source>
@@ -152,6 +136,25 @@
         <message>
             <source>Clear Script History</source>
             <translation>清空脚本历史</translation>
+        </message>
+    </context>
+    <context>
+        <name>HeaderMenuPanel</name>
+        <message>
+            <source>Switch to Light</source>
+            <translation>切换到浅色</translation>
+        </message>
+        <message>
+            <source>Switch to Dark</source>
+            <translation>切换到深色</translation>
+        </message>
+        <message>
+            <source>Switch to English</source>
+            <translation>切换到英文</translation>
+        </message>
+        <message>
+            <source>Switch to Chinese</source>
+            <translation>切换到中文</translation>
         </message>
     </context>
     <context>
