@@ -23,12 +23,15 @@ namespace OpenGeoLab::App {
 class CoinQuickItem : public QQuickFramebufferObject {
     Q_OBJECT
     QML_ELEMENT
+    Q_PROPERTY(int displayMode READ displayMode WRITE setDisplayMode NOTIFY displayModeChanged)
 
 public:
     explicit CoinQuickItem(QQuickItem* parent = nullptr);
     ~CoinQuickItem() override;
 
     [[nodiscard]] auto createRenderer() const -> QQuickFramebufferObject::Renderer* override;
+    [[nodiscard]] auto displayMode() const -> int;
+    void setDisplayMode(int mode);
 
     /// Fit camera to show all scene objects.
     Q_INVOKABLE void viewAll();
@@ -43,6 +46,8 @@ public:
     Q_INVOKABLE void requestUpdate();
 
 signals:
+    void displayModeChanged();
+
     /// Emitted after mouse navigation completes (on mouse release or wheel).
     void navigationFinished(const QString& cameraStateJson);
 

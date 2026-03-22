@@ -1,28 +1,32 @@
 set(render_sources
     src/camera_state.cpp
-    src/scene_manager.cpp
-    src/navigation_controller.cpp
     src/event_translator.cpp
+    src/navigation_controller.cpp
     src/render_module.cpp
     src/render_registration.cpp
+    src/scene_manager.cpp
+    src/actions/add_box_action.cpp
+    src/actions/describe_scene_action.cpp
     src/actions/get_camera_state_action.cpp
     src/actions/set_camera_state_action.cpp
+    src/actions/set_display_mode_action.cpp
     src/actions/view_all_action.cpp
-    src/actions/add_box_action.cpp
-    src/actions/describe_scene_action.cpp)
+)
 
 set(render_public_headers
     include/opengeolab/render/camera_state.hpp
-    include/opengeolab/render/scene_manager.hpp
-    include/opengeolab/render/navigation_controller.hpp
     include/opengeolab/render/event_translator.hpp
+    include/opengeolab/render/navigation_controller.hpp
     include/opengeolab/render/render_module.hpp
     include/opengeolab/render/render_registration.hpp
+    include/opengeolab/render/scene_manager.hpp
+    include/opengeolab/render/actions/add_box_action.hpp
+    include/opengeolab/render/actions/describe_scene_action.hpp
     include/opengeolab/render/actions/get_camera_state_action.hpp
     include/opengeolab/render/actions/set_camera_state_action.hpp
+    include/opengeolab/render/actions/set_display_mode_action.hpp
     include/opengeolab/render/actions/view_all_action.hpp
-    include/opengeolab/render/actions/add_box_action.hpp
-    include/opengeolab/render/actions/describe_scene_action.hpp)
+)
 
 opengeolab_add_module(
     ogl_render

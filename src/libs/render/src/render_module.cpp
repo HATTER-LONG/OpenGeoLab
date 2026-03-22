@@ -41,7 +41,7 @@ auto RenderModule::dispatch(std::string_view action, const nlohmann::json& paylo
 
 auto RenderModule::supportedActions() const -> std::vector<std::string> {
     return {"camera.get_state", "camera.set_state", "camera.view_all", "scene.add_box",
-            "scene.describe"};
+            "scene.describe", "display.set_mode"};
 }
 
 auto RenderModule::scene_manager() const -> std::shared_ptr<SceneManager> { return scene_manager_; }

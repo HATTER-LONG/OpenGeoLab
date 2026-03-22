@@ -216,4 +216,24 @@ void CoinQuickItem::wheelEvent(QWheelEvent* event) {
     event->accept();
 }
 
+auto CoinQuickItem::displayMode() const -> int {
+    if(!scene_manager_) {
+        return 0;
+    }
+    return static_cast<int>(scene_manager_->display_mode());
+}
+
+void CoinQuickItem::setDisplayMode(int mode) {
+    if(!scene_manager_) {
+        return;
+    }
+    auto dm = static_cast<Render::DisplayMode>(mode);
+    if(scene_manager_->display_mode() == dm) {
+        return;
+    }
+    scene_manager_->set_display_mode(dm);
+    emit displayModeChanged();
+    update();
+}
+
 } // namespace OpenGeoLab::App

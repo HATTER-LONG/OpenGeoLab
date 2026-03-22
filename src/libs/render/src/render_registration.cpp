@@ -10,6 +10,7 @@
 #include <opengeolab/render/actions/describe_scene_action.hpp>
 #include <opengeolab/render/actions/get_camera_state_action.hpp>
 #include <opengeolab/render/actions/set_camera_state_action.hpp>
+#include <opengeolab/render/actions/set_display_mode_action.hpp>
 #include <opengeolab/render/actions/view_all_action.hpp>
 #include <opengeolab/render/render_module.hpp>
 #include <opengeolab/render/scene_manager.hpp>
@@ -63,6 +64,10 @@ void registerRenderModule(Kangaroo::Util::PluginComponentFactory& factory) {
     auto [create_describe, destroy_describe] = make_scene_action_callbacks<DescribeSceneAction>();
     Base::registerAction<DescribeSceneAction>(factory, "render.scene.describe", create_describe,
                                               destroy_describe);
+
+    auto [create_set_mode, destroy_set_mode] = make_scene_action_callbacks<SetDisplayModeAction>();
+    Base::registerAction<SetDisplayModeAction>(factory, "render.display.set_mode", create_set_mode,
+                                               destroy_set_mode);
 }
 
 } // namespace OpenGeoLab::Render

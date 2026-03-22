@@ -55,6 +55,14 @@ ApplicationWindow {
                     width: parent.width
                     spacing: 8
 
+                    ComboBox {
+                        id: displayModeCombo
+                        model: ["Flat Lines", "Wireframe"]
+                        currentIndex: viewer3D.displayMode
+                        onCurrentIndexChanged: viewer3D.displayMode = currentIndex
+                        Layout.fillWidth: true
+                    }
+
                     GridLayout {
                         columns: 2
                         Layout.fillWidth: true
