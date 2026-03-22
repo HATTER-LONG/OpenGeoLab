@@ -15,9 +15,9 @@ Window {
     property string statusNote: qsTr("Viewport is active. Ribbon commands stay connected to the same controller pipeline.")
 
     width: 1500
-    height: 900
+    height: 1000
     minimumWidth: 1280
-    minimumHeight: 800
+    minimumHeight: 860
     visible: true
     title: "OpenGeoLab"
     color: appTheme.bg0

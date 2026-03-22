@@ -231,6 +231,7 @@ Rectangle {
                 required property int line
                 required property int index
 
+                readonly property string displayLevelName: root.levelLabel(level).toUpperCase()
                 readonly property color entryAccent: root.levelTint(level)
 
                 visible: (root.enabledLevelMask & (1 << level)) !== 0
@@ -277,7 +278,7 @@ Rectangle {
                             Text {
                                 id: badgeLabel
                                 anchors.centerIn: parent
-                                text: levelName.toUpperCase()
+                                text: eventCard.displayLevelName
                                 color: root.theme.textPrimary
                                 font.pixelSize: 10
                                 font.bold: true
