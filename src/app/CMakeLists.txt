@@ -25,6 +25,7 @@ qt_add_qml_module(
     QML_FILES
     resource/qml/Main.qml
     resource/qml/RibbonConfig.qml
+    resource/qml/MenuConfig.qml
     resource/qml/theme/AppTheme.qml
     resource/qml/sections/AppHeader.qml
     resource/qml/sections/HeaderMenuPanel.qml
