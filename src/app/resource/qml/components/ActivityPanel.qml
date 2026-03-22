@@ -78,7 +78,7 @@ Item {
         interval: 200
         repeat: false
         onTriggered: {
-            if (text.trimStart().startsWith("{")) {
+            if (text.trim().startsWith("{")) {
                 try {
                     const parsed = JSON.parse(text);
                     root.appendTerminalEntry("response", JSON.stringify({ status: "ok", echo: parsed }, null, 2));
@@ -109,17 +109,18 @@ Item {
                 model: root.tabs
 
                 delegate: Rectangle {
+                    id: tabDelegate
                     required property var modelData
                     required property int index
 
                     Layout.fillWidth: true
                     implicitHeight: 32
                     radius: root.theme.radiusSmall
-                    color: root.currentTab === index
+                    color: root.currentTab === tabDelegate.index
                         ? root.theme.tint(root.theme.accentA, root.theme.darkMode ? 0.24 : 0.12)
                         : root.theme.surfaceMuted
                     border.width: 1
-                    border.color: root.currentTab === index
+                    border.color: root.currentTab === tabDelegate.index
                         ? root.theme.tint(root.theme.accentA, root.theme.darkMode ? 0.56 : 0.3)
                         : root.theme.tint(root.theme.borderSubtle, 0.75)
 
@@ -129,18 +130,18 @@ Item {
 
                         AppIcon {
                             theme: root.theme
-                            iconKind: modelData.icon
+                            iconKind: tabDelegate.modelData.icon
                             useThemeContrast: false
-                            primaryColor: root.currentTab === index ? root.theme.textPrimary : root.theme.textSecondary
+                            primaryColor: root.currentTab === tabDelegate.index ? root.theme.textPrimary : root.theme.textSecondary
                             width: 14
                             height: 14
                         }
 
                         Text {
-                            text: modelData.title
+                            text: tabDelegate.modelData.title
                             color: root.theme.textPrimary
                             font.pixelSize: 11
-                            font.bold: root.currentTab === index
+                            font.bold: root.currentTab === tabDelegate.index
                         }
                     }
 
@@ -150,7 +151,7 @@ Item {
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: root.currentTab = index
+                        onClicked: root.currentTab = tabDelegate.index
                     }
                 }
             }

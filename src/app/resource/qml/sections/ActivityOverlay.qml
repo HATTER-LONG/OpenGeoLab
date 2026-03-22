@@ -126,6 +126,7 @@ Item {
         }
 
         Rectangle {
+            id: notificationDot
             visible: root.hasNewErrors || root.hasNewLogs
             anchors.top: parent.top
             anchors.right: parent.right
@@ -138,7 +139,7 @@ Item {
 
             SequentialAnimation on opacity {
                 loops: Animation.Infinite
-                running: parent.visible
+                running: notificationDot.visible
                 NumberAnimation { from: 1.0; to: 0.38; duration: 800 }
                 NumberAnimation { from: 0.38; to: 1.0; duration: 800 }
             }

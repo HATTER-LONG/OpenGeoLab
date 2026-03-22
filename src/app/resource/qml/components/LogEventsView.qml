@@ -315,7 +315,7 @@ Rectangle {
 
                         Text {
                             Layout.fillWidth: true
-                            text: source
+                            text: eventCard.source
                             color: root.theme.textPrimary
                             elide: Text.ElideRight
                             font.pixelSize: 11
@@ -323,7 +323,7 @@ Rectangle {
                         }
 
                         Text {
-                            text: time
+                            text: eventCard.time
                             color: root.theme.textTertiary
                             font.family: root.theme.monoFontFamily
                             font.pixelSize: 10
@@ -333,7 +333,7 @@ Rectangle {
 
                     Text {
                         Layout.fillWidth: true
-                        text: message
+                        text: eventCard.message
                         color: root.theme.textPrimary
                         wrapMode: Text.Wrap
                         font.pixelSize: 12
@@ -341,8 +341,8 @@ Rectangle {
 
                     Text {
                         Layout.fillWidth: true
-                        visible: file.length > 0 || threadId > 0
-                        text: qsTr("tid %1").arg(threadId) + (file.length > 0 ? qsTr(" · %1:%2").arg(file).arg(line) : "")
+                        visible: eventCard.file.length > 0 || eventCard.threadId > 0
+                        text: qsTr("tid %1").arg(eventCard.threadId) + (eventCard.file.length > 0 ? qsTr(" · %1:%2").arg(eventCard.file).arg(eventCard.line) : "")
                         color: root.theme.textTertiary
                         font.pixelSize: 10
                     }
