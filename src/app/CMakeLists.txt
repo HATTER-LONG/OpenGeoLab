@@ -35,6 +35,10 @@ qt_add_qml_module(
     resource/qml/components/ActionButton.qml
     resource/qml/components/RibbonTile.qml
     resource/qml/components/SectionCard.qml
+    resource/qml/components/LogLevelChip.qml
+    resource/qml/components/LogEventsView.qml
+    resource/qml/components/ActivityPanel.qml
+    resource/qml/components/TerminalView.qml
     RESOURCES
     resource/icons/menu.svg
     resource/icons/box.svg
