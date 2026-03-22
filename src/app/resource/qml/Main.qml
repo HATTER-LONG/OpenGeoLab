@@ -1,73 +1,157 @@
-import QtQuick
-import QtQuick.Controls
-import QtQuick.Layouts
+pragma ComponentBehavior: Bound
 
-ApplicationWindow {
+import QtQuick
+import QtQuick.Layouts
+import QtQuick.Window
+import "theme"
+import "sections"
+
+Window {
     id: root
+
+    property bool darkMode: false
+    property bool menuOpen: false
+    property int selectedRibbonTab: 0
+    property string currentLanguage: "en_US"
+    property string statusNote: qsTr("Viewport is active. Ribbon commands stay connected to the same controller pipeline.")
 
     width: 1500
     height: 900
-    minimumWidth: 800
-    minimumHeight: 600
+    minimumWidth: 1280
+    minimumHeight: 800
     visible: true
     title: "OpenGeoLab"
-    color: "#1a1a2e"
+    color: appTheme.bg0
 
-    ColumnLayout {
-        anchors.fill: parent
-        anchors.margins: 14
-        spacing: 10
+    AppTheme {
+        id: appTheme
 
-        // Header placeholder
-        Rectangle {
-            Layout.fillWidth: true
-            Layout.preferredHeight: 60
-            radius: 10
-            color: "#16213e"
+        darkMode: root.darkMode
+    }
 
-            Text {
-                anchors.centerIn: parent
-                text: "OpenGeoLab"
-                font.pixelSize: 22
-                font.bold: true
-                color: "#e2e8f0"
-            }
+    RibbonConfig {
+        id: ribbonConfig
+    }
+
+    function toggleTheme() {
+        root.darkMode = !root.darkMode;
+        root.statusNote = root.darkMode ? qsTr("Switched to dark theme.") : qsTr("Switched to light theme.");
+        root.menuOpen = false;
+    }
+
+    function toggleLanguage() {
+        root.currentLanguage = (root.currentLanguage === "en_US") ? "zh_CN" : "en_US";
+        root.statusNote = root.currentLanguage === "zh_CN"
+            ? qsTr("Switched to Chinese.")
+            : qsTr("Switched to English.");
+        root.menuOpen = false;
+    }
+
+    function openActionPage(actionKey) {
+        if (actionKey === "toggleTheme") {
+            root.toggleTheme();
+            return;
         }
 
-        RowLayout {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            spacing: 10
+        root.statusNote = qsTr("Action: %1").arg(actionKey);
+        root.menuOpen = false;
+        console.log("[Main] openActionPage:", actionKey);
+    }
 
-            // Sidebar placeholder
-            Rectangle {
-                Layout.preferredWidth: 280
-                Layout.fillHeight: true
-                radius: 10
-                color: "#16213e"
+    Rectangle {
+        anchors.fill: parent
+        gradient: Gradient {
+            GradientStop {
+                position: 0.0
+                color: appTheme.bg0
+            }
+            GradientStop {
+                position: 0.55
+                color: appTheme.bg1
+            }
+            GradientStop {
+                position: 1.0
+                color: appTheme.bg2
+            }
+        }
+    }
 
-                Text {
-                    anchors.centerIn: parent
-                    text: "Sidebar"
-                    font.pixelSize: 16
-                    color: "#94a3b8"
+    Rectangle {
+        width: 360
+        height: 360
+        radius: 96
+        anchors.right: parent.right
+        anchors.rightMargin: -90
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: -120
+        color: appTheme.tint(appTheme.accentD, appTheme.darkMode ? 0.08 : 0.05)
+        border.width: 1
+        border.color: appTheme.tint(appTheme.accentD, 0.12)
+        rotation: 14
+    }
+
+    Rectangle {
+        anchors.fill: parent
+        radius: 20
+        color: "transparent"
+        border.width: 0
+        border.color: appTheme.shellBorder
+
+        ColumnLayout {
+            anchors.fill: parent
+            anchors.margins: appTheme.shellPadding
+            spacing: appTheme.gap
+
+            AppHeader {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 136
+                theme: appTheme
+                darkMode: root.darkMode
+                menuOpen: root.menuOpen
+                currentLanguage: root.currentLanguage
+                selectedTab: root.selectedRibbonTab
+                recordedCommandCount: 0
+                ribbonTabs: ribbonConfig.tabs
+                ribbonGroups: ribbonConfig.groupsForTab(root.selectedRibbonTab)
+                onToggleMenu: root.menuOpen = !root.menuOpen
+                onRequestThemeToggle: root.toggleTheme()
+                onRequestLanguageToggle: root.toggleLanguage()
+                onSelectTab: function (tabIndex) {
+                    root.selectedRibbonTab = tabIndex;
+                }
+                onTriggerAction: function (actionKey) {
+                    root.openActionPage(actionKey);
                 }
             }
 
-            // Viewport placeholder
-            Rectangle {
+            Item {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                radius: 10
-                color: "#0f3460"
 
-                Text {
-                    anchors.centerIn: parent
-                    text: "3D Viewport\n(Hello World)"
-                    font.pixelSize: 24
-                    font.bold: true
-                    color: "#e94560"
-                    horizontalAlignment: Text.AlignHCenter
+                MouseArea {
+                    anchors.fill: parent
+                    visible: root.menuOpen
+                    z: 10
+                    acceptedButtons: Qt.LeftButton
+                    cursorShape: Qt.ArrowCursor
+                    onClicked: root.menuOpen = false
+                }
+
+                RowLayout {
+                    anchors.fill: parent
+                    spacing: appTheme.gap
+
+                    SidebarPanel {
+                        Layout.preferredWidth: 280
+                        Layout.fillHeight: true
+                        theme: appTheme
+                    }
+
+                    ViewportPanel {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        theme: appTheme
+                    }
                 }
             }
         }

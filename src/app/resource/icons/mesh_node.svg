@@ -1,0 +1,20 @@
+<svg width="24" height="24" viewBox="0 0 24 24"
+     xmlns="http://www.w3.org/2000/svg"
+     fill="none" stroke="currentColor"
+     stroke-linecap="round" stroke-linejoin="round">
+
+  <!-- Light mesh edges (context) -->
+  <line x1="5" y1="6" x2="19" y2="6" stroke-width="0.6" opacity="0.3"/>
+  <line x1="5" y1="6" x2="12" y2="18" stroke-width="0.6" opacity="0.3"/>
+  <line x1="19" y1="6" x2="12" y2="18" stroke-width="0.6" opacity="0.3"/>
+  <line x1="5" y1="6" x2="12" y2="12" stroke-width="0.6" opacity="0.3"/>
+  <line x1="19" y1="6" x2="12" y2="12" stroke-width="0.6" opacity="0.3"/>
+  <line x1="12" y1="12" x2="12" y2="18" stroke-width="0.6" opacity="0.3"/>
+
+  <!-- Highlighted nodes -->
+  <circle cx="5" cy="6" r="2.5" fill="currentColor"/>
+  <circle cx="19" cy="6" r="2.5" fill="currentColor"/>
+  <circle cx="12" cy="18" r="2.5" fill="currentColor"/>
+  <circle cx="12" cy="12" r="2" fill="currentColor"/>
+
+</svg>

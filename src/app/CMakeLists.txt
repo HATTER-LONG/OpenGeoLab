@@ -6,6 +6,7 @@ target_include_directories(opengeolab_app
 target_link_libraries(
     opengeolab_app
     PRIVATE Qt6::Core
+            Qt6::Core5Compat
             Qt6::Gui
             Qt6::Qml
             Qt6::Quick
@@ -13,8 +14,76 @@ target_link_libraries(
             Qt6::Widgets
             Qt6::OpenGL)
 
-qt_add_qml_module(opengeolab_app URI OpenGeoLab.App VERSION 1.0
-                  QML_FILES resource/qml/Main.qml)
+qt_add_qml_module(
+    opengeolab_app
+    URI
+    OpenGeoLab.App
+    VERSION
+    1.0
+    QML_FILES
+    resource/qml/Main.qml
+    resource/qml/RibbonConfig.qml
+    resource/qml/theme/AppTheme.qml
+    resource/qml/sections/AppHeader.qml
+    resource/qml/sections/HeaderMenuPanel.qml
+    resource/qml/sections/HeaderRibbonGroup.qml
+    resource/qml/sections/SidebarPanel.qml
+    resource/qml/sections/ViewportPanel.qml
+    resource/qml/components/AppIcon.qml
+    resource/qml/components/ActionButton.qml
+    resource/qml/components/RibbonTile.qml
+    resource/qml/components/SectionCard.qml
+    RESOURCES
+    resource/icons/ai_chat.svg
+    resource/icons/ai_suggestion.svg
+    resource/icons/box.svg
+    resource/icons/chevron_down.svg
+    resource/icons/chevron_right.svg
+    resource/icons/clear.svg
+    resource/icons/collapse.svg
+    resource/icons/cylinder.svg
+    resource/icons/dark.svg
+    resource/icons/edge.svg
+    resource/icons/exit.svg
+    resource/icons/expand.svg
+    resource/icons/export_record.svg
+    resource/icons/export.svg
+    resource/icons/eye.svg
+    resource/icons/face.svg
+    resource/icons/import.svg
+    resource/icons/language.svg
+    resource/icons/light.svg
+    resource/icons/line.svg
+    resource/icons/menu.svg
+    resource/icons/mesh_display.svg
+    resource/icons/mesh_element.svg
+    resource/icons/mesh_line.svg
+    resource/icons/mesh_node.svg
+    resource/icons/mesh.svg
+    resource/icons/new.svg
+    resource/icons/offset.svg
+    resource/icons/point.svg
+    resource/icons/query.svg
+    resource/icons/record.svg
+    resource/icons/refresh.svg
+    resource/icons/replay.svg
+    resource/icons/shell.svg
+    resource/icons/smooth_mesh.svg
+    resource/icons/solid.svg
+    resource/icons/sphere.svg
+    resource/icons/torus.svg
+    resource/icons/trim.svg
+    resource/icons/vertex.svg
+    resource/icons/view_back.svg
+    resource/icons/view_bottom.svg
+    resource/icons/view_fit.svg
+    resource/icons/view_front.svg
+    resource/icons/view_left.svg
+    resource/icons/view_projection.svg
+    resource/icons/view_right.svg
+    resource/icons/view_top.svg
+    resource/icons/view_xray.svg
+    resource/icons/wire.svg)
 
 # Use console subsystem during development so errors are visible.
 option(OPENGEOLAB_WIN32_APP

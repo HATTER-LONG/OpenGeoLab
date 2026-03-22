@@ -1,0 +1,16 @@
+<svg width="64" height="64" viewBox="0 0 64 64"
+     xmlns="http://www.w3.org/2000/svg"
+     fill="none" stroke="currentColor" stroke-width="3"
+     stroke-linecap="round" stroke-linejoin="round">
+
+  <!-- Closed wire -->
+  <polyline points="16,16 48,16 52,36 32,48 12,36 16,16"/>
+
+  <!-- Vertices -->
+  <circle cx="16" cy="16" r="3" fill="currentColor"/>
+  <circle cx="48" cy="16" r="3" fill="currentColor"/>
+  <circle cx="52" cy="36" r="3" fill="currentColor"/>
+  <circle cx="32" cy="48" r="3" fill="currentColor"/>
+  <circle cx="12" cy="36" r="3" fill="currentColor"/>
+
+</svg>

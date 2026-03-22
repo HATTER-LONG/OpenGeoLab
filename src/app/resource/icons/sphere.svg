@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Main sphere circle -->
+  <circle cx="12" cy="12" r="9"/>
+  <!-- Horizontal latitude line -->
+  <ellipse cx="12" cy="12" rx="9" ry="3"/>
+  <!-- Vertical longitude line (partial) -->
+  <path d="M12 3 Q8 12 12 21"/>
+  <!-- Light reflection hint -->
+  <path d="M8 7 Q9 6 10 7" opacity="0.6"/>
+</svg>

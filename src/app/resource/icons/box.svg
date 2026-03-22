@@ -1,0 +1,21 @@
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <!-- front face -->
+  <rect x="6" y="8" width="10" height="10"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.6"/>
+
+  <!-- top face -->
+  <path d="M6 8l4-4h10l-4 4z"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.6"
+        stroke-linejoin="round"/>
+
+  <!-- side face -->
+  <path d="M16 8v10l4-4V4"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.6"
+        stroke-linejoin="round"/>
+</svg>

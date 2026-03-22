@@ -1,0 +1,5 @@
+module OpenGeoLab.App.Components
+AppIcon 1.0 AppIcon.qml
+ActionButton 1.0 ActionButton.qml
+RibbonTile 1.0 RibbonTile.qml
+SectionCard 1.0 SectionCard.qml
