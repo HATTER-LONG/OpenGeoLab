@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <numbers>
 
 namespace {
 
@@ -11,39 +10,8 @@ auto vec_add(const std::array<float, 3>& lhs, const std::array<float, 3>& rhs)
     return {lhs[0] + rhs[0], lhs[1] + rhs[1], lhs[2] + rhs[2]};
 }
 
-auto vec_subtract(const std::array<float, 3>& lhs, const std::array<float, 3>& rhs)
-    -> std::array<float, 3> {
-    return {lhs[0] - rhs[0], lhs[1] - rhs[1], lhs[2] - rhs[2]};
-}
-
 auto vec_scale(const std::array<float, 3>& value, float scale) -> std::array<float, 3> {
     return {value[0] * scale, value[1] * scale, value[2] * scale};
-}
-
-auto vec_dot(const std::array<float, 3>& lhs, const std::array<float, 3>& rhs) -> float {
-    return lhs[0] * rhs[0] + lhs[1] * rhs[1] + lhs[2] * rhs[2];
-}
-
-auto vec_cross(const std::array<float, 3>& lhs, const std::array<float, 3>& rhs)
-    -> std::array<float, 3> {
-    return {
-        lhs[1] * rhs[2] - lhs[2] * rhs[1],
-        lhs[2] * rhs[0] - lhs[0] * rhs[2],
-        lhs[0] * rhs[1] - lhs[1] * rhs[0],
-    };
-}
-
-auto vec_length(const std::array<float, 3>& value) -> float {
-    return std::sqrt(vec_dot(value, value));
-}
-
-auto vec_normalize(const std::array<float, 3>& value) -> std::array<float, 3> {
-    const float length = vec_length(value);
-    if(length <= 1e-6f) {
-        return {0.f, 0.f, 0.f};
-    }
-
-    return vec_scale(value, 1.f / length);
 }
 
 auto quat_conjugate(const std::array<float, 4>& q) -> std::array<float, 4> {
@@ -78,41 +46,9 @@ auto quat_rotate_vec(const std::array<float, 4>& q, const std::array<float, 3>& 
     return {rotated[0], rotated[1], rotated[2]};
 }
 
-auto quat_from_axis_angle(const std::array<float, 3>& axis, float angle) -> std::array<float, 4> {
-    const auto normalized_axis = vec_normalize(axis);
-    const float half_angle = angle * 0.5f;
-    const float sin_half_angle = std::sin(half_angle);
-
-    return quat_normalize({
-        normalized_axis[0] * sin_half_angle,
-        normalized_axis[1] * sin_half_angle,
-        normalized_axis[2] * sin_half_angle,
-        std::cos(half_angle),
-    });
-}
-
 } // namespace
 
 namespace OpenGeoLab::Render {
-
-auto NavigationController::compute_orbit(
-    const std::array<float, 4>& current_orientation,
-    const std::array<float, 3>& current_position,
-    float dx, float dy,
-    const std::array<float, 3>& scene_center) -> OrbitResult {
-    const auto offset = vec_subtract(current_position, scene_center);
-    const std::array<float, 3> world_up = {0.f, 1.f, 0.f};
-    const auto right = quat_rotate_vec(current_orientation, {1.f, 0.f, 0.f});
-
-    const auto yaw_q = quat_from_axis_angle(world_up, dx * std::numbers::pi_v<float>);
-    const auto pitch_q = quat_from_axis_angle(right, dy * std::numbers::pi_v<float>);
-    const auto rotation = quat_normalize(quat_multiply(yaw_q, pitch_q));
-
-    return {
-        .new_orientation = quat_normalize(quat_multiply(rotation, current_orientation)),
-        .new_position = vec_add(scene_center, quat_rotate_vec(rotation, offset)),
-    };
-}
 
 auto NavigationController::compute_pan(
     const std::array<float, 3>& current_position,

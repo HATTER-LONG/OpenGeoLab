@@ -12,9 +12,12 @@
 
 #include <kangaroo/util/plugin_component_factory.hpp>
 
+#include <Inventor/SbViewVolume.h>
 #include <Inventor/SbViewportRegion.h>
 #include <Inventor/actions/SoGLRenderAction.h>
+#include <Inventor/nodes/SoCamera.h>
 #include <Inventor/nodes/SoSeparator.h>
+#include <Inventor/projectors/SbSphereSheetProjector.h>
 
 #include <QMouseEvent>
 #include <QOpenGLContext>
@@ -28,6 +31,21 @@
 
 #include <array>
 #include <utility>
+
+namespace {
+
+void reorient_camera(SoCamera* camera, const SbRotation& rotation,
+                     const SbVec3f& rotation_center) {
+    SbVec3f offset_cam;
+    camera->orientation.getValue().inverse().multVec(
+        camera->position.getValue() - rotation_center, offset_cam);
+    camera->orientation = rotation * camera->orientation.getValue();
+    SbVec3f new_offset;
+    camera->orientation.getValue().multVec(offset_cam, new_offset);
+    camera->position = rotation_center + new_offset;
+}
+
+} // namespace
 
 namespace OpenGeoLab::App {
 
@@ -98,6 +116,8 @@ CoinQuickItem::CoinQuickItem(QQuickItem* parent) : QQuickFramebufferObject(paren
 
     setAcceptedMouseButtons(Qt::AllButtons);
     setAcceptTouchEvents(true);
+    projector_ = std::make_unique<SbSphereSheetProjector>(
+        SbSphere(SbVec3f(0.F, 0.F, 0.F), 0.8F), TRUE);
 }
 
 CoinQuickItem::~CoinQuickItem() = default;
@@ -136,6 +156,7 @@ void CoinQuickItem::mousePressEvent(QMouseEvent* event) {
     last_mouse_pos_ = event->position();
     if(event->button() == Qt::LeftButton) {
         is_orbiting_ = true;
+        has_last_point_ = false;
     } else if(event->button() == Qt::MiddleButton) {
         is_panning_ = true;
     }
@@ -156,22 +177,36 @@ void CoinQuickItem::mouseMoveEvent(QMouseEvent* event) {
         return;
     }
 
-    const auto dx = static_cast<float>((pos.x() - last_mouse_pos_.x()) / width_value);
-    const auto dy = static_cast<float>((pos.y() - last_mouse_pos_.y()) / height_value);
-    last_mouse_pos_ = pos;
+    if(is_orbiting_ && projector_) {
+        auto* cam = scene_manager_->camera();
+        if(cam) {
+            SbViewVolume vv = cam->getViewVolume(
+                static_cast<float>(width_value / height_value));
+            projector_->setViewVolume(vv);
 
-    auto cam_state = scene_manager_->camera_state();
+            SbVec2f norm_pos(
+                static_cast<float>(pos.x() / width_value),
+                static_cast<float>(1.0 - pos.y() / height_value));
 
-    if(is_orbiting_) {
-        const std::array<float, 3> center = {0.F, 0.F, 0.F};
-        auto result = Render::NavigationController::compute_orbit(
-            cam_state.orientation, cam_state.position, dx, dy, center);
+            SbVec3f projected = projector_->project(norm_pos);
 
-        cam_state.orientation = result.new_orientation;
-        cam_state.position = result.new_position;
-        scene_manager_->restore_camera_state(cam_state);
-        update();
+            if(has_last_point_) {
+                SbRotation rotation = projector_->getRotation(
+                    last_projected_point_, projected);
+                rotation.invert();
+                // TODO(future): replace hardcoded origin with scene bounding center
+                reorient_camera(cam, rotation, SbVec3f(0.F, 0.F, 0.F));
+            }
+
+            last_projected_point_ = projected;
+            has_last_point_ = true;
+            update();
+        }
     } else if(is_panning_) {
+        const auto dx = static_cast<float>((pos.x() - last_mouse_pos_.x()) / width_value);
+        const auto dy = static_cast<float>((pos.y() - last_mouse_pos_.y()) / height_value);
+
+        auto cam_state = scene_manager_->camera_state();
         auto result = Render::NavigationController::compute_pan(
             cam_state.position, cam_state.orientation, dx, dy, cam_state.focal_distance);
 
@@ -180,12 +215,14 @@ void CoinQuickItem::mouseMoveEvent(QMouseEvent* event) {
         update();
     }
 
+    last_mouse_pos_ = pos;
     event->accept();
 }
 
 void CoinQuickItem::mouseReleaseEvent(QMouseEvent* event) {
     is_orbiting_ = false;
     is_panning_ = false;
+    has_last_point_ = false;
     emit navigationFinished(cameraStateJson());
     event->accept();
 }

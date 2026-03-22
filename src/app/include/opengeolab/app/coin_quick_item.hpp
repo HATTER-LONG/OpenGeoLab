@@ -7,6 +7,9 @@
 
 #include <opengeolab/render/scene_manager.hpp>
 
+#include <Inventor/SbVec3f.h>
+#include <Inventor/projectors/SbSphereSheetProjector.h>
+
 #include <QQuickFramebufferObject>
 
 #include <memory>
@@ -62,6 +65,9 @@ private:
     QPointF last_mouse_pos_;
     bool is_orbiting_ = false;
     bool is_panning_ = false;
+    std::unique_ptr<SbSphereSheetProjector> projector_;
+    SbVec3f last_projected_point_;
+    bool has_last_point_ = false;
 };
 
 } // namespace OpenGeoLab::App

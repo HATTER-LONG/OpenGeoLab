@@ -1,6 +1,6 @@
 /**
  * @file navigation_controller.hpp
- * @brief Stateless navigation calculator for orbit, pan, and zoom.
+ * @brief Stateless navigation calculator for pan and zoom.
  */
 
 #pragma once
@@ -12,7 +12,7 @@
 namespace OpenGeoLab::Render {
 
 /**
- * @brief Stateless navigation calculator.
+ * @brief Stateless pan and zoom calculator.
  *
  * Receives mouse deltas and current camera parameters, returns new camera
  * parameters. Does not depend on Coin3D types — uses std::array<float, N>
@@ -20,12 +20,6 @@ namespace OpenGeoLab::Render {
  */
 class OPENGEOLAB_RENDER_EXPORT NavigationController {
 public:
-    /// Result of an orbit operation around scene_center.
-    struct OrbitResult {
-        std::array<float, 4> new_orientation; ///< Quaternion (x, y, z, w)
-        std::array<float, 3> new_position;    ///< New camera world position
-    };
-
     /// Result of a pan operation.
     struct PanResult {
         std::array<float, 3> new_position;
@@ -37,20 +31,6 @@ public:
         std::array<float, 3> new_position; ///< Perspective: moved along view direction
         float new_height;                  ///< Orthographic: scaled viewport height
     };
-
-    /**
-     * @brief Compute orbit rotation around scene_center.
-     * @param current_orientation Current camera orientation quaternion (x,y,z,w)
-     * @param current_position Current camera world position
-     * @param dx Normalized horizontal mouse delta [-1, 1]
-     * @param dy Normalized vertical mouse delta [-1, 1]
-     * @param scene_center World-space rotation center
-     */
-    static auto compute_orbit(
-        const std::array<float, 4>& current_orientation,
-        const std::array<float, 3>& current_position,
-        float dx, float dy,
-        const std::array<float, 3>& scene_center) -> OrbitResult;
 
     /**
      * @brief Compute pan translation along camera view plane.

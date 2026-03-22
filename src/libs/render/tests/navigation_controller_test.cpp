@@ -6,27 +6,6 @@
 
 using OpenGeoLab::Render::NavigationController;
 
-TEST_CASE("compute_orbit changes orientation and position") {
-    std::array<float, 4> orientation = {0.f, 0.f, 0.f, 1.f};
-    std::array<float, 3> position = {0.f, 0.f, 10.f};
-    std::array<float, 3> center = {0.f, 0.f, 0.f};
-
-    auto result = NavigationController::compute_orbit(
-        orientation, position, 0.1f, 0.0f, center);
-
-    CHECK(result.new_orientation != orientation);
-    CHECK(result.new_position != position);
-
-    float dist_before = std::sqrt(
-        position[0] * position[0] + position[1] * position[1] + position[2] * position[2]);
-    float dist_after = std::sqrt(
-        result.new_position[0] * result.new_position[0] +
-        result.new_position[1] * result.new_position[1] +
-        result.new_position[2] * result.new_position[2]);
-
-    CHECK(dist_after == doctest::Approx(dist_before).epsilon(1e-4));
-}
-
 TEST_CASE("compute_pan translates position along view plane") {
     std::array<float, 4> orientation = {0.f, 0.f, 0.f, 1.f};
     std::array<float, 3> position = {0.f, 0.f, 10.f};
