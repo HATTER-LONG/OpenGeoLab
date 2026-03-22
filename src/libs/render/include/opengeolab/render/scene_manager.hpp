@@ -19,6 +19,9 @@ class SoCamera;
 
 namespace OpenGeoLab::Render {
 
+/// Rendering display modes for 3D objects.
+enum class DisplayMode { kFlatLines, kWireframe };
+
 /**
  * @brief Manages Coin3D scene graph: root tree, camera, light, geometry nodes.
  *
@@ -56,6 +59,12 @@ public:
 
     /// Remove a geometry node by its ID.
     void remove_node(std::string_view node_id);
+
+    /// Set the display mode for all objects.
+    void set_display_mode(DisplayMode mode);
+
+    /// Get the current display mode.
+    [[nodiscard]] auto display_mode() const -> DisplayMode;
 
     /// @return Snapshot of current camera parameters.
     [[nodiscard]] auto camera_state() const -> CameraState;
