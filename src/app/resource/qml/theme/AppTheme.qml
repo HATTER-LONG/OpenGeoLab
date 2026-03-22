@@ -70,4 +70,11 @@ QtObject {
     function tint(colorValue: color, alphaValue: real): color {
         return Qt.rgba(colorValue.r, colorValue.g, colorValue.b, alphaValue);
     }
+
+    /// Return the accent color property identified by @p name, defaulting to accentA.
+    function accentByName(name: string): color {
+        const map = { "accentA": accentA, "accentB": accentB, "accentC": accentC,
+                      "accentD": accentD, "accentE": accentE };
+        return map[name] ?? accentA;
+    }
 }

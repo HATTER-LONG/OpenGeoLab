@@ -42,17 +42,17 @@ qt_add_qml_module(
     resource/icons/offset.svg
     resource/icons/query.svg
     resource/icons/mesh.svg
-    resource/icons/smooth_mesh.svg
-    resource/icons/ai_suggestion.svg
-    resource/icons/ai_chat.svg
+    resource/icons/smoothMesh.svg
+    resource/icons/aiSuggest.svg
+    resource/icons/aiChat.svg
     resource/icons/import.svg
     resource/icons/export.svg
-    resource/icons/dark.svg
-    resource/icons/light.svg
+    resource/icons/darkTheme.svg
+    resource/icons/lightTheme.svg
     resource/icons/language.svg
     resource/icons/record.svg
     resource/icons/replay.svg
-    resource/icons/export_record.svg
+    resource/icons/exportRecord.svg
     resource/icons/clear.svg)
 
 # Use console subsystem during development so errors are visible.
