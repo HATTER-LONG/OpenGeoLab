@@ -1,8 +1,9 @@
-qt_add_executable(opengeolab_app src/main.cpp)
+qt_add_executable(opengeolab_app src/main.cpp src/translation_manager.cpp)
 
 target_compile_features(opengeolab_app PRIVATE cxx_std_20)
 target_include_directories(opengeolab_app
-                           PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
+                           PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include"
+                                   "${CMAKE_CURRENT_SOURCE_DIR}/include/opengeolab/app")
 target_link_libraries(
     opengeolab_app
     PRIVATE Qt6::Core
@@ -19,6 +20,8 @@ qt_add_qml_module(
     OpenGeoLab.App
     VERSION
     1.0
+    SOURCES
+    include/opengeolab/app/translation_manager.h
     QML_FILES
     resource/qml/Main.qml
     resource/qml/RibbonConfig.qml
@@ -83,5 +86,10 @@ file(
     GENERATE
     OUTPUT "$<TARGET_FILE_DIR:opengeolab_app>/qt.conf"
     CONTENT "[Paths]\nPrefix = ${_qt_prefix_fwd}\n")
+
+qt_add_translations(
+    opengeolab_app
+    TS_FILES resource/translations/opengeolab_zh_CN.ts
+    RESOURCE_PREFIX "/translations")
 
 install(TARGETS opengeolab_app RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")

@@ -12,7 +12,6 @@ Window {
     property bool darkMode: false
     property bool menuOpen: false
     property int selectedRibbonTab: 0
-    property string currentLanguage: "en_US"
     property string statusNote: qsTr("Viewport is active. Ribbon commands stay connected to the same controller pipeline.")
 
     width: 1500
@@ -39,17 +38,15 @@ Window {
         root.menuOpen = false;
     }
 
-    function toggleLanguage() {
-        root.currentLanguage = (root.currentLanguage === "en_US") ? "zh_CN" : "en_US";
-        root.statusNote = root.currentLanguage === "zh_CN"
-            ? qsTr("Switched to Chinese.")
-            : qsTr("Switched to English.");
-        root.menuOpen = false;
-    }
-
     function openActionPage(actionKey) {
         if (actionKey === "toggleTheme") {
             root.toggleTheme();
+            return;
+        }
+        if (actionKey === "switchLanguage") {
+            root.statusNote = TranslationManager.currentLanguage === "zh_CN"
+                ? qsTr("Switched to Chinese.") : qsTr("Switched to English.");
+            root.menuOpen = false;
             return;
         }
 
@@ -108,14 +105,12 @@ Window {
                 theme: appTheme
                 darkMode: root.darkMode
                 menuOpen: root.menuOpen
-                currentLanguage: root.currentLanguage
                 selectedTab: root.selectedRibbonTab
                 recordedCommandCount: 0
                 ribbonTabs: ribbonConfig.tabs
                 ribbonGroups: ribbonConfig.groupsForTab(root.selectedRibbonTab)
                 onToggleMenu: root.menuOpen = !root.menuOpen
                 onRequestThemeToggle: root.toggleTheme()
-                onRequestLanguageToggle: root.toggleLanguage()
                 onSelectTab: function (tabIndex) {
                     root.selectedRibbonTab = tabIndex;
                 }

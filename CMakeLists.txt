@@ -83,6 +83,7 @@ find_package(
     COMPONENTS Concurrent
                Core
                Gui
+               LinguistTools
                Qml
                Quick
                QuickControls2
