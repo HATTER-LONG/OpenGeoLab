@@ -10,6 +10,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -19,7 +20,11 @@ PYBIND11_MODULE(opengeolab_pywrapper, module) {
     module.doc() = "OpenGeoLab JSON process bridge";
 
     auto& factory = Kangaroo::Util::PluginComponentFactory::instance();
-    OpenGeoLab::Command::registerAllModules(factory);
+    try {
+        OpenGeoLab::Command::registerAllModules(factory);
+    } catch(const Kangaroo::Util::ComponentFactoryAlreadyRegisteredEx&) {
+        // Host application already registered modules — safe to continue.
+    }
 
     static auto dispatcher = OpenGeoLab::Command::ModuleDispatcher(factory);
 

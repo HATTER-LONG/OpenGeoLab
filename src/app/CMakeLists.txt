@@ -16,6 +16,7 @@ target_link_libraries(
             Qt6::QuickControls2
             Qt6::Widgets
             Qt6::OpenGL
+            OpenGeoLab::Command
             OpenGeoLab::Python
             OpenGeoLab::Render
             Coin::Coin)

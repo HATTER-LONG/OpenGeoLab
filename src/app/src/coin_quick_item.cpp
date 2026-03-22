@@ -83,11 +83,15 @@ private:
 };
 
 CoinQuickItem::CoinQuickItem(QQuickItem* parent) : QQuickFramebufferObject(parent) {
-    auto& factory = Kangaroo::Util::PluginComponentFactory::instance();
-    auto module = factory.getSharedInstance<OpenGeoLab::Base::IModuleService>("render");
-    auto render_module = std::dynamic_pointer_cast<Render::RenderModule>(module);
-    if(render_module) {
-        scene_manager_ = render_module->scene_manager();
+    try {
+        auto& factory = Kangaroo::Util::PluginComponentFactory::instance();
+        auto module = factory.getSharedInstance<OpenGeoLab::Base::IModuleService>("render");
+        auto render_module = std::dynamic_pointer_cast<Render::RenderModule>(module);
+        if(render_module) {
+            scene_manager_ = render_module->scene_manager();
+        }
+    } catch(const std::exception& ex) {
+        qWarning("CoinQuickItem: failed to resolve render module: %s", ex.what());
     }
 
     if(scene_manager_) {

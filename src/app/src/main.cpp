@@ -7,7 +7,10 @@
 #include <pybind11/pybind11.h>
 
 #include <opengeolab/app/process_service.hpp>
+#include <opengeolab/command/module_registry.hpp>
 #include <opengeolab/python/embedded_python_runtime.hpp>
+
+#include <kangaroo/util/plugin_component_factory.hpp>
 
 #include <QApplication>
 #include <QCoreApplication>
@@ -48,6 +51,14 @@ int main(int argc, char* argv[]) {
     const auto plugin_dir = std::filesystem::path(app_dir) / "plugins" / "python";
 
     OpenGeoLab::Python::EmbeddedPythonRuntime python_runtime(app_dir, runtime_dir, plugin_dir);
+
+    // Register all C++ module services before QML loads.  CoinQuickItem's
+    // constructor resolves the render module from the factory, so the
+    // factory must already contain the registrations at that point.
+    // The Python wrapper performs the same call; Kangaroo throws on
+    // duplicate registration, so the wrapper now guards against that.
+    auto& factory = Kangaroo::Util::PluginComponentFactory::instance();
+    OpenGeoLab::Command::registerAllModules(factory);
 
     OpenGeoLab::App::ProcessService process_service(python_runtime);
 
