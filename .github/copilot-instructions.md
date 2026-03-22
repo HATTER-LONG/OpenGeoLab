@@ -36,3 +36,10 @@ applyTo: '**'
 - 避免无信息量提交信息，例如 `update files`、`fix bug`、`wip`、`temp`。
 - 示例：`refactor(architecture): split app and libs into modular subprojects`
 - 示例：`feat(selection): add pick and box-select action components`
+
+## 构建配置
+
+- 优先使用 Ninja 作为 CMake 生成器：`cmake -S . -B build -G Ninja`
+- 默认构建类型为 RelWithDebInfo
+- 构建命令：`cmake --build build --parallel 4`
+- 测试命令：`ctest --test-dir build --output-on-failure`

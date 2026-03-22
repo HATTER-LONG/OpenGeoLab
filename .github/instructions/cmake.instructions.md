@@ -46,6 +46,7 @@ applyTo: '**/{CMakeLists.txt,*.cmake}'
 - 对外暴露的库应明确区分 public/private include、编译定义和链接库。
 - 安装、导出、打包逻辑应与构建逻辑分离，避免互相耦合。
 - 对于第三方依赖，优先保持封装，避免污染全局命名空间或编译设置。
+- 优先使用 Ninja 作为构建生成器（`cmake -G Ninja`），提升增量编译速度；在 Windows 上确保 MSVC 环境已激活。
 
 ## 6. 生成代码时的默认行为
 
