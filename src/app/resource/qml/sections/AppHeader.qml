@@ -14,14 +14,13 @@ Rectangle {
     required property bool darkMode
     required property bool menuOpen
     required property int selectedTab
+    required property var actionHandler
     property int recordedCommandCount: 0
     property var ribbonTabs: []
     property var ribbonGroups: []
     property int ribbonButtonWidth: 68
     signal toggleMenu
-    signal requestThemeToggle
     signal selectTab(int index)
-    signal triggerAction(string actionKey)
 
     radius: theme.radiusMedium
     z: 20
@@ -39,9 +38,9 @@ Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 28
             radius: 12
-            color: header.theme.tint(header.theme.surface, header.theme.darkMode ? 0.7 : 1.0)
+            color: header.theme.panel.normal
             border.width: 1
-            border.color: header.theme.tint(header.theme.borderSubtle, 0.78)
+            border.color: header.theme.panel.tabBarBorder
 
             RowLayout {
                 anchors.fill: parent
@@ -90,9 +89,9 @@ Rectangle {
                         Layout.preferredWidth: Math.max(tabLabel.implicitWidth + 18, 62)
                         Layout.preferredHeight: 22
                         radius: 8
-                        color: tabButton.active ? header.theme.tint(header.theme.accentA, header.theme.darkMode ? 0.2 : 0.12) : (tabArea.containsMouse ? header.theme.tint(header.theme.surfaceStrong, header.theme.darkMode ? 0.54 : 0.74) : "transparent")
+                        color: tabButton.active ? header.theme.panel.tabActiveBg : (tabArea.containsMouse ? header.theme.panel.tabHovered : "transparent")
                         border.width: active ? 1 : 0
-                        border.color: header.theme.tint(header.theme.accentA, header.theme.darkMode ? 0.42 : 0.24)
+                        border.color: header.theme.panel.tabActiveBorder
 
                         Text {
                             id: tabLabel
@@ -125,9 +124,9 @@ Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
             radius: 14
-            color: header.theme.tint(header.theme.surface, header.theme.darkMode ? 0.7 : 1.0)
+            color: header.theme.panel.normal
             border.width: 1
-            border.color: header.theme.tint(header.theme.borderSubtle, 0.7)
+            border.color: header.theme.panel.border
 
             Flickable {
                 anchors.fill: parent
@@ -162,9 +161,7 @@ Rectangle {
                                 groupIndex: parent.index
                                 groupCount: header.ribbonGroups.length
                                 buttonSize: header.ribbonButtonWidth
-                                onTriggerAction: function (actionKey) {
-                                    header.triggerAction(actionKey);
-                                }
+                                actionHandler: header.actionHandler
                             }
                         }
                     }
@@ -177,9 +174,6 @@ Rectangle {
         theme: header.theme
         darkMode: header.darkMode
         menuOpen: header.menuOpen
-        onRequestThemeToggle: header.requestThemeToggle()
-        onTriggerAction: function (actionKey) {
-            header.triggerAction(actionKey);
-        }
+        actionHandler: header.actionHandler
     }
 }

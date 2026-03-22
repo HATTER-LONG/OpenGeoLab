@@ -44,6 +44,8 @@ Window {
             return;
         }
         if (actionKey === "switchLanguage") {
+            TranslationManager.switchLanguage(
+                TranslationManager.currentLanguage === "zh_CN" ? "en_US" : "zh_CN");
             root.statusNote = TranslationManager.currentLanguage === "zh_CN"
                 ? qsTr("Switched to Chinese.") : qsTr("Switched to English.");
             root.menuOpen = false;
@@ -109,13 +111,10 @@ Window {
                 recordedCommandCount: 0
                 ribbonTabs: ribbonConfig.tabs
                 ribbonGroups: ribbonConfig.groupsForTab(root.selectedRibbonTab)
+                actionHandler: root.openActionPage
                 onToggleMenu: root.menuOpen = !root.menuOpen
-                onRequestThemeToggle: root.toggleTheme()
                 onSelectTab: function (tabIndex) {
                     root.selectedRibbonTab = tabIndex;
-                }
-                onTriggerAction: function (actionKey) {
-                    root.openActionPage(actionKey);
                 }
             }
 

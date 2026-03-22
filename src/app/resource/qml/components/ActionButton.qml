@@ -7,33 +7,25 @@ Rectangle {
     id: control
 
     required property AppTheme theme
+    required property var actionHandler
+    property string actionKey: ""
     property string buttonText: ""
     property string iconKind: ""
     property bool leftAligned: false
-    property color buttonColor: theme.surfaceMuted
-    property color pressedColor: theme.surfaceStrong
+    property var colorSet: ({})
+    property color hoverBorderOverride: "transparent"
     property color labelColor: theme.textPrimary
     property color iconPrimaryColor: theme.textPrimary
-    property color iconSecondaryColor: theme.accentB
-    property color hoverBorderColor: theme.tint(iconPrimaryColor, theme.darkMode ? 0.52 : 0.3)
     property int labelSize: 13
     property bool quiet: false
-    signal clicked
 
     implicitWidth: 132
     implicitHeight: 40
     radius: theme.radiusSmall
-    color: mouseArea.pressed ? pressedColor : (mouseArea.containsMouse ? theme.tint(buttonColor, quiet ? 0.92 : 1.0) : buttonColor)
+    color: mouseArea.pressed ? colorSet.pressed : (mouseArea.containsMouse ? theme.tint(colorSet.normal, quiet ? 0.92 : 1.0) : colorSet.normal)
     border.width: 1
-    border.color: mouseArea.containsMouse ? hoverBorderColor : (quiet ? theme.tint(theme.borderSubtle, 0.45) : theme.borderSubtle)
+    border.color: mouseArea.containsMouse ? (hoverBorderOverride.a > 0 ? hoverBorderOverride : theme.tint(theme.textPrimary, theme.darkMode ? 0.52 : 0.3)) : (quiet ? theme.tint(theme.borderSubtle, 0.45) : theme.borderSubtle)
     scale: mouseArea.pressed ? 0.98 : (mouseArea.containsMouse ? 1.01 : 1.0)
-
-    Rectangle {
-        anchors.fill: parent
-        radius: parent.radius
-        color: mouseArea.containsMouse ? control.theme.tint(control.iconSecondaryColor, control.theme.darkMode ? 0.08 : 0.06) : "transparent"
-        border.width: 0
-    }
 
     Behavior on color {
         ColorAnimation {
@@ -77,6 +69,6 @@ Rectangle {
         anchors.fill: parent
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
-        onClicked: control.clicked()
+        onClicked: control.actionHandler(control.actionKey)
     }
 }

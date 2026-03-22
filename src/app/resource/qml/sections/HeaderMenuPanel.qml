@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 
+import ".."
 import "../theme"
 import "../components" as Components
 
@@ -11,8 +12,11 @@ Rectangle {
     required property AppTheme theme
     required property bool darkMode
     required property bool menuOpen
-    signal requestThemeToggle
-    signal triggerAction(string actionKey)
+    required property var actionHandler
+
+    MenuConfig {
+        id: menuConfig
+    }
 
     visible: panel.menuOpen
     z: 10
@@ -47,150 +51,82 @@ Rectangle {
         anchors.margins: 12
         spacing: 10
 
-        Text {
-            text: qsTr("Workspace")
-            color: panel.theme.textSecondary
-            font.pixelSize: 12
-            font.bold: true
-        }
+        Repeater {
+            model: menuConfig.sections
 
-        Rectangle {
-            width: parent.width
-            radius: 14
-            color: panel.theme.tint(panel.theme.surfaceMuted, panel.theme.darkMode ? 0.5 : 0.74)
-            border.width: 1
-            border.color: panel.theme.tint(panel.theme.borderSubtle, 0.7)
-            implicitHeight: workspaceMenuGroup.implicitHeight + 20
+            delegate: Column {
+                id: sectionDelegate
 
-            Column {
-                id: workspaceMenuGroup
+                required property int index
+                required property var modelData
 
-                anchors.fill: parent
-                anchors.margins: 10
-                spacing: 8
+                readonly property string sectionAccent: modelData.accent
 
-                Components.ActionButton {
-                    theme: panel.theme
-                    width: parent.width
-                    buttonText: qsTr("Import Model")
-                    iconKind: "import"
-                    leftAligned: true
-                    buttonColor: panel.theme.tint(panel.theme.accentA, panel.theme.darkMode ? 0.2 : 0.11)
-                    pressedColor: panel.theme.tint(panel.theme.accentA, panel.theme.darkMode ? 0.3 : 0.18)
-                    onClicked: panel.triggerAction("importModel")
+                width: menuColumn.width
+                spacing: 10
+
+                Text {
+                    text: sectionDelegate.modelData.title
+                    color: panel.theme.textSecondary
+                    font.pixelSize: 12
+                    font.bold: true
                 }
 
-                Components.ActionButton {
-                    theme: panel.theme
+                Rectangle {
                     width: parent.width
-                    buttonText: qsTr("Export Model")
-                    iconKind: "export"
-                    leftAligned: true
-                    buttonColor: panel.theme.tint(panel.theme.accentA, panel.theme.darkMode ? 0.2 : 0.11)
-                    pressedColor: panel.theme.tint(panel.theme.accentA, panel.theme.darkMode ? 0.3 : 0.18)
-                    onClicked: panel.triggerAction("exportModel")
-                }
+                    radius: 14
+                    color: sectionDelegate.index === 0 ? panel.theme.panel.menuBg : panel.theme.panel.menuRecorderBg
+                    border.width: 1
+                    border.color: panel.theme.panel.menuBorder
+                    implicitHeight: actionColumn.implicitHeight + 20
 
-                Components.ActionButton {
-                    theme: panel.theme
-                    width: parent.width
-                    buttonText: panel.darkMode ? qsTr("Switch to Light") : qsTr("Switch to Dark")
-                    iconKind: panel.darkMode ? "lightTheme" : "darkTheme"
-                    leftAligned: true
-                    buttonColor: panel.theme.tint(panel.theme.accentA, panel.theme.darkMode ? 0.18 : 0.1)
-                    pressedColor: panel.theme.tint(panel.theme.accentA, panel.theme.darkMode ? 0.28 : 0.16)
-                    hoverBorderColor: panel.theme.tint(panel.theme.accentA, panel.theme.darkMode ? 0.58 : 0.34)
-                    onClicked: panel.requestThemeToggle()
-                }
+                    Column {
+                        id: actionColumn
 
-                Components.ActionButton {
-                    theme: panel.theme
-                    width: parent.width
-                    buttonText: TranslationManager.currentLanguage === "zh_CN" ? qsTr("Switch to English") : qsTr("Switch to Chinese")
-                    iconKind: "language"
-                    leftAligned: true
-                    buttonColor: panel.theme.tint(panel.theme.accentE, panel.theme.darkMode ? 0.18 : 0.1)
-                    pressedColor: panel.theme.tint(panel.theme.accentE, panel.theme.darkMode ? 0.28 : 0.16)
-                    hoverBorderColor: panel.theme.tint(panel.theme.accentE, panel.theme.darkMode ? 0.58 : 0.34)
-                    onClicked: {
-                        TranslationManager.switchLanguage(TranslationManager.currentLanguage === "zh_CN" ? "en_US" : "zh_CN");
-                        panel.triggerAction("switchLanguage");
+                        anchors.fill: parent
+                        anchors.margins: 10
+                        spacing: 8
+
+                        Repeater {
+                            model: sectionDelegate.modelData.actions
+
+                            delegate: Components.ActionButton {
+                                required property var modelData
+
+                                readonly property string effectiveAccent: modelData.accent ?? sectionDelegate.sectionAccent
+                                readonly property string effectiveAlpha: modelData.alphaScale ?? "normal"
+
+                                theme: panel.theme
+                                width: actionColumn.width
+                                leftAligned: true
+                                actionKey: modelData.key
+                                actionHandler: panel.actionHandler
+                                colorSet: panel.theme.actionButtonColors(effectiveAccent, effectiveAlpha)
+                                hoverBorderOverride: modelData.hoverAccent
+                                    ? panel.theme.accentHoverBorder(modelData.hoverAccent) : "transparent"
+                                buttonText: {
+                                    if (modelData.key === "toggleTheme")
+                                        return panel.darkMode ? qsTr("Switch to Light") : qsTr("Switch to Dark");
+                                    if (modelData.key === "switchLanguage")
+                                        return TranslationManager.currentLanguage === "zh_CN"
+                                            ? qsTr("Switch to English") : qsTr("Switch to Chinese");
+                                    return modelData.title;
+                                }
+                                iconKind: {
+                                    if (modelData.key === "toggleTheme")
+                                        return panel.darkMode ? "lightTheme" : "darkTheme";
+                                    return modelData.icon;
+                                }
+                            }
+                        }
                     }
                 }
-            }
-        }
 
-        Rectangle {
-            width: parent.width
-            height: 1
-            color: panel.theme.tint(panel.theme.borderSubtle, 0.6)
-        }
-
-        Text {
-            text: qsTr("Script Recorder")
-            color: panel.theme.textSecondary
-            font.pixelSize: 12
-            font.bold: true
-        }
-
-        Rectangle {
-            width: parent.width
-            radius: 14
-            color: panel.theme.tint(panel.theme.surfaceMuted, panel.theme.darkMode ? 0.46 : 0.72)
-            border.width: 1
-            border.color: panel.theme.tint(panel.theme.borderSubtle, 0.7)
-            implicitHeight: recorderMenuGroup.implicitHeight + 20
-
-            Column {
-                id: recorderMenuGroup
-
-                anchors.fill: parent
-                anchors.margins: 10
-                spacing: 8
-
-                Components.ActionButton {
-                    theme: panel.theme
+                Rectangle {
                     width: parent.width
-                    buttonText: qsTr("Start Script Record")
-                    iconKind: "record"
-                    leftAligned: true
-                    buttonColor: panel.theme.tint(panel.theme.accentB, panel.theme.darkMode ? 0.2 : 0.11)
-                    pressedColor: panel.theme.tint(panel.theme.accentB, panel.theme.darkMode ? 0.3 : 0.18)
-                    onClicked: panel.triggerAction("recordSelection")
-                }
-
-                Components.ActionButton {
-                    theme: panel.theme
-                    width: parent.width
-                    buttonText: qsTr("Replay Script")
-                    iconKind: "replay"
-                    leftAligned: true
-                    buttonColor: panel.theme.tint(panel.theme.accentB, panel.theme.darkMode ? 0.2 : 0.11)
-                    pressedColor: panel.theme.tint(panel.theme.accentB, panel.theme.darkMode ? 0.3 : 0.18)
-                    onClicked: panel.triggerAction("replayCommands")
-                }
-
-                Components.ActionButton {
-                    theme: panel.theme
-                    width: parent.width
-                    buttonText: qsTr("Export Record")
-                    iconKind: "exportRecord"
-                    leftAligned: true
-                    buttonColor: panel.theme.tint(panel.theme.accentB, panel.theme.darkMode ? 0.2 : 0.11)
-                    pressedColor: panel.theme.tint(panel.theme.accentB, panel.theme.darkMode ? 0.3 : 0.18)
-                    onClicked: panel.triggerAction("exportScript")
-                }
-
-                Components.ActionButton {
-                    theme: panel.theme
-                    width: parent.width
-                    buttonText: qsTr("Clear Script History")
-                    iconKind: "clear"
-                    leftAligned: true
-                    buttonColor: panel.theme.tint(panel.theme.accentB, panel.theme.darkMode ? 0.2 : 0.11)
-                    pressedColor: panel.theme.tint(panel.theme.accentB, panel.theme.darkMode ? 0.3 : 0.18)
-                    hoverBorderColor: panel.theme.tint(panel.theme.accentD, panel.theme.darkMode ? 0.58 : 0.34)
-                    onClicked: panel.triggerAction("clearRecordedCommands")
+                    height: 1
+                    color: panel.theme.panel.separator
+                    visible: sectionDelegate.index < menuConfig.sections.length - 1
                 }
             }
         }

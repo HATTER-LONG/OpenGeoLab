@@ -12,8 +12,8 @@ Item {
     required property var groupData
     required property int groupIndex
     required property int groupCount
+    required property var actionHandler
     property int buttonSize: 68
-    signal triggerAction(string actionKey)
 
     readonly property int actionCount: groupData.actions ? groupData.actions.length : 0
 
@@ -50,7 +50,8 @@ Item {
                     iconKind: modelData.icon
                     accentOne: groupRoot.theme.accentByName(modelData.accentOne)
                     accentTwo: groupRoot.theme.accentByName(modelData.accentTwo)
-                    onClicked: groupRoot.triggerAction(modelData.key)
+                    actionKey: modelData.key
+                    actionHandler: groupRoot.actionHandler
                 }
             }
         }
