@@ -80,4 +80,51 @@ QtObject {
         };
         return map[name] ?? accentA;
     }
+
+    // ── Pre-computed color sets ──────────────────────────────────────────
+    readonly property QtObject ribbonTile: QtObject {
+        readonly property color normal: root.tint(root.surface, root.darkMode ? 0.3 : 0.66)
+        readonly property color hovered: root.tint(root.surfaceMuted, root.darkMode ? 0.9 : 0.96)
+        readonly property color pressed: root.tint(root.surfaceStrong, root.darkMode ? 0.94 : 0.98)
+        readonly property color borderNormal: root.tint(root.borderSubtle, root.darkMode ? 0.88 : 0.72)
+        readonly property color iconBg: root.tint(root.surface, root.darkMode ? 0.82 : 0.95)
+    }
+
+    readonly property QtObject panel: QtObject {
+        readonly property color normal: root.tint(root.surface, root.darkMode ? 0.7 : 1.0)
+        readonly property color border: root.tint(root.borderSubtle, 0.7)
+        readonly property color tabBarBorder: root.tint(root.borderSubtle, 0.78)
+        readonly property color tabActiveBg: root.tint(root.accentA, root.darkMode ? 0.2 : 0.12)
+        readonly property color tabActiveBorder: root.tint(root.accentA, root.darkMode ? 0.42 : 0.24)
+        readonly property color tabHovered: root.tint(root.surfaceStrong, root.darkMode ? 0.54 : 0.74)
+        readonly property color menuBg: root.tint(root.surfaceMuted, root.darkMode ? 0.5 : 0.74)
+        readonly property color menuBorder: root.tint(root.borderSubtle, 0.7)
+        readonly property color menuRecorderBg: root.tint(root.surfaceMuted, root.darkMode ? 0.46 : 0.72)
+        readonly property color separator: root.tint(root.borderSubtle, 0.6)
+    }
+
+    /// Return a color set for ActionButton based on accent name and alpha scale.
+    /// @param accentName  AppTheme accent name (e.g. "accentA", "accentE")
+    /// @param alphaScale  "normal" or "muted" (dimmer for tool buttons); defaults to "normal"
+    function actionButtonColors(accentName: string, alphaScale: string): var {
+        const scale = alphaScale || "normal";
+        const accent = root.accentByName(accentName);
+        if (scale === "muted") {
+            return {
+                normal: root.tint(accent, root.darkMode ? 0.18 : 0.1),
+                pressed: root.tint(accent, root.darkMode ? 0.28 : 0.16)
+            };
+        }
+        return {
+            normal: root.tint(accent, root.darkMode ? 0.2 : 0.11),
+            pressed: root.tint(accent, root.darkMode ? 0.3 : 0.18)
+        };
+    }
+
+    /// Return the hover border color for a specific accent.
+    /// Only used by buttons that explicitly specify hoverAccent in MenuConfig.
+    function accentHoverBorder(accentName: string): color {
+        const accent = root.accentByName(accentName);
+        return root.tint(accent, root.darkMode ? 0.58 : 0.34);
+    }
 }
