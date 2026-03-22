@@ -148,6 +148,15 @@ Window {
                         theme: appTheme
                     }
                 }
+
+                ActivityOverlay {
+                    anchors.right: parent.right
+                    anchors.bottom: parent.bottom
+                    anchors.rightMargin: appTheme.gap
+                    anchors.bottomMargin: appTheme.gap
+                    theme: appTheme
+                    z: 40
+                }
             }
         }
     }

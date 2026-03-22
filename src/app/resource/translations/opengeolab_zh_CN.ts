@@ -176,4 +176,128 @@
             <translation>3D 视口</translation>
         </message>
     </context>
+    <context>
+        <name>ActivityOverlay</name>
+        <message>
+            <source>Activity</source>
+            <translation>活动</translation>
+        </message>
+    </context>
+    <context>
+        <name>ActivityPanel</name>
+        <message>
+            <source>Activity Center</source>
+            <translation>活动中心</translation>
+        </message>
+        <message>
+            <source>Events</source>
+            <translation>事件</translation>
+        </message>
+        <message>
+            <source>Command Line</source>
+            <translation>命令行</translation>
+        </message>
+        <message>
+            <source>Command executed: </source>
+            <translation>命令已执行：</translation>
+        </message>
+        <message>
+            <source>ERROR</source>
+            <translation>错误</translation>
+        </message>
+        <message>
+            <source>INFO</source>
+            <translation>信息</translation>
+        </message>
+        <message>
+            <source>WARN</source>
+            <translation>警告</translation>
+        </message>
+        <message>
+            <source>DEBUG</source>
+            <translation>调试</translation>
+        </message>
+        <message>
+            <source>TRACE</source>
+            <translation>跟踪</translation>
+        </message>
+        <message>
+            <source>CRITICAL</source>
+            <translation>严重</translation>
+        </message>
+        <message>
+            <source>Boolean operation failed: self-intersecting input</source>
+            <translation>布尔运算失败：输入自相交</translation>
+        </message>
+        <message>
+            <source>Scene loaded successfully (12 objects)</source>
+            <translation>场景加载成功（12 个对象）</translation>
+        </message>
+        <message>
+            <source>Degenerate triangle detected, skipping face #847</source>
+            <translation>检测到退化三角形，跳过面 #847</translation>
+        </message>
+        <message>
+            <source>Frame buffer resized to 1920x1080</source>
+            <translation>帧缓冲区调整为 1920x1080</translation>
+        </message>
+        <message>
+            <source>Loaded 3 plugins: geometry, mesh, export</source>
+            <translation>已加载 3 个插件：geometry、mesh、export</translation>
+        </message>
+        <message>
+            <source>Processing 42 pending events</source>
+            <translation>正在处理 42 个待处理事件</translation>
+        </message>
+        <message>
+            <source>Allocation failed: out of memory (requested 2.1 GB)</source>
+            <translation>分配失败：内存不足（请求 2.1 GB）</translation>
+        </message>
+        <message>
+            <source>Recording started</source>
+            <translation>录制已开始</translation>
+        </message>
+    </context>
+    <context>
+        <name>TerminalView</name>
+        <message>
+            <source>Type a command...</source>
+            <translation>输入命令...</translation>
+        </message>
+    </context>
+    <context>
+        <name>LogEventsView</name>
+        <message>
+            <source>TRACE</source>
+            <translation>跟踪</translation>
+        </message>
+        <message>
+            <source>DEBUG</source>
+            <translation>调试</translation>
+        </message>
+        <message>
+            <source>INFO</source>
+            <translation>信息</translation>
+        </message>
+        <message>
+            <source>WARN</source>
+            <translation>警告</translation>
+        </message>
+        <message>
+            <source>ERROR</source>
+            <translation>错误</translation>
+        </message>
+        <message>
+            <source>CRITICAL</source>
+            <translation>严重</translation>
+        </message>
+        <message>
+            <source>tid %1</source>
+            <translation>线程 %1</translation>
+        </message>
+        <message>
+            <source> · %1:%2</source>
+            <translation> · %1:%2</translation>
+        </message>
+    </context>
 </TS>
