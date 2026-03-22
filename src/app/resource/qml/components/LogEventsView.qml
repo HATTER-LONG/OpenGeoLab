@@ -55,7 +55,7 @@ Rectangle {
             Item { Layout.fillWidth: true }
 
             Rectangle {
-                implicitWidth: 72
+                implicitWidth: levelsRow.implicitWidth + 18
                 implicitHeight: 28
                 radius: root.theme.radiusSmall
                 color: levelsArea.pressed ? root.theme.tint(root.theme.surfaceStrong, root.theme.darkMode ? 0.88 : 0.98)
@@ -63,12 +63,26 @@ Rectangle {
                 border.width: 1
                 border.color: root.theme.tint(root.theme.borderSubtle, root.theme.darkMode ? 0.8 : 0.44)
 
-                Text {
+                Row {
+                    id: levelsRow
                     anchors.centerIn: parent
-                    text: root.filterOpen ? qsTr("Levels ▲") : qsTr("Levels ▼")
-                    color: root.theme.textPrimary
-                    font.pixelSize: 11
-                    font.bold: true
+                    spacing: 4
+
+                    AppIcon {
+                        theme: root.theme
+                        iconKind: "list"
+                        useThemeContrast: false
+                        primaryColor: root.theme.textPrimary
+                        width: 12
+                        height: 12
+                    }
+
+                    Text {
+                        text: root.filterOpen ? qsTr("Levels ▲") : qsTr("Levels ▼")
+                        color: root.theme.textPrimary
+                        font.pixelSize: 11
+                        font.bold: true
+                    }
                 }
 
                 MouseArea {
@@ -81,7 +95,7 @@ Rectangle {
             }
 
             Rectangle {
-                implicitWidth: 54
+                implicitWidth: clearRow.implicitWidth + 18
                 implicitHeight: 28
                 radius: root.theme.radiusSmall
                 color: clearArea.pressed ? root.theme.tint(root.theme.surfaceStrong, root.theme.darkMode ? 0.88 : 0.98)
@@ -89,12 +103,26 @@ Rectangle {
                 border.width: 1
                 border.color: root.theme.tint(root.theme.borderSubtle, root.theme.darkMode ? 0.8 : 0.44)
 
-                Text {
+                Row {
+                    id: clearRow
                     anchors.centerIn: parent
-                    text: qsTr("Clear")
-                    color: root.theme.textPrimary
-                    font.pixelSize: 11
-                    font.bold: true
+                    spacing: 4
+
+                    AppIcon {
+                        theme: root.theme
+                        iconKind: "trash"
+                        useThemeContrast: false
+                        primaryColor: root.theme.textPrimary
+                        width: 12
+                        height: 12
+                    }
+
+                    Text {
+                        text: qsTr("Clear")
+                        color: root.theme.textPrimary
+                        font.pixelSize: 11
+                        font.bold: true
+                    }
                 }
 
                 MouseArea {
@@ -126,7 +154,7 @@ Rectangle {
                 spacing: 8
 
                 Text {
-                    text: qsTr("spdlog output level")
+                    text: qsTr("Output Level")
                     color: root.theme.textSecondary
                     font.pixelSize: 11
                     font.bold: true
@@ -134,7 +162,7 @@ Rectangle {
 
                 Text {
                     width: parent.width
-                    text: qsTr("This controls which new log messages are emitted by the runtime logger pipeline.")
+                    text: qsTr("Set the minimum severity for new log messages.")
                     wrapMode: Text.WordWrap
                     color: root.theme.textTertiary
                     font.pixelSize: 10
@@ -166,7 +194,7 @@ Rectangle {
                 }
 
                 Text {
-                    text: qsTr("Visible log entries")
+                    text: qsTr("Display Filter")
                     color: root.theme.textSecondary
                     font.pixelSize: 11
                     font.bold: true
@@ -174,7 +202,7 @@ Rectangle {
 
                 Text {
                     width: parent.width
-                    text: qsTr("This only filters the entries already captured inside the panel.")
+                    text: qsTr("Filter entries already captured in the panel.")
                     wrapMode: Text.WordWrap
                     color: root.theme.textTertiary
                     font.pixelSize: 10

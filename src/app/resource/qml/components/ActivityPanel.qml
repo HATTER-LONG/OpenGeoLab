@@ -103,46 +103,6 @@ Item {
 
         RowLayout {
             Layout.fillWidth: true
-            spacing: root.theme.gapTight
-
-            Text {
-                text: qsTr("Activity Center")
-                color: root.theme.textPrimary
-                font.pixelSize: 14
-                font.bold: true
-                Layout.fillWidth: true
-            }
-
-            Rectangle {
-                Layout.preferredWidth: 32
-                Layout.preferredHeight: 32
-                radius: root.theme.radiusSmall
-                color: closeArea.pressed ? root.theme.surfaceStrong
-                                         : (closeArea.containsMouse ? root.theme.tint(root.theme.surfaceMuted, root.theme.darkMode ? 0.84 : 0.96) : "transparent")
-                border.width: 1
-                border.color: closeArea.containsMouse ? root.theme.tint(root.theme.accentA, 0.35) : "transparent"
-
-                AppIcon {
-                    anchors.centerIn: parent
-                    theme: root.theme
-                    iconKind: "closePanel"
-                    width: 16
-                    height: 16
-                }
-
-                MouseArea {
-                    id: closeArea
-
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: root.closeRequested()
-                }
-            }
-        }
-
-        RowLayout {
-            Layout.fillWidth: true
             spacing: 8
 
             Repeater {
@@ -192,6 +152,33 @@ Item {
                         cursorShape: Qt.PointingHandCursor
                         onClicked: root.currentTab = index
                     }
+                }
+            }
+
+            Rectangle {
+                Layout.preferredWidth: 32
+                Layout.preferredHeight: 32
+                radius: root.theme.radiusSmall
+                color: closeArea.pressed ? root.theme.surfaceStrong
+                                         : (closeArea.containsMouse ? root.theme.tint(root.theme.surfaceMuted, root.theme.darkMode ? 0.84 : 0.96) : "transparent")
+                border.width: 1
+                border.color: closeArea.containsMouse ? root.theme.tint(root.theme.accentA, 0.35) : "transparent"
+
+                AppIcon {
+                    anchors.centerIn: parent
+                    theme: root.theme
+                    iconKind: "closePanel"
+                    width: 16
+                    height: 16
+                }
+
+                MouseArea {
+                    id: closeArea
+
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.closeRequested()
                 }
             }
         }

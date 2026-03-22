@@ -189,10 +189,6 @@
     <context>
         <name>ActivityPanel</name>
         <message>
-            <source>Activity Center</source>
-            <translation>活动中心</translation>
-        </message>
-        <message>
             <source>Logs</source>
             <translation>日志</translation>
         </message>
@@ -323,20 +319,20 @@
             <translation>输出 ≥ %1</translation>
         </message>
         <message>
-            <source>spdlog output level</source>
-            <translation>spdlog 输出等级</translation>
+            <source>Output Level</source>
+            <translation>输出等级</translation>
         </message>
         <message>
-            <source>This controls which new log messages are emitted by the runtime logger pipeline.</source>
-            <translation>控制运行时日志管道发出哪些新日志消息。</translation>
+            <source>Set the minimum severity for new log messages.</source>
+            <translation>设置新日志消息的最低严重等级。</translation>
         </message>
         <message>
-            <source>Visible log entries</source>
-            <translation>可见日志条目</translation>
+            <source>Display Filter</source>
+            <translation>显示筛选</translation>
         </message>
         <message>
-            <source>This only filters the entries already captured inside the panel.</source>
-            <translation>仅过滤面板内已捕获的日志条目。</translation>
+            <source>Filter entries already captured in the panel.</source>
+            <translation>筛选面板中已有的日志条目。</translation>
         </message>
     </context>
 </TS>
