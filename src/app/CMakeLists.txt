@@ -37,6 +37,7 @@ qt_add_qml_module(
     resource/qml/components/RibbonTile.qml
     resource/qml/components/SectionCard.qml
     resource/qml/components/LogLevelChip.qml
+    resource/qml/components/StatChip.qml
     resource/qml/components/LogEventsView.qml
     resource/qml/components/ActivityPanel.qml
     resource/qml/components/TerminalView.qml
@@ -67,8 +68,6 @@ qt_add_qml_module(
     resource/icons/terminal.svg
     resource/icons/closePanel.svg
     resource/icons/trash.svg
-    resource/icons/funnel.svg
-    resource/icons/chevronDown.svg
     resource/icons/play.svg)
 
 # Use console subsystem during development so errors are visible.

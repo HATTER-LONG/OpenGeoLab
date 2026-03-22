@@ -190,8 +190,8 @@
             <translation>活动中心</translation>
         </message>
         <message>
-            <source>Events</source>
-            <translation>事件</translation>
+            <source>Logs</source>
+            <translation>日志</translation>
         </message>
         <message>
             <source>Command Line</source>
@@ -272,27 +272,27 @@
     <context>
         <name>LogEventsView</name>
         <message>
-            <source>TRACE</source>
+            <source>Trace</source>
             <translation>跟踪</translation>
         </message>
         <message>
-            <source>DEBUG</source>
+            <source>Debug</source>
             <translation>调试</translation>
         </message>
         <message>
-            <source>INFO</source>
+            <source>Info</source>
             <translation>信息</translation>
         </message>
         <message>
-            <source>WARN</source>
+            <source>Warn</source>
             <translation>警告</translation>
         </message>
         <message>
-            <source>ERROR</source>
+            <source>Error</source>
             <translation>错误</translation>
         </message>
         <message>
-            <source>CRITICAL</source>
+            <source>Critical</source>
             <translation>严重</translation>
         </message>
         <message>
@@ -300,12 +300,40 @@
             <translation>线程 %1</translation>
         </message>
         <message>
+            <source> · %1:%2</source>
+            <translation> · %1:%2</translation>
+        </message>
+        <message>
             <source>Clear</source>
             <translation>清除</translation>
         </message>
         <message>
-            <source> · %1:%2</source>
-            <translation> · %1:%2</translation>
+            <source>Levels ▲</source>
+            <translation>等级 ▲</translation>
+        </message>
+        <message>
+            <source>Levels ▼</source>
+            <translation>等级 ▼</translation>
+        </message>
+        <message>
+            <source>Print ≥ %1</source>
+            <translation>输出 ≥ %1</translation>
+        </message>
+        <message>
+            <source>spdlog output level</source>
+            <translation>spdlog 输出等级</translation>
+        </message>
+        <message>
+            <source>This controls which new log messages are emitted by the runtime logger pipeline.</source>
+            <translation>控制运行时日志管道发出哪些新日志消息。</translation>
+        </message>
+        <message>
+            <source>Visible log entries</source>
+            <translation>可见日志条目</translation>
+        </message>
+        <message>
+            <source>This only filters the entries already captured inside the panel.</source>
+            <translation>仅过滤面板内已捕获的日志条目。</translation>
         </message>
     </context>
 </TS>

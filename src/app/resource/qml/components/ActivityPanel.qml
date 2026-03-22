@@ -4,19 +4,21 @@ import QtQuick
 import QtQuick.Layouts
 import "../theme"
 
-Rectangle {
+Item {
     id: root
 
     required property AppTheme theme
     property int currentTab: 0
+    property real availableHeight: 760
     signal closeRequested
 
+    readonly property int minimumHeight: 360
+    readonly property int maximumHeight: Math.max(minimumHeight, Math.min(Math.floor(availableHeight), 760))
+    readonly property int resolvedHeight: maximumHeight
+
     implicitWidth: 460
-    height: root.currentTab === 0 ? 400 : 500
-    implicitHeight: height
-    radius: root.theme.radiusLarge
-    color: "transparent"
-    clip: false
+    height: resolvedHeight
+    implicitHeight: resolvedHeight
 
     Rectangle {
         id: shadowRect
@@ -89,6 +91,11 @@ Rectangle {
         }
     }
 
+    readonly property var tabs: [
+        { "title": qsTr("Logs"), "icon": "list" },
+        { "title": qsTr("Command Line"), "icon": "terminal" }
+    ]
+
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: root.theme.gapWide
@@ -101,11 +108,10 @@ Rectangle {
             Text {
                 text: qsTr("Activity Center")
                 color: root.theme.textPrimary
-                font.pixelSize: 15
+                font.pixelSize: 14
                 font.bold: true
+                Layout.fillWidth: true
             }
-
-            Item { Layout.fillWidth: true }
 
             Rectangle {
                 Layout.preferredWidth: 32
@@ -135,30 +141,29 @@ Rectangle {
             }
         }
 
-        Row {
+        RowLayout {
             Layout.fillWidth: true
-            spacing: root.theme.gapTight
+            spacing: 8
 
             Repeater {
-                model: [
-                    { label: qsTr("Events"), icon: "list" },
-                    { label: qsTr("Command Line"), icon: "terminal" }
-                ]
+                model: root.tabs
 
                 delegate: Rectangle {
-                    required property int index
                     required property var modelData
+                    required property int index
 
-                    height: 34
-                    radius: root.theme.radiusMedium / 2
-                    color: root.currentTab === index ? root.theme.tint(root.theme.accentA, root.theme.darkMode ? 0.2 : 0.1) : "transparent"
+                    Layout.fillWidth: true
+                    implicitHeight: 32
+                    radius: root.theme.radiusSmall
+                    color: root.currentTab === index
+                        ? root.theme.tint(root.theme.accentA, root.theme.darkMode ? 0.24 : 0.12)
+                        : root.theme.surfaceMuted
                     border.width: 1
-                    border.color: tabArea.containsMouse ? root.theme.tint(root.theme.accentA, 0.28) : "transparent"
-                    implicitWidth: tabRow.implicitWidth + 18
+                    border.color: root.currentTab === index
+                        ? root.theme.tint(root.theme.accentA, root.theme.darkMode ? 0.56 : 0.3)
+                        : root.theme.tint(root.theme.borderSubtle, 0.75)
 
                     Row {
-                        id: tabRow
-
                         anchors.centerIn: parent
                         spacing: 6
 
@@ -172,9 +177,9 @@ Rectangle {
                         }
 
                         Text {
-                            text: modelData.label
-                            color: root.currentTab === index ? root.theme.textPrimary : root.theme.textSecondary
-                            font.pixelSize: 12
+                            text: modelData.title
+                            color: root.theme.textPrimary
+                            font.pixelSize: 11
                             font.bold: root.currentTab === index
                         }
                     }
@@ -191,21 +196,25 @@ Rectangle {
             }
         }
 
-        LogEventsView {
+        StackLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            visible: root.currentTab === 0
-            theme: root.theme
-            model: mockLogModel
-        }
+            currentIndex: root.currentTab
 
-        TerminalView {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            visible: root.currentTab === 1
-            theme: root.theme
-            model: mockTerminalModel
-            onCommandSubmitted: function(text) { root.runCommand(text) }
+            LogEventsView {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                theme: root.theme
+                model: mockLogModel
+            }
+
+            TerminalView {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                theme: root.theme
+                model: mockTerminalModel
+                onCommandSubmitted: function(text) { root.runCommand(text) }
+            }
         }
     }
 }

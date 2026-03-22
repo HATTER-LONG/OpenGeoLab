@@ -10,55 +10,93 @@ Rectangle {
     required property AppTheme theme
     required property var model
     property int enabledLevelMask: 0x3F
-    property bool filterExpanded: true
+    property int runtimeMinLevel: 2
+    property bool filterOpen: false
     color: "transparent"
+
+    readonly property var levelOptions: [
+        { "level": 0, "label": qsTr("Trace") },
+        { "level": 1, "label": qsTr("Debug") },
+        { "level": 2, "label": qsTr("Info") },
+        { "level": 3, "label": qsTr("Warn") },
+        { "level": 4, "label": qsTr("Error") },
+        { "level": 5, "label": qsTr("Critical") }
+    ]
+
+    function levelTint(level: int): color {
+        if (level >= 4) return root.theme.accentD;
+        if (level === 3) return root.theme.accentC;
+        if (level === 2) return root.theme.accentB;
+        return root.theme.accentA;
+    }
+
+    function levelLabel(level: int): string {
+        for (let i = 0; i < root.levelOptions.length; ++i) {
+            if (root.levelOptions[i].level === level)
+                return root.levelOptions[i].label;
+        }
+        return qsTr("Info");
+    }
 
     ColumnLayout {
         anchors.fill: parent
-        spacing: root.theme.gapTight
+        spacing: 8
 
-        Row {
+        RowLayout {
             Layout.fillWidth: true
-            spacing: root.theme.gapTight
+            spacing: 8
+
+            StatChip {
+                theme: root.theme
+                text: qsTr("Print ≥ %1").arg(root.levelLabel(root.runtimeMinLevel))
+                tintColor: root.levelTint(root.runtimeMinLevel)
+            }
+
+            Item { Layout.fillWidth: true }
 
             Rectangle {
-                id: filterButton
-                width: 32; height: 32; radius: 10
-                color: filterArea.pressed ? root.theme.surfaceStrong
-                                          : (filterArea.containsMouse ? root.theme.tint(root.theme.surfaceMuted, root.theme.darkMode ? 0.84 : 0.96) : root.theme.tint(root.theme.surface, root.theme.darkMode ? 0.54 : 0.88))
+                implicitWidth: 72
+                implicitHeight: 28
+                radius: root.theme.radiusSmall
+                color: levelsArea.pressed ? root.theme.tint(root.theme.surfaceStrong, root.theme.darkMode ? 0.88 : 0.98)
+                                          : (levelsArea.containsMouse ? root.theme.tint(root.theme.surfaceStrong, root.theme.darkMode ? 0.78 : 0.94) : root.theme.surfaceMuted)
                 border.width: 1
-                border.color: root.theme.tint(root.theme.borderSubtle, root.theme.darkMode ? 0.84 : 0.52)
+                border.color: root.theme.tint(root.theme.borderSubtle, root.theme.darkMode ? 0.8 : 0.44)
 
-                AppIcon { anchors.centerIn: parent; width: 16; height: 16; theme: root.theme; iconKind: "funnel" }
+                Text {
+                    anchors.centerIn: parent
+                    text: root.filterOpen ? qsTr("Levels ▲") : qsTr("Levels ▼")
+                    color: root.theme.textPrimary
+                    font.pixelSize: 11
+                    font.bold: true
+                }
+
                 MouseArea {
-                    id: filterArea
+                    id: levelsArea
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: root.filterExpanded = !root.filterExpanded
-                }
-            }
-
-            Item {
-                width: 16; height: 16
-                y: Math.round((filterButton.height - height) / 2)
-                AppIcon {
-                    anchors.fill: parent
-                    theme: root.theme
-                    iconKind: "chevronDown"
-                    rotation: root.filterExpanded ? 180 : 0
-                    Behavior on rotation { NumberAnimation { duration: 150 } }
+                    onClicked: root.filterOpen = !root.filterOpen
                 }
             }
 
             Rectangle {
-                width: 32; height: 32; radius: 10
-                color: clearArea.pressed ? root.theme.surfaceStrong
-                                         : (clearArea.containsMouse ? root.theme.tint(root.theme.surfaceMuted, root.theme.darkMode ? 0.84 : 0.96) : root.theme.tint(root.theme.surface, root.theme.darkMode ? 0.54 : 0.88))
+                implicitWidth: 54
+                implicitHeight: 28
+                radius: root.theme.radiusSmall
+                color: clearArea.pressed ? root.theme.tint(root.theme.surfaceStrong, root.theme.darkMode ? 0.88 : 0.98)
+                                         : (clearArea.containsMouse ? root.theme.tint(root.theme.surfaceStrong, root.theme.darkMode ? 0.78 : 0.94) : root.theme.surfaceMuted)
                 border.width: 1
-                border.color: root.theme.tint(root.theme.borderSubtle, root.theme.darkMode ? 0.84 : 0.52)
+                border.color: root.theme.tint(root.theme.borderSubtle, root.theme.darkMode ? 0.8 : 0.44)
 
-                AppIcon { anchors.centerIn: parent; width: 16; height: 16; theme: root.theme; iconKind: "trash" }
+                Text {
+                    anchors.centerIn: parent
+                    text: qsTr("Clear")
+                    color: root.theme.textPrimary
+                    font.pixelSize: 11
+                    font.bold: true
+                }
+
                 MouseArea {
                     id: clearArea
                     anchors.fill: parent
@@ -66,29 +104,101 @@ Rectangle {
                     cursorShape: Qt.PointingHandCursor
                     onClicked: root.model.clear()
                 }
-
-                ToolTip {
-                    visible: clearArea.containsMouse
-                    delay: 600
-                    text: qsTr("Clear")
-                }
             }
         }
 
-        Flow {
-            Layout.fillWidth: true
-            spacing: root.theme.gapTight
-            visible: root.filterExpanded
+        Rectangle {
+            id: filterPanel
 
-            Repeater {
-                model: 6
-                LogLevelChip {
-                    required property int index
-                    theme: root.theme
-                    text: [qsTr("TRACE"), qsTr("DEBUG"), qsTr("INFO"), qsTr("WARN"), qsTr("ERROR"), qsTr("CRITICAL")][index]
-                    accentColor: [root.theme.accentA, root.theme.accentA, root.theme.accentB, root.theme.accentC, root.theme.accentD, root.theme.accentD][index]
-                    selected: (root.enabledLevelMask & (1 << index)) !== 0
-                    onClicked: root.enabledLevelMask ^= (1 << index)
+            visible: root.filterOpen
+            Layout.fillWidth: true
+            radius: root.theme.radiusSmall
+            color: root.theme.tint(root.theme.surfaceMuted, root.theme.darkMode ? 0.84 : 0.97)
+            border.width: 1
+            border.color: root.theme.tint(root.theme.borderSubtle, 0.8)
+            implicitHeight: filterColumn.implicitHeight + 16
+
+            Column {
+                id: filterColumn
+
+                anchors.fill: parent
+                anchors.margins: 8
+                spacing: 8
+
+                Text {
+                    text: qsTr("spdlog output level")
+                    color: root.theme.textSecondary
+                    font.pixelSize: 11
+                    font.bold: true
+                }
+
+                Text {
+                    width: parent.width
+                    text: qsTr("This controls which new log messages are emitted by the runtime logger pipeline.")
+                    wrapMode: Text.WordWrap
+                    color: root.theme.textTertiary
+                    font.pixelSize: 10
+                }
+
+                Flow {
+                    width: parent.width
+                    spacing: 8
+
+                    Repeater {
+                        model: root.levelOptions
+
+                        delegate: LogLevelChip {
+                            required property var modelData
+
+                            theme: root.theme
+                            text: modelData.label
+                            accentColor: root.levelTint(modelData.level)
+                            selected: root.runtimeMinLevel === modelData.level
+                            onClicked: root.runtimeMinLevel = modelData.level
+                        }
+                    }
+                }
+
+                Rectangle {
+                    width: parent.width
+                    height: 1
+                    color: root.theme.tint(root.theme.borderSubtle, 0.82)
+                }
+
+                Text {
+                    text: qsTr("Visible log entries")
+                    color: root.theme.textSecondary
+                    font.pixelSize: 11
+                    font.bold: true
+                }
+
+                Text {
+                    width: parent.width
+                    text: qsTr("This only filters the entries already captured inside the panel.")
+                    wrapMode: Text.WordWrap
+                    color: root.theme.textTertiary
+                    font.pixelSize: 10
+                }
+
+                Flow {
+                    width: parent.width
+                    spacing: 8
+
+                    Repeater {
+                        model: root.levelOptions
+
+                        delegate: LogLevelChip {
+                            required property var modelData
+
+                            readonly property bool selectedLevel: (root.enabledLevelMask & (1 << modelData.level)) !== 0
+
+                            theme: root.theme
+                            text: modelData.label
+                            accentColor: root.levelTint(modelData.level)
+                            selected: selectedLevel
+                            onClicked: root.enabledLevelMask ^= (1 << modelData.level)
+                        }
+                    }
                 }
             }
         }
@@ -121,12 +231,7 @@ Rectangle {
                 required property int line
                 required property int index
 
-                readonly property color entryAccent: {
-                    if (level >= 4) return root.theme.accentD;
-                    if (level === 3) return root.theme.accentC;
-                    if (level === 2) return root.theme.accentB;
-                    return root.theme.accentA;
-                }
+                readonly property color entryAccent: root.levelTint(level)
 
                 visible: (root.enabledLevelMask & (1 << level)) !== 0
                 height: visible ? implicitHeight : 0
