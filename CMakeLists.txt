@@ -78,8 +78,16 @@ set(OPENGEOLAB_DOCTEST_VERSION 2.4.12)
 # Qt
 # ---------------------------------------------------------------------------
 
-find_package(Qt6 6.9 REQUIRED COMPONENTS Concurrent Core Gui Qml Quick
-                                         QuickControls2 Widgets OpenGL)
+find_package(
+    Qt6 6.9 REQUIRED
+    COMPONENTS Concurrent
+               Core
+               Gui
+               Qml
+               Quick
+               QuickControls2
+               Widgets
+               OpenGL)
 if (QT_KNOWN_POLICY_QTP0004)
     qt_policy(SET QTP0004 NEW)
 endif ()

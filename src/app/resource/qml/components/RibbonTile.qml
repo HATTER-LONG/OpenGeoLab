@@ -83,8 +83,8 @@ Rectangle {
                 height: 42
 
                 Rectangle {
-                    width: 38
-                    height: 38
+                    width: 42
+                    height: 42
                     radius: 12
                     anchors.centerIn: parent
                     color: tile.theme.tint(tile.theme.surface, tile.theme.darkMode ? 0.82 : 0.95)
@@ -105,8 +105,8 @@ Rectangle {
                         theme: tile.theme
                         iconKind: tile.iconKind
                         primaryColor: tile.iconPrimaryColor
-                        width: 21
-                        height: 21
+                        width: 26
+                        height: 26
                     }
                 }
             }

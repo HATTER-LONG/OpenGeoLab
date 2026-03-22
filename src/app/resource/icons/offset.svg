@@ -1,28 +1,5 @@
-<svg width="24" height="24" viewBox="0 0 24 24"
-     xmlns="http://www.w3.org/2000/svg"
-     fill="none"
-     stroke="currentColor"
-     stroke-linecap="butt"
-     stroke-linejoin="miter">
-
-  <!-- Original shape (18x18 boundary) -->
-  <rect x="3" y="6" width="13" height="13"
-        stroke-width="1.6"/>
-
-  <!-- Offset shape (shifted right+up by 3 units) -->
-  <rect x="6" y="3" width="13" height="13"
-        stroke-width="1.6"
-        opacity="0.65"
-        stroke-dasharray="3 2"/>
-
-  <!-- Offset direction arrows -->
-  <g stroke-width="1.1" opacity="0.9">
-    <!-- Top-left arrow -->
-    <path d="M4.5 5 L5.5 4" stroke-linecap="round"/>
-    <path d="M5.2 4.8 L5.5 4 L4.7 4.3" fill="none"/>
-    
-    <!-- Bottom-right arrow -->
-    <path d="M17.5 17 L18.5 16" stroke-linecap="round"/>
-    <path d="M18.2 16.8 L18.5 16 L17.7 16.3" fill="none"/>
-  </g>
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M269.236 388.364L90.5454 388.364C79.2617 388.364 68.4401 383.881 60.4612 375.902C52.4824 367.924 48 357.102 48 345.818L48 90.5454C48 79.2617 52.4824 68.4401 60.4613 60.4613C68.4401 52.4824 79.2617 48 90.5454 48L345.818 48C357.102 48 367.924 52.4825 375.902 60.4613C383.881 68.4401 388.364 79.2617 388.364 90.5455L388.364 269.236" stroke="black" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M331.636 464L464 464L464 331.636" stroke="black" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M216 216L464 464" stroke="black" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
