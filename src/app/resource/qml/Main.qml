@@ -192,12 +192,12 @@ ApplicationWindow {
         target: processService
 
         function onResponseReady(requestId, responseJson) {
-            responsePanel.appendResponse(responseJson)
+            responsePanel.appendResponse(responseJson, false)
             viewer3D.requestUpdate()
         }
 
         function onErrorOccurred(requestId, errorMessage) {
-            responsePanel.appendResponse("ERROR: " + errorMessage)
+            responsePanel.appendResponse(errorMessage, true)
         }
     }
 }
