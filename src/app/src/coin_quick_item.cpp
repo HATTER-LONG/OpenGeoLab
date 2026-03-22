@@ -67,8 +67,6 @@ public:
         }
         render_action_->setViewportRegion(viewport_region_);
         render_action_->apply(scene_manager_->root_node());
-
-        update();
     }
 
     void synchronize(QQuickFramebufferObject* /*item*/) override {
@@ -115,6 +113,8 @@ void CoinQuickItem::viewAll() {
     scene_manager_->view_all(static_cast<int>(width()), static_cast<int>(height()));
     update();
 }
+
+void CoinQuickItem::requestUpdate() { update(); }
 
 void CoinQuickItem::restoreCameraState(const QString& json) {
     if(!scene_manager_) {

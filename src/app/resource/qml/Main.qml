@@ -185,6 +185,7 @@ ApplicationWindow {
 
         function onResponseReady(requestId, responseJson) {
             responsePanel.appendResponse(responseJson)
+            viewer3D.requestUpdate()
         }
 
         function onErrorOccurred(requestId, errorMessage) {

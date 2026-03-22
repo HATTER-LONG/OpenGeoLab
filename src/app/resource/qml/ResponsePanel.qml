@@ -10,6 +10,11 @@ ScrollView {
     function appendResponse(text) {
         const timestamp = new Date().toLocaleTimeString()
         responseText += "\n[" + timestamp + "]\n" + text + "\n"
+        // Auto-scroll to bottom on next frame.
+        Qt.callLater(() => {
+            if (contentItem)
+                contentItem.contentY = Math.max(0, contentItem.contentHeight - height)
+        })
     }
 
     Layout.fillWidth: true

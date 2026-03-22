@@ -39,6 +39,9 @@ public:
     /// Get current camera state as JSON string.
     Q_INVOKABLE QString cameraStateJson() const;
 
+    /// Request a re-render (call after external scene changes).
+    Q_INVOKABLE void requestUpdate();
+
 signals:
     /// Emitted after mouse navigation completes (on mouse release or wheel).
     void navigationFinished(const QString& cameraStateJson);
