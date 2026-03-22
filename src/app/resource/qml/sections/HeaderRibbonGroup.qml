@@ -66,7 +66,6 @@ Item {
         text: groupRoot.groupData.title
         color: groupRoot.theme.textTertiary
         font.pixelSize: 9
-        font.family: groupRoot.theme.bodyFontFamily
         font.bold: true
         horizontalAlignment: Text.AlignHCenter
         elide: Text.ElideRight

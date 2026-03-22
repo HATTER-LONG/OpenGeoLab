@@ -43,7 +43,9 @@ Item {
         // Repaint when viewport changes size or theme toggles
         Connections {
             target: root.theme
-            function onDarkModeChanged() { gridCanvas.requestPaint(); }
+            function onDarkModeChanged() {
+                gridCanvas.requestPaint();
+            }
         }
 
         onWidthChanged: gridCanvas.requestPaint()
@@ -53,7 +55,6 @@ Item {
         Text {
             anchors.centerIn: parent
             text: qsTr("3D Viewport")
-            font.family: root.theme.titleFontFamily
             font.pixelSize: 28
             font.weight: Font.Bold
             color: root.theme.tint(root.theme.textTertiary, 0.35)

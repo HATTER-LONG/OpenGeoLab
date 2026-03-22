@@ -68,7 +68,6 @@ Rectangle {
             color: control.labelColor
             font.pixelSize: control.labelSize
             font.bold: true
-            font.family: control.theme.bodyFontFamily
         }
     }
 

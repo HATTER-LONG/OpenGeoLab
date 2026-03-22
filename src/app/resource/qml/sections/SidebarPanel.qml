@@ -23,7 +23,6 @@ Item {
         Text {
             width: parent.width
             text: qsTr("Scene tree and tools will appear here.")
-            font.family: root.theme.bodyFontFamily
             font.pixelSize: 13
             color: root.theme.textTertiary
             wrapMode: Text.WordWrap

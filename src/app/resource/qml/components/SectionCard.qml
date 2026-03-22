@@ -33,7 +33,6 @@ Item {
         Text {
             visible: root.title.length > 0
             text: root.title
-            font.family: root.theme.titleFontFamily
             font.pixelSize: 14
             font.weight: Font.DemiBold
             color: root.theme.textPrimary
@@ -42,7 +41,6 @@ Item {
         Text {
             visible: root.subtitle.length > 0
             text: root.subtitle
-            font.family: root.theme.bodyFontFamily
             font.pixelSize: 12
             color: root.theme.textTertiary
         }

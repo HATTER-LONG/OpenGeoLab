@@ -102,7 +102,6 @@ Rectangle {
                             color: tabButton.active ? header.theme.textPrimary : header.theme.textSecondary
                             font.pixelSize: 11
                             font.bold: tabButton.active
-                            font.family: header.theme.bodyFontFamily
                         }
 
                         MouseArea {

@@ -119,7 +119,6 @@ Rectangle {
                 color: tile.theme.textPrimary
                 font.pixelSize: 10
                 font.bold: true
-                font.family: tile.theme.bodyFontFamily
                 maximumLineCount: 1
                 elide: Text.ElideRight
             }

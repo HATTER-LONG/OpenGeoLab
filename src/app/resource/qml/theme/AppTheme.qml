@@ -24,8 +24,6 @@ QtObject {
     readonly property int radiusLarge: 24
 
     // ── Typography ─────────────────────────────────────────────────────
-    readonly property string titleFontFamily: Qt.application.font.family
-    readonly property string bodyFontFamily: Qt.application.font.family
     readonly property string monoFontFamily: "Consolas"
 
     // ── Backgrounds ────────────────────────────────────────────────────
@@ -73,8 +71,13 @@ QtObject {
 
     /// Return the accent color property identified by @p name, defaulting to accentA.
     function accentByName(name: string): color {
-        const map = { "accentA": accentA, "accentB": accentB, "accentC": accentC,
-                      "accentD": accentD, "accentE": accentE };
+        const map = {
+            "accentA": accentA,
+            "accentB": accentB,
+            "accentC": accentC,
+            "accentD": accentD,
+            "accentE": accentE
+        };
         return map[name] ?? accentA;
     }
 }

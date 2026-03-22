@@ -52,7 +52,6 @@ Rectangle {
             color: panel.theme.textSecondary
             font.pixelSize: 12
             font.bold: true
-            font.family: panel.theme.bodyFontFamily
         }
 
         Rectangle {
@@ -107,17 +106,15 @@ Rectangle {
                 Components.ActionButton {
                     theme: panel.theme
                     width: parent.width
-                    buttonText: TranslationManager.currentLanguage === "zh_CN"
-                        ? qsTr("Switch to English") : qsTr("Switch to Chinese")
+                    buttonText: TranslationManager.currentLanguage === "zh_CN" ? qsTr("Switch to English") : qsTr("Switch to Chinese")
                     iconKind: "language"
                     leftAligned: true
                     buttonColor: panel.theme.tint(panel.theme.accentE, panel.theme.darkMode ? 0.18 : 0.1)
                     pressedColor: panel.theme.tint(panel.theme.accentE, panel.theme.darkMode ? 0.28 : 0.16)
                     hoverBorderColor: panel.theme.tint(panel.theme.accentE, panel.theme.darkMode ? 0.58 : 0.34)
                     onClicked: {
-                        TranslationManager.switchLanguage(
-                            TranslationManager.currentLanguage === "zh_CN" ? "en_US" : "zh_CN")
-                        panel.triggerAction("switchLanguage")
+                        TranslationManager.switchLanguage(TranslationManager.currentLanguage === "zh_CN" ? "en_US" : "zh_CN");
+                        panel.triggerAction("switchLanguage");
                     }
                 }
             }
@@ -134,7 +131,6 @@ Rectangle {
             color: panel.theme.textSecondary
             font.pixelSize: 12
             font.bold: true
-            font.family: panel.theme.bodyFontFamily
         }
 
         Rectangle {
