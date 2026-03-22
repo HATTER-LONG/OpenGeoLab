@@ -9,6 +9,7 @@
 #include <QQuickStyle>
 #include <QQuickWindow>
 #include <QSGRendererInterface>
+#include <QSurfaceFormat>
 
 #include <filesystem>
 
@@ -27,6 +28,12 @@ auto main(int argc, char* argv[]) -> int {
 #endif
 
     QQuickWindow::setGraphicsApi(QSGRendererInterface::OpenGL);
+
+    QSurfaceFormat fmt;
+    fmt.setSwapBehavior(QSurfaceFormat::DoubleBuffer);
+    fmt.setSwapInterval(1);
+    QSurfaceFormat::setDefaultFormat(fmt);
+
     QApplication app(argc, argv);
     QApplication::setStyle("Fusion");
     QQuickStyle::setStyle("Fusion");
