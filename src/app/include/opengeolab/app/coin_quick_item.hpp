@@ -7,6 +7,7 @@
 
 #include <opengeolab/render/scene_manager.hpp>
 
+#include <Inventor/SbVec2f.h>
 #include <Inventor/SbVec3f.h>
 #include <Inventor/projectors/SbSphereSheetProjector.h>
 
@@ -66,7 +67,7 @@ private:
     bool is_orbiting_ = false;
     bool is_panning_ = false;
     std::unique_ptr<SbSphereSheetProjector> projector_;
-    SbVec3f last_projected_point_;
+    SbVec2f last_norm_pos_;
     bool has_last_point_ = false;
 };
 

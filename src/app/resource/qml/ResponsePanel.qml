@@ -5,9 +5,10 @@ import QtQuick.Layouts
 Item {
     id: root
 
-    function appendResponse(text, isError) {
+    function appendResponse(text, isError, requestId) {
         messageModel.insert(0, {
             timestamp: new Date().toLocaleTimeString(),
+            requestId: requestId || "",
             content: text,
             isError: isError || false,
             expanded: false
@@ -53,6 +54,14 @@ Item {
                         font.pixelSize: 11
                         font.bold: true
                         color: model.isError ? "#CC3333" : "#33AA33"
+                    }
+                    Label {
+                        text: model.requestId
+                        font.pixelSize: 11
+                        color: "#336699"
+                        visible: model.requestId !== ""
+                        elide: Text.ElideMiddle
+                        Layout.maximumWidth: 140
                     }
                     Item { Layout.fillWidth: true }
                     Label {

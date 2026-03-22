@@ -47,7 +47,6 @@ ApplicationWindow {
 
             ScrollView {
                 Layout.fillWidth: true
-                Layout.fillHeight: true
                 Layout.leftMargin: 16
                 Layout.rightMargin: 16
 
@@ -179,11 +178,16 @@ ApplicationWindow {
                         Layout.alignment: Qt.AlignHCenter
                         visible: running
                     }
-
-                    ResponsePanel {
-                        id: responsePanel
-                    }
                 }
+            }
+
+            ResponsePanel {
+                id: responsePanel
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                Layout.leftMargin: 16
+                Layout.rightMargin: 16
+                Layout.bottomMargin: 8
             }
         }
     }
@@ -192,12 +196,12 @@ ApplicationWindow {
         target: processService
 
         function onResponseReady(requestId, responseJson) {
-            responsePanel.appendResponse(responseJson, false)
+            responsePanel.appendResponse(responseJson, false, requestId)
             viewer3D.requestUpdate()
         }
 
         function onErrorOccurred(requestId, errorMessage) {
-            responsePanel.appendResponse(errorMessage, true)
+            responsePanel.appendResponse(errorMessage, true, requestId)
         }
     }
 }

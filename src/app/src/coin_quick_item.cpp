@@ -118,6 +118,11 @@ CoinQuickItem::CoinQuickItem(QQuickItem* parent) : QQuickFramebufferObject(paren
     setAcceptTouchEvents(true);
     projector_ = std::make_unique<SbSphereSheetProjector>(
         SbSphere(SbVec3f(0.F, 0.F, 0.F), 0.8F), TRUE);
+
+    // Fixed ortho view volume (FreeCAD pattern) — provides consistent coordinate space
+    SbViewVolume ortho_vv;
+    ortho_vv.ortho(-1, 1, -1, 1, -1, 1);
+    projector_->setViewVolume(ortho_vv);
 }
 
 CoinQuickItem::~CoinQuickItem() = default;
@@ -180,25 +185,26 @@ void CoinQuickItem::mouseMoveEvent(QMouseEvent* event) {
     if(is_orbiting_ && projector_) {
         auto* cam = scene_manager_->camera();
         if(cam) {
-            SbViewVolume vv = cam->getViewVolume(
-                static_cast<float>(width_value / height_value));
-            projector_->setViewVolume(vv);
+            // Set working space from camera orientation (FreeCAD pattern)
+            SbMatrix mat;
+            cam->orientation.getValue().getValue(mat);
+            projector_->setWorkingSpace(mat);
 
             SbVec2f norm_pos(
                 static_cast<float>(pos.x() / width_value),
                 static_cast<float>(1.0 - pos.y() / height_value));
 
-            SbVec3f projected = projector_->project(norm_pos);
-
             if(has_last_point_) {
-                SbRotation rotation = projector_->getRotation(
-                    last_projected_point_, projected);
+                // Project both prev and curr with the same working space
+                projector_->project(last_norm_pos_);
+                SbRotation rotation;
+                projector_->projectAndGetRotation(norm_pos, rotation);
                 rotation.invert();
                 // TODO(future): replace hardcoded origin with scene bounding center
                 reorient_camera(cam, rotation, SbVec3f(0.F, 0.F, 0.F));
             }
 
-            last_projected_point_ = projected;
+            last_norm_pos_ = norm_pos;
             has_last_point_ = true;
             update();
         }
