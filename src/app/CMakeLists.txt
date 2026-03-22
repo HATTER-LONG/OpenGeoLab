@@ -56,7 +56,15 @@ qt_add_qml_module(
     resource/icons/record.svg
     resource/icons/replay.svg
     resource/icons/exportRecord.svg
-    resource/icons/clear.svg)
+    resource/icons/clear.svg
+    resource/icons/pulse.svg
+    resource/icons/list.svg
+    resource/icons/terminal.svg
+    resource/icons/closePanel.svg
+    resource/icons/trash.svg
+    resource/icons/funnel.svg
+    resource/icons/chevronDown.svg
+    resource/icons/play.svg)
 
 # Use console subsystem during development so errors are visible.
 option(OPENGEOLAB_WIN32_APP
