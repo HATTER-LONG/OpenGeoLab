@@ -29,7 +29,6 @@ Item {
         anchors.fill: parent
         source: iconRoot.iconUrl
         fillMode: Image.PreserveAspectFit
-        smooth: true
         antialiasing: true
         cache: true
         visible: false
