@@ -176,6 +176,25 @@ opengeolab_resolve_package(
     v${OPENGEOLAB_NLOHMANN_JSON_VERSION})
 
 # ---------------------------------------------------------------------------
+# Python: embedded runtime + pybind11 bridge
+# ---------------------------------------------------------------------------
+
+find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
+
+set(OPENGEOLAB_PYBIND11_VERSION 3.0.2)
+opengeolab_resolve_package(
+    pybind11
+    pybind11::pybind11
+    VERSION
+    ${OPENGEOLAB_PYBIND11_VERSION}
+    GITHUB_REPOSITORY
+    pybind/pybind11
+    GIT_TAG
+    v${OPENGEOLAB_PYBIND11_VERSION})
+
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/SetupPySideVenv.cmake)
+
+# ---------------------------------------------------------------------------
 # Testing
 # ---------------------------------------------------------------------------
 
@@ -202,4 +221,5 @@ endif ()
 # Sub-projects
 # ---------------------------------------------------------------------------
 
+add_subdirectory(src/libs/python)
 add_subdirectory(src/app)
