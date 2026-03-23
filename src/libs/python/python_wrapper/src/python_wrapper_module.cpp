@@ -17,8 +17,7 @@ PYBIND11_MODULE(opengeolab_pywrapper, module) {
         [](const std::string& /*request_json*/) -> std::string {
             return R"({"ok":false,"summary":"No C++ modules registered yet."})";
         },
-        Py::arg("request_json"),
-        "Forward a JSON request to C++ modules (not yet implemented).");
+        Py::arg("request_json"), "Forward a JSON request to C++ modules (not yet implemented).");
 
     module.def(
         "protocol_version", []() -> std::string { return "1.0"; },

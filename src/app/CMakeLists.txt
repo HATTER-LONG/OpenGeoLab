@@ -128,9 +128,8 @@ add_custom_command(
         ${CMAKE_COMMAND} -E copy_if_different
         "${CMAKE_CURRENT_SOURCE_DIR}/resource/python/opengeolab_runtime.py"
         "$<TARGET_FILE_DIR:opengeolab_app>/python/opengeolab_runtime.py"
-    COMMAND
-        ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/plugins"
-        "$<TARGET_FILE_DIR:opengeolab_app>/plugins"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/plugins"
+            "$<TARGET_FILE_DIR:opengeolab_app>/plugins"
     COMMENT "Copying Python runtime scripts; Copying Python plugins"
     VERBATIM)
 

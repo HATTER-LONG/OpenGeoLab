@@ -3,6 +3,7 @@ Checks: "-*,clang-diagnostic-*,llvm-*,misc-*,google-*,
   -llvm-header-guard,
   -misc-include-cleaner,
   -misc-non-private-member-variables-in-classes,
+  -misc-use-anonymous-namespace,
   readability-identifier-naming,
   readability-function-size"
 CheckOptions:

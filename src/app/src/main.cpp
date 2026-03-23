@@ -11,11 +11,11 @@
 
 #include <QApplication>
 #include <QQmlApplicationEngine>
-#include <QQmlContext>
 #include <QQuickStyle>
 #include <QQuickWindow>
 #include <QSGRendererInterface>
 #include <QSurfaceFormat>
+#include <QtQml/qqml.h>
 
 #include <filesystem>
 
@@ -51,8 +51,9 @@ auto main(int argc, char* argv[]) -> int {
     OpenGeoLab::Python::EmbeddedPythonRuntime python_runtime(app_dir, runtime_dir, plugin_dir);
     OpenGeoLab::App::ProcessService process_service(python_runtime);
 
+    qmlRegisterSingletonInstance("OpenGeoLab.Services", 1, 0, "ProcessService", &process_service);
+
     QQmlApplicationEngine engine;
-    engine.rootContext()->setContextProperty("processService", &process_service);
 
     QObject::connect(
         &engine, &QQmlApplicationEngine::objectCreationFailed, &app,

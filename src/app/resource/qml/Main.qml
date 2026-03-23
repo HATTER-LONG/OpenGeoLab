@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Window
+import OpenGeoLab.Services
 import "theme"
 import "sections"
 
@@ -35,7 +36,7 @@ Window {
     }
 
     Connections {
-        target: processService
+        target: ProcessService
 
         function onResponseReady(responseJson) {
             try {
@@ -56,7 +57,7 @@ Window {
     }
 
     Component.onCompleted: {
-        processService.submitRequest(JSON.stringify({
+        ProcessService.submitRequest(JSON.stringify({
             module: "plugins",
             action: "list",
             param: {}
@@ -85,7 +86,7 @@ Window {
 
         if (actionKey.startsWith("pluginUI_")) {
             const pluginName = actionKey.substring(9);
-            processService.submitRequest(JSON.stringify({
+            ProcessService.submitRequest(JSON.stringify({
                 module: "plugins",
                 action: "invoke_ui",
                 param: { pluginName: pluginName }
@@ -96,7 +97,7 @@ Window {
 
         if (actionKey.startsWith("plugin_")) {
             const pluginName = actionKey.substring(7);
-            processService.submitRequest(JSON.stringify({
+            ProcessService.submitRequest(JSON.stringify({
                 module: "plugins",
                 action: "execute",
                 param: { pluginName: pluginName }

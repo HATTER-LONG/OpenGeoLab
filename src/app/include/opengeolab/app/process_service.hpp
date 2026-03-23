@@ -38,9 +38,9 @@ public:
 
     /**
      * @brief Submit a JSON request from QML to the Python runtime.
-     * @param requestJson JSON envelope containing separate module and action fields.
+     * @param request_json JSON envelope containing separate module and action fields.
      */
-    Q_INVOKABLE void submitRequest(const QString& requestJson);
+    Q_INVOKABLE void submitRequest(const QString& request_json);
 
     /**
      * @brief Report whether any asynchronous request is still running.
@@ -51,15 +51,15 @@ public:
 signals:
     /**
      * @brief Emitted when the Python runtime returns a successful JSON response.
-     * @param responseJson JSON response envelope returned by the runtime.
+     * @param response_json JSON response envelope returned by the runtime.
      */
-    void responseReady(const QString& responseJson);
+    void responseReady(const QString& response_json);
 
     /**
      * @brief Emitted when request processing fails or returns an error envelope.
-     * @param errorMessage Human-readable failure summary.
+     * @param error_message Human-readable failure summary.
      */
-    void errorOccurred(const QString& errorMessage);
+    void errorOccurred(const QString& error_message);
 
     /**
      * @brief Emitted when the busy state changes.

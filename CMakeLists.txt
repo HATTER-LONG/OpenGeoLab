@@ -24,16 +24,17 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Default to RelWithDebInfo for single-config generators.
-# PySide6 (pip) ships release Qt DLLs (Qt6Core.dll without 'd' suffix).
-# Debug builds load Qt6Cored.dll, causing two separate Qt singletons and
-# breaking QApplication.instance() in PySide6. RelWithDebInfo gives debug
-# symbols while using release Qt, ensuring a single shared Qt instance.
+# Default to RelWithDebInfo for single-config generators. PySide6 (pip) ships
+# release Qt DLLs (Qt6Core.dll without 'd' suffix). Debug builds load
+# Qt6Cored.dll, causing two separate Qt singletons and breaking
+# QApplication.instance() in PySide6. RelWithDebInfo gives debug symbols while
+# using release Qt, ensuring a single shared Qt instance.
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE
         RelWithDebInfo
         CACHE STRING "Build type" FORCE)
-    message(STATUS "Defaulting CMAKE_BUILD_TYPE to RelWithDebInfo (PySide6 compat)")
+    message(
+        STATUS "Defaulting CMAKE_BUILD_TYPE to RelWithDebInfo (PySide6 compat)")
 endif ()
 
 set(CMAKE_AUTOMOC ON)
