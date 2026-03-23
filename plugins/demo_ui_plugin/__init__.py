@@ -16,12 +16,20 @@ def describe_plugin() -> dict:
 def launch_ui() -> dict:
     """Show a non-modal PySide6 window. Returns immediately."""
     from PySide6.QtCore import Qt
-    from PySide6.QtWidgets import QLabel, QPushButton, QVBoxLayout, QWidget
+    from PySide6.QtWidgets import QApplication, QLabel, QPushButton, QVBoxLayout, QWidget
+
+    application = QApplication.instance()
+    if application is None:
+        return {
+            "ok": False,
+            "message": "No QApplication instance — PySide6 requires the C++ host app "
+                       "(run with RelWithDebInfo, not Debug).",
+        }
 
     window = QWidget()
     window.setWindowTitle("Demo UI Plugin")
     window.setMinimumSize(320, 200)
-    window.setAttribute(Qt.WA_DeleteOnClose) # type: ignore
+    window.setAttribute(Qt.WA_DeleteOnClose)  # type: ignore[arg-type]
     window.destroyed.connect(lambda: _active_windows.remove(window))
     _active_windows.append(window)
 

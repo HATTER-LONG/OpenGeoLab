@@ -261,8 +261,12 @@ void EmbeddedPythonRuntime::initialize() {
 }
 
 [[nodiscard]] std::string EmbeddedPythonRuntime::process(std::string_view request_json) {
-    const Py::gil_scoped_acquire acquire;
-    return m_impl->processFunction(std::string{request_json}).cast<std::string>();
+    try {
+        const Py::gil_scoped_acquire acquire;
+        return Py::cast<std::string>(m_impl->processFunction(Py::str(request_json)));
+    } catch(const Py::error_already_set& error) {
+        throw std::runtime_error(error.what());
+    }
 }
 
 } // namespace OpenGeoLab::Python
