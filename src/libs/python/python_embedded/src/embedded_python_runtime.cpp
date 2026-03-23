@@ -129,8 +129,6 @@ struct EmbeddedPythonRuntime::Impl {
     module_search_paths.emplace_back(python_home / "Lib" / "site-packages");
 #ifdef OPENGEOLAB_PYVENV_SITE_PACKAGES
     module_search_paths.emplace_back(compiledPath(OPENGEOLAB_PYVENV_SITE_PACKAGES));
-#else
-    module_search_paths.emplace_back(std::filesystem::path{});
 #endif
     return module_search_paths;
 }

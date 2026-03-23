@@ -25,11 +25,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Default to RelWithDebInfo for single-config generators.
+# PySide6 (pip) ships release Qt DLLs (Qt6Core.dll without 'd' suffix).
+# Debug builds load Qt6Cored.dll, causing two separate Qt singletons and
+# breaking QApplication.instance() in PySide6. RelWithDebInfo gives debug
+# symbols while using release Qt, ensuring a single shared Qt instance.
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE
         RelWithDebInfo
         CACHE STRING "Build type" FORCE)
-    message(STATUS "Defaulting CMAKE_BUILD_TYPE to RelWithDebInfo")
+    message(STATUS "Defaulting CMAKE_BUILD_TYPE to RelWithDebInfo (PySide6 compat)")
 endif ()
 
 set(CMAKE_AUTOMOC ON)
@@ -179,7 +183,8 @@ opengeolab_resolve_package(
 # Python: embedded runtime + pybind11 bridge
 # ---------------------------------------------------------------------------
 
-find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
+find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module
+                                         Development.Embed)
 
 set(OPENGEOLAB_PYBIND11_VERSION 3.0.2)
 opengeolab_resolve_package(
@@ -192,7 +197,21 @@ opengeolab_resolve_package(
     GIT_TAG
     v${OPENGEOLAB_PYBIND11_VERSION})
 
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/SetupPySideVenv.cmake)
+# PySide6 pip wheels only ship release Qt binaries.  Debug builds load both
+# debug (Qt6Cored.dll) and release Qt DLLs, creating duplicate Qt singletons.
+# Default OFF for Debug to avoid this conflict.
+set(_pyside6_default ON)
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(_pyside6_default OFF)
+endif ()
+option(OPENGEOLAB_ENABLE_PYSIDE6 "Setup PySide6 venv (requires release Qt)"
+       ${_pyside6_default})
+
+if (OPENGEOLAB_ENABLE_PYSIDE6)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/SetupPySideVenv.cmake)
+else ()
+    message(STATUS "PySide6 venv setup disabled (Debug build or explicit OFF)")
+endif ()
 
 # ---------------------------------------------------------------------------
 # Testing
