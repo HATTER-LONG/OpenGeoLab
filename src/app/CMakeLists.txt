@@ -1,9 +1,10 @@
-qt_add_executable(opengeolab_app src/main.cpp src/translation_manager.cpp)
+qt_add_executable(opengeolab_app src/main.cpp src/translation_manager.cpp
+                  src/process_service.cpp)
 
 target_compile_features(opengeolab_app PRIVATE cxx_std_20)
-target_include_directories(opengeolab_app
-                           PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include"
-                                   "${CMAKE_CURRENT_SOURCE_DIR}/include/opengeolab/app")
+target_include_directories(
+    opengeolab_app PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include"
+                           "${CMAKE_CURRENT_SOURCE_DIR}/include/opengeolab/app")
 target_link_libraries(
     opengeolab_app
     PRIVATE Qt6::Core
@@ -12,7 +13,9 @@ target_link_libraries(
             Qt6::Quick
             Qt6::QuickControls2
             Qt6::Widgets
-            Qt6::OpenGL)
+            Qt6::OpenGL
+            Qt6::Concurrent
+            OpenGeoLab::Python)
 
 qt_add_qml_module(
     opengeolab_app
@@ -22,6 +25,7 @@ qt_add_qml_module(
     1.0
     SOURCES
     include/opengeolab/app/translation_manager.h
+    include/opengeolab/app/process_service.hpp
     QML_FILES
     resource/qml/Main.qml
     resource/qml/RibbonConfig.qml
@@ -94,6 +98,23 @@ endif ()
 
 opengeolab_copy_runtime_dlls(opengeolab_app)
 
+# Copy Python runtime scripts and plugins to the output directory.
+add_custom_command(
+    TARGET opengeolab_app
+    POST_BUILD
+    COMMAND
+        ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_CURRENT_SOURCE_DIR}/resource/python"
+        "$<TARGET_FILE_DIR:opengeolab_app>/python"
+    COMMENT "Copying Python runtime scripts")
+
+add_custom_command(
+    TARGET opengeolab_app
+    POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/plugins"
+            "$<TARGET_FILE_DIR:opengeolab_app>/plugins"
+    COMMENT "Copying Python plugins")
+
 # Generate qt.conf so Qt finds plugins and QML modules from the install prefix.
 file(
     GENERATE
@@ -101,8 +122,7 @@ file(
     CONTENT "[Paths]\nPrefix = ${_qt_prefix_fwd}\n")
 
 qt_add_translations(
-    opengeolab_app
-    TS_FILES resource/translations/opengeolab_zh_CN.ts
+    opengeolab_app TS_FILES resource/translations/opengeolab_zh_CN.ts
     RESOURCE_PREFIX "/translations")
 
 install(TARGETS opengeolab_app RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
