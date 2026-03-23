@@ -16,6 +16,10 @@
             <translation>AI</translation>
         </message>
         <message>
+            <source>Plugins</source>
+            <translation>插件</translation>
+        </message>
+        <message>
             <source>Create</source>
             <translation>创建</translation>
         </message>
@@ -101,6 +105,33 @@
         <message>
             <source>Action: %1</source>
             <translation>操作：%1</translation>
+        </message>
+        <message>
+            <source>Found %1 plugin(s).</source>
+            <translation>找到 %1 个插件。</translation>
+        </message>
+        <message>
+            <source>Error: %1</source>
+            <translation>错误：%1</translation>
+        </message>
+        <message>
+            <source>Launching plugin UI: %1</source>
+            <translation>正在启动插件界面：%1</translation>
+        </message>
+        <message>
+            <source>Executing plugin: %1</source>
+            <translation>正在执行插件：%1</translation>
+        </message>
+    </context>
+    <context>
+        <name>PluginRibbonGroup</name>
+        <message>
+            <source>Plugin</source>
+            <translation>插件</translation>
+        </message>
+        <message>
+            <source>No plugins found</source>
+            <translation>未找到插件</translation>
         </message>
     </context>
     <context>

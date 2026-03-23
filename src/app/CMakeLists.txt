@@ -39,6 +39,7 @@ qt_add_qml_module(
     resource/qml/sections/ActivityOverlay.qml
     resource/qml/components/AppIcon.qml
     resource/qml/components/ActionButton.qml
+    resource/qml/components/PluginRibbonGroup.qml
     resource/qml/components/RibbonTile.qml
     resource/qml/components/SectionCard.qml
     resource/qml/components/LogLevelChip.qml

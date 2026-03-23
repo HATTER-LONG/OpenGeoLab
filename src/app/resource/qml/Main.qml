@@ -12,6 +12,8 @@ Window {
     property bool darkMode: false
     property bool menuOpen: false
     property int selectedRibbonTab: 0
+    property var pluginList: []
+    property bool pluginListLoaded: false
     property string statusNote: qsTr("Viewport is active. Ribbon commands stay connected to the same controller pipeline.")
 
     width: 1500
@@ -32,6 +34,35 @@ Window {
         id: ribbonConfig
     }
 
+    Connections {
+        target: processService
+
+        function onResponseReady(responseJson) {
+            try {
+                const resp = JSON.parse(responseJson);
+                if (resp.module === "plugins" && resp.action === "list" && resp.ok) {
+                    root.pluginList = resp.result.plugins || [];
+                    root.pluginListLoaded = true;
+                    root.statusNote = qsTr("Found %1 plugin(s).").arg(root.pluginList.length);
+                }
+            } catch (e) {
+                console.warn("[Main] Failed to parse response:", e);
+            }
+        }
+
+        function onErrorOccurred(errorMessage) {
+            root.statusNote = qsTr("Error: %1").arg(errorMessage);
+        }
+    }
+
+    Component.onCompleted: {
+        processService.submitRequest(JSON.stringify({
+            module: "plugins",
+            action: "list",
+            param: {}
+        }));
+    }
+
     function toggleTheme() {
         root.darkMode = !root.darkMode;
         root.statusNote = root.darkMode ? qsTr("Switched to dark theme.") : qsTr("Switched to light theme.");
@@ -49,6 +80,28 @@ Window {
             root.statusNote = TranslationManager.currentLanguage === "zh_CN"
                 ? qsTr("Switched to Chinese.") : qsTr("Switched to English.");
             root.menuOpen = false;
+            return;
+        }
+
+        if (actionKey.startsWith("pluginUI_")) {
+            const pluginName = actionKey.substring(9);
+            processService.submitRequest(JSON.stringify({
+                module: "plugins",
+                action: "invoke_ui",
+                param: { pluginName: pluginName }
+            }));
+            root.statusNote = qsTr("Launching plugin UI: %1").arg(pluginName);
+            return;
+        }
+
+        if (actionKey.startsWith("plugin_")) {
+            const pluginName = actionKey.substring(7);
+            processService.submitRequest(JSON.stringify({
+                module: "plugins",
+                action: "execute",
+                param: { pluginName: pluginName }
+            }));
+            root.statusNote = qsTr("Executing plugin: %1").arg(pluginName);
             return;
         }
 
@@ -111,6 +164,7 @@ Window {
                 recordedCommandCount: 0
                 ribbonTabs: ribbonConfig.tabs
                 ribbonGroups: ribbonConfig.groupsForTab(root.selectedRibbonTab)
+                pluginList: root.pluginList
                 actionHandler: root.openActionPage
                 onToggleMenu: root.menuOpen = !root.menuOpen
                 onSelectTab: function (tabIndex) {

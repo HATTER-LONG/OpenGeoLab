@@ -18,6 +18,8 @@ Rectangle {
     property int recordedCommandCount: 0
     property var ribbonTabs: []
     property var ribbonGroups: []
+    property var pluginList: []
+    property int pluginTabIndex: 3
     property int ribbonButtonWidth: 68
     signal toggleMenu
     signal selectTab(int index)
@@ -131,7 +133,9 @@ Rectangle {
             Flickable {
                 anchors.fill: parent
                 anchors.margins: 6
-                contentWidth: groupRow.implicitWidth
+                contentWidth: header.selectedTab === header.pluginTabIndex
+                              ? pluginRibbonGroup.implicitWidth
+                              : groupRow.implicitWidth
                 contentHeight: height
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
@@ -141,6 +145,7 @@ Rectangle {
 
                     height: parent.height
                     spacing: 0
+                    visible: header.selectedTab !== header.pluginTabIndex
 
                     Repeater {
                         model: header.ribbonGroups
@@ -165,6 +170,16 @@ Rectangle {
                             }
                         }
                     }
+                }
+
+                Components.PluginRibbonGroup {
+                    id: pluginRibbonGroup
+
+                    visible: header.selectedTab === header.pluginTabIndex
+                    height: parent.height
+                    theme: header.theme
+                    plugins: header.pluginList
+                    actionHandler: header.actionHandler
                 }
             }
         }

@@ -3,7 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQml
 
 QtObject {
-    readonly property var tabs: [qsTr("Geometry"), qsTr("Mesh"), qsTr("AI")]
+    readonly property var tabs: [qsTr("Geometry"), qsTr("Mesh"), qsTr("AI"), qsTr("Plugins")]
     readonly property var groupsModel: [[
             {
                 "title": qsTr("Create"),
@@ -121,7 +121,7 @@ QtObject {
                     }
                 ]
             }
-        ]]
+        ], []]
 
     function groupsForTab(tabIndex) {
         if (tabIndex < 0 || tabIndex >= groupsModel.length) {
