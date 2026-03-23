@@ -1,1 +1,2 @@
-# Python integration libraries — populated by subsequent tasks.
+add_subdirectory(python_embedded)
+add_subdirectory(python_wrapper)
