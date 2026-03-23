@@ -5,7 +5,8 @@
 
 #include <opengeolab/python/embedded_python_runtime.hpp>
 
-#include <Python.h>
+// pybind11/embed.h MUST precede any direct Python.h include so that pybind11
+// can suppress the _DEBUG → Py_DEBUG redirection on MSVC Debug builds.
 #include <pybind11/embed.h>
 
 #include <cstdlib>

@@ -21,7 +21,7 @@ def launch_ui() -> dict:
     window = QWidget()
     window.setWindowTitle("Demo UI Plugin")
     window.setMinimumSize(320, 200)
-    window.setAttribute(Qt.WA_DeleteOnClose)
+    window.setAttribute(Qt.WA_DeleteOnClose) # type: ignore
     window.destroyed.connect(lambda: _active_windows.remove(window))
     _active_windows.append(window)
 
