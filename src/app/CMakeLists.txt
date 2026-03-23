@@ -109,22 +109,30 @@ endif ()
 
 opengeolab_copy_runtime_dlls(opengeolab_app)
 
+# Ensure opengeolab_pywrapper is built before the app so its .pyd is available.
+if (NOT TARGET opengeolab_pywrapper)
+    message(
+        FATAL_ERROR "opengeolab_app requires the opengeolab_pywrapper module.")
+endif ()
+add_dependencies(opengeolab_app opengeolab_pywrapper)
+
 # Copy Python runtime scripts and plugins to the output directory.
 add_custom_command(
     TARGET opengeolab_app
     POST_BUILD
-    COMMAND
-        ${CMAKE_COMMAND} -E copy_directory
-        "${CMAKE_CURRENT_SOURCE_DIR}/resource/python"
-        "$<TARGET_FILE_DIR:opengeolab_app>/python"
-    COMMENT "Copying Python runtime scripts")
-
-add_custom_command(
-    TARGET opengeolab_app
-    POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/plugins"
+    COMMAND ${CMAKE_COMMAND} -E make_directory
+            "$<TARGET_FILE_DIR:opengeolab_app>/python"
+    COMMAND ${CMAKE_COMMAND} -E make_directory
             "$<TARGET_FILE_DIR:opengeolab_app>/plugins"
-    COMMENT "Copying Python plugins")
+    COMMAND
+        ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_CURRENT_SOURCE_DIR}/resource/python/opengeolab_runtime.py"
+        "$<TARGET_FILE_DIR:opengeolab_app>/python/opengeolab_runtime.py"
+    COMMAND
+        ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/plugins"
+        "$<TARGET_FILE_DIR:opengeolab_app>/plugins"
+    COMMENT "Copying Python runtime scripts; Copying Python plugins"
+    VERBATIM)
 
 # Generate qt.conf so Qt finds plugins and QML modules from the install prefix.
 file(

@@ -120,8 +120,8 @@ function (opengeolab_copy_runtime_dlls target)
         POST_BUILD
         COMMAND
             ${CMAKE_COMMAND}
-            "-Druntime_dlls=$<JOIN:$<TARGET_RUNTIME_DLLS:${target}>,;>"
-            -Dtarget_dir=$<TARGET_FILE_DIR:${target}>
+            "-Druntime_dlls=$<TARGET_RUNTIME_DLLS:${target}>"
+            "-Dtarget_dir=$<TARGET_FILE_DIR:${target}>"
             -P "${OPENGEOLAB_MODULE_CMAKE_DIR}/copy_runtime_dlls.cmake"
-        COMMAND_EXPAND_LISTS VERBATIM)
+        VERBATIM)
 endfunction ()
