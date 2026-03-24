@@ -17,6 +17,10 @@ Window {
     property bool pluginListLoaded: false
     property string statusNote: qsTr("Viewport is active. Ribbon commands stay connected to the same controller pipeline.")
 
+    ListModel {
+        id: boxListModel
+    }
+
     width: 1500
     height: 1000
     minimumWidth: 1280
@@ -45,6 +49,19 @@ Window {
                     root.pluginList = resp.result.plugins || [];
                     root.pluginListLoaded = true;
                     root.statusNote = qsTr("Found %1 plugin(s).").arg(root.pluginList.length);
+                } else if (resp.module === "geometry" && resp.action === "list_boxes" && resp.ok) {
+                    boxListModel.clear();
+                    const boxes = resp.result.boxes || [];
+                    for (let i = 0; i < boxes.length; ++i) {
+                        const b = boxes[i];
+                        boxListModel.append({
+                            boxId: b.id ?? 0,
+                            label: b.label ?? qsTr("Box"),
+                            center: Array.isArray(b.center) && b.center.length === 3 ? b.center : [0, 0, 0],
+                            size: Array.isArray(b.size) && b.size.length === 3 ? b.size : [0, 0, 0],
+                            vertexCount: b.vertexCount ?? 0
+                        });
+                    }
                 } else if (resp.module === "geometry" && resp.ok) {
                     root.statusNote = qsTr("Geometry: %1").arg(resp.summary ?? "done");
                 }
@@ -63,7 +80,14 @@ Window {
 
         function onNotificationReceived(channel, payload) {
             try {
-                if (channel === "geometry.status" || channel === "geometry.progress") {
+                if (channel === "geometry.data_changed") {
+                    RequestService.submitAsync(JSON.stringify({
+                        module: "geometry",
+                        action: "list_boxes",
+                        param: {},
+                        mute: true
+                    }));
+                } else if (channel === "geometry.status" || channel === "geometry.progress") {
                     const data = JSON.parse(payload);
                     if (data.event === "started") {
                         root.statusNote = qsTr("Creating box…");
@@ -83,7 +107,8 @@ Window {
         RequestService.submitAsync(JSON.stringify({
             module: "plugins",
             action: "list",
-            param: {}
+            param: {},
+            mute: true
         }));
     }
 
@@ -123,7 +148,8 @@ Window {
             RequestService.executeOnMainThread(JSON.stringify({
                 module: "plugins",
                 action: "invoke_ui",
-                param: { pluginName: pluginName }
+                param: { pluginName: pluginName },
+                mute: true
             }));
             root.statusNote = qsTr("Launching plugin UI: %1").arg(pluginName);
             return;
@@ -134,7 +160,8 @@ Window {
             RequestService.submitAsync(JSON.stringify({
                 module: "plugins",
                 action: "execute",
-                param: { pluginName: pluginName }
+                param: { pluginName: pluginName },
+                mute: true
             }));
             root.statusNote = qsTr("Executing plugin: %1").arg(pluginName);
             return;
@@ -228,6 +255,7 @@ Window {
                         Layout.preferredWidth: 280
                         Layout.fillHeight: true
                         theme: appTheme
+                        boxListModel: boxListModel
                     }
 
                     ViewportPanel {
@@ -243,8 +271,6 @@ Window {
                     anchors.rightMargin: appTheme.gap
                     anchors.bottomMargin: appTheme.gap
                     theme: appTheme
-                    progress: ProgressTracker.hasActiveTasks ? ProgressTracker.currentProgress : -1
-                    progressStatus: ProgressTracker.statusText
                 }
             }
         }

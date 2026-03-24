@@ -57,6 +57,8 @@ qt_add_qml_module(
     resource/qml/components/LogEventsView.qml
     resource/qml/components/ActivityPanel.qml
     resource/qml/components/TerminalView.qml
+    resource/qml/components/ProgressCard.qml
+    resource/qml/components/BoxListItem.qml
     RESOURCES
     resource/icons/menu.svg
     resource/icons/box.svg
@@ -94,7 +96,11 @@ qt_add_qml_module(
     resource/icons/pluginG.svg
     resource/icons/pluginH.svg
     resource/icons/pluginI.svg
-    resource/icons/pluginJ.svg)
+    resource/icons/pluginJ.svg
+    resource/icons/cubeOutline.svg
+    resource/icons/hourglassOutline.svg
+    resource/icons/checkmarkCircleOutline.svg
+    resource/icons/closeCircleOutline.svg)
 
 # Use console subsystem during development so errors are visible.
 option(OPENGEOLAB_WIN32_APP

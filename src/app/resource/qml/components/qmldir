@@ -3,3 +3,5 @@ AppIcon 1.0 AppIcon.qml
 ActionButton 1.0 ActionButton.qml
 RibbonTile 1.0 RibbonTile.qml
 SectionCard 1.0 SectionCard.qml
+ProgressCard 1.0 ProgressCard.qml
+BoxListItem 1.0 BoxListItem.qml
