@@ -1,5 +1,7 @@
-/// @file notification_service.hpp
-/// @brief Qt-based notification service bridging cross-thread notifications to QML.
+/**
+ * @file notification_service.hpp
+ * @brief Qt-based notification service bridging cross-thread notifications to QML.
+ */
 #pragma once
 
 #include <opengeolab/base/notification_sink.hpp>
@@ -16,34 +18,44 @@
 
 namespace OpenGeoLab::App {
 
-/// @brief Concrete notification service that bridges INotificationSink to Qt signals.
-///
-/// Thread-safe: notify() can be called from any thread. The notificationReceived
-/// signal is always emitted on the main thread via QueuedConnection.
-/// Optionally buffers high-frequency channels (e.g. LLM token streams) to reduce
-/// signal emission overhead.
+/**
+ * @brief Concrete notification service that bridges INotificationSink to Qt signals.
+ *
+ * Thread-safe: notify() can be called from any thread. The notificationReceived
+ * signal is always emitted on the main thread via QueuedConnection.
+ * Optionally buffers high-frequency channels (e.g. LLM token streams) to reduce
+ * signal emission overhead.
+ */
 class NotificationService : public QObject, public OpenGeoLab::Base::INotificationSink {
     Q_OBJECT
 
 public:
     explicit NotificationService(QObject* parent = nullptr);
 
-    /// @brief INotificationSink implementation. Thread-safe.
-    /// Delivers notification to the main thread via QueuedConnection.
-    /// If the channel matches a buffered prefix, accumulates and flushes periodically.
+    /**
+     * @brief INotificationSink implementation. Thread-safe.
+     *
+     * Delivers notification to the main thread via QueuedConnection.
+     * If the channel matches a buffered prefix, accumulates and flushes periodically.
+     */
     void notify(std::string_view channel, std::string_view payload_json) override;
 
-    /// @brief Enable buffered delivery for a channel prefix.
-    /// Messages matching the prefix are accumulated for interval_ms milliseconds,
-    /// then delivered as a JSON array in a single notificationReceived emission.
-    /// @param channel_prefix Dot-separated prefix (e.g. "llm.stream").
-    /// @param interval_ms Buffering interval in milliseconds (default 16ms ≈ 60fps).
+    /**
+     * @brief Enable buffered delivery for a channel prefix.
+     *
+     * Messages matching the prefix are accumulated for interval_ms milliseconds,
+     * then delivered as a JSON array in a single notificationReceived emission.
+     * @param channel_prefix Dot-separated prefix (e.g. "llm.stream").
+     * @param interval_ms Buffering interval in milliseconds (default 16ms ≈ 60fps).
+     */
     void enableBuffering(const QString& channel_prefix, int interval_ms = 16);
 
 signals:
-    /// @brief Emitted on the main thread for every notification (or buffered batch).
-    /// @param channel The notification channel name.
-    /// @param payload JSON payload string. For buffered channels, a JSON array.
+    /**
+     * @brief Emitted on the main thread for every notification (or buffered batch).
+     * @param channel The notification channel name.
+     * @param payload JSON payload string. For buffered channels, a JSON array.
+     */
     void notificationReceived(const QString& channel, const QString& payload);
 
 private:
@@ -61,7 +73,7 @@ private:
     void flushBuffer(const std::string& prefix);
 
     std::vector<BufferConfig> m_bufferConfigs;
-    /// Stored as unique_ptr so that map rehashing does not invalidate BufferState pointers.
+    /** Stored as unique_ptr so that map rehashing does not invalidate BufferState pointers. */
     std::unordered_map<std::string, std::unique_ptr<BufferState>> m_bufferStates;
     std::mutex m_configMutex;
 };

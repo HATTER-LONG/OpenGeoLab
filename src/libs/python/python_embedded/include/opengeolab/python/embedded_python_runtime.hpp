@@ -15,9 +15,11 @@
 
 namespace OpenGeoLab::Python {
 
-/// @brief Progress callback for long-running operations.
-/// @param progress Normalized progress [0, 1], or 0 for indeterminate.
-/// @param message Human-readable status message.
+/**
+ * @brief Progress callback for long-running operations.
+ * @param progress Normalized progress [0, 1], or 0 for indeterminate.
+ * @param message Human-readable status message.
+ */
 using ProgressCallback = std::function<void(double, std::string_view)>;
 
 /**

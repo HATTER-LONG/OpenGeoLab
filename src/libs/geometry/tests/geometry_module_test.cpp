@@ -1,5 +1,7 @@
-/// @file geometry_module_test.cpp
-/// @brief Tests for SceneStore and GeometryModule JSON dispatching.
+/**
+ * @file geometry_module_test.cpp
+ * @brief Tests for SceneStore and GeometryModule JSON dispatching.
+ */
 #include <opengeolab/geometry/create_box_action.hpp>
 #include <opengeolab/geometry/geometry_module.hpp>
 #include <opengeolab/geometry/scene_store.hpp>
