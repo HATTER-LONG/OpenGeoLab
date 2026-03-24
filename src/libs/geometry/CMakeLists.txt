@@ -1,9 +1,10 @@
 set(geometry_public_headers
     include/opengeolab/geometry/box_data.hpp
     include/opengeolab/geometry/create_box_action.hpp
-    include/opengeolab/geometry/geometry_module.hpp)
+    include/opengeolab/geometry/geometry_module.hpp
+    include/opengeolab/geometry/scene_store.hpp)
 
-set(geometry_sources src/create_box_action.cpp src/geometry_module.cpp)
+set(geometry_sources src/create_box_action.cpp src/geometry_module.cpp src/scene_store.cpp)
 
 opengeolab_add_module(
     opengeolab_geometry

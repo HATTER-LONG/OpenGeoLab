@@ -12,7 +12,7 @@ namespace OpenGeoLab::Geometry {
 BoxData createBox(std::array<double, 3> center,
                   std::array<double, 3> dimensions,
                   int vertex_count,
-                  ProgressCallback progress_callback) {
+                  const ProgressCallback& progress_callback) {
     auto* sink = OpenGeoLab::Base::NotificationRegistry::sink();
 
     // Notify start
@@ -48,13 +48,6 @@ BoxData createBox(std::array<double, 3> center,
     result.size = dimensions;
     result.vertexCount = vertex_count;
     result.label = std::format("Box({}x{}x{})", dimensions[0], dimensions[1], dimensions[2]);
-
-    // Notify completion
-    if(sink != nullptr) {
-        auto payload = std::format(R"({{"event":"completed","action":"create_box","label":"{}"}})",
-                                   result.label);
-        sink->notify("geometry.status", payload);
-    }
 
     return result;
 }
