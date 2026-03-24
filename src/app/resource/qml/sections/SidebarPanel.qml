@@ -41,6 +41,11 @@ Item {
 
             delegate: BoxListItem {
                 required property int index
+                required property string label
+                required property int boxId
+                required property var center
+                required property var size
+                required property int vertexCount
 
                 width: ListView.view.width
                 theme: root.theme
