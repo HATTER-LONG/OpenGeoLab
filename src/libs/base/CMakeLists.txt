@@ -1,6 +1,7 @@
-set(base_public_headers include/opengeolab/base/notification_sink.hpp)
+set(base_public_headers include/opengeolab/base/notification_sink.hpp
+                       include/opengeolab/base/notification_registry.hpp)
 
-set(base_sources src/placeholder.cpp)
+set(base_sources src/notification_registry.cpp)
 
 opengeolab_add_module(
     opengeolab_base

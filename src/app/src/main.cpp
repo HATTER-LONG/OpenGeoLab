@@ -10,6 +10,7 @@
 #include <opengeolab/app/notification_service.hpp>
 #include <opengeolab/app/progress_tracker.hpp>
 #include <opengeolab/app/request_service.hpp>
+#include <opengeolab/base/notification_registry.hpp>
 #include <opengeolab/python/embedded_python_runtime.hpp>
 
 #include <QApplication>
@@ -56,6 +57,7 @@ int main(int argc, char* argv[]) {
     OpenGeoLab::App::ProgressTracker progress_tracker;
     OpenGeoLab::App::NotificationService notification_service;
     OpenGeoLab::App::MainThreadExecutor main_thread_executor;
+    OpenGeoLab::Base::NotificationRegistry::setSink(&notification_service);
     OpenGeoLab::App::RequestService request_service(python_runtime, progress_tracker);
 
     qmlRegisterSingletonInstance("OpenGeoLab.Services", 1, 0, "RequestService", &request_service);

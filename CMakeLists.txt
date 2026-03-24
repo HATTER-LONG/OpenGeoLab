@@ -242,5 +242,6 @@ endif ()
 # ---------------------------------------------------------------------------
 
 add_subdirectory(src/libs/base)
+add_subdirectory(src/libs/geometry)
 add_subdirectory(src/libs/python)
 add_subdirectory(src/app)
