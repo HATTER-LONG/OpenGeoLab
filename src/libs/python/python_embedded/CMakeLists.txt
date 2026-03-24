@@ -40,3 +40,9 @@ if (DEFINED OPENGEOLAB_PYVENV_SITE_PACKAGES)
 endif ()
 
 opengeolab_copy_runtime_dlls(opengeolab_python_embed)
+
+if (OPENGEOLAB_BUILD_TESTS)
+    opengeolab_add_doctest_test(
+        opengeolab_python_embed_api_test SOURCES
+        tests/embedded_python_runtime_api_test.cpp LINKS OpenGeoLab::Python)
+endif ()

@@ -36,9 +36,9 @@ Window {
     }
 
     Connections {
-        target: ProcessService
+        target: RequestService
 
-        function onResponseReady(responseJson) {
+        function onResponseReady(requestId, responseJson) {
             try {
                 const resp = JSON.parse(responseJson);
                 if (resp.module === "plugins" && resp.action === "list" && resp.ok) {
@@ -51,13 +51,13 @@ Window {
             }
         }
 
-        function onErrorOccurred(errorMessage) {
+        function onErrorOccurred(requestId, errorMessage) {
             root.statusNote = qsTr("Error: %1").arg(errorMessage);
         }
     }
 
     Component.onCompleted: {
-        ProcessService.submitRequest(JSON.stringify({
+        RequestService.submitAsync(JSON.stringify({
             module: "plugins",
             action: "list",
             param: {}
@@ -86,7 +86,7 @@ Window {
 
         if (actionKey.startsWith("pluginUI_")) {
             const pluginName = actionKey.substring(9);
-            ProcessService.submitRequest(JSON.stringify({
+            RequestService.executeOnMainThread(JSON.stringify({
                 module: "plugins",
                 action: "invoke_ui",
                 param: { pluginName: pluginName }
@@ -97,7 +97,7 @@ Window {
 
         if (actionKey.startsWith("plugin_")) {
             const pluginName = actionKey.substring(7);
-            ProcessService.submitRequest(JSON.stringify({
+            RequestService.submitAsync(JSON.stringify({
                 module: "plugins",
                 action: "execute",
                 param: { pluginName: pluginName }
@@ -209,6 +209,8 @@ Window {
                     anchors.rightMargin: appTheme.gap
                     anchors.bottomMargin: appTheme.gap
                     theme: appTheme
+                    progress: ProgressTracker.hasActiveTasks ? ProgressTracker.currentProgress : -1
+                    progressStatus: ProgressTracker.statusText
                 }
             }
         }

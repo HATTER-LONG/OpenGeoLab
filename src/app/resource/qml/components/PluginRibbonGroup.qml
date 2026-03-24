@@ -12,14 +12,9 @@ Item {
     required property var actionHandler
     property var plugins: []
 
-    readonly property var pluginIcons: [
-        "pluginA", "pluginB", "pluginC", "pluginD", "pluginE",
-        "pluginF", "pluginG", "pluginH", "pluginI", "pluginJ"
-    ]
+    readonly property var pluginIcons: ["pluginA", "pluginB", "pluginC", "pluginD", "pluginE", "pluginF", "pluginG", "pluginH", "pluginI", "pluginJ"]
 
-    implicitWidth: pluginGroup.plugins.length > 0
-                       ? pluginRow.implicitWidth + 20
-                       : emptyLabel.implicitWidth + 32
+    implicitWidth: pluginGroup.plugins.length > 0 ? pluginRow.implicitWidth + 20 : emptyLabel.implicitWidth + 32
     implicitHeight: parent ? parent.height : 80
 
     Item {
@@ -78,7 +73,7 @@ Item {
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         anchors.bottomMargin: 1
-        text: qsTr("Plugins")
+        text: qsTr("Plugin")
         color: pluginGroup.theme.textTertiary
         font.pixelSize: 9
         font.bold: true

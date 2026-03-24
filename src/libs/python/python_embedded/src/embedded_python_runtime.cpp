@@ -260,10 +260,18 @@ void EmbeddedPythonRuntime::initialize() {
     m_impl->processFunction = runtime_module.attr("process");
 }
 
-[[nodiscard]] std::string EmbeddedPythonRuntime::process(std::string_view request_json) {
+[[nodiscard]] std::string EmbeddedPythonRuntime::process(std::string_view request_json,
+                                                         ProgressCallback progress_callback) {
     try {
         const Py::gil_scoped_acquire acquire;
-        return Py::cast<std::string>(m_impl->processFunction(Py::str(request_json)));
+
+        Py::object py_cb = Py::none();
+        if(progress_callback) {
+            py_cb = Py::cpp_function(
+                [cb = std::move(progress_callback)](double p, const std::string& m) { cb(p, m); });
+        }
+
+        return Py::cast<std::string>(m_impl->processFunction(Py::str(request_json), py_cb));
     } catch(const Py::error_already_set& error) {
         throw std::runtime_error(error.what());
     }

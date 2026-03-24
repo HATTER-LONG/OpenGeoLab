@@ -1,12 +1,15 @@
 /**
  * @file main.cpp
  * @brief Application entry point: initializes QML engine, embedded Python
- *        runtime, and ProcessService.
+ *        runtime, and layered services.
  */
 
 #include <pybind11/pybind11.h>
 
-#include <opengeolab/app/process_service.hpp>
+#include <opengeolab/app/main_thread_executor.hpp>
+#include <opengeolab/app/notification_service.hpp>
+#include <opengeolab/app/progress_tracker.hpp>
+#include <opengeolab/app/request_service.hpp>
 #include <opengeolab/python/embedded_python_runtime.hpp>
 
 #include <QApplication>
@@ -49,9 +52,18 @@ int main(int argc, char* argv[]) {
     const auto plugin_dir = app_dir / "plugins";
 
     OpenGeoLab::Python::EmbeddedPythonRuntime python_runtime(app_dir, runtime_dir, plugin_dir);
-    OpenGeoLab::App::ProcessService process_service(python_runtime);
 
-    qmlRegisterSingletonInstance("OpenGeoLab.Services", 1, 0, "ProcessService", &process_service);
+    OpenGeoLab::App::ProgressTracker progress_tracker;
+    OpenGeoLab::App::NotificationService notification_service;
+    OpenGeoLab::App::MainThreadExecutor main_thread_executor;
+    OpenGeoLab::App::RequestService request_service(python_runtime, progress_tracker);
+
+    qmlRegisterSingletonInstance("OpenGeoLab.Services", 1, 0, "RequestService", &request_service);
+    qmlRegisterSingletonInstance("OpenGeoLab.Services", 1, 0, "NotificationService",
+                                 &notification_service);
+    qmlRegisterSingletonInstance("OpenGeoLab.Services", 1, 0, "ProgressTracker", &progress_tracker);
+    qmlRegisterSingletonInstance("OpenGeoLab.Services", 1, 0, "MainThreadExecutor",
+                                 &main_thread_executor);
 
     QQmlApplicationEngine engine;
 

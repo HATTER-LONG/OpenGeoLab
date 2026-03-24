@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import importlib
 import json
+import inspect
 import os
 import pkgutil
 import sys
@@ -50,9 +51,10 @@ def _make_response(
     summary: str,
     result: dict[str, Any] | None = None,
     errors: list[str] | None = None,
+    request_id: str = "",
 ) -> str:
     """Build a JSON response envelope."""
-    return json.dumps({
+    response: dict[str, Any] = {
         "protocolVersion": PROTOCOL_VERSION,
         "ok": ok,
         "module": module,
@@ -60,7 +62,10 @@ def _make_response(
         "summary": summary,
         "result": result or {},
         "errors": errors or [],
-    })
+    }
+    if request_id:
+        response["requestId"] = request_id
+    return json.dumps(response)
 
 
 def _python_capabilities() -> dict[str, Any]:
@@ -118,18 +123,33 @@ def _discover_plugins() -> list[dict[str, Any]]:
 # ---------------------------------------------------------------------------
 
 
-def _plugins_response() -> str:
+def _plugins_response(request_id: str = "") -> str:
     """Handle plugins.list — enumerate available plugins."""
     plugins = _discover_plugins()
-    return _make_response("plugins", "list", True, "Plugins enumerated.", {"plugins": plugins})
+    return _make_response(
+        "plugins",
+        "list",
+        True,
+        "Plugins enumerated.",
+        {"plugins": plugins},
+        request_id=request_id,
+    )
 
 
-def _execute_plugin(request: dict[str, Any]) -> str:
+def _execute_plugin(
+    request: dict[str, Any], request_id: str = "", progress_callback=None
+) -> str:
     """Handle plugins.execute — run a plugin's execute() function."""
     param = request.get("param", {})
     plugin_name = param.get("pluginName", "")
     if not plugin_name:
-        return _make_response("plugins", "execute", False, "Missing pluginName in param.")
+        return _make_response(
+            "plugins",
+            "execute",
+            False,
+            "Missing pluginName in param.",
+            request_id=request_id,
+        )
 
     try:
         mod = importlib.import_module(plugin_name)
@@ -139,24 +159,43 @@ def _execute_plugin(request: dict[str, Any]) -> str:
                 "execute",
                 False,
                 f"Plugin '{plugin_name}' has no execute().",
+                request_id=request_id,
             )
-        result = mod.execute(param)
-        return _make_response("plugins", "execute", True, f"Plugin '{plugin_name}' executed.", result)
+        sig = inspect.signature(mod.execute)
+        if progress_callback and "progress_callback" in sig.parameters:
+            result = mod.execute(param, progress_callback=progress_callback)
+        else:
+            result = mod.execute(param)
+        return _make_response(
+            "plugins",
+            "execute",
+            True,
+            f"Plugin '{plugin_name}' executed.",
+            result,
+            request_id=request_id,
+        )
     except Exception:
         return _make_response(
             "plugins",
             "execute",
             False,
             f"Plugin execution failed: {traceback.format_exc()}",
+            request_id=request_id,
         )
 
 
-def _launch_plugin_ui(request: dict[str, Any]) -> str:
+def _launch_plugin_ui(request: dict[str, Any], request_id: str = "") -> str:
     """Handle plugins.invoke_ui — show a PySide6 non-modal window."""
     param = request.get("param", {})
     plugin_name = param.get("pluginName", "")
     if not plugin_name:
-        return _make_response("plugins", "invoke_ui", False, "Missing pluginName in param.")
+        return _make_response(
+            "plugins",
+            "invoke_ui",
+            False,
+            "Missing pluginName in param.",
+            request_id=request_id,
+        )
 
     try:
         mod = importlib.import_module(plugin_name)
@@ -166,22 +205,38 @@ def _launch_plugin_ui(request: dict[str, Any]) -> str:
                 "invoke_ui",
                 False,
                 f"Plugin '{plugin_name}' has no launch_ui().",
+                request_id=request_id,
             )
         result = mod.launch_ui()
-        return _make_response("plugins", "invoke_ui", True, "Plugin UI launched.", result)
+        return _make_response(
+            "plugins",
+            "invoke_ui",
+            True,
+            "Plugin UI launched.",
+            result,
+            request_id=request_id,
+        )
     except Exception:
         return _make_response(
             "plugins",
             "invoke_ui",
             False,
             f"Plugin UI failed: {traceback.format_exc()}",
+            request_id=request_id,
         )
 
 
-def _capabilities_response() -> str:
+def _capabilities_response(request_id: str = "") -> str:
     """Handle system.capabilities — return runtime info."""
     caps = _python_capabilities()
-    return _make_response("system", "capabilities", True, "Capabilities reported.", caps)
+    return _make_response(
+        "system",
+        "capabilities",
+        True,
+        "Capabilities reported.",
+        caps,
+        request_id=request_id,
+    )
 
 
 def _import_backend_wrapper() -> Any:
@@ -199,35 +254,54 @@ def _import_backend_wrapper() -> Any:
 # ---------------------------------------------------------------------------
 
 
-def process(request_json: str) -> str:
+def process(request_json: str, progress_callback=None) -> str:
     """Route a JSON request to the appropriate handler."""
     try:
         request = json.loads(request_json)
     except json.JSONDecodeError as exc:
         return _make_response("unknown", "unknown", False, f"Invalid JSON: {exc}")
 
+    request_id = request.get("requestId", "")
     module = request.get("module", "")
     action = request.get("action", "")
 
     # Plugin routes.
     if module == "plugins":
         if action == "list":
-            return _plugins_response()
+            return _plugins_response(request_id)
         if action == "execute":
-            return _execute_plugin(request)
+            return _execute_plugin(request, request_id, progress_callback)
         if action == "invoke_ui":
-            return _launch_plugin_ui(request)
-        return _make_response(module, action, False, f"Unknown plugins action: {action}")
+            return _launch_plugin_ui(request, request_id)
+        return _make_response(
+            module,
+            action,
+            False,
+            f"Unknown plugins action: {action}",
+            request_id=request_id,
+        )
 
     # System routes.
     if module == "system":
         if action == "capabilities":
-            return _capabilities_response()
-        return _make_response(module, action, False, f"Unknown system action: {action}")
+            return _capabilities_response(request_id)
+        return _make_response(
+            module,
+            action,
+            False,
+            f"Unknown system action: {action}",
+            request_id=request_id,
+        )
 
     # Fallback to C++ wrapper.
     wrapper = _import_backend_wrapper()
     if wrapper is not None:
         return wrapper.process(request_json)
 
-    return _make_response(module, action, False, f"No handler for module '{module}'.")
+    return _make_response(
+        module,
+        action,
+        False,
+        f"No handler for module '{module}'.",
+        request_id=request_id,
+    )

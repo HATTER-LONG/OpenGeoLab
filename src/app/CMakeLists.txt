@@ -1,5 +1,11 @@
-qt_add_executable(opengeolab_app src/main.cpp src/translation_manager.cpp
-                  src/process_service.cpp)
+qt_add_executable(
+    opengeolab_app
+    src/main.cpp
+    src/translation_manager.cpp
+    src/progress_tracker.cpp
+    src/main_thread_executor.cpp
+    src/notification_service.cpp
+    src/request_service.cpp)
 
 target_compile_features(opengeolab_app PRIVATE cxx_std_20)
 target_include_directories(
@@ -15,6 +21,7 @@ target_link_libraries(
             Qt6::Widgets
             Qt6::OpenGL
             Qt6::Concurrent
+            OpenGeoLab::Base
             OpenGeoLab::Python)
 
 qt_add_qml_module(
@@ -25,7 +32,10 @@ qt_add_qml_module(
     1.0
     SOURCES
     include/opengeolab/app/translation_manager.h
-    include/opengeolab/app/process_service.hpp
+    include/opengeolab/app/progress_tracker.hpp
+    include/opengeolab/app/main_thread_executor.hpp
+    include/opengeolab/app/notification_service.hpp
+    include/opengeolab/app/request_service.hpp
     QML_FILES
     resource/qml/Main.qml
     resource/qml/RibbonConfig.qml
