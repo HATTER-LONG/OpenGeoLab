@@ -40,6 +40,10 @@ int main(int argc, char* argv[]) {
     QQuickWindow::setGraphicsApi(QSGRendererInterface::OpenGL);
 
     QSurfaceFormat fmt;
+    fmt.setVersion(4, 5);
+    fmt.setProfile(QSurfaceFormat::CoreProfile);
+    fmt.setDepthBufferSize(24);
+    fmt.setStencilBufferSize(8);
     fmt.setSwapBehavior(QSurfaceFormat::DoubleBuffer);
     fmt.setSwapInterval(1);
     QSurfaceFormat::setDefaultFormat(fmt);

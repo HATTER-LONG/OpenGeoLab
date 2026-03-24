@@ -5,7 +5,9 @@ qt_add_executable(
     src/progress_tracker.cpp
     src/main_thread_executor.cpp
     src/notification_service.cpp
-    src/request_service.cpp)
+    src/request_service.cpp
+    src/gl_viewport_item.cpp
+    src/viewport_controller.cpp)
 
 target_compile_features(opengeolab_app PRIVATE cxx_std_20)
 target_include_directories(
@@ -22,7 +24,10 @@ target_link_libraries(
             Qt6::OpenGL
             Qt6::Concurrent
             OpenGeoLab::Base
-            OpenGeoLab::Python)
+            OpenGeoLab::Python
+            OpenGeoLab::Render
+            OpenGeoLab::Scene
+            glad)
 
 qt_add_qml_module(
     opengeolab_app
@@ -36,6 +41,8 @@ qt_add_qml_module(
     include/opengeolab/app/main_thread_executor.hpp
     include/opengeolab/app/notification_service.hpp
     include/opengeolab/app/request_service.hpp
+    include/opengeolab/app/gl_viewport_item.hpp
+    include/opengeolab/app/viewport_controller.hpp
     QML_FILES
     resource/qml/Main.qml
     resource/qml/RibbonConfig.qml
