@@ -23,7 +23,7 @@
 #include <windows.h>
 #endif
 
-auto main(int argc, char* argv[]) -> int {
+int main(int argc, char* argv[]) {
 #if defined(_WIN32) && defined(OPENGEOLAB_QT_BIN_DIR)
     {
         const auto qt_bin = std::filesystem::path(OPENGEOLAB_QT_BIN_DIR);

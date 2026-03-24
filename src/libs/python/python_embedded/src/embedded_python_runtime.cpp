@@ -28,7 +28,7 @@ struct EmbeddedPythonRuntime::Impl {
     Py::object processFunction;
 };
 
-[[nodiscard]] static auto environmentPath(const char* variable_name) -> std::filesystem::path {
+[[nodiscard]] static std::filesystem::path environmentPath(const char* variable_name) {
 #if defined(_WIN32)
     char* raw_value = nullptr;
     size_t raw_size = 0;
@@ -49,7 +49,7 @@ struct EmbeddedPythonRuntime::Impl {
 #endif
 }
 
-[[nodiscard]] static auto compiledPath(const char* value) -> std::filesystem::path {
+[[nodiscard]] static std::filesystem::path compiledPath(const char* value) {
     if(value == nullptr) {
         return {};
     }
@@ -58,7 +58,7 @@ struct EmbeddedPythonRuntime::Impl {
     return path_value.empty() ? std::filesystem::path{} : std::filesystem::path{path_value};
 }
 
-[[nodiscard]] static auto resolvePythonHome() -> std::filesystem::path {
+[[nodiscard]] static std::filesystem::path resolvePythonHome() {
     if(const auto python_home = environmentPath("OPENGEOLAB_PYTHON_HOME"); !python_home.empty()) {
         return python_home;
     }
@@ -76,8 +76,8 @@ struct EmbeddedPythonRuntime::Impl {
     return {};
 }
 
-[[nodiscard]] static auto resolvePythonExecutable(const std::filesystem::path& python_home)
-    -> std::filesystem::path {
+[[nodiscard]] static std::filesystem::path
+resolvePythonExecutable(const std::filesystem::path& python_home) {
     if(const auto python_executable = environmentPath("OPENGEOLAB_PYTHON_EXECUTABLE");
        !python_executable.empty()) {
         return python_executable;
@@ -101,19 +101,19 @@ struct EmbeddedPythonRuntime::Impl {
 #endif
 }
 
-[[nodiscard]] static auto pathToWideString(const std::filesystem::path& path) -> std::wstring {
+[[nodiscard]] static std::wstring pathToWideString(const std::filesystem::path& path) {
     return path.wstring();
 }
 
-[[nodiscard]] static auto pathToString(const std::filesystem::path& path) -> std::string {
+[[nodiscard]] static std::string pathToString(const std::filesystem::path& path) {
     return path.generic_string();
 }
 
-[[nodiscard]] static auto buildModuleSearchPaths(const std::filesystem::path& application_root,
-                                                 const std::filesystem::path& runtime_root,
-                                                 const std::filesystem::path& plugin_root,
-                                                 const std::filesystem::path& python_home)
-    -> std::vector<std::filesystem::path> {
+[[nodiscard]] static std::vector<std::filesystem::path>
+buildModuleSearchPaths(const std::filesystem::path& application_root,
+                       const std::filesystem::path& runtime_root,
+                       const std::filesystem::path& plugin_root,
+                       const std::filesystem::path& python_home) {
     const std::string python_version_tag =
         std::to_string(PY_MAJOR_VERSION) + std::to_string(PY_MINOR_VERSION);
 
@@ -180,8 +180,8 @@ struct InitializationContext {
     std::vector<std::filesystem::path> moduleSearchPaths;
 };
 
-[[nodiscard]] static auto describeInitializationContext(const InitializationContext& context)
-    -> std::string {
+[[nodiscard]] static std::string
+describeInitializationContext(const InitializationContext& context) {
     std::ostringstream description;
     description << "application_root=" << pathToString(context.applicationRoot) << '\n'
                 << "runtime_root=" << pathToString(context.runtimeRoot) << '\n'
