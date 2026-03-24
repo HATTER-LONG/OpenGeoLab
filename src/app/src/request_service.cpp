@@ -16,11 +16,11 @@ namespace OpenGeoLab::App {
 RequestService::RequestService(OpenGeoLab::Python::EmbeddedPythonRuntime& runtime,
                                ProgressTracker& progress_tracker,
                                QObject* parent)
-    : QObject(parent), runtime_(runtime), progress_tracker_(progress_tracker) {}
+    : QObject(parent), m_runtime(runtime), m_progressTracker(progress_tracker) {}
 
 RequestService::~RequestService() {
-    const std::lock_guard lock(futures_mutex_);
-    for(auto& future : pending_futures_) {
+    const std::lock_guard lock(m_futuresMutex);
+    for(auto& future : m_pendingFutures) {
         future.waitForFinished();
     }
 }
@@ -30,44 +30,44 @@ QString RequestService::submitAsync(const QString& request_json) {
     const auto description = extractDescription(request_json);
     const auto injected_json = injectRequestId(request_json, request_id);
 
-    pending_count_.fetch_add(1, std::memory_order_relaxed);
+    m_pendingCount.fetch_add(1, std::memory_order_relaxed);
     emit busyChanged();
-    progress_tracker_.beginTask(request_id, description);
+    m_progressTracker.beginTask(request_id, description);
 
     auto* watcher = new QFutureWatcher<QString>(this);
 
     auto future = QtConcurrent::run(
         [this, json = injected_json.toStdString(), task_id = request_id]() -> QString {
             OpenGeoLab::Python::ProgressCallback progress_cb =
-                [tracker = &progress_tracker_, task_id](double progress, std::string_view message) {
+                [tracker = &m_progressTracker, task_id](double progress, std::string_view message) {
                     tracker->updateProgress(
                         task_id, progress,
                         QString::fromUtf8(message.data(), static_cast<qsizetype>(message.size())));
                 };
-            return QString::fromStdString(runtime_.process(json, std::move(progress_cb)));
+            return QString::fromStdString(m_runtime.process(json, std::move(progress_cb)));
         });
 
     {
-        const std::lock_guard lock(futures_mutex_);
-        pending_futures_.push_back(future);
+        const std::lock_guard lock(m_futuresMutex);
+        m_pendingFutures.push_back(future);
     }
 
     connect(watcher, &QFutureWatcher<QString>::finished, this, [this, watcher, request_id]() {
-        pending_count_.fetch_sub(1, std::memory_order_relaxed);
+        m_pendingCount.fetch_sub(1, std::memory_order_relaxed);
         emit busyChanged();
 
         try {
             const QString response = watcher->result();
-            progress_tracker_.completeTask(request_id, true);
+            m_progressTracker.completeTask(request_id, true);
             emitResponse(request_id, response);
         } catch(const std::exception& exception) {
-            progress_tracker_.completeTask(request_id, false);
+            m_progressTracker.completeTask(request_id, false);
             emit errorOccurred(request_id, QString::fromStdString(exception.what()));
         }
 
         {
-            const std::lock_guard lock(futures_mutex_);
-            std::erase_if(pending_futures_,
+            const std::lock_guard lock(m_futuresMutex);
+            std::erase_if(m_pendingFutures,
                           [](const QFuture<QString>& future) { return future.isFinished(); });
         }
 
@@ -83,11 +83,11 @@ QString RequestService::executeOnMainThread(const QString& request_json) {
     const auto description = extractDescription(request_json);
     const auto injected_json = injectRequestId(request_json, request_id);
 
-    progress_tracker_.beginTask(request_id, description);
+    m_progressTracker.beginTask(request_id, description);
 
     OpenGeoLab::Python::ProgressCallback progress_cb =
         [this, request_id](double progress, std::string_view message) {
-            progress_tracker_.updateProgress(
+            m_progressTracker.updateProgress(
                 request_id, progress,
                 QString::fromUtf8(message.data(), static_cast<qsizetype>(message.size())));
         };
@@ -98,19 +98,19 @@ QString RequestService::executeOnMainThread(const QString& request_json) {
         // This is intentional for PySide6 invoke_ui — Qt widget creation must happen
         // on the main thread. Keep operations short (e.g. show() a window) to avoid
         // blocking the event loop.
-        const auto response =
-            QString::fromStdString(runtime_.process(injected_json.toStdString(), std::move(progress_cb)));
-        progress_tracker_.completeTask(request_id, true);
+        const auto response = QString::fromStdString(
+            m_runtime.process(injected_json.toStdString(), std::move(progress_cb)));
+        m_progressTracker.completeTask(request_id, true);
         emitResponse(request_id, response);
     } catch(const std::exception& exception) {
-        progress_tracker_.completeTask(request_id, false);
+        m_progressTracker.completeTask(request_id, false);
         emit errorOccurred(request_id, QString::fromStdString(exception.what()));
     }
 
     return request_id;
 }
 
-bool RequestService::isBusy() const { return pending_count_.load(std::memory_order_relaxed) > 0; }
+bool RequestService::isBusy() const { return m_pendingCount.load(std::memory_order_relaxed) > 0; }
 
 QString RequestService::injectRequestId(const QString& json, const QString& request_id) {
     auto document = QJsonDocument::fromJson(json.toUtf8());

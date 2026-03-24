@@ -7,16 +7,16 @@
 namespace OpenGeoLab::App {
 
 ProgressTracker::ProgressTracker(QObject* parent)
-    : QObject(parent), prune_timer_(new QTimer(this)) {
-    prune_timer_->setInterval(10'000);
-    connect(prune_timer_, &QTimer::timeout, this, &ProgressTracker::pruneCompletedTasks);
-    prune_timer_->start();
+    : QObject(parent), m_pruneTimer(new QTimer(this)) {
+    m_pruneTimer->setInterval(10'000);
+    connect(m_pruneTimer, &QTimer::timeout, this, &ProgressTracker::pruneCompletedTasks);
+    m_pruneTimer->start();
 }
 
 void ProgressTracker::beginTask(const QString& task_id, const QString& description) {
     {
-        const std::lock_guard lock(mutex_);
-        tasks_[task_id] =
+        const std::lock_guard lock(m_mutex);
+        m_tasks[task_id] =
             TaskState{description, {}, 0.0, std::chrono::steady_clock::now(), false, true};
     }
 
@@ -27,15 +27,15 @@ void ProgressTracker::updateProgress(const QString& task_id,
                                      double progress,
                                      const QString& message) {
     {
-        const std::lock_guard lock(mutex_);
-        const auto iterator = tasks_.find(task_id);
-        if(iterator == tasks_.end()) {
+        const std::lock_guard lock(m_mutex);
+        const auto iterator = m_tasks.find(task_id);
+        if(iterator == m_tasks.end()) {
             return;
         }
 
         iterator->second.progress = progress;
         iterator->second.message = message;
-        iterator->second.last_update = std::chrono::steady_clock::now();
+        iterator->second.lastUpdate = std::chrono::steady_clock::now();
     }
 
     emitProgressChanged();
@@ -43,9 +43,9 @@ void ProgressTracker::updateProgress(const QString& task_id,
 
 void ProgressTracker::completeTask(const QString& task_id, bool success) {
     {
-        const std::lock_guard lock(mutex_);
-        const auto iterator = tasks_.find(task_id);
-        if(iterator == tasks_.end()) {
+        const std::lock_guard lock(m_mutex);
+        const auto iterator = m_tasks.find(task_id);
+        if(iterator == m_tasks.end()) {
             return;
         }
 
@@ -54,22 +54,22 @@ void ProgressTracker::completeTask(const QString& task_id, bool success) {
         if(success) {
             iterator->second.progress = 1.0;
         }
-        iterator->second.last_update = std::chrono::steady_clock::now();
+        iterator->second.lastUpdate = std::chrono::steady_clock::now();
     }
 
     emitProgressChanged();
 }
 
 double ProgressTracker::currentProgress() const {
-    const std::lock_guard lock(mutex_);
+    const std::lock_guard lock(m_mutex);
 
     const TaskState* latest_task = nullptr;
-    for(const auto& [task_id, task_state] : tasks_) {
+    for(const auto& [task_id, task_state] : m_tasks) {
         static_cast<void>(task_id);
         if(task_state.completed) {
             continue;
         }
-        if(latest_task == nullptr || latest_task->last_update < task_state.last_update) {
+        if(latest_task == nullptr || latest_task->lastUpdate < task_state.lastUpdate) {
             latest_task = &task_state;
         }
     }
@@ -82,15 +82,15 @@ double ProgressTracker::currentProgress() const {
 }
 
 QString ProgressTracker::statusText() const {
-    const std::lock_guard lock(mutex_);
+    const std::lock_guard lock(m_mutex);
 
     const TaskState* latest_task = nullptr;
-    for(const auto& [task_id, task_state] : tasks_) {
+    for(const auto& [task_id, task_state] : m_tasks) {
         static_cast<void>(task_id);
         if(task_state.completed) {
             continue;
         }
-        if(latest_task == nullptr || latest_task->last_update < task_state.last_update) {
+        if(latest_task == nullptr || latest_task->lastUpdate < task_state.lastUpdate) {
             latest_task = &task_state;
         }
     }
@@ -107,8 +107,8 @@ QString ProgressTracker::statusText() const {
 }
 
 bool ProgressTracker::hasActiveTasks() const {
-    const std::lock_guard lock(mutex_);
-    return std::any_of(tasks_.cbegin(), tasks_.cend(),
+    const std::lock_guard lock(m_mutex);
+    return std::any_of(m_tasks.cbegin(), m_tasks.cend(),
                        [](const auto& entry) { return !entry.second.completed; });
 }
 
@@ -119,14 +119,14 @@ void ProgressTracker::emitProgressChanged() {
 void ProgressTracker::pruneCompletedTasks() {
     bool erased = false;
     {
-        const std::lock_guard lock(mutex_);
+        const std::lock_guard lock(m_mutex);
         const auto now = std::chrono::steady_clock::now();
-        const auto previous_size = tasks_.size();
-        std::erase_if(tasks_, [now](const auto& entry) {
+        const auto previous_size = m_tasks.size();
+        std::erase_if(m_tasks, [now](const auto& entry) {
             return entry.second.completed &&
-                   (now - entry.second.last_update) > std::chrono::seconds{10};
+                   (now - entry.second.lastUpdate) > std::chrono::seconds{10};
         });
-        erased = tasks_.size() != previous_size;
+        erased = m_tasks.size() != previous_size;
     }
 
     if(erased) {

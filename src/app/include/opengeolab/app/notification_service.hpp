@@ -49,21 +49,21 @@ signals:
 private:
     struct BufferConfig {
         std::string prefix;
-        int interval_ms = 16;
+        int intervalMs = 16;
     };
 
     struct BufferState {
         std::mutex mutex;
         std::vector<std::string> pending;
-        bool timer_scheduled = false;
+        bool timerScheduled = false;
     };
 
     void flushBuffer(const std::string& prefix);
 
-    std::vector<BufferConfig> buffer_configs_;
+    std::vector<BufferConfig> m_bufferConfigs;
     /// Stored as unique_ptr so that map rehashing does not invalidate BufferState pointers.
-    std::unordered_map<std::string, std::unique_ptr<BufferState>> buffer_states_;
-    std::mutex config_mutex_;
+    std::unordered_map<std::string, std::unique_ptr<BufferState>> m_bufferStates;
+    std::mutex m_configMutex;
 };
 
 } // namespace OpenGeoLab::App

@@ -12,7 +12,7 @@
 
 namespace OpenGeoLab::Python {
 class EmbeddedPythonRuntime;
-}
+} // namespace OpenGeoLab::Python
 
 namespace OpenGeoLab::App {
 
@@ -48,8 +48,8 @@ public:
     [[nodiscard]] bool isBusy() const;
 
 signals:
-    void responseReady(const QString& requestId, const QString& responseJson);
-    void errorOccurred(const QString& requestId, const QString& errorMessage);
+    void responseReady(const QString& request_id, const QString& response_json);
+    void errorOccurred(const QString& request_id, const QString& error_message);
     void busyChanged();
 
 private:
@@ -62,11 +62,11 @@ private:
     /// @brief Parse response and emit responseReady or errorOccurred.
     void emitResponse(const QString& request_id, const QString& response);
 
-    OpenGeoLab::Python::EmbeddedPythonRuntime& runtime_;
-    ProgressTracker& progress_tracker_;
-    std::atomic<int> pending_count_{0};
-    mutable std::mutex futures_mutex_;
-    std::vector<QFuture<QString>> pending_futures_;
+    OpenGeoLab::Python::EmbeddedPythonRuntime& m_runtime;
+    ProgressTracker& m_progressTracker;
+    std::atomic<int> m_pendingCount{0};
+    mutable std::mutex m_futuresMutex;
+    std::vector<QFuture<QString>> m_pendingFutures;
 };
 
 } // namespace OpenGeoLab::App

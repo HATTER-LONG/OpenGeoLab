@@ -65,7 +65,7 @@ private:
         QString description;
         QString message;
         double progress = 0.0;
-        std::chrono::steady_clock::time_point last_update;
+        std::chrono::steady_clock::time_point lastUpdate;
         bool completed = false;
         bool success = true;
     };
@@ -73,9 +73,9 @@ private:
     void emitProgressChanged();
     void pruneCompletedTasks();
 
-    mutable std::mutex mutex_;
-    std::unordered_map<QString, TaskState> tasks_;
-    QTimer* prune_timer_ = nullptr;
+    mutable std::mutex m_mutex;
+    std::unordered_map<QString, TaskState> m_tasks;
+    QTimer* m_pruneTimer = nullptr;
 };
 
 } // namespace OpenGeoLab::App

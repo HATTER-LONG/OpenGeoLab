@@ -17,17 +17,17 @@ void NotificationService::notify(std::string_view channel, std::string_view payl
     int matched_interval_ms = 16;
 
     {
-        const std::lock_guard lock(config_mutex_);
-        for(const auto& buffer_config : buffer_configs_) {
+        const std::lock_guard lock(m_configMutex);
+        for(const auto& buffer_config : m_bufferConfigs) {
             if(!channel_string.starts_with(buffer_config.prefix)) {
                 continue;
             }
 
             matched_prefix = buffer_config.prefix;
-            matched_interval_ms = buffer_config.interval_ms;
+            matched_interval_ms = buffer_config.intervalMs;
 
-            const auto state_iterator = buffer_states_.find(matched_prefix);
-            if(state_iterator != buffer_states_.end()) {
+            const auto state_iterator = m_bufferStates.find(matched_prefix);
+            if(state_iterator != m_bufferStates.end()) {
                 matched_state = state_iterator->second.get();
             }
             break;
@@ -39,8 +39,8 @@ void NotificationService::notify(std::string_view channel, std::string_view payl
         {
             const std::lock_guard lock(matched_state->mutex);
             matched_state->pending.push_back(payload_string);
-            if(!matched_state->timer_scheduled) {
-                matched_state->timer_scheduled = true;
+            if(!matched_state->timerScheduled) {
+                matched_state->timerScheduled = true;
                 should_schedule_timer = true;
             }
         }
@@ -69,18 +69,18 @@ void NotificationService::notify(std::string_view channel, std::string_view payl
 }
 
 void NotificationService::enableBuffering(const QString& channel_prefix, int interval_ms) {
-    const std::lock_guard lock(config_mutex_);
+    const std::lock_guard lock(m_configMutex);
 
-    buffer_configs_.push_back(BufferConfig{channel_prefix.toStdString(), interval_ms});
-    buffer_states_.try_emplace(buffer_configs_.back().prefix, std::make_unique<BufferState>());
+    m_bufferConfigs.push_back(BufferConfig{channel_prefix.toStdString(), interval_ms});
+    m_bufferStates.try_emplace(m_bufferConfigs.back().prefix, std::make_unique<BufferState>());
 }
 
 void NotificationService::flushBuffer(const std::string& prefix) {
     BufferState* buffer_state = nullptr;
     {
-        const std::lock_guard lock(config_mutex_);
-        const auto state_iterator = buffer_states_.find(prefix);
-        if(state_iterator == buffer_states_.end()) {
+        const std::lock_guard lock(m_configMutex);
+        const auto state_iterator = m_bufferStates.find(prefix);
+        if(state_iterator == m_bufferStates.end()) {
             return;
         }
 
@@ -91,7 +91,7 @@ void NotificationService::flushBuffer(const std::string& prefix) {
     {
         const std::lock_guard lock(buffer_state->mutex);
         payloads.swap(buffer_state->pending);
-        buffer_state->timer_scheduled = false;
+        buffer_state->timerScheduled = false;
     }
 
     if(payloads.empty()) {
