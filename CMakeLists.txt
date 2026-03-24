@@ -78,6 +78,7 @@ set(OPENGEOLAB_SPDLOG_VERSION 1.17.0)
 set(OPENGEOLAB_KANGAROO_VERSION 2.2.2)
 set(OPENGEOLAB_NLOHMANN_JSON_VERSION 3.12.0)
 set(OPENGEOLAB_DOCTEST_VERSION 2.4.12)
+set(OPENGEOLAB_GLM_VERSION 1.0.1)
 
 # ---------------------------------------------------------------------------
 # Qt
@@ -179,6 +180,16 @@ opengeolab_resolve_package(
     nlohmann/json
     GIT_TAG
     v${OPENGEOLAB_NLOHMANN_JSON_VERSION})
+
+opengeolab_resolve_package(
+    glm
+    glm::glm
+    VERSION
+    ${OPENGEOLAB_GLM_VERSION}
+    GITHUB_REPOSITORY
+    g-truc/glm
+    GIT_TAG
+    ${OPENGEOLAB_GLM_VERSION})
 
 # ---------------------------------------------------------------------------
 # Python: embedded runtime + pybind11 bridge
