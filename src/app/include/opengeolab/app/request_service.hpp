@@ -1,5 +1,7 @@
-/// @file request_service.hpp
-/// @brief Async request-response service with requestId tracking and progress integration.
+/**
+ * @file request_service.hpp
+ * @brief Async request-response service with requestId tracking and progress integration.
+ */
 #pragma once
 
 #include <QFuture>
@@ -18,10 +20,12 @@ namespace OpenGeoLab::App {
 
 class ProgressTracker;
 
-/// @brief Manages async and main-thread request execution with UUID tracking.
-///
-/// Each request gets a unique requestId injected into the JSON envelope.
-/// Progress is reported through ProgressTracker.
+/**
+ * @brief Manages async and main-thread request execution with UUID tracking.
+ *
+ * Each request gets a unique requestId injected into the JSON envelope.
+ * Progress is reported through ProgressTracker.
+ */
 class RequestService : public QObject {
     Q_OBJECT
     Q_PROPERTY(bool busy READ isBusy NOTIFY busyChanged)
@@ -31,18 +35,23 @@ public:
                             ProgressTracker& progress_tracker,
                             QObject* parent = nullptr);
 
-    /// @brief Waits for all pending futures before destruction.
+    /** @brief Waits for all pending futures before destruction. */
     ~RequestService() override;
 
-    /// @brief Submit an async request dispatched to a worker thread.
-    /// @param request_json JSON request envelope.
-    /// @return Generated requestId (UUID without braces).
+    /**
+     * @brief Submit an async request dispatched to a worker thread.
+     * @param request_json JSON request envelope.
+     * @return Generated requestId (UUID without braces).
+     */
     Q_INVOKABLE QString submitAsync(const QString& request_json);
 
-    /// @brief Execute a request synchronously on the main thread.
-    /// Must be called from the main thread. Used for PySide6 UI operations.
-    /// @param request_json JSON request envelope.
-    /// @return Generated requestId (UUID without braces).
+    /**
+     * @brief Execute a request synchronously on the main thread.
+     *
+     * Must be called from the main thread. Used for PySide6 UI operations.
+     * @param request_json JSON request envelope.
+     * @return Generated requestId (UUID without braces).
+     */
     Q_INVOKABLE QString executeOnMainThread(const QString& request_json);
 
     [[nodiscard]] bool isBusy() const;
@@ -53,13 +62,18 @@ signals:
     void busyChanged();
 
 private:
-    /// @brief Inject requestId field into JSON, return modified JSON string.
-    static QString injectRequestId(const QString& json, const QString& request_id);
+    /** @brief Parsed request metadata prepared in a single JSON parse. */
+    struct PreparedRequest {
+        QString requestId;
+        QString description;
+        QString injectedJson;
+        bool muted = false;
+    };
 
-    /// @brief Extract "module.action" description from JSON for ProgressTracker.
-    static QString extractDescription(const QString& json);
+    /** @brief Parse request JSON once, extract metadata, and inject requestId. */
+    static PreparedRequest prepareRequest(const QString& json);
 
-    /// @brief Parse response and emit responseReady or errorOccurred.
+    /** @brief Parse response and emit responseReady or errorOccurred. */
     void emitResponse(const QString& request_id, const QString& response);
 
     OpenGeoLab::Python::EmbeddedPythonRuntime& m_runtime;

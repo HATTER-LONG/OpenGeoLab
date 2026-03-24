@@ -26,24 +26,27 @@ RequestService::~RequestService() {
 }
 
 QString RequestService::submitAsync(const QString& request_json) {
-    const auto request_id = QUuid::createUuid().toString(QUuid::WithoutBraces);
-    const auto description = extractDescription(request_json);
-    const auto injected_json = injectRequestId(request_json, request_id);
+    auto [request_id, description, injected_json, muted] = prepareRequest(request_json);
 
     m_pendingCount.fetch_add(1, std::memory_order_relaxed);
     emit busyChanged();
-    m_progressTracker.beginTask(request_id, description);
+    if(!muted) {
+        m_progressTracker.beginTask(request_id, description);
+    }
 
     auto* watcher = new QFutureWatcher<QString>(this);
 
     auto future = QtConcurrent::run(
-        [this, json = injected_json.toStdString(), task_id = request_id]() -> QString {
-            OpenGeoLab::Python::ProgressCallback progress_cb =
-                [tracker = &m_progressTracker, task_id](double progress, std::string_view message) {
+        [this, json = injected_json.toStdString(), task_id = request_id, muted]() -> QString {
+            OpenGeoLab::Python::ProgressCallback progress_cb;
+            if(!muted) {
+                progress_cb = [tracker = &m_progressTracker, task_id](double progress,
+                                                                      std::string_view message) {
                     tracker->updateProgress(
                         task_id, progress,
                         QString::fromUtf8(message.data(), static_cast<qsizetype>(message.size())));
                 };
+            }
             return QString::fromStdString(m_runtime.process(json, std::move(progress_cb)));
         });
 
@@ -52,45 +55,52 @@ QString RequestService::submitAsync(const QString& request_json) {
         m_pendingFutures.push_back(future);
     }
 
-    connect(watcher, &QFutureWatcher<QString>::finished, this, [this, watcher, request_id]() {
-        m_pendingCount.fetch_sub(1, std::memory_order_relaxed);
-        emit busyChanged();
+    connect(
+        watcher, &QFutureWatcher<QString>::finished, this, [this, watcher, request_id, muted]() {
+            m_pendingCount.fetch_sub(1, std::memory_order_relaxed);
+            emit busyChanged();
 
-        try {
-            const QString response = watcher->result();
-            m_progressTracker.completeTask(request_id, true);
-            emitResponse(request_id, response);
-        } catch(const std::exception& exception) {
-            m_progressTracker.completeTask(request_id, false);
-            emit errorOccurred(request_id, QString::fromStdString(exception.what()));
-        }
+            try {
+                const QString response = watcher->result();
+                if(!muted) {
+                    m_progressTracker.completeTask(request_id, true);
+                }
+                emitResponse(request_id, response);
+            } catch(const std::exception& exception) {
+                if(!muted) {
+                    m_progressTracker.completeTask(request_id, false);
+                }
+                emit errorOccurred(request_id, QString::fromStdString(exception.what()));
+            }
 
-        {
-            const std::lock_guard lock(m_futuresMutex);
-            std::erase_if(m_pendingFutures,
-                          [](const QFuture<QString>& future) { return future.isFinished(); });
-        }
+            {
+                const std::lock_guard lock(m_futuresMutex);
+                std::erase_if(m_pendingFutures,
+                              [](const QFuture<QString>& future) { return future.isFinished(); });
+            }
 
-        watcher->deleteLater();
-    });
+            watcher->deleteLater();
+        });
 
     watcher->setFuture(future);
     return request_id;
 }
 
 QString RequestService::executeOnMainThread(const QString& request_json) {
-    const auto request_id = QUuid::createUuid().toString(QUuid::WithoutBraces);
-    const auto description = extractDescription(request_json);
-    const auto injected_json = injectRequestId(request_json, request_id);
+    auto [request_id, description, injected_json, muted] = prepareRequest(request_json);
 
-    m_progressTracker.beginTask(request_id, description);
+    if(!muted) {
+        m_progressTracker.beginTask(request_id, description);
+    }
 
-    OpenGeoLab::Python::ProgressCallback progress_cb =
-        [this, request_id](double progress, std::string_view message) {
+    OpenGeoLab::Python::ProgressCallback progress_cb;
+    if(!muted) {
+        progress_cb = [this, request_id](double progress, std::string_view message) {
             m_progressTracker.updateProgress(
                 request_id, progress,
                 QString::fromUtf8(message.data(), static_cast<qsizetype>(message.size())));
         };
+    }
 
     try {
         // Main thread GIL note: main.cpp releases GIL before app.exec().
@@ -100,10 +110,14 @@ QString RequestService::executeOnMainThread(const QString& request_json) {
         // blocking the event loop.
         const auto response = QString::fromStdString(
             m_runtime.process(injected_json.toStdString(), std::move(progress_cb)));
-        m_progressTracker.completeTask(request_id, true);
+        if(!muted) {
+            m_progressTracker.completeTask(request_id, true);
+        }
         emitResponse(request_id, response);
     } catch(const std::exception& exception) {
-        m_progressTracker.completeTask(request_id, false);
+        if(!muted) {
+            m_progressTracker.completeTask(request_id, false);
+        }
         emit errorOccurred(request_id, QString::fromStdString(exception.what()));
     }
 
@@ -112,19 +126,23 @@ QString RequestService::executeOnMainThread(const QString& request_json) {
 
 bool RequestService::isBusy() const { return m_pendingCount.load(std::memory_order_relaxed) > 0; }
 
-QString RequestService::injectRequestId(const QString& json, const QString& request_id) {
+RequestService::PreparedRequest RequestService::prepareRequest(const QString& json) {
     auto document = QJsonDocument::fromJson(json.toUtf8());
     auto object = document.object();
-    object.insert(QStringLiteral("requestId"), request_id);
-    return QString::fromUtf8(QJsonDocument(object).toJson(QJsonDocument::Compact));
-}
 
-QString RequestService::extractDescription(const QString& json) {
-    const auto document = QJsonDocument::fromJson(json.toUtf8());
-    const auto object = document.object();
     const auto module = object.value("module").toString(QStringLiteral("unknown"));
     const auto action = object.value("action").toString(QStringLiteral("unknown"));
-    return QStringLiteral("%1.%2").arg(module, action);
+    const bool muted = object.value("mute").toBool(false);
+
+    const auto request_id = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    object.insert(QStringLiteral("requestId"), request_id);
+
+    return {
+        request_id,
+        QStringLiteral("%1.%2").arg(module, action),
+        QString::fromUtf8(QJsonDocument(object).toJson(QJsonDocument::Compact)),
+        muted,
+    };
 }
 
 void RequestService::emitResponse(const QString& request_id, const QString& response) {

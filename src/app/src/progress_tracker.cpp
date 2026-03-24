@@ -20,6 +20,11 @@ void ProgressTracker::beginTask(const QString& task_id, const QString& descripti
             TaskState{description, {}, 0.0, std::chrono::steady_clock::now(), false, true};
     }
 
+    // Emit taskStarted before progressChanged so QML resets bar state
+    // before bindings see the new progress value.
+    QMetaObject::invokeMethod(
+        this, [this, task_id]() { emit taskStarted(task_id); }, Qt::QueuedConnection);
+
     emitProgressChanged();
 }
 
@@ -56,6 +61,13 @@ void ProgressTracker::completeTask(const QString& task_id, bool success) {
         }
         iterator->second.lastUpdate = std::chrono::steady_clock::now();
     }
+
+    // Emit taskCompleted BEFORE progressChanged so QML sets completionState
+    // before bindings see hasActiveTasks=false. This avoids the progress bar
+    // briefly jumping to 0 then animating back to 100%.
+    QMetaObject::invokeMethod(
+        this, [this, task_id, success]() { emit taskCompleted(task_id, success); },
+        Qt::QueuedConnection);
 
     emitProgressChanged();
 }
@@ -110,6 +122,27 @@ bool ProgressTracker::hasActiveTasks() const {
     const std::lock_guard lock(m_mutex);
     return std::any_of(m_tasks.cbegin(), m_tasks.cend(),
                        [](const auto& entry) { return !entry.second.completed; });
+}
+
+QString ProgressTracker::currentMessage() const {
+    const std::lock_guard lock(m_mutex);
+
+    const TaskState* latest_task = nullptr;
+    for(const auto& [task_id, task_state] : m_tasks) {
+        static_cast<void>(task_id);
+        if(task_state.completed) {
+            continue;
+        }
+        if(latest_task == nullptr || latest_task->lastUpdate < task_state.lastUpdate) {
+            latest_task = &task_state;
+        }
+    }
+
+    if(latest_task == nullptr) {
+        return {};
+    }
+
+    return latest_task->message;
 }
 
 void ProgressTracker::emitProgressChanged() {
