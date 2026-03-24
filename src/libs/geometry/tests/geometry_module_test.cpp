@@ -12,7 +12,7 @@
 TEST_CASE("createBox generates correct BoxData with progress") {
     std::vector<double> reported_progress;
 
-    OpenGeoLab::Geometry::ProgressCallback callback =
+    const OpenGeoLab::Geometry::ProgressCallback callback =
         [&reported_progress](double progress, std::string_view /*message*/) {
             reported_progress.push_back(progress);
         };

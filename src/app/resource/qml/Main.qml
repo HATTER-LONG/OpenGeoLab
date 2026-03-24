@@ -45,6 +45,8 @@ Window {
                     root.pluginList = resp.result.plugins || [];
                     root.pluginListLoaded = true;
                     root.statusNote = qsTr("Found %1 plugin(s).").arg(root.pluginList.length);
+                } else if (resp.module === "geometry" && resp.ok) {
+                    root.statusNote = qsTr("Geometry: %1").arg(resp.summary ?? "done");
                 }
             } catch (e) {
                 console.warn("[Main] Failed to parse response:", e);
@@ -53,6 +55,27 @@ Window {
 
         function onErrorOccurred(requestId, errorMessage) {
             root.statusNote = qsTr("Error: %1").arg(errorMessage);
+        }
+    }
+
+    Connections {
+        target: NotificationService
+
+        function onNotificationReceived(channel, payload) {
+            try {
+                if (channel === "geometry.status" || channel === "geometry.progress") {
+                    const data = JSON.parse(payload);
+                    if (data.event === "started") {
+                        root.statusNote = qsTr("Creating box…");
+                    } else if (data.event === "progress") {
+                        root.statusNote = data.message ?? qsTr("Processing…");
+                    } else if (data.event === "completed") {
+                        root.statusNote = qsTr("Completed: %1").arg(data.label ?? "");
+                    }
+                }
+            } catch (e) {
+                console.warn("[Main] Failed to parse notification:", e);
+            }
         }
     }
 
@@ -81,6 +104,17 @@ Window {
             root.statusNote = TranslationManager.currentLanguage === "zh_CN"
                 ? qsTr("Switched to Chinese.") : qsTr("Switched to English.");
             root.menuOpen = false;
+            return;
+        }
+
+        // Geometry actions dispatched to C++ geometry module via Python runtime
+        if (actionKey === "addBox") {
+            RequestService.submitAsync(JSON.stringify({
+                module: "geometry",
+                action: "create_box",
+                param: { vertexCount: 100, center: [0, 0, 0], size: [1, 1, 1] }
+            }));
+            root.statusNote = qsTr("Creating box…");
             return;
         }
 

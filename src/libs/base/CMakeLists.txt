@@ -1,5 +1,5 @@
 set(base_public_headers include/opengeolab/base/notification_sink.hpp
-                       include/opengeolab/base/notification_registry.hpp)
+                        include/opengeolab/base/notification_registry.hpp)
 
 set(base_sources src/notification_registry.cpp)
 
