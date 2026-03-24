@@ -256,5 +256,6 @@ add_subdirectory(third_party/glad)
 
 add_subdirectory(src/libs/base)
 add_subdirectory(src/libs/geometry)
+add_subdirectory(src/libs/scene)
 add_subdirectory(src/libs/python)
 add_subdirectory(src/app)
