@@ -28,14 +28,20 @@ RenderEngine::~RenderEngine() {
     }
 }
 
-void RenderEngine::initialize() {
+bool RenderEngine::initialize(GlLoaderFunc loader, void* userptr) {
     if(initialized_) {
-        return;
+        return true;
+    }
+
+    const int version = gladLoadGLUserPtr(loader, userptr);
+    if(version == 0) {
+        return false;
     }
 
     passManager_.registerPass("grid", std::make_unique<GridPass>(), 100);
     passManager_.setupAll(width_, height_);
     initialized_ = true;
+    return true;
 }
 
 void RenderEngine::resize(int width, int height) {

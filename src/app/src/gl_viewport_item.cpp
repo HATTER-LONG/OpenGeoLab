@@ -5,8 +5,7 @@
 #include <opengeolab/app/gl_viewport_item.hpp>
 
 #include <opengeolab/app/viewport_controller.hpp>
-
-#include <glad/gl.h>
+#include <opengeolab/render/render_engine.hpp>
 
 #include <QMouseEvent>
 #include <QOpenGLContext>
@@ -20,13 +19,13 @@ namespace OpenGeoLab::App {
 
 namespace {
 
-[[nodiscard]] GLADapiproc loadOpenGLProcAddress(void* userptr, const char* name) {
+[[nodiscard]] Render::GlFuncPtr loadOpenGLProcAddress(void* userptr, const char* name) {
     auto* context = static_cast<QOpenGLContext*>(userptr);
     if(context == nullptr) {
         return nullptr;
     }
 
-    return reinterpret_cast<GLADapiproc>(context->getProcAddress(name));
+    return reinterpret_cast<Render::GlFuncPtr>(context->getProcAddress(name));
 }
 
 class GLViewportRenderer : public QQuickFramebufferObject::Renderer {
@@ -62,15 +61,12 @@ public:
                 return;
             }
 
-            const int version =
-                gladLoadGLUserPtr(loadOpenGLProcAddress, static_cast<void*>(current_context));
-            if(version == 0) {
+            glad_initialized_ = engine_->initialize(
+                loadOpenGLProcAddress, static_cast<void*>(current_context));
+            if(!glad_initialized_) {
                 qWarning("Failed to initialize GLAD");
                 return;
             }
-
-            engine_->initialize();
-            glad_initialized_ = true;
         }
 
         engine_->render();

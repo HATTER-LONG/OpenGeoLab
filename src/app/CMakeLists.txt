@@ -26,8 +26,7 @@ target_link_libraries(
             OpenGeoLab::Base
             OpenGeoLab::Python
             OpenGeoLab::Render
-            OpenGeoLab::Scene
-            glad)
+            OpenGeoLab::Scene)
 
 qt_add_qml_module(
     opengeolab_app
