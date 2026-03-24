@@ -3,7 +3,7 @@ project(
     OpenGeoLab
     VERSION 0.1.0
     DESCRIPTION "OpenGeoLab — Modern OpenGL 3D modeling application"
-    LANGUAGES CXX)
+    LANGUAGES C CXX)
 
 if (POLICY CMP0207)
     cmake_policy(SET CMP0207 NEW)
