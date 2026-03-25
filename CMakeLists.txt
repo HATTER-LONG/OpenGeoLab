@@ -192,6 +192,18 @@ opengeolab_resolve_package(
     ${OPENGEOLAB_GLM_VERSION})
 
 # ---------------------------------------------------------------------------
+# OpenCASCADE geometry kernel
+# ---------------------------------------------------------------------------
+
+option(OPENGEOLAB_USE_OCC "Enable OpenCASCADE geometry kernel" ON)
+
+if(OPENGEOLAB_USE_OCC)
+  find_package(OpenCASCADE REQUIRED)
+  message(STATUS "OpenCASCADE ${OpenCASCADE_MAJOR_VERSION}.${OpenCASCADE_MINOR_VERSION}.${OpenCASCADE_MAINTENANCE_VERSION}"
+                 " found: ${OpenCASCADE_INSTALL_PREFIX}")
+endif()
+
+# ---------------------------------------------------------------------------
 # Python: embedded runtime + pybind11 bridge
 # ---------------------------------------------------------------------------
 
