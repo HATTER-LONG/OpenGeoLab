@@ -12,6 +12,9 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Enforce dynamic CRT (/MD, /MDd) for all targets including third-party deps.
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+
 option(OPENGEOLAB_BUILD_TESTS "Build OpenGeoLab tests" ON)
 option(OPENGEOLAB_FETCH_DEPENDENCIES "Fetch missing dependencies with CPM" ON)
 option(OPENGEOLAB_BUILD_SHARED_LIBS

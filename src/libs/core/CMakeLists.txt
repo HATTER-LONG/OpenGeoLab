@@ -1,7 +1,9 @@
-set(core_public_headers include/opengeolab/core/progress_callback.hpp
-                        include/opengeolab/core/point_vector3d.hpp)
+set(core_public_headers
+    include/opengeolab/core/logger.hpp
+    include/opengeolab/core/progress_callback.hpp
+    include/opengeolab/core/point_vector3d.hpp)
 
-set(core_sources src/process_callback.cpp)
+set(core_sources src/logger.cpp src/process_callback.cpp)
 opengeolab_add_module(
     opengeolab_core
     ALIAS_NAME
@@ -11,7 +13,8 @@ opengeolab_add_module(
     PUBLIC_HEADERS
     ${core_public_headers}
     PUBLIC_LINKS
-    Kangaroo::Kangaroo)
+    Kangaroo::Kangaroo
+    spdlog::spdlog)
 
 if (OPENGEOLAB_BUILD_TESTS)
     opengeolab_add_doctest_test(

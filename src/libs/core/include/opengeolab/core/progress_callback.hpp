@@ -8,8 +8,10 @@
 
 #pragma once
 
+#include <opengeolab/core/core_export.hpp>
+
 #include <functional>
-#include <kangaroo/util/current_thread.hpp>
+#include <string>
 
 namespace OpenGeoLab::Core {
 /**
@@ -31,7 +33,7 @@ inline const ProgressCallback NO_PROGRESS_CALLBACK = [](double, const std::strin
  * @param span Size of the sub-range
  * @return Callback that maps [0,1] to [base, base+span]
  */
-[[nodiscard]] ProgressCallback
+[[nodiscard]] OPENGEOLAB_CORE_EXPORT ProgressCallback
 makeScaledProgressCallback(ProgressCallback callback, double base, double span);
 
 } // namespace OpenGeoLab::Core
