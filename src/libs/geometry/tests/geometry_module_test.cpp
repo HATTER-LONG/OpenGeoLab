@@ -10,6 +10,7 @@
 #include <opengeolab/scene/render_mesh_data.hpp>
 
 #include "shape_store.hpp"
+#include "tessellator.hpp"
 
 #include <BRepPrimAPI_MakeBox.hxx>
 
@@ -71,4 +72,39 @@ TEST_CASE("ShapeStore clear") {
 
     store.clear();
     CHECK(store.shapeCount() == 0);
+}
+
+TEST_CASE("Tessellator tessellate box") {
+    TopoDS_Shape box = BRepPrimAPI_MakeBox(2.0, 3.0, 4.0).Shape();
+    auto mesh = OpenGeoLab::Geometry::Tessellator::tessellate(box);
+
+    CHECK(!mesh.positions.empty());
+    CHECK(!mesh.indices.empty());
+    CHECK(mesh.topology == OpenGeoLab::Scene::PrimitiveType::Triangles);
+    CHECK(mesh.indices.size() % 3 == 0);
+    auto vertexCount = static_cast<std::uint32_t>(mesh.positions.size() / 3);
+    for(auto idx : mesh.indices) {
+        CHECK(idx < vertexCount);
+    }
+}
+
+TEST_CASE("Tessellator extractEdges box") {
+    TopoDS_Shape box = BRepPrimAPI_MakeBox(2.0, 3.0, 4.0).Shape();
+    auto mesh = OpenGeoLab::Geometry::Tessellator::extractEdges(box);
+
+    CHECK(!mesh.positions.empty());
+    CHECK(mesh.topology == OpenGeoLab::Scene::PrimitiveType::Lines);
+}
+
+TEST_CASE("Tessellator computeBounds") {
+    TopoDS_Shape box = BRepPrimAPI_MakeBox(2.0, 2.0, 2.0).Shape();
+    auto bounds = OpenGeoLab::Geometry::Tessellator::computeBounds(box);
+
+    CHECK(bounds.isValid());
+    CHECK(bounds.min.x == doctest::Approx(0.0).epsilon(0.01));
+    CHECK(bounds.min.y == doctest::Approx(0.0).epsilon(0.01));
+    CHECK(bounds.min.z == doctest::Approx(0.0).epsilon(0.01));
+    CHECK(bounds.max.x == doctest::Approx(2.0).epsilon(0.01));
+    CHECK(bounds.max.y == doctest::Approx(2.0).epsilon(0.01));
+    CHECK(bounds.max.z == doctest::Approx(2.0).epsilon(0.01));
 }
