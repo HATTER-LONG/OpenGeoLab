@@ -8,6 +8,9 @@
 #include <opengeolab/geometry/geometry_module.hpp>
 #include <opengeolab/scene/bounding_box.hpp>
 #include <opengeolab/scene/render_mesh_data.hpp>
+#include <opengeolab/scene/scene_graph.hpp>
+
+#include <nlohmann/json.hpp>
 
 #include "shape_store.hpp"
 #include "tessellator.hpp"
@@ -30,10 +33,65 @@ int countSubShapes(const TopoDS_Shape& shape, TopAbs_ShapeEnum type) {
 
 } // namespace
 
-TEST_CASE("GeometryModule stub returns not-implemented") {
-    OpenGeoLab::Geometry::GeometryModule mod;
-    auto result = mod.process(R"({"action":"unknown"})");
-    CHECK(result.find("not implemented") != std::string::npos);
+TEST_CASE("GeometryModule create_box JSON") {
+    OpenGeoLab::Scene::SceneGraph graph;
+    OpenGeoLab::Geometry::GeometryModule module(graph);
+
+    auto response = module.process(R"({
+        "action": "create_box",
+        "center": [0.0, 0.0, 0.0],
+        "size": [2.0, 3.0, 4.0]
+    })");
+
+    auto j = nlohmann::json::parse(response);
+    CHECK(j["ok"] == true);
+    CHECK(j["result"]["id"].get<int>() > 0);
+    CHECK(graph.root().children.size() == 1);
+    CHECK(!graph.root().children[0].meshes.empty());
+}
+
+TEST_CASE("GeometryModule create_cylinder JSON") {
+    OpenGeoLab::Scene::SceneGraph graph;
+    OpenGeoLab::Geometry::GeometryModule module(graph);
+
+    auto response = module.process(R"({
+        "action": "create_cylinder",
+        "center": [0.0, 0.0, 0.0],
+        "radius": 1.0,
+        "height": 5.0
+    })");
+
+    auto j = nlohmann::json::parse(response);
+    CHECK(j["ok"] == true);
+    CHECK(j["result"]["id"].get<int>() > 0);
+    CHECK(graph.root().children.size() == 1);
+}
+
+TEST_CASE("GeometryModule list_shapes") {
+    OpenGeoLab::Scene::SceneGraph graph;
+    OpenGeoLab::Geometry::GeometryModule module(graph);
+
+    const auto createBoxResponse =
+        module.process(R"({"action":"create_box","center":[0,0,0],"size":[1,1,1]})");
+    const auto createSphereResponse =
+        module.process(R"({"action":"create_sphere","center":[5,0,0],"radius":2.0})");
+    CHECK(!createBoxResponse.empty());
+    CHECK(!createSphereResponse.empty());
+
+    auto response = module.process(R"({"action":"list_shapes"})");
+    auto j = nlohmann::json::parse(response);
+    CHECK(j["ok"] == true);
+    CHECK(j["result"]["count"].get<int>() == 2);
+}
+
+TEST_CASE("GeometryModule unknown action") {
+    OpenGeoLab::Scene::SceneGraph graph;
+    OpenGeoLab::Geometry::GeometryModule module(graph);
+
+    auto response = module.process(R"({"action":"nonexistent"})");
+    auto j = nlohmann::json::parse(response);
+    CHECK(j["ok"] == false);
+    CHECK(j.contains("error"));
 }
 
 TEST_CASE("ShapeStore addShape and retrieve") {
