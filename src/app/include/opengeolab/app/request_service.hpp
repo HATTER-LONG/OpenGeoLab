@@ -36,6 +36,12 @@ class RequestService : public QObject {
     Q_PROPERTY(bool busy READ isBusy NOTIFY busyChanged)
 
 public:
+    /**
+     * @brief Construct a request service bound to Python and progress services.
+     * @param runtime Embedded Python runtime used for non-geometry requests.
+     * @param progress_tracker Progress tracker updated during request execution.
+     * @param parent Optional QObject parent.
+     */
     explicit RequestService(OpenGeoLab::Python::EmbeddedPythonRuntime& runtime,
                             ProgressTracker& progress_tracker,
                             QObject* parent = nullptr);
@@ -59,13 +65,31 @@ public:
      */
     Q_INVOKABLE QString executeOnMainThread(const QString& request_json);
 
+    /**
+     * @brief Attach the geometry module used for OCC-backed geometry requests.
+     * @param module Geometry module instance, or @c nullptr to disable geometry handling.
+     */
     void setGeometryModule(Geometry::GeometryModule* module);
 
+    /** @brief Check whether any asynchronous requests are still running. */
     [[nodiscard]] bool isBusy() const;
 
 signals:
+    /**
+     * @brief Emitted when a request completes with a structured JSON response.
+     * @param request_id Request identifier assigned by the service.
+     * @param response_json JSON response payload returned by the request handler.
+     */
     void responseReady(const QString& request_id, const QString& response_json);
+
+    /**
+     * @brief Emitted when request processing fails before a response is produced.
+     * @param request_id Request identifier assigned by the service.
+     * @param error_message Human-readable error description.
+     */
     void errorOccurred(const QString& request_id, const QString& error_message);
+
+    /** @brief Emitted when the busy state changes due to request scheduling or completion. */
     void busyChanged();
 
 private:

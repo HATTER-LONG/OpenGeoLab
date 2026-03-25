@@ -29,12 +29,25 @@ class GLViewportItem : public QQuickFramebufferObject {
     Q_PROPERTY(ViewportController* controller READ controller CONSTANT)
 
 public:
+    /**
+     * @brief Construct the viewport item and its viewport controller.
+     * @param parent Optional parent quick item.
+     */
     explicit GLViewportItem(QQuickItem* parent = nullptr);
 
+    /** @brief Create the Qt scene graph renderer bound to this viewport item. */
     [[nodiscard]] Renderer* createRenderer() const override;
 
+    /** @brief Access the controller that translates user input into camera commands. */
     [[nodiscard]] ViewportController* controller() const;
+
+    /** @brief Access the render engine owned by this viewport item. */
     Render::RenderEngine& renderEngine();
+
+    /**
+     * @brief Attach the scene graph consumed by the render engine.
+     * @param graph Scene graph to visualize, or @c nullptr to disconnect.
+     */
     void setSceneGraph(Scene::SceneGraph* graph);
 
 protected:

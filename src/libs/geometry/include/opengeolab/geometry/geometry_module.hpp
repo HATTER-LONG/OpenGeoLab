@@ -42,11 +42,22 @@ public:
      */
     explicit GeometryModule(Scene::SceneGraph& graph);
 
+    /** @brief Destroy the module and release OCC-backed state. */
     ~GeometryModule();
 
     GeometryModule(const GeometryModule&) = delete;
     GeometryModule& operator=(const GeometryModule&) = delete;
+    /**
+     * @brief Transfer ownership from another module instance.
+     * @param other Source module to move from.
+     */
     GeometryModule(GeometryModule&&) noexcept;
+
+    /**
+     * @brief Replace this module state by moving from another instance.
+     * @param other Source module to move from.
+     * @return Reference to this module.
+     */
     GeometryModule& operator=(GeometryModule&&) noexcept;
 
     /**

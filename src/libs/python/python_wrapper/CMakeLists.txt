@@ -5,9 +5,9 @@ target_compile_features(opengeolab_pywrapper PRIVATE cxx_std_20)
 target_compile_definitions(
     opengeolab_pywrapper PRIVATE $<$<PLATFORM_ID:Windows>:MS_NO_COREDLL>
                                  $<$<PLATFORM_ID:Windows>:Py_ENABLE_SHARED>)
-target_link_libraries(opengeolab_pywrapper PRIVATE pybind11::pybind11
-                                                   OpenGeoLab::Geometry
-                                                   OpenGeoLab::Scene)
+target_link_libraries(
+    opengeolab_pywrapper PRIVATE pybind11::pybind11 OpenGeoLab::Geometry
+                                 OpenGeoLab::Scene)
 set_target_properties(
     opengeolab_pywrapper
     PROPERTIES FOLDER "python"

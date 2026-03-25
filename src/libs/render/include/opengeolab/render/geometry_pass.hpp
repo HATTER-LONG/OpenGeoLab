@@ -30,8 +30,20 @@ public:
         glm::mat4 transform{1.0F};
     };
 
+    /**
+     * @brief Initialize shaders and GL state for geometry rendering.
+     * @param width Current framebuffer width in pixels.
+     * @param height Current framebuffer height in pixels.
+     */
     void setup(int width, int height) override;
+
+    /**
+     * @brief Render the configured face meshes for the current frame.
+     * @param ctx Frame render context containing matrices and viewport state.
+     */
     void execute(const RenderContext& ctx) override;
+
+    /** @brief Release GL resources owned by the geometry pass. */
     void teardown() override;
 
     /**

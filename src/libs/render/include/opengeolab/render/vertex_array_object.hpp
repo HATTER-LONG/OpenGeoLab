@@ -19,12 +19,25 @@ namespace OpenGeoLab::Render {
  */
 class OPENGEOLAB_RENDER_EXPORT VertexArrayObject {
 public:
+    /** @brief Construct an empty VAO wrapper with no allocated GL objects. */
     VertexArrayObject() = default;
+
+    /** @brief Destroy the VAO wrapper and release any owned GL resources. */
     ~VertexArrayObject();
 
     VertexArrayObject(const VertexArrayObject&) = delete;
     VertexArrayObject& operator=(const VertexArrayObject&) = delete;
+    /**
+     * @brief Move GL object ownership from another wrapper.
+     * @param other Source wrapper to move from.
+     */
     VertexArrayObject(VertexArrayObject&& other) noexcept;
+
+    /**
+     * @brief Replace owned GL objects by moving from another wrapper.
+     * @param other Source wrapper to move from.
+     * @return Reference to this wrapper.
+     */
     VertexArrayObject& operator=(VertexArrayObject&& other) noexcept;
 
     /**

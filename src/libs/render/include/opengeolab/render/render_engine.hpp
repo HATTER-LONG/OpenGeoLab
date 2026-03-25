@@ -17,13 +17,15 @@ namespace OpenGeoLab::Render {
 class GeometryPass;
 class WireframePass;
 
-/// Opaque function pointer representing a GL procedure address.
+/** @brief Opaque function pointer representing a GL procedure address. */
 using GlFuncPtr = void (*)();
 
-/// Callback that resolves an OpenGL function by name.
-/// @param userptr Opaque context forwarded from initialize().
-/// @param name    Null-terminated GL function name (e.g. "glCreateShader").
-/// @return Function pointer, or nullptr if not found.
+/**
+ * @brief Callback that resolves an OpenGL function by name.
+ * @param userptr Opaque context forwarded from initialize().
+ * @param name Null-terminated GL function name, for example @c "glCreateShader".
+ * @return Function pointer, or @c nullptr if not found.
+ */
 using GlLoaderFunc = GlFuncPtr (*)(void* userptr, const char* name);
 
 /**
@@ -35,7 +37,10 @@ using GlLoaderFunc = GlFuncPtr (*)(void* userptr, const char* name);
  */
 class OPENGEOLAB_RENDER_EXPORT RenderEngine {
 public:
+    /** @brief Construct a render engine with built-in passes disconnected from any scene. */
     RenderEngine();
+
+    /** @brief Destroy the render engine and tear down owned render passes. */
     ~RenderEngine();
 
     /**
@@ -46,7 +51,11 @@ public:
      */
     [[nodiscard]] bool initialize(GlLoaderFunc loader, void* userptr);
 
-    /** @brief Handle viewport resize. */
+    /**
+     * @brief Handle viewport resize.
+     * @param width New viewport width in pixels.
+     * @param height New viewport height in pixels.
+     */
     void resize(int width, int height);
 
     /** @brief Execute one frame. */
@@ -58,8 +67,13 @@ public:
      */
     void setSceneGraph(Scene::SceneGraph* graph);
 
+    /** @brief Access the engine camera used for frame rendering. */
     Camera& camera();
+
+    /** @brief Access the engine camera used for frame rendering. */
     const Camera& camera() const;
+
+    /** @brief Access the pass manager coordinating built-in render passes. */
     PassManager& passManager();
 
 private:

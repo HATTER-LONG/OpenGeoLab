@@ -172,22 +172,22 @@ if (OPENGEOLAB_BUILD_TESTS)
     opengeolab_add_doctest_test(
         opengeolab_app_request_service_test
         SOURCES
-            include/opengeolab/app/progress_tracker.hpp
-            include/opengeolab/app/request_service.hpp
-            tests/request_service_test.cpp
-            tests/gl_viewport_item_api_test.cpp
-            src/request_service.cpp
-            src/progress_tracker.cpp
+        include/opengeolab/app/progress_tracker.hpp
+        include/opengeolab/app/request_service.hpp
+        tests/request_service_test.cpp
+        tests/gl_viewport_item_api_test.cpp
+        src/request_service.cpp
+        src/progress_tracker.cpp
         LINKS
-            Qt6::Concurrent
-            Qt6::Core
-            Qt6::Gui
-            Qt6::Qml
-            Qt6::Quick
-            OpenGeoLab::Geometry
-            OpenGeoLab::Python
-            OpenGeoLab::Render
-            OpenGeoLab::Scene)
+        Qt6::Concurrent
+        Qt6::Core
+        Qt6::Gui
+        Qt6::Qml
+        Qt6::Quick
+        OpenGeoLab::Geometry
+        OpenGeoLab::Python
+        OpenGeoLab::Render
+        OpenGeoLab::Scene)
     target_include_directories(
         opengeolab_app_request_service_test
         PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include"
