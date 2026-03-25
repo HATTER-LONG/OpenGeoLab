@@ -4,6 +4,7 @@
  */
 
 #include <opengeolab/geometry/geometry_module.hpp>
+#include <opengeolab/scene/scene_graph.hpp>
 
 #include <pybind11/pybind11.h>
 
@@ -33,8 +34,8 @@ PYBIND11_MODULE(opengeolab_pywrapper, module) {
             const auto module_pos = request_json.find("\"module\"");
             if(module_pos != std::string::npos) {
                 if(request_json.find("\"geometry\"", module_pos) != std::string::npos) {
-                    static OpenGeoLab::Geometry::SceneStore geometry_store;
-                    static OpenGeoLab::Geometry::GeometryModule geometry_module{geometry_store};
+                    static OpenGeoLab::Scene::SceneGraph scene_graph;
+                    static OpenGeoLab::Geometry::GeometryModule geometry_module{scene_graph};
                     return geometry_module.process(request_json, cpp_callback);
                 }
             }

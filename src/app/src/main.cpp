@@ -6,12 +6,15 @@
 
 #include <pybind11/pybind11.h>
 
+#include <opengeolab/app/gl_viewport_item.hpp>
 #include <opengeolab/app/main_thread_executor.hpp>
 #include <opengeolab/app/notification_service.hpp>
 #include <opengeolab/app/progress_tracker.hpp>
 #include <opengeolab/app/request_service.hpp>
 #include <opengeolab/base/notification_registry.hpp>
+#include <opengeolab/geometry/geometry_module.hpp>
 #include <opengeolab/python/embedded_python_runtime.hpp>
+#include <opengeolab/scene/scene_graph.hpp>
 
 #include <QApplication>
 #include <QQmlApplicationEngine>
@@ -63,6 +66,9 @@ int main(int argc, char* argv[]) {
     OpenGeoLab::App::MainThreadExecutor main_thread_executor;
     OpenGeoLab::Base::NotificationRegistry::setSink(&notification_service);
     OpenGeoLab::App::RequestService request_service(python_runtime, progress_tracker);
+    OpenGeoLab::Scene::SceneGraph scene_graph;
+    OpenGeoLab::Geometry::GeometryModule geometry_module(scene_graph);
+    request_service.setGeometryModule(&geometry_module);
 
     qmlRegisterSingletonInstance("OpenGeoLab.Services", 1, 0, "RequestService", &request_service);
     qmlRegisterSingletonInstance("OpenGeoLab.Services", 1, 0, "NotificationService",
@@ -77,7 +83,26 @@ int main(int argc, char* argv[]) {
         &engine, &QQmlApplicationEngine::objectCreationFailed, &app,
         []() { QCoreApplication::exit(-1); }, Qt::QueuedConnection);
 
+    const auto wire_scene_graph = [&scene_graph](QObject* object) {
+        if(object == nullptr) {
+            return;
+        }
+
+        auto* viewport = object->findChild<OpenGeoLab::App::GLViewportItem*>();
+        if(viewport != nullptr) {
+            viewport->setSceneGraph(&scene_graph);
+        }
+    };
+
+    QObject::connect(
+        &engine, &QQmlApplicationEngine::objectCreated, &app,
+        [&wire_scene_graph](QObject* object, const QUrl&) { wire_scene_graph(object); },
+        Qt::QueuedConnection);
+
     engine.loadFromModule("OpenGeoLab.App", "Main");
+    for(QObject* object : engine.rootObjects()) {
+        wire_scene_graph(object);
+    }
 
     const pybind11::gil_scoped_release release;
     return app.exec();

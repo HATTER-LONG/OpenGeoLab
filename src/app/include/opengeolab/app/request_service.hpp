@@ -10,11 +10,16 @@
 
 #include <atomic>
 #include <mutex>
+#include <string>
 #include <vector>
 
 namespace OpenGeoLab::Python {
 class EmbeddedPythonRuntime;
 } // namespace OpenGeoLab::Python
+
+namespace OpenGeoLab::Geometry {
+class GeometryModule;
+} // namespace OpenGeoLab::Geometry
 
 namespace OpenGeoLab::App {
 
@@ -54,6 +59,8 @@ public:
      */
     Q_INVOKABLE QString executeOnMainThread(const QString& request_json);
 
+    void setGeometryModule(Geometry::GeometryModule* module);
+
     [[nodiscard]] bool isBusy() const;
 
 signals:
@@ -68,6 +75,7 @@ private:
         QString description;
         QString injectedJson;
         bool muted = false;
+        QString module;
     };
 
     /** @brief Parse request JSON once, extract metadata, and inject requestId. */
@@ -75,9 +83,11 @@ private:
 
     /** @brief Parse response and emit responseReady or errorOccurred. */
     void emitResponse(const QString& request_id, const QString& response);
+    QString processGeometry(const std::string& json, const QString& taskId, bool muted);
 
     OpenGeoLab::Python::EmbeddedPythonRuntime& m_runtime;
     ProgressTracker& m_progressTracker;
+    Geometry::GeometryModule* geometryModule_ = nullptr;
     std::atomic<int> m_pendingCount{0};
     mutable std::mutex m_futuresMutex;
     std::vector<QFuture<QString>> m_pendingFutures;

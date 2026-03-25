@@ -26,7 +26,8 @@ target_link_libraries(
             OpenGeoLab::Base
             OpenGeoLab::Python
             OpenGeoLab::Render
-            OpenGeoLab::Scene)
+            OpenGeoLab::Scene
+            OpenGeoLab::Geometry)
 
 qt_add_qml_module(
     opengeolab_app
@@ -166,3 +167,32 @@ qt_add_translations(
     RESOURCE_PREFIX "/translations")
 
 install(TARGETS opengeolab_app RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
+
+if (OPENGEOLAB_BUILD_TESTS)
+    opengeolab_add_doctest_test(
+        opengeolab_app_request_service_test
+        SOURCES
+            include/opengeolab/app/progress_tracker.hpp
+            include/opengeolab/app/request_service.hpp
+            tests/request_service_test.cpp
+            tests/gl_viewport_item_api_test.cpp
+            src/request_service.cpp
+            src/progress_tracker.cpp
+        LINKS
+            Qt6::Concurrent
+            Qt6::Core
+            Qt6::Gui
+            Qt6::Qml
+            Qt6::Quick
+            OpenGeoLab::Geometry
+            OpenGeoLab::Python
+            OpenGeoLab::Render
+            OpenGeoLab::Scene)
+    target_include_directories(
+        opengeolab_app_request_service_test
+        PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include"
+                "${CMAKE_CURRENT_SOURCE_DIR}/include/opengeolab/app")
+    target_compile_definitions(
+        opengeolab_app_request_service_test
+        PRIVATE OPENGEOLAB_PROJECT_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+endif ()

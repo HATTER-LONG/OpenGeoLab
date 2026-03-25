@@ -1,6 +1,7 @@
 #include <opengeolab/app/request_service.hpp>
 
 #include <opengeolab/app/progress_tracker.hpp>
+#include <opengeolab/geometry/geometry_module.hpp>
 #include <opengeolab/python/embedded_python_runtime.hpp>
 
 #include <QFutureWatcher>
@@ -25,8 +26,14 @@ RequestService::~RequestService() {
     }
 }
 
+void RequestService::setGeometryModule(Geometry::GeometryModule* module) {
+    geometryModule_ = module;
+}
+
 QString RequestService::submitAsync(const QString& request_json) {
-    auto [request_id, description, injected_json, muted] = prepareRequest(request_json);
+    auto [request_id, description, injected_json, muted, module] = prepareRequest(request_json);
+    const bool use_geometry_module =
+        geometryModule_ != nullptr && module == QStringLiteral("geometry");
 
     m_pendingCount.fetch_add(1, std::memory_order_relaxed);
     emit busyChanged();
@@ -36,19 +43,23 @@ QString RequestService::submitAsync(const QString& request_json) {
 
     auto* watcher = new QFutureWatcher<QString>(this);
 
-    auto future = QtConcurrent::run(
-        [this, json = injected_json.toStdString(), task_id = request_id, muted]() -> QString {
-            OpenGeoLab::Python::ProgressCallback progress_cb;
-            if(!muted) {
-                progress_cb = [tracker = &m_progressTracker, task_id](double progress,
-                                                                      std::string_view message) {
-                    tracker->updateProgress(
-                        task_id, progress,
-                        QString::fromUtf8(message.data(), static_cast<qsizetype>(message.size())));
-                };
-            }
-            return QString::fromStdString(m_runtime.process(json, std::move(progress_cb)));
-        });
+    auto future = QtConcurrent::run([this, json = injected_json.toStdString(), task_id = request_id,
+                                     muted, use_geometry_module]() -> QString {
+        if(use_geometry_module) {
+            return processGeometry(json, task_id, muted);
+        }
+
+        OpenGeoLab::Python::ProgressCallback progress_cb;
+        if(!muted) {
+            progress_cb = [tracker = &m_progressTracker, task_id](double progress,
+                                                                  std::string_view message) {
+                tracker->updateProgress(
+                    task_id, progress,
+                    QString::fromUtf8(message.data(), static_cast<qsizetype>(message.size())));
+            };
+        }
+        return QString::fromStdString(m_runtime.process(json, std::move(progress_cb)));
+    });
 
     {
         const std::lock_guard lock(m_futuresMutex);
@@ -87,29 +98,37 @@ QString RequestService::submitAsync(const QString& request_json) {
 }
 
 QString RequestService::executeOnMainThread(const QString& request_json) {
-    auto [request_id, description, injected_json, muted] = prepareRequest(request_json);
+    auto [request_id, description, injected_json, muted, module] = prepareRequest(request_json);
+    const bool use_geometry_module =
+        geometryModule_ != nullptr && module == QStringLiteral("geometry");
 
     if(!muted) {
         m_progressTracker.beginTask(request_id, description);
     }
 
-    OpenGeoLab::Python::ProgressCallback progress_cb;
-    if(!muted) {
-        progress_cb = [this, request_id](double progress, std::string_view message) {
-            m_progressTracker.updateProgress(
-                request_id, progress,
-                QString::fromUtf8(message.data(), static_cast<qsizetype>(message.size())));
-        };
-    }
-
     try {
-        // Main thread GIL note: main.cpp releases GIL before app.exec().
-        // runtime_.process() re-acquires the GIL internally, executes Python, then releases.
-        // This is intentional for PySide6 invoke_ui — Qt widget creation must happen
-        // on the main thread. Keep operations short (e.g. show() a window) to avoid
-        // blocking the event loop.
-        const auto response = QString::fromStdString(
-            m_runtime.process(injected_json.toStdString(), std::move(progress_cb)));
+        QString response;
+        if(use_geometry_module) {
+            response = processGeometry(injected_json.toStdString(), request_id, muted);
+        } else {
+            OpenGeoLab::Python::ProgressCallback progress_cb;
+            if(!muted) {
+                progress_cb = [this, request_id](double progress, std::string_view message) {
+                    m_progressTracker.updateProgress(
+                        request_id, progress,
+                        QString::fromUtf8(message.data(), static_cast<qsizetype>(message.size())));
+                };
+            }
+
+            // Main thread GIL note: main.cpp releases GIL before app.exec().
+            // runtime_.process() re-acquires the GIL internally, executes Python, then releases.
+            // This is intentional for PySide6 invoke_ui — Qt widget creation must happen
+            // on the main thread. Keep operations short (e.g. show() a window) to avoid
+            // blocking the event loop.
+            response = QString::fromStdString(
+                m_runtime.process(injected_json.toStdString(), std::move(progress_cb)));
+        }
+
         if(!muted) {
             m_progressTracker.completeTask(request_id, true);
         }
@@ -142,7 +161,22 @@ RequestService::PreparedRequest RequestService::prepareRequest(const QString& js
         QStringLiteral("%1.%2").arg(module, action),
         QString::fromUtf8(QJsonDocument(object).toJson(QJsonDocument::Compact)),
         muted,
+        module,
     };
+}
+
+QString
+RequestService::processGeometry(const std::string& json, const QString& taskId, bool muted) {
+    Geometry::ModuleProgressCallback progress_cb;
+    if(!muted) {
+        progress_cb = [this, taskId](double progress, std::string_view message) {
+            m_progressTracker.updateProgress(
+                taskId, progress,
+                QString::fromUtf8(message.data(), static_cast<qsizetype>(message.size())));
+        };
+    }
+
+    return QString::fromStdString(geometryModule_->process(json, std::move(progress_cb)));
 }
 
 void RequestService::emitResponse(const QString& request_id, const QString& response) {

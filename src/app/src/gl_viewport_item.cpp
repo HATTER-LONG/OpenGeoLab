@@ -61,8 +61,8 @@ public:
                 return;
             }
 
-            glad_initialized_ = engine_->initialize(
-                loadOpenGLProcAddress, static_cast<void*>(current_context));
+            glad_initialized_ =
+                engine_->initialize(loadOpenGLProcAddress, static_cast<void*>(current_context));
             if(!glad_initialized_) {
                 qWarning("Failed to initialize GLAD");
                 return;
@@ -103,6 +103,8 @@ QQuickFramebufferObject::Renderer* GLViewportItem::createRenderer() const {
 ViewportController* GLViewportItem::controller() const { return controller_; }
 
 Render::RenderEngine& GLViewportItem::renderEngine() { return renderEngine_; }
+
+void GLViewportItem::setSceneGraph(Scene::SceneGraph* graph) { renderEngine_.setSceneGraph(graph); }
 
 void GLViewportItem::mousePressEvent(QMouseEvent* event) {
     controller_->onMousePress(event->position(), event->buttons(), event->modifiers());

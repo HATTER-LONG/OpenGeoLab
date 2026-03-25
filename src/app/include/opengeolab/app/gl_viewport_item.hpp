@@ -10,6 +10,10 @@
 #include <QQuickFramebufferObject>
 #include <QtQml/qqmlregistration.h>
 
+namespace OpenGeoLab::Scene {
+class SceneGraph;
+}
+
 namespace OpenGeoLab::App {
 
 /**
@@ -31,6 +35,7 @@ public:
 
     [[nodiscard]] ViewportController* controller() const;
     Render::RenderEngine& renderEngine();
+    void setSceneGraph(Scene::SceneGraph* graph);
 
 protected:
     void mousePressEvent(QMouseEvent* event) override;
