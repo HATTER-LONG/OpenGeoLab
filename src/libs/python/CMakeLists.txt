@@ -1,2 +1,2 @@
 add_subdirectory(python_embedded)
-# add_subdirectory(python_wrapper)
+add_subdirectory(python_wrapper)
