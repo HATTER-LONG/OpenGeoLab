@@ -8,7 +8,14 @@
 #include <opengeolab/render/pass_manager.hpp>
 #include <opengeolab/render/render_export.hpp>
 
+namespace OpenGeoLab::Scene {
+class SceneGraph;
+}
+
 namespace OpenGeoLab::Render {
+
+class GeometryPass;
+class WireframePass;
 
 /// Opaque function pointer representing a GL procedure address.
 using GlFuncPtr = void (*)();
@@ -45,6 +52,12 @@ public:
     /** @brief Execute one frame. */
     void render();
 
+    /**
+     * @brief Set the scene graph to read geometry from.
+     * @param graph Pointer to scene graph, or nullptr to disconnect.
+     */
+    void setSceneGraph(Scene::SceneGraph* graph);
+
     Camera& camera();
     const Camera& camera() const;
     PassManager& passManager();
@@ -52,8 +65,12 @@ public:
 private:
     Camera camera_;
     PassManager passManager_;
+    GeometryPass* geometryPass_ = nullptr;
+    WireframePass* wireframePass_ = nullptr;
+    Scene::SceneGraph* sceneGraph_ = nullptr;
     int width_ = 0;
     int height_ = 0;
+    bool sceneDirty_ = true;
     bool initialized_ = false;
 };
 

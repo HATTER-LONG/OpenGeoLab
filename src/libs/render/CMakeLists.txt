@@ -45,4 +45,8 @@ if (OPENGEOLAB_BUILD_TESTS)
     opengeolab_add_doctest_test(
         opengeolab_render_vertex_array_object_test SOURCES
         tests/vertex_array_object_test.cpp LINKS OpenGeoLab::Render)
+
+    opengeolab_add_doctest_test(
+        opengeolab_render_render_engine_test SOURCES tests/render_engine_test.cpp
+        LINKS OpenGeoLab::Render OpenGeoLab::Scene)
 endif ()
