@@ -18,6 +18,7 @@ opengeolab_add_module(
     PUBLIC_HEADERS
     ${python_embed_public_headers}
     PUBLIC_LINKS
+    OpenGeoLab::Core
     pybind11::embed
     Python3::Python)
 

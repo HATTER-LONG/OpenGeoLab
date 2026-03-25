@@ -5,21 +5,17 @@
 
 #pragma once
 
+#include <opengeolab/core/progress_callback.hpp>
 #include <opengeolab/python_embed/python_embed_export.hpp>
 
 #include <filesystem>
-#include <functional>
 #include <memory>
 #include <string>
 #include <string_view>
 
 namespace OpenGeoLab::PythonEmbed {
-/**
- * @brief Progress callback for long-running operations.
- * @param progress Normalized progress [0, 1], or 0 for indeterminate.
- * @param message Human-readable status message.
- */
-using ProgressCallback = std::function<void(double, std::string_view)>;
+/// Reuse Core progress callback; Python bridge ignores the cancellation return.
+using ProgressCallback = Core::ProgressCallback;
 
 /**
  * @brief Provides a reusable embedded Python runtime that routes JSON through

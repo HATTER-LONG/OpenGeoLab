@@ -229,5 +229,6 @@ endif ()
 # ---------------------------------------------------------------------------
 # Sub-projects
 # ---------------------------------------------------------------------------
+add_subdirectory(src/libs/core)
 add_subdirectory(src/libs/python)
 # add_subdirectory(src/app)

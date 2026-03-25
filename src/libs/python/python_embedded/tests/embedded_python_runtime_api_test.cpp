@@ -9,7 +9,7 @@
 
 namespace OpenGeoLab::PythonEmbed::Tests {
 
-static_assert(std::is_same_v<ProgressCallback, std::function<void(double, std::string_view)>>);
+static_assert(std::is_same_v<ProgressCallback, Core::ProgressCallback>);
 
 static_assert(requires(EmbeddedPythonRuntime& runtime,
                        std::string_view request_json,

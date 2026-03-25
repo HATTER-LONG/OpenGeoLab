@@ -267,8 +267,9 @@ void EmbeddedPythonRuntime::initialize() {
 
         Py::object py_cb = Py::none();
         if(progress_callback) {
-            py_cb = Py::cpp_function(
-                [cb = std::move(progress_callback)](double p, const std::string& m) { cb(p, m); });
+            py_cb =
+                Py::cpp_function([cb = std::move(progress_callback)](
+                                     double p, const std::string& m) -> bool { return cb(p, m); });
         }
 
         return Py::cast<std::string>(m_impl->processFunction(Py::str(request_json), py_cb));
