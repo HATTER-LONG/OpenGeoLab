@@ -13,6 +13,22 @@
 #include "tessellator.hpp"
 
 #include <BRepPrimAPI_MakeBox.hxx>
+#include <TopAbs_ShapeEnum.hxx>
+#include <TopExp.hxx>
+#include <TopExp_Explorer.hxx>
+#include <TopTools_IndexedMapOfShape.hxx>
+
+#include "occ_primitives.hpp"
+
+namespace {
+
+int countSubShapes(const TopoDS_Shape& shape, TopAbs_ShapeEnum type) {
+    TopTools_IndexedMapOfShape shapes;
+    TopExp::MapShapes(shape, type, shapes);
+    return shapes.Extent();
+}
+
+} // namespace
 
 TEST_CASE("GeometryModule stub returns not-implemented") {
     OpenGeoLab::Geometry::GeometryModule mod;
@@ -107,4 +123,30 @@ TEST_CASE("Tessellator computeBounds") {
     CHECK(bounds.max.x == doctest::Approx(2.0).epsilon(0.01));
     CHECK(bounds.max.y == doctest::Approx(2.0).epsilon(0.01));
     CHECK(bounds.max.z == doctest::Approx(2.0).epsilon(0.01));
+}
+
+TEST_CASE("makePrimitive topology counts") {
+    using namespace OpenGeoLab::Geometry;
+
+    SUBCASE("makeBox has 6 faces, 12 edges, 8 vertices") {
+        auto box = makeBox({0.0, 0.0, 0.0}, {2.0, 3.0, 4.0});
+        CHECK(countSubShapes(box, TopAbs_FACE) == 6);
+        CHECK(countSubShapes(box, TopAbs_EDGE) == 12);
+        CHECK(countSubShapes(box, TopAbs_VERTEX) == 8);
+    }
+
+    SUBCASE("makeSphere has faces") {
+        auto sphere = makeSphere({0.0, 0.0, 0.0}, 1.0);
+        CHECK(countSubShapes(sphere, TopAbs_FACE) > 0);
+    }
+
+    SUBCASE("makeCylinder has faces") {
+        auto cylinder = makeCylinder({0.0, 0.0, 0.0}, 1.0, 5.0);
+        CHECK(countSubShapes(cylinder, TopAbs_FACE) > 0);
+    }
+
+    SUBCASE("makeTorus has faces") {
+        auto torus = makeTorus({0.0, 0.0, 0.0}, 2.0, 0.5);
+        CHECK(countSubShapes(torus, TopAbs_FACE) > 0);
+    }
 }

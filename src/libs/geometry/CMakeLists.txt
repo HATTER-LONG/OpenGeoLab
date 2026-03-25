@@ -4,7 +4,8 @@ set(geometry_public_headers
 set(geometry_sources
     src/geometry_module.cpp
     src/shape_store.cpp
-    src/tessellator.cpp)
+    src/tessellator.cpp
+    src/occ_primitives.cpp)
 
 opengeolab_add_module(
     opengeolab_geometry
@@ -19,6 +20,7 @@ if(OPENGEOLAB_BUILD_TESTS)
     opengeolab_add_doctest_test(
         opengeolab_geometry_module_test
         SOURCES tests/geometry_module_test.cpp src/shape_store.cpp src/tessellator.cpp
+                src/occ_primitives.cpp
         LINKS OpenGeoLab::Geometry nlohmann_json::nlohmann_json
               TKernel TKBRep TKPrim TKMath TKTopAlgo TKMesh TKG3d)
     target_include_directories(
