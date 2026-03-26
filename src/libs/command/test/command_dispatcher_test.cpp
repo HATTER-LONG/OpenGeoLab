@@ -8,10 +8,10 @@
 
 #include <doctest/doctest.h>
 
+using Kangaroo::Util::PluginComponentFactory;
 using OpenGeoLab::Command::CommandDispatcher;
 using OpenGeoLab::Command::registerBuiltinModules;
 using OpenGeoLab::Core::NO_PROGRESS_CALLBACK;
-using Kangaroo::Util::PluginComponentFactory;
 
 TEST_CASE("CommandDispatcher dispatches to IOModule via request JSON") {
     PluginComponentFactory factory;
