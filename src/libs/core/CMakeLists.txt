@@ -1,9 +1,12 @@
 set(core_public_headers
+    include/opengeolab/core/action.hpp
     include/opengeolab/core/logger.hpp
+    include/opengeolab/core/module.hpp
     include/opengeolab/core/progress_callback.hpp
     include/opengeolab/core/point_vector3d.hpp)
 
-set(core_sources src/logger.cpp src/process_callback.cpp)
+set(core_sources src/action.cpp src/logger.cpp src/module.cpp
+                 src/process_callback.cpp)
 opengeolab_add_module(
     opengeolab_core
     ALIAS_NAME
@@ -14,7 +17,8 @@ opengeolab_add_module(
     ${core_public_headers}
     PUBLIC_LINKS
     Kangaroo::Kangaroo
-    spdlog::spdlog)
+    spdlog::spdlog
+    nlohmann_json::nlohmann_json)
 
 if (OPENGEOLAB_BUILD_TESTS)
     opengeolab_add_doctest_test(

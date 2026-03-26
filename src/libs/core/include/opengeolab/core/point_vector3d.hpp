@@ -49,9 +49,9 @@ constexpr bool almostEqual(T a,
 template <class T> struct Vector3D final {
     static_assert(std::is_arithmetic_v<T>, "Vector3D<T>: T must be arithmetic.");
 
-    T x{}; // NOLINT
-    T y{}; // NOLINT
-    T z{}; // NOLINT
+    T x{};
+    T y{};
+    T z{};
 
     constexpr Vector3D() noexcept = default;
     constexpr Vector3D(T x, T y, T z) noexcept : x(x), y(y), z(z) {}
@@ -190,9 +190,9 @@ template <class T> [[nodiscard]] constexpr Vector3D<T> operator/(Vector3D<T> v, 
 template <class T> struct Point3D final {
     static_assert(std::is_arithmetic_v<T>, "Point3D<T>: T must be arithmetic.");
 
-    T x{}; // NOLINT
-    T y{}; // NOLINT
-    T z{}; // NOLINT
+    T x{};
+    T y{};
+    T z{};
 
     constexpr Point3D() noexcept = default;
     constexpr Point3D(T x, T y, T z) noexcept : x(x), y(y), z(z) {}

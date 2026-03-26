@@ -66,7 +66,7 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/OpenGeoLabModule.cmake)
 
 set(OPENGEOLAB_FMT_VERSION 12.0.0)
 set(OPENGEOLAB_SPDLOG_VERSION 1.17.0)
-set(OPENGEOLAB_KANGAROO_VERSION 2.2.2)
+set(OPENGEOLAB_KANGAROO_VERSION 2.3.1)
 set(OPENGEOLAB_NLOHMANN_JSON_VERSION 3.12.0)
 set(OPENGEOLAB_DOCTEST_VERSION 2.4.12)
 set(OPENGEOLAB_GLM_VERSION 1.0.1)
@@ -233,5 +233,7 @@ endif ()
 # Sub-projects
 # ---------------------------------------------------------------------------
 add_subdirectory(src/libs/core)
+add_subdirectory(src/libs/io)
+add_subdirectory(src/libs/command)
 add_subdirectory(src/libs/python)
 # add_subdirectory(src/app)
