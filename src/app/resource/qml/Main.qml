@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Window
+import OpenGeoLab.Services 1.0
 import "theme"
 import "sections"
 
@@ -37,6 +38,32 @@ Window {
         id: ribbonConfig
     }
 
+    Connections {
+        target: RequestService
+
+        function onResponseReady(requestId, responseJson) {
+            const resp = JSON.parse(responseJson);
+            if (resp.module === "plugins" && resp.action === "list" && resp.ok) {
+                root.pluginList = resp.result.plugins || [];
+                root.statusNote = qsTr("Found %1 plugin(s).").arg(root.pluginList.length);
+            }
+        }
+
+        function onErrorOccurred(requestId, errorMessage) {
+            root.statusNote = qsTr("Error: %1").arg(errorMessage);
+            console.warn("[Main] Request error:", requestId, errorMessage);
+        }
+    }
+
+    Component.onCompleted: {
+        RequestService.submitAsync(JSON.stringify({
+            module: "plugins",
+            action: "list",
+            param: {},
+            mute: true
+        }));
+    }
+
     function toggleTheme() {
         root.darkMode = !root.darkMode;
         root.statusNote = root.darkMode ? qsTr("Switched to dark theme.") : qsTr("Switched to light theme.");
@@ -55,7 +82,39 @@ Window {
             return;
         }
 
-        // TODO: implement backend service dispatch for each action
+        // PySide6 UI plugins — must execute on main thread.
+        if (actionKey.startsWith("pluginUI_")) {
+            const pluginName = actionKey.substring(9);
+            root.statusNote = qsTr("Launching plugin UI: %1").arg(pluginName);
+            root.menuOpen = false;
+            RequestService.executeOnMainThread(JSON.stringify({
+                module: "plugins",
+                action: "invoke_ui",
+                param: {
+                    pluginName: pluginName
+                },
+                mute: true
+            }));
+            return;
+        }
+
+        // Script-only plugins — execute asynchronously.
+        if (actionKey.startsWith("plugin_")) {
+            const pluginName = actionKey.substring(7);
+            root.statusNote = qsTr("Executing plugin: %1").arg(pluginName);
+            root.menuOpen = false;
+            RequestService.submitAsync(JSON.stringify({
+                module: "plugins",
+                action: "execute",
+                param: {
+                    pluginName: pluginName
+                },
+                mute: false
+            }));
+            return;
+        }
+
+        // Other actions — not yet implemented.
         root.statusNote = qsTr("Action: %1 (not yet implemented)").arg(actionKey);
         root.menuOpen = false;
         console.log("[Main] Action not implemented:", actionKey);

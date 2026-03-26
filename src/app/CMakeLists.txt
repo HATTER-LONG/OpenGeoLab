@@ -2,9 +2,11 @@
 # OpenGeoLab Application
 # ---------------------------------------------------------------------------
 
-find_package(Qt6 6.9 REQUIRED COMPONENTS Core5Compat Svg QuickLayouts)
+find_package(Qt6 6.9 REQUIRED COMPONENTS Concurrent Core5Compat Svg
+                                         QuickLayouts Widgets)
 
-qt_add_executable(opengeolab_app src/main.cpp src/translation_manager.cpp)
+qt_add_executable(opengeolab_app src/main.cpp src/translation_manager.cpp
+                  src/request_service.cpp)
 
 target_compile_features(opengeolab_app PRIVATE cxx_std_20)
 target_include_directories(
@@ -12,14 +14,17 @@ target_include_directories(
                            "${CMAKE_CURRENT_SOURCE_DIR}/include/opengeolab/app")
 target_link_libraries(
     opengeolab_app
-    PRIVATE Qt6::Core
+    PRIVATE Qt6::Concurrent
+            Qt6::Core
             Qt6::Core5Compat
             Qt6::Gui
             Qt6::Qml
             Qt6::Quick
             Qt6::QuickControls2
             Qt6::QuickLayouts
-            Qt6::Svg)
+            Qt6::Svg
+            Qt6::Widgets
+            OpenGeoLab::Python_Embed)
 
 qt_add_qml_module(
     opengeolab_app
@@ -29,6 +34,7 @@ qt_add_qml_module(
     1.0
     SOURCES
     include/opengeolab/app/translation_manager.h
+    include/opengeolab/app/request_service.h
     QML_FILES
     resource/qml/Main.qml
     resource/qml/RibbonConfig.qml
@@ -125,6 +131,32 @@ file(
     CONTENT "[Paths]\nPrefix = ${_qt_prefix_fwd}\n")
 
 install(TARGETS opengeolab_app RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
+
+# ---------------------------------------------------------------------------
+# Deploy Python runtime script and plugins next to the executable.
+# ---------------------------------------------------------------------------
+set(_app_bin_dir "$<TARGET_FILE_DIR:opengeolab_app>")
+
+add_custom_command(
+    TARGET opengeolab_app
+    POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${_app_bin_dir}/python"
+    COMMAND
+        ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_CURRENT_SOURCE_DIR}/resource/python/opengeolab_runtime.py"
+        "${_app_bin_dir}/python/opengeolab_runtime.py"
+    COMMENT "Copying Python runtime script")
+
+# Copy plugins directory if it exists.
+set(_plugin_source_dir "${CMAKE_SOURCE_DIR}/plugins")
+if (EXISTS "${_plugin_source_dir}")
+    add_custom_command(
+        TARGET opengeolab_app
+        POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory "${_plugin_source_dir}"
+                "${_app_bin_dir}/plugins"
+        COMMENT "Copying plugins directory")
+endif ()
 
 qt_add_translations(
     opengeolab_app TS_FILES resource/translations/opengeolab_zh_CN.ts
