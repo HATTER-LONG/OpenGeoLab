@@ -48,6 +48,7 @@ applyTo: '**/*.{h,hpp,hh,hxx,c,cc,cpp,cxx}'
 
 ## 6. 代码风格偏好
 
+- **禁止 `using namespace`**：在头文件和实现文件中均不使用 `using namespace`。需要简化名称时，使用针对性的 `using` 声明引入具体类型或函数（如 `using OpenGeoLab::Core::ModuleBase;`）。
 - 保持函数短小，单个函数只做一件事。
 - 避免嵌套过深的条件分支，必要时提前返回或拆分辅助函数。
 - 优先使用显式初始化，避免未定义状态。
