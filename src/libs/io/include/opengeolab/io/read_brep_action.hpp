@@ -8,8 +8,6 @@
 #include <opengeolab/core/action.hpp>
 #include <opengeolab/io/io_export.hpp>
 
-#include <string>
-
 namespace OpenGeoLab::IO {
 
 /**

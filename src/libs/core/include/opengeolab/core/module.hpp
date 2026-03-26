@@ -7,7 +7,6 @@
 #include <kangaroo/util/plugin_component_factory.hpp>
 #include <nlohmann/json.hpp>
 
-#include <string>
 #include <string_view>
 
 namespace OpenGeoLab::Core {

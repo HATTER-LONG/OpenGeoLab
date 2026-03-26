@@ -13,8 +13,6 @@
 
 #include <nlohmann/json.hpp>
 
-#include <string>
-
 namespace OpenGeoLab::Core {
 
 /**
