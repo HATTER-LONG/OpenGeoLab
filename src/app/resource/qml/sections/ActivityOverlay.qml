@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import OpenGeoLab.Services 1.0
 import "../theme"
 import "../components"
 
@@ -22,6 +23,26 @@ Item {
     height: activityButton.height
         + ((activityOpen || activityPanel.opacity > 0.01) ? activityPanel.height + 10 : 0)
     z: 40
+
+    Connections {
+        target: LogEventModel
+
+        function onNewEntryAdded(level: int): void {
+            if (!root.activityOpen) {
+                root.hasNewLogs = true;
+                if (level >= 4) {
+                    root.hasNewErrors = true;
+                }
+            }
+        }
+    }
+
+    onActivityOpenChanged: {
+        if (activityOpen) {
+            hasNewErrors = false;
+            hasNewLogs = false;
+        }
+    }
 
     ActivityPanel {
         id: activityPanel

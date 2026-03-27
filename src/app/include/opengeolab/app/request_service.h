@@ -68,6 +68,15 @@ signals:
     void errorOccurred(const QString& request_id, const QString& error_message);
     void busyChanged();
 
+    /**
+     * @brief Emitted when a non-muted request is dispatched.
+     * @param request_id UUID for the request.
+     * @param description Short label, e.g. "io.read_brep".
+     * @param request_json Full injected JSON envelope.
+     */
+    void
+    requestSent(const QString& request_id, const QString& description, const QString& request_json);
+
 private:
     struct PreparedRequest {
         QString requestId;

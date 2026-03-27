@@ -3,8 +3,10 @@
 
 #include <pybind11/pybind11.h>
 
+#include "opengeolab/app/log_event_model.h"
 #include "opengeolab/app/request_service.h"
 
+#include <opengeolab/core/logger.hpp>
 #include <opengeolab/python_embed/embedded_python_runtime.hpp>
 
 #include <QApplication>
@@ -44,6 +46,10 @@ int main(int argc, char* argv[]) {
 
     OpenGeoLab::App::RequestService request_service(python_runtime);
     qmlRegisterSingletonInstance("OpenGeoLab.Services", 1, 0, "RequestService", &request_service);
+
+    OpenGeoLab::App::LogEventModel log_event_model;
+    log_event_model.installSink(OpenGeoLab::Core::getLoggerShared());
+    qmlRegisterSingletonInstance("OpenGeoLab.Services", 1, 0, "LogEventModel", &log_event_model);
 
     QQmlApplicationEngine engine;
     engine.loadFromModule("OpenGeoLab.App", "Main");

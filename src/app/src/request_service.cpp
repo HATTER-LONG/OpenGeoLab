@@ -26,6 +26,10 @@ RequestService::~RequestService() {
 QString RequestService::submitAsync(const QString& request_json) {
     auto [request_id, description, injected_json, muted] = prepareRequest(request_json);
 
+    if(!muted) {
+        emit requestSent(request_id, description, injected_json);
+    }
+
     m_pendingCount.fetch_add(1, std::memory_order_relaxed);
     emit busyChanged();
 
@@ -66,6 +70,10 @@ QString RequestService::submitAsync(const QString& request_json) {
 
 QString RequestService::executeOnMainThread(const QString& request_json) {
     auto [request_id, description, injected_json, muted] = prepareRequest(request_json);
+
+    if(!muted) {
+        emit requestSent(request_id, description, injected_json);
+    }
 
     try {
         // main.cpp releases GIL before app.exec(). runtime.process() re-acquires

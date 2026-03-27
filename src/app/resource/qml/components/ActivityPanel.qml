@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
+import OpenGeoLab.Services 1.0
 import "../theme"
 
 Item {
@@ -38,55 +39,41 @@ Item {
         clip: true
     }
 
-    ListModel { id: mockLogModel }
-    ListModel { id: mockTerminalModel }
+    ListModel { id: terminalModel }
+
+    /** @brief Map of requestId → true for non-muted requests tracked in terminal. */
+    property var trackedRequests: ({})
 
     function appendTerminalEntry(type: string, text: string): void {
-        mockTerminalModel.append({ type: type, text: text });
-        if (mockTerminalModel.count > 160) {
-            mockTerminalModel.remove(0);
+        terminalModel.append({ type: type, text: text });
+        if (terminalModel.count > 160) {
+            terminalModel.remove(0);
         }
     }
 
     function runCommand(text: string): void {
-        appendTerminalEntry("command", text);
-        responseTimer.text = text;
-        responseTimer.start();
+        RequestService.submitAsync(text);
     }
 
-    Component.onCompleted: {
-        const samples = [
-            { level: 4, levelName: qsTr("ERROR"), source: "GeometryKernel", message: qsTr("Boolean operation failed: self-intersecting input"), time: "14:32:07", threadId: 1024, file: "boolean_op.cpp", line: 342 },
-            { level: 2, levelName: qsTr("INFO"), source: "SceneManager", message: qsTr("Scene loaded successfully (12 objects)"), time: "14:32:05", threadId: 1, file: "", line: 0 },
-            { level: 3, levelName: qsTr("WARN"), source: "MeshGenerator", message: qsTr("Degenerate triangle detected, skipping face #847"), time: "14:32:04", threadId: 2048, file: "mesh_gen.cpp", line: 156 },
-            { level: 1, levelName: qsTr("DEBUG"), source: "RenderPipeline", message: qsTr("Frame buffer resized to 1920x1080"), time: "14:32:03", threadId: 1, file: "", line: 0 },
-            { level: 2, levelName: qsTr("INFO"), source: "PluginLoader", message: qsTr("Loaded 3 plugins: geometry, mesh, export"), time: "14:32:01", threadId: 1, file: "", line: 0 },
-            { level: 0, levelName: qsTr("TRACE"), source: "EventLoop", message: qsTr("Processing 42 pending events"), time: "14:31:58", threadId: 1, file: "event_loop.cpp", line: 89 },
-            { level: 5, levelName: qsTr("CRITICAL"), source: "MemoryPool", message: qsTr("Allocation failed: out of memory (requested 2.1 GB)"), time: "14:31:55", threadId: 4096, file: "memory_pool.cpp", line: 67 },
-            { level: 2, levelName: qsTr("INFO"), source: "CommandRecorder", message: qsTr("Recording started"), time: "14:31:50", threadId: 1, file: "", line: 0 }
-        ];
-        for (const entry of samples) {
-            mockLogModel.append(entry);
+    Connections {
+        target: RequestService
+
+        function onRequestSent(requestId: string, description: string, requestJson: string): void {
+            root.trackedRequests[requestId] = true;
+            root.appendTerminalEntry("command", "[" + description + "] " + requestJson);
         }
-    }
 
-    Timer {
-        id: responseTimer
+        function onResponseReady(requestId: string, responseJson: string): void {
+            if (root.trackedRequests[requestId]) {
+                delete root.trackedRequests[requestId];
+                root.appendTerminalEntry("response", responseJson);
+            }
+        }
 
-        property string text: ""
-
-        interval: 200
-        repeat: false
-        onTriggered: {
-            if (text.trim().startsWith("{")) {
-                try {
-                    const parsed = JSON.parse(text);
-                    root.appendTerminalEntry("response", JSON.stringify({ status: "ok", echo: parsed }, null, 2));
-                } catch (e) {
-                    root.appendTerminalEntry("error", e.toString());
-                }
-            } else {
-                root.appendTerminalEntry("response", qsTr("Command executed: ") + text);
+        function onErrorOccurred(requestId: string, errorMessage: string): void {
+            if (root.trackedRequests[requestId]) {
+                delete root.trackedRequests[requestId];
+                root.appendTerminalEntry("error", errorMessage);
             }
         }
     }
@@ -193,14 +180,15 @@ Item {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 theme: root.theme
-                model: mockLogModel
+                model: LogEventModel
+                onRuntimeMinLevelChanged: LogEventModel.setRuntimeMinLevel(runtimeMinLevel)
             }
 
             TerminalView {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 theme: root.theme
-                model: mockTerminalModel
+                model: terminalModel
                 onCommandSubmitted: function(text) { root.runCommand(text) }
             }
         }
