@@ -3,7 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import "../theme"
 
-/// @brief Placeholder 3D viewport with a subtle grid background.
+/** @brief Placeholder 3D viewport with a subtle grid background. */
 Item {
     id: root
 

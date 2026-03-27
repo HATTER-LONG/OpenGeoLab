@@ -1,0 +1,345 @@
+import QtQuick
+import QtQuick.Layouts
+import OpenGeoLab.Services 1.0
+import ".."
+import "../theme"
+
+Item {
+    id: root
+
+    property string pageTitle: qsTr("Function")
+    property string pageIcon: ""
+    property string actionId: ""
+    property bool pageVisible: false
+    property int maxContentHeight: 420
+    default property alias content: contentColumn.data
+
+    visible: pageVisible
+    focus: pageVisible
+    z: 1000
+    width: 320
+    height: panelColumn.implicitHeight
+
+    function clamp(value, minimum, maximum) {
+        return Math.max(minimum, Math.min(maximum, value));
+    }
+
+    function open(payload) {
+        root.x = 292;
+        root.y = 12;
+        root.pageVisible = true;
+        root.forceActiveFocus();
+        if (payload !== undefined && payload !== null) {
+            root.parsePayload(payload);
+        }
+    }
+
+    function close() {
+        root.pageVisible = false;
+        if (MainPages.currentOpenPage === root.actionId) {
+            MainPages.currentOpenPage = "";
+        }
+    }
+
+    function parsePayload(payload) {
+    }
+
+    function getParameters() {
+        return {};
+    }
+
+    function execute() {
+        RequestService.submitAsync(JSON.stringify(root.getParameters()));
+        root.close();
+    }
+
+    Keys.onEscapePressed: root.close()
+
+    Rectangle {
+        id: shadow
+
+        anchors.fill: panel
+        anchors.margins: -2
+        radius: panel.radius + 2
+        color: MainPages.theme.tint(MainPages.theme.shell, MainPages.theme.darkMode ? 0.18 : 0.08)
+    }
+
+    Rectangle {
+        id: panel
+
+        anchors.fill: parent
+        radius: MainPages.theme.radiusMedium
+        color: MainPages.theme.surface
+        border.width: 1
+        border.color: MainPages.theme.borderSubtle
+        clip: true
+
+        Column {
+            id: panelColumn
+
+            anchors.fill: parent
+            anchors.margins: 1
+            spacing: 0
+
+            Rectangle {
+                id: titleBar
+
+                width: parent.width
+                height: 36
+                radius: MainPages.theme.radiusMedium - 1
+                color: MainPages.theme.surfaceMuted
+
+                Rectangle {
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.bottom: parent.bottom
+                    height: MainPages.theme.radiusMedium
+                    color: parent.color
+                }
+
+                MouseArea {
+                    id: dragArea
+
+                    property real pressOffsetX: 0
+                    property real pressOffsetY: 0
+
+                    anchors.fill: parent
+                    acceptedButtons: Qt.LeftButton
+                    cursorShape: Qt.SizeAllCursor
+                    preventStealing: true
+
+                    onPressed: function(mouse) {
+                        dragArea.pressOffsetX = mouse.x;
+                        dragArea.pressOffsetY = mouse.y;
+                    }
+
+                    onPositionChanged: function(mouse) {
+                        if (!dragArea.pressed || !root.parent) {
+                            return;
+                        }
+                        const nextX = root.x + mouse.x - dragArea.pressOffsetX;
+                        const nextY = root.y + mouse.y - dragArea.pressOffsetY;
+                        const minX = 292;
+                        const maxX = Math.max(minX, root.parent.width - root.width);
+                        const minY = 12;
+                        const maxY = Math.max(minY, root.parent.height - root.height);
+                        root.x = root.clamp(nextX, minX, maxX);
+                        root.y = root.clamp(nextY, minY, maxY);
+                    }
+                }
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.leftMargin: 12
+                    anchors.rightMargin: 6
+                    spacing: 8
+
+                    AppIcon {
+                        theme: MainPages.theme
+                        iconKind: root.pageIcon
+                        width: 18
+                        height: 18
+                        visible: root.pageIcon.length > 0
+                    }
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: root.pageTitle
+                        color: MainPages.theme.textPrimary
+                        font.pixelSize: 13
+                        font.bold: true
+                        elide: Text.ElideRight
+                        verticalAlignment: Text.AlignVCenter
+                    }
+
+                    Rectangle {
+                        id: closeButton
+
+                        Layout.preferredWidth: 24
+                        Layout.preferredHeight: 24
+                        radius: MainPages.theme.radiusSmall
+                        color: closeMouseArea.pressed
+                            ? MainPages.theme.surfaceStrong
+                            : (closeMouseArea.containsMouse
+                                   ? MainPages.theme.tint(MainPages.theme.surfaceStrong, MainPages.theme.darkMode ? 0.92 : 0.82)
+                                   : "transparent")
+                        border.width: 1
+                        border.color: closeMouseArea.containsMouse
+                            ? MainPages.theme.tint(MainPages.theme.accentD, MainPages.theme.darkMode ? 0.46 : 0.28)
+                            : "transparent"
+                        scale: closeMouseArea.pressed ? 0.98 : (closeMouseArea.containsMouse ? 1.01 : 1.0)
+
+                        Behavior on color {
+                            ColorAnimation {
+                                duration: 140
+                            }
+                        }
+
+                        Behavior on scale {
+                            NumberAnimation {
+                                duration: 120
+                                easing.type: Easing.OutCubic
+                            }
+                        }
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: qsTr("✕")
+                            color: MainPages.theme.textPrimary
+                            font.pixelSize: 13
+                            font.bold: true
+                        }
+
+                        MouseArea {
+                            id: closeMouseArea
+
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.close()
+                        }
+                    }
+                }
+            }
+
+            Rectangle {
+                width: parent.width
+                height: 1
+                color: MainPages.theme.borderSubtle
+            }
+
+            Flickable {
+                id: contentArea
+
+                width: parent.width
+                height: Math.min(contentColumn.implicitHeight + 24, root.maxContentHeight)
+                clip: true
+                contentWidth: width
+                contentHeight: contentColumn.implicitHeight + 24
+                boundsBehavior: Flickable.StopAtBounds
+                interactive: contentHeight > height
+
+                Column {
+                    id: contentColumn
+
+                    x: 12
+                    y: 12
+                    width: contentArea.width - 24
+                    spacing: 12
+                }
+            }
+
+            Rectangle {
+                width: parent.width
+                height: 1
+                color: MainPages.theme.borderSubtle
+            }
+
+            Item {
+                width: parent.width
+                height: 48
+
+                RowLayout {
+                    anchors.centerIn: parent
+                    spacing: 12
+
+                    Rectangle {
+                        id: executeButton
+
+                        Layout.preferredWidth: 112
+                        Layout.preferredHeight: 32
+                        radius: MainPages.theme.radiusSmall
+                        color: executeMouseArea.pressed
+                            ? MainPages.theme.tint(MainPages.theme.accentA, MainPages.theme.darkMode ? 0.3 : 0.18)
+                            : (executeMouseArea.containsMouse
+                                   ? MainPages.theme.tint(MainPages.theme.accentA, MainPages.theme.darkMode ? 0.24 : 0.14)
+                                   : MainPages.theme.tint(MainPages.theme.accentA, MainPages.theme.darkMode ? 0.2 : 0.11))
+                        border.width: 1
+                        border.color: executeMouseArea.containsMouse
+                            ? MainPages.theme.tint(MainPages.theme.accentA, MainPages.theme.darkMode ? 0.58 : 0.34)
+                            : MainPages.theme.tint(MainPages.theme.borderSubtle, 0.45)
+                        scale: executeMouseArea.pressed ? 0.98 : (executeMouseArea.containsMouse ? 1.01 : 1.0)
+
+                        Behavior on color {
+                            ColorAnimation {
+                                duration: 140
+                            }
+                        }
+
+                        Behavior on scale {
+                            NumberAnimation {
+                                duration: 120
+                                easing.type: Easing.OutCubic
+                            }
+                        }
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: qsTr("Execute")
+                            color: MainPages.theme.darkMode ? "#f4f7fb" : "#ffffff"
+                            font.pixelSize: 13
+                            font.bold: true
+                        }
+
+                        MouseArea {
+                            id: executeMouseArea
+
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.execute()
+                        }
+                    }
+
+                    Rectangle {
+                        id: cancelButton
+
+                        Layout.preferredWidth: 96
+                        Layout.preferredHeight: 32
+                        radius: MainPages.theme.radiusSmall
+                        color: cancelMouseArea.pressed
+                            ? MainPages.theme.surfaceStrong
+                            : (cancelMouseArea.containsMouse
+                                   ? MainPages.theme.tint(MainPages.theme.surfaceMuted, MainPages.theme.darkMode ? 0.96 : 0.9)
+                                   : MainPages.theme.surfaceMuted)
+                        border.width: 1
+                        border.color: cancelMouseArea.containsMouse
+                            ? MainPages.theme.tint(MainPages.theme.textPrimary, MainPages.theme.darkMode ? 0.52 : 0.3)
+                            : MainPages.theme.borderSubtle
+                        scale: cancelMouseArea.pressed ? 0.98 : (cancelMouseArea.containsMouse ? 1.01 : 1.0)
+
+                        Behavior on color {
+                            ColorAnimation {
+                                duration: 140
+                            }
+                        }
+
+                        Behavior on scale {
+                            NumberAnimation {
+                                duration: 120
+                                easing.type: Easing.OutCubic
+                            }
+                        }
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: qsTr("Cancel")
+                            color: MainPages.theme.textPrimary
+                            font.pixelSize: 13
+                            font.bold: true
+                        }
+
+                        MouseArea {
+                            id: cancelMouseArea
+
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.close()
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

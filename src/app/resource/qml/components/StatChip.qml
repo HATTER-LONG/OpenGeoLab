@@ -3,7 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import "../theme"
 
-/// @brief Read-only status chip showing a tinted label.
+/** @brief Read-only status chip showing a tinted label. */
 Rectangle {
     id: chip
 

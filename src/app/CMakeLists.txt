@@ -40,6 +40,7 @@ qt_add_qml_module(
     resource/qml/Main.qml
     resource/qml/RibbonConfig.qml
     resource/qml/MenuConfig.qml
+    resource/qml/MainPages.qml
     resource/qml/theme/AppTheme.qml
     resource/qml/sections/AppHeader.qml
     resource/qml/sections/HeaderMenuPanel.qml
@@ -59,6 +60,14 @@ qt_add_qml_module(
     resource/qml/components/TerminalView.qml
     resource/qml/components/ProgressCard.qml
     resource/qml/components/BoxListItem.qml
+    resource/qml/components/FunctionPageBase.qml
+    resource/qml/components/DimensionInput.qml
+    resource/qml/components/ParamField.qml
+    resource/qml/components/CoordinateField.qml
+    resource/qml/components/pages/CreateBoxPage.qml
+    resource/qml/components/pages/CreateCylinderPage.qml
+    resource/qml/components/pages/CreateSpherePage.qml
+    resource/qml/components/pages/CreateTorusPage.qml
     RESOURCES
     resource/icons/menu.svg
     resource/icons/box.svg
@@ -102,7 +111,8 @@ qt_add_qml_module(
     resource/icons/checkmarkCircleOutline.svg
     resource/icons/closeCircleOutline.svg
     resource/icons/syncOutline.svg
-    resource/icons/copyOutline.svg)
+    resource/icons/copyOutline.svg
+    resource/icons/exitOutline.svg)
 
 # Use console subsystem during development so errors are visible.
 option(OPENGEOLAB_WIN32_APP
@@ -164,3 +174,14 @@ endif ()
 qt_add_translations(
     opengeolab_app TS_FILES resource/translations/opengeolab_zh_CN.ts
     RESOURCE_PREFIX "/translations")
+
+if (OPENGEOLAB_BUILD_TESTS)
+    opengeolab_add_doctest_test(
+        opengeolab_app_qml_pages_test
+        SOURCES
+        test/qml_page_registration_test.cpp
+        LINKS
+        Qt6::Core
+        DEFINITIONS
+        OPENGEOLAB_APP_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+endif ()

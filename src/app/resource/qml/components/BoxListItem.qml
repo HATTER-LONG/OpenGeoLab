@@ -4,7 +4,7 @@ import QtQuick
 import QtQuick.Layouts
 import "../theme"
 
-/// @brief Expandable list item displaying a single box's metadata.
+/** @brief Expandable list item displaying a single box's metadata. */
 Item {
     id: root
 

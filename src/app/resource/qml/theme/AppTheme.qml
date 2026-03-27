@@ -2,8 +2,11 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 
-/// @brief Central theme object providing colors, spacing, fonts and dark-mode toggle.
-/// Instantiate once in Main.qml and pass via `required property AppTheme theme`.
+/**
+ * @brief Central theme object providing colors, spacing, fonts and dark-mode toggle.
+ *
+ * Instantiate once in Main.qml and pass via `required property AppTheme theme`.
+ */
 QtObject {
     id: root
 

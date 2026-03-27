@@ -5,7 +5,7 @@ import QtQuick.Layouts
 import "../theme"
 import "../components"
 
-/// @brief Left sidebar — scene explorer with box list.
+/** @brief Left sidebar — scene explorer with box list. */
 Item {
     id: root
 

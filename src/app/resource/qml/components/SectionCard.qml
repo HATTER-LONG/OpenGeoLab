@@ -4,7 +4,7 @@ import QtQuick
 import QtQuick.Layouts
 import "../theme"
 
-/// @brief Content card with optional title, subtitle, and a default content slot.
+/** @brief Content card with optional title, subtitle, and a default content slot. */
 Item {
     id: root
 

@@ -149,24 +149,8 @@
             <translation>导出模型</translation>
         </message>
         <message>
-            <source>Script Recorder</source>
-            <translation>脚本录制</translation>
-        </message>
-        <message>
-            <source>Start Script Record</source>
-            <translation>开始录制脚本</translation>
-        </message>
-        <message>
-            <source>Replay Script</source>
-            <translation>回放脚本</translation>
-        </message>
-        <message>
-            <source>Export Record</source>
-            <translation>导出录制</translation>
-        </message>
-        <message>
-            <source>Clear Script History</source>
-            <translation>清空脚本历史</translation>
+            <source>Exit</source>
+            <translation>退出</translation>
         </message>
     </context>
     <context>
@@ -364,6 +348,189 @@
         <message>
             <source>Filter entries already captured in the panel.</source>
             <translation>筛选面板中已有的日志条目。</translation>
+        </message>
+    </context>
+    <context>
+        <name>FunctionPageBase</name>
+        <message>
+            <source>Function</source>
+            <translation>功能</translation>
+        </message>
+        <message>
+            <source>✕</source>
+            <translation>✕</translation>
+        </message>
+        <message>
+            <source>Execute</source>
+            <translation>执行</translation>
+        </message>
+        <message>
+            <source>Cancel</source>
+            <translation>取消</translation>
+        </message>
+    </context>
+    <context>
+        <name>CreateBoxPage</name>
+        <message>
+            <source>Create Box</source>
+            <translation>创建长方体</translation>
+        </message>
+        <message>
+            <source>Box Name</source>
+            <translation>长方体名称</translation>
+        </message>
+        <message>
+            <source>Auto-generated if empty</source>
+            <translation>留空时自动生成</translation>
+        </message>
+        <message>
+            <source>Origin Point</source>
+            <translation>原点坐标</translation>
+        </message>
+        <message>
+            <source>Dimensions</source>
+            <translation>尺寸</translation>
+        </message>
+        <message>
+            <source>Width</source>
+            <translation>宽度</translation>
+        </message>
+        <message>
+            <source>Height</source>
+            <translation>高度</translation>
+        </message>
+        <message>
+            <source>Depth</source>
+            <translation>深度</translation>
+        </message>
+        <message>
+            <source>Volume:</source>
+            <translation>体积：</translation>
+        </message>
+    </context>
+    <context>
+        <name>CreateCylinderPage</name>
+        <message>
+            <source>Create Cylinder</source>
+            <translation>创建圆柱体</translation>
+        </message>
+        <message>
+            <source>Cylinder Name</source>
+            <translation>圆柱体名称</translation>
+        </message>
+        <message>
+            <source>Auto-generated if empty</source>
+            <translation>留空时自动生成</translation>
+        </message>
+        <message>
+            <source>Center Point</source>
+            <translation>中心点坐标</translation>
+        </message>
+        <message>
+            <source>Dimensions</source>
+            <translation>尺寸</translation>
+        </message>
+        <message>
+            <source>Radius</source>
+            <translation>半径</translation>
+        </message>
+        <message>
+            <source>Height</source>
+            <translation>高度</translation>
+        </message>
+        <message>
+            <source>Volume:</source>
+            <translation>体积：</translation>
+        </message>
+        <message>
+            <source>Surface Area:</source>
+            <translation>表面积：</translation>
+        </message>
+    </context>
+    <context>
+        <name>CreateSpherePage</name>
+        <message>
+            <source>Create Sphere</source>
+            <translation>创建球体</translation>
+        </message>
+        <message>
+            <source>Sphere Name</source>
+            <translation>球体名称</translation>
+        </message>
+        <message>
+            <source>Auto-generated if empty</source>
+            <translation>留空时自动生成</translation>
+        </message>
+        <message>
+            <source>Center Point</source>
+            <translation>中心点坐标</translation>
+        </message>
+        <message>
+            <source>Dimensions</source>
+            <translation>尺寸</translation>
+        </message>
+        <message>
+            <source>Radius</source>
+            <translation>半径</translation>
+        </message>
+        <message>
+            <source>Volume:</source>
+            <translation>体积：</translation>
+        </message>
+        <message>
+            <source>Surface Area:</source>
+            <translation>表面积：</translation>
+        </message>
+        <message>
+            <source>Diameter:</source>
+            <translation>直径：</translation>
+        </message>
+    </context>
+    <context>
+        <name>CreateTorusPage</name>
+        <message>
+            <source>Create Torus</source>
+            <translation>创建圆环体</translation>
+        </message>
+        <message>
+            <source>Torus Name</source>
+            <translation>圆环体名称</translation>
+        </message>
+        <message>
+            <source>Auto-generated if empty</source>
+            <translation>留空时自动生成</translation>
+        </message>
+        <message>
+            <source>Center Point</source>
+            <translation>中心点坐标</translation>
+        </message>
+        <message>
+            <source>Dimensions</source>
+            <translation>尺寸</translation>
+        </message>
+        <message>
+            <source>Major Radius</source>
+            <translation>主半径</translation>
+        </message>
+        <message>
+            <source>Minor Radius</source>
+            <translation>次半径</translation>
+        </message>
+        <message>
+            <source>Minor radius should be less than major radius</source>
+            <translation>次半径应小于主半径</translation>
+        </message>
+        <message>
+            <source>Volume:</source>
+            <translation>体积：</translation>
+        </message>
+        <message>
+            <source>Surface Area:</source>
+            <translation>表面积：</translation>
+        </message>
+        <message>
+            <source>Outer Diameter:</source>
+            <translation>外径：</translation>
         </message>
     </context>
 </TS>

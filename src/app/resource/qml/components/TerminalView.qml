@@ -139,6 +139,8 @@ Rectangle {
                 }
 
                 delegate: Item {
+                    id: entryDelegate
+
                     required property string type
                     required property string header
                     required property string json
@@ -191,7 +193,7 @@ Rectangle {
                             acceptedButtons: Qt.RightButton
                             cursorShape: Qt.IBeamCursor
                             onClicked: function (mouse) {
-                                terminalContextMenu.targetJson = parent.parent.json;
+                                terminalContextMenu.targetJson = entryDelegate.json;
                                 const pos = mapToItem(root, mouse.x, mouse.y);
                                 terminalContextMenu.x = pos.x;
                                 terminalContextMenu.y = pos.y;
@@ -246,6 +248,8 @@ Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: editorContainer.implicitHeight + (root.theme.gapTight * 2)
             color: root.theme.surfaceMuted
+            bottomLeftRadius: root.theme.radiusMedium
+            bottomRightRadius: root.theme.radiusMedium
 
             RowLayout {
                 id: editorContainer

@@ -15,7 +15,6 @@ Rectangle {
     required property bool menuOpen
     required property int selectedTab
     required property var actionHandler
-    property int recordedCommandCount: 0
     property var ribbonTabs: []
     property var ribbonGroups: []
     property var pluginList: []

@@ -56,6 +56,9 @@ Window {
     }
 
     Component.onCompleted: {
+        MainPages.mainWindow = root;
+        MainPages.theme = appTheme;
+        MainPages.pagesContainer = functionPagesContainer;
         RequestService.submitAsync(JSON.stringify({
             module: "plugins",
             action: "list",
@@ -71,6 +74,10 @@ Window {
     }
 
     function openActionPage(actionKey) {
+        if (actionKey === "exit") {
+            Qt.quit();
+            return;
+        }
         if (actionKey === "toggleTheme") {
             root.toggleTheme();
             return;
@@ -114,25 +121,9 @@ Window {
             return;
         }
 
-        // Other actions — not yet implemented.
-        // Geometry creation actions
-        const geometryActions = {
-            "addBox":      { action: "create_box", param: { width: 1.0, height: 1.0, depth: 1.0 } },
-            "addCylinder": { action: "create_cylinder", param: { radius: 0.5, height: 1.0 } },
-            "addSphere":   { action: "create_sphere", param: { radius: 0.5 } },
-            "addTorus":    { action: "create_torus", param: { majorRadius: 1.0, minorRadius: 0.3 } }
-        };
-
-        if (actionKey in geometryActions) {
-            const spec = geometryActions[actionKey];
-            root.statusNote = qsTr("Creating %1...").arg(spec.action);
+        if (MainPages.hasPage(actionKey)) {
+            MainPages.handleAction(actionKey);
             root.menuOpen = false;
-            RequestService.submitAsync(JSON.stringify({
-                module: "geometry",
-                action: spec.action,
-                param: spec.param,
-                mute: false
-            }));
             return;
         }
 
@@ -192,7 +183,6 @@ Window {
                 darkMode: root.darkMode
                 menuOpen: root.menuOpen
                 selectedTab: root.selectedRibbonTab
-                recordedCommandCount: 0
                 ribbonTabs: ribbonConfig.tabs
                 ribbonGroups: ribbonConfig.groupsForTab(root.selectedRibbonTab)
                 pluginList: root.pluginList
@@ -253,6 +243,13 @@ Window {
                     anchors.rightMargin: appTheme.gap
                     anchors.bottomMargin: appTheme.gap
                     theme: appTheme
+                }
+
+                Item {
+                    id: functionPagesContainer
+                    anchors.fill: parent
+                    z: 100
+                    visible: MainPages.currentOpenPage.length > 0
                 }
             }
         }
