@@ -49,8 +49,18 @@ TEST_CASE("CommandDispatcher listModules returns registered modules") {
 
     CommandDispatcher dispatcher(factory);
     auto modules = dispatcher.listModules();
-    REQUIRE(modules.size() == 1);
-    CHECK(modules[0].m_moduleName == "io");
+    REQUIRE(modules.size() == 2);
+
+    bool found_io = false;
+    bool found_geometry = false;
+    for(const auto& m : modules) {
+        if(m.m_moduleName == "io")
+            found_io = true;
+        if(m.m_moduleName == "geometry")
+            found_geometry = true;
+    }
+    CHECK(found_io);
+    CHECK(found_geometry);
 }
 
 TEST_CASE("CommandDispatcher describe returns full system description") { // NOLINT
@@ -72,9 +82,18 @@ TEST_CASE("CommandDispatcher describe returns full system description") { // NOL
     REQUIRE(desc.contains("modules"));
     auto& modules = desc["modules"];
     REQUIRE(modules.is_array());
-    REQUIRE(modules.size() == 1);
+    REQUIRE(modules.size() == 2);
 
-    auto& io_mod = modules[0];
+    // Find io module in the array
+    const nlohmann::json* io_mod_ptr = nullptr;
+    for(const auto& mod : modules) {
+        if(mod["name"] == "io") {
+            io_mod_ptr = &mod;
+            break;
+        }
+    }
+    REQUIRE(io_mod_ptr != nullptr);
+    const auto& io_mod = *io_mod_ptr;
     CHECK(io_mod["name"] == "io");
     CHECK(io_mod.contains("description"));
     REQUIRE(io_mod.contains("actions"));

@@ -16,10 +16,10 @@
 
 namespace Py = pybind11;
 
-namespace {
-
-/// Lazy-initialized dispatcher backed by the global PluginComponentFactory.
-OpenGeoLab::Command::CommandDispatcher& getDispatcher() {
+/**
+ * @brief Lazy-initialized dispatcher backed by the global PluginComponentFactory.
+ */
+static OpenGeoLab::Command::CommandDispatcher& getDispatcher() {
     static std::once_flag flag;
     std::call_once(flag,
                    [] { OpenGeoLab::Command::registerBuiltinModules(g_PluginComponentFactory); });
@@ -27,9 +27,7 @@ OpenGeoLab::Command::CommandDispatcher& getDispatcher() {
     return dispatcher;
 }
 
-} // namespace
-
-PYBIND11_MODULE(opengeolab_python_wrapper, m) {
+PYBIND11_MODULE(opengeolab_pywrapper, m) {
     m.doc() = "OpenGeoLab JSON process bridge — dispatches to C++ modules";
 
     m.def(
@@ -44,7 +42,7 @@ PYBIND11_MODULE(opengeolab_python_wrapper, m) {
                 cpp_progress = [cb = Py::object(progress_callback)](
                                    double progress, const std::string& message) -> bool {
                     try {
-                        Py::gil_scoped_acquire acquire;
+                        const Py::gil_scoped_acquire acquire;
                         auto result = cb(progress, message);
                         return result.cast<bool>();
                     } catch(const Py::error_already_set& e) {

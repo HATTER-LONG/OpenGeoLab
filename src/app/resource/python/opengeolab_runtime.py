@@ -51,7 +51,6 @@ def _make_response(
     summary: str,
     result: dict[str, Any] | None = None,
     errors: list[str] | None = None,
-    request_id: str = "",
 ) -> str:
     """Build a JSON response envelope."""
     response: dict[str, Any] = {
@@ -63,8 +62,6 @@ def _make_response(
         "result": result or {},
         "errors": errors or [],
     }
-    if request_id:
-        response["requestId"] = request_id
     return json.dumps(response)
 
 
@@ -123,7 +120,7 @@ def _discover_plugins() -> list[dict[str, Any]]:
 # ---------------------------------------------------------------------------
 
 
-def _plugins_response(request_id: str = "") -> str:
+def _plugins_response() -> str:
     """Handle plugins.list — enumerate available plugins."""
     plugins = _discover_plugins()
     return _make_response(
@@ -132,12 +129,11 @@ def _plugins_response(request_id: str = "") -> str:
         True,
         "Plugins enumerated.",
         {"plugins": plugins},
-        request_id=request_id,
     )
 
 
 def _execute_plugin(
-    request: dict[str, Any], request_id: str = "", progress_callback=None
+    request: dict[str, Any], progress_callback=None
 ) -> str:
     """Handle plugins.execute — run a plugin's execute() function."""
     param = request.get("param", {})
@@ -148,7 +144,6 @@ def _execute_plugin(
             "execute",
             False,
             "Missing pluginName in param.",
-            request_id=request_id,
         )
 
     try:
@@ -159,7 +154,6 @@ def _execute_plugin(
                 "execute",
                 False,
                 f"Plugin '{plugin_name}' has no execute().",
-                request_id=request_id,
             )
         sig = inspect.signature(mod.execute)
         if progress_callback and "progress_callback" in sig.parameters:
@@ -172,7 +166,6 @@ def _execute_plugin(
             True,
             f"Plugin '{plugin_name}' executed.",
             result,
-            request_id=request_id,
         )
     except Exception:
         return _make_response(
@@ -180,11 +173,10 @@ def _execute_plugin(
             "execute",
             False,
             f"Plugin execution failed: {traceback.format_exc()}",
-            request_id=request_id,
         )
 
 
-def _launch_plugin_ui(request: dict[str, Any], request_id: str = "") -> str:
+def _launch_plugin_ui(request: dict[str, Any]) -> str:
     """Handle plugins.invoke_ui — show a PySide6 non-modal window."""
     param = request.get("param", {})
     plugin_name = param.get("pluginName", "")
@@ -194,7 +186,6 @@ def _launch_plugin_ui(request: dict[str, Any], request_id: str = "") -> str:
             "invoke_ui",
             False,
             "Missing pluginName in param.",
-            request_id=request_id,
         )
 
     try:
@@ -205,7 +196,6 @@ def _launch_plugin_ui(request: dict[str, Any], request_id: str = "") -> str:
                 "invoke_ui",
                 False,
                 f"Plugin '{plugin_name}' has no launch_ui().",
-                request_id=request_id,
             )
         result = mod.launch_ui()
         return _make_response(
@@ -214,7 +204,6 @@ def _launch_plugin_ui(request: dict[str, Any], request_id: str = "") -> str:
             True,
             "Plugin UI launched.",
             result,
-            request_id=request_id,
         )
     except Exception:
         return _make_response(
@@ -222,11 +211,10 @@ def _launch_plugin_ui(request: dict[str, Any], request_id: str = "") -> str:
             "invoke_ui",
             False,
             f"Plugin UI failed: {traceback.format_exc()}",
-            request_id=request_id,
         )
 
 
-def _capabilities_response(request_id: str = "") -> str:
+def _capabilities_response() -> str:
     """Handle system.capabilities — return runtime info."""
     caps = _python_capabilities()
     return _make_response(
@@ -235,7 +223,6 @@ def _capabilities_response(request_id: str = "") -> str:
         True,
         "Capabilities reported.",
         caps,
-        request_id=request_id,
     )
 
 
@@ -261,36 +248,33 @@ def process(request_json: str, progress_callback=None) -> str:
     except json.JSONDecodeError as exc:
         return _make_response("unknown", "unknown", False, f"Invalid JSON: {exc}")
 
-    request_id = request.get("requestId", "")
     module = request.get("module", "")
     action = request.get("action", "")
 
     # Plugin routes.
     if module == "plugins":
         if action == "list":
-            return _plugins_response(request_id)
+            return _plugins_response()
         if action == "execute":
-            return _execute_plugin(request, request_id, progress_callback)
+            return _execute_plugin(request, progress_callback)
         if action == "invoke_ui":
-            return _launch_plugin_ui(request, request_id)
+            return _launch_plugin_ui(request)
         return _make_response(
             module,
             action,
             False,
             f"Unknown plugins action: {action}",
-            request_id=request_id,
         )
 
     # System routes.
     if module == "system":
         if action == "capabilities":
-            return _capabilities_response(request_id)
+            return _capabilities_response()
         return _make_response(
             module,
             action,
             False,
             f"Unknown system action: {action}",
-            request_id=request_id,
         )
 
     # Fallback to C++ wrapper.
@@ -303,5 +287,4 @@ def process(request_json: str, progress_callback=None) -> str:
         action,
         False,
         f"No handler for module '{module}'.",
-        request_id=request_id,
     )

@@ -100,7 +100,9 @@ qt_add_qml_module(
     resource/icons/cubeOutline.svg
     resource/icons/hourglassOutline.svg
     resource/icons/checkmarkCircleOutline.svg
-    resource/icons/closeCircleOutline.svg)
+    resource/icons/closeCircleOutline.svg
+    resource/icons/syncOutline.svg
+    resource/icons/copyOutline.svg)
 
 # Use console subsystem during development so errors are visible.
 option(OPENGEOLAB_WIN32_APP

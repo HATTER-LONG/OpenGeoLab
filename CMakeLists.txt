@@ -234,6 +234,7 @@ endif ()
 # ---------------------------------------------------------------------------
 add_subdirectory(src/libs/core)
 add_subdirectory(src/libs/io)
+add_subdirectory(src/libs/geometry)
 add_subdirectory(src/libs/command)
 add_subdirectory(src/libs/python)
 add_subdirectory(src/app)

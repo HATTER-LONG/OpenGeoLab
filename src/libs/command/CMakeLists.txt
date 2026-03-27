@@ -12,7 +12,8 @@ opengeolab_add_module(
     ${command_public_headers}
     PUBLIC_LINKS
     OpenGeoLab::Core
-    OpenGeoLab::IO)
+    OpenGeoLab::IO
+    OpenGeoLab::Geometry)
 
 if (OPENGEOLAB_BUILD_TESTS)
     opengeolab_add_doctest_test(

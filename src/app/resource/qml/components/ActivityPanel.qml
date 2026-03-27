@@ -2,7 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
-import OpenGeoLab.Services 1.0
+import OpenGeoLab.Services
 import "../theme"
 
 Item {
@@ -10,14 +10,14 @@ Item {
 
     required property AppTheme theme
     property int currentTab: 0
-    property real availableHeight: 760
+    property real availableHeight: 480
     signal closeRequested
 
-    readonly property int minimumHeight: 360
-    readonly property int maximumHeight: Math.max(minimumHeight, Math.min(Math.floor(availableHeight), 760))
+    readonly property int minimumHeight: 300
+    readonly property int maximumHeight: Math.max(minimumHeight, Math.min(Math.floor(availableHeight), 560))
     readonly property int resolvedHeight: maximumHeight
 
-    implicitWidth: 460
+    implicitWidth: 360
     height: resolvedHeight
     implicitHeight: resolvedHeight
 
@@ -39,13 +39,24 @@ Item {
         clip: true
     }
 
-    ListModel { id: terminalModel }
+    ListModel {
+        id: terminalModel
+    }
 
-    /** @brief Map of requestId → true for non-muted requests tracked in terminal. */
-    property var trackedRequests: ({})
+    function formatJson(text: string): string {
+        try {
+            return JSON.stringify(JSON.parse(text), null, 2);
+        } catch (e) {
+            return text;
+        }
+    }
 
-    function appendTerminalEntry(type: string, text: string): void {
-        terminalModel.append({ type: type, text: text });
+    function appendTerminalEntry(type: string, header: string, json: string): void {
+        terminalModel.append({
+            type: type,
+            header: header,
+            json: json
+        });
         if (terminalModel.count > 160) {
             terminalModel.remove(0);
         }
@@ -58,29 +69,29 @@ Item {
     Connections {
         target: RequestService
 
-        function onRequestSent(requestId: string, description: string, requestJson: string): void {
-            root.trackedRequests[requestId] = true;
-            root.appendTerminalEntry("command", "[" + description + "] " + requestJson);
+        function onRequestSent(description: string, requestJson: string, muted: bool): void {
+            const label = "[" + description + "]" + (muted ? " (muted)" : "");
+            root.appendTerminalEntry("command", label, root.formatJson(requestJson));
         }
 
-        function onResponseReady(requestId: string, responseJson: string): void {
-            if (root.trackedRequests[requestId]) {
-                delete root.trackedRequests[requestId];
-                root.appendTerminalEntry("response", responseJson);
-            }
+        function onResponseReady(responseJson: string, muted: bool): void {
+            root.appendTerminalEntry("response", "", root.formatJson(responseJson));
         }
 
-        function onErrorOccurred(requestId: string, errorMessage: string): void {
-            if (root.trackedRequests[requestId]) {
-                delete root.trackedRequests[requestId];
-                root.appendTerminalEntry("error", errorMessage);
-            }
+        function onErrorOccurred(errorMessage: string, muted: bool): void {
+            root.appendTerminalEntry("error", "", errorMessage);
         }
     }
 
     readonly property var tabs: [
-        { "title": qsTr("Logs"), "icon": "list" },
-        { "title": qsTr("Command Line"), "icon": "terminal" }
+        {
+            "title": qsTr("Logs"),
+            "icon": "list"
+        },
+        {
+            "title": qsTr("Command Line"),
+            "icon": "terminal"
+        }
     ]
 
     ColumnLayout {
@@ -103,13 +114,9 @@ Item {
                     Layout.fillWidth: true
                     implicitHeight: 32
                     radius: root.theme.radiusSmall
-                    color: root.currentTab === tabDelegate.index
-                        ? root.theme.tint(root.theme.accentA, root.theme.darkMode ? 0.24 : 0.12)
-                        : root.theme.surfaceMuted
+                    color: root.currentTab === tabDelegate.index ? root.theme.tint(root.theme.accentA, root.theme.darkMode ? 0.24 : 0.12) : root.theme.surfaceMuted
                     border.width: 1
-                    border.color: root.currentTab === tabDelegate.index
-                        ? root.theme.tint(root.theme.accentA, root.theme.darkMode ? 0.56 : 0.3)
-                        : root.theme.tint(root.theme.borderSubtle, 0.75)
+                    border.color: root.currentTab === tabDelegate.index ? root.theme.tint(root.theme.accentA, root.theme.darkMode ? 0.56 : 0.3) : root.theme.tint(root.theme.borderSubtle, 0.75)
 
                     Row {
                         anchors.centerIn: parent
@@ -147,8 +154,7 @@ Item {
                 Layout.preferredWidth: 32
                 Layout.preferredHeight: 32
                 radius: root.theme.radiusSmall
-                color: closeArea.pressed ? root.theme.surfaceStrong
-                                         : (closeArea.containsMouse ? root.theme.tint(root.theme.surfaceMuted, root.theme.darkMode ? 0.84 : 0.96) : "transparent")
+                color: closeArea.pressed ? root.theme.surfaceStrong : (closeArea.containsMouse ? root.theme.tint(root.theme.surfaceMuted, root.theme.darkMode ? 0.84 : 0.96) : "transparent")
                 border.width: 1
                 border.color: closeArea.containsMouse ? root.theme.tint(root.theme.accentA, 0.35) : "transparent"
 
@@ -189,7 +195,9 @@ Item {
                 Layout.fillHeight: true
                 theme: root.theme
                 model: terminalModel
-                onCommandSubmitted: function(text) { root.runCommand(text) }
+                onCommandSubmitted: function (text) {
+                    root.runCommand(text);
+                }
             }
         }
     }

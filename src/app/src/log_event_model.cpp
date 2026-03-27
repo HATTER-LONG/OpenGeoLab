@@ -99,24 +99,24 @@ void LogEventModel::installSink(const std::shared_ptr<spdlog::logger>& logger) {
 }
 
 void LogEventModel::appendEntry(int level,
-                                const QString& levelName,
+                                const QString& level_name,
                                 const QString& source,
                                 const QString& message,
                                 const QString& time,
-                                int threadId,
+                                int thread_id,
                                 const QString& file,
                                 int line) {
     // Trim old entries if exceeding capacity
     if(static_cast<int>(m_entries.size()) >= MAX_ENTRIES) {
-        const int removeCount = MAX_ENTRIES / 4;
-        beginRemoveRows(QModelIndex(), 0, removeCount - 1);
-        m_entries.erase(m_entries.begin(), m_entries.begin() + removeCount);
+        const int remove_count = MAX_ENTRIES / 4;
+        beginRemoveRows(QModelIndex(), 0, remove_count - 1);
+        m_entries.erase(m_entries.begin(), m_entries.begin() + remove_count);
         endRemoveRows();
     }
 
     const int row = static_cast<int>(m_entries.size());
     beginInsertRows(QModelIndex(), row, row);
-    m_entries.push_back({level, levelName, source, message, time, threadId, file, line});
+    m_entries.push_back({level, level_name, source, message, time, thread_id, file, line});
     endInsertRows();
 
     emit countChanged();
@@ -133,10 +133,10 @@ void QmlLogSink::sink_it_(const spdlog::details::log_msg& msg) {
     const int level = static_cast<int>(msg.level);
 
     // Level name mapping (spdlog: err → display: ERROR)
-    static constexpr const char* LEVEL_NAMES[] = {"TRACE", "DEBUG", "INFO",
+    static constexpr const char* level_names[] = {"TRACE", "DEBUG", "INFO",
                                                   "WARN",  "ERROR", "CRITICAL"};
-    const QString levelName = (level >= 0 && level <= 5) ? QString::fromLatin1(LEVEL_NAMES[level])
-                                                         : QStringLiteral("UNKNOWN");
+    const QString level_name = (level >= 0 && level <= 5) ? QString::fromLatin1(level_names[level])
+                                                          : QStringLiteral("UNKNOWN");
 
     // Extract source component name from file path
     QString source = QStringLiteral("OpenGeoLab");
@@ -144,10 +144,10 @@ void QmlLogSink::sink_it_(const spdlog::details::log_msg& msg) {
     int line = 0;
 
     if(!msg.source.empty()) {
-        const std::string_view fullPath(msg.source.filename);
-        const auto lastSep = fullPath.find_last_of("/\\");
+        const std::string_view full_path(msg.source.filename);
+        const auto last_sep = full_path.find_last_of("/\\");
         const auto filename =
-            (lastSep != std::string_view::npos) ? fullPath.substr(lastSep + 1) : fullPath;
+            (last_sep != std::string_view::npos) ? full_path.substr(last_sep + 1) : full_path;
         const auto dot = filename.find_last_of('.');
         const auto stem = (dot != std::string_view::npos) ? filename.substr(0, dot) : filename;
 
@@ -163,23 +163,24 @@ void QmlLogSink::sink_it_(const spdlog::details::log_msg& msg) {
     // Timestamp from the log message
     const auto epoch = msg.time.time_since_epoch();
     const auto seconds = std::chrono::duration_cast<std::chrono::seconds>(epoch);
-    const std::time_t timeVal = seconds.count();
-    std::tm tmBuf{};
+    const std::time_t time_val = seconds.count();
+    std::tm tm_buf{};
 #ifdef _WIN32
-    localtime_s(&tmBuf, &timeVal);
+    localtime_s(&tm_buf, &time_val);
 #else
-    localtime_r(&timeVal, &tmBuf);
+    localtime_r(&time_val, &tm_buf);
 #endif
-    const QString timeStr =
-        QString::asprintf("%02d:%02d:%02d", tmBuf.tm_hour, tmBuf.tm_min, tmBuf.tm_sec);
+    const QString time_str =
+        QString::asprintf("%04d-%02d-%02d %02d:%02d:%02d", tm_buf.tm_year + 1900, tm_buf.tm_mon + 1,
+                          tm_buf.tm_mday, tm_buf.tm_hour, tm_buf.tm_min, tm_buf.tm_sec);
 
-    const int threadId = static_cast<int>(msg.thread_id);
+    const int thread_id = static_cast<int>(msg.thread_id);
 
     // Post to the main thread
     QMetaObject::invokeMethod(m_model, "appendEntry", Qt::QueuedConnection, Q_ARG(int, level),
-                              Q_ARG(QString, levelName), Q_ARG(QString, source),
-                              Q_ARG(QString, message), Q_ARG(QString, timeStr),
-                              Q_ARG(int, threadId), Q_ARG(QString, file), Q_ARG(int, line));
+                              Q_ARG(QString, level_name), Q_ARG(QString, source),
+                              Q_ARG(QString, message), Q_ARG(QString, time_str),
+                              Q_ARG(int, thread_id), Q_ARG(QString, file), Q_ARG(int, line));
 }
 
 void QmlLogSink::flush_() {

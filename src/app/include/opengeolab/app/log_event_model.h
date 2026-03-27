@@ -78,11 +78,11 @@ signals:
 public slots:
     /** @brief Append a log entry (called from QmlLogSink via QueuedConnection). */
     void appendEntry(int level,
-                     const QString& levelName,
+                     const QString& level_name,
                      const QString& source,
                      const QString& message,
                      const QString& time,
-                     int threadId,
+                     int thread_id,
                      const QString& file,
                      int line);
 

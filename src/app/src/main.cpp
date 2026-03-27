@@ -1,5 +1,7 @@
-/// @file main.cpp
-/// @brief Application entry point for OpenGeoLab.
+/**
+ * @file main.cpp
+ * @brief Application entry point for OpenGeoLab.
+ */
 
 #include <pybind11/pybind11.h>
 

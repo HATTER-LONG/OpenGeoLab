@@ -13,13 +13,10 @@ Item {
     property bool hasNewErrors: false
     property bool hasNewLogs: false
 
-    readonly property real availableWidth: parent ? Math.max(520, parent.width - 24) : 860
-    readonly property real availableHeight: parent ? Math.max(420, parent.height - 36) : 760
+    readonly property real availableWidth: parent ? Math.max(400, parent.width - 24) : 680
+    readonly property real availableHeight: parent ? Math.max(320, parent.height - 36) : 560
 
-    width: Math.max(
-        Math.min(920, availableWidth),
-        activityButton.width + (progressCard.visible ? progressCard.implicitWidth + 8 : 0)
-    )
+    width: Math.max(Math.min(680, availableWidth), activityButton.width)
     height: activityButton.height
         + ((activityOpen || activityPanel.opacity > 0.01) ? activityPanel.height + 10 : 0)
     z: 40
@@ -60,15 +57,6 @@ Item {
         Behavior on opacity {
             NumberAnimation { duration: 180; easing.type: Easing.OutQuad }
         }
-    }
-
-    ProgressCard {
-        id: progressCard
-
-        theme: root.theme
-        anchors.right: activityButton.left
-        anchors.rightMargin: 8
-        anchors.verticalCenter: activityButton.verticalCenter
     }
 
     Rectangle {

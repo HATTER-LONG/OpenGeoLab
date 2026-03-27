@@ -38,6 +38,77 @@ Rectangle {
         return qsTr("Info");
     }
 
+    function copyToClipboard(text: string): void {
+        clipboardHelper.text = text;
+        clipboardHelper.selectAll();
+        clipboardHelper.copy();
+    }
+
+    TextEdit {
+        id: clipboardHelper
+        visible: false
+    }
+
+    Popup {
+        id: logContextMenu
+
+        property string copyText: ""
+
+        width: logCopyRow.implicitWidth + 24
+        height: logCopyRow.implicitHeight + 16
+        padding: 0
+        modal: false
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+
+        background: Rectangle {
+            radius: root.theme.radiusMedium
+            color: root.theme.surfaceStrong
+            border.width: 1
+            border.color: root.theme.tint(root.theme.borderSubtle, root.theme.darkMode ? 0.8 : 0.5)
+        }
+
+        contentItem: Rectangle {
+            color: logCopyMouseArea.containsMouse
+                ? root.theme.tint(root.theme.accentA, root.theme.darkMode ? 0.18 : 0.08)
+                : root.theme.surfaceStrong
+            radius: root.theme.radiusSmall
+
+            Row {
+                id: logCopyRow
+                anchors.centerIn: parent
+                spacing: 6
+
+                AppIcon {
+                    theme: root.theme
+                    iconKind: "copyOutline"
+                    useThemeContrast: false
+                    primaryColor: root.theme.textPrimary
+                    width: 14
+                    height: 14
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+
+                Text {
+                    text: qsTr("Copy")
+                    color: root.theme.textPrimary
+                    font.pixelSize: 12
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+            }
+
+            MouseArea {
+                id: logCopyMouseArea
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: {
+                    root.copyToClipboard(logContextMenu.copyText);
+                    logContextMenu.close();
+                }
+            }
+        }
+    }
+
     ColumnLayout {
         anchors.fill: parent
         spacing: 8
@@ -347,6 +418,27 @@ Rectangle {
                         font.pixelSize: 10
                     }
                 }
+
+                MouseArea {
+                    anchors.fill: parent
+                    acceptedButtons: Qt.RightButton
+                    onClicked: function(mouse) {
+                        let parts = [];
+                        parts.push("[" + eventCard.time + "]");
+                        parts.push("[" + eventCard.displayLevelName + "]");
+                        if (eventCard.threadId > 0)
+                            parts.push("[tid:" + eventCard.threadId + "]");
+                        parts.push("[" + eventCard.source + "]");
+                        if (eventCard.file.length > 0)
+                            parts.push("[" + eventCard.file + ":" + eventCard.line + "]");
+                        parts.push(eventCard.message);
+                        logContextMenu.copyText = parts.join(" ");
+                        const pos = mapToItem(root, mouse.x, mouse.y);
+                        logContextMenu.x = pos.x;
+                        logContextMenu.y = pos.y;
+                        logContextMenu.open();
+                    }
+                }
             }
 
             ScrollBar.vertical: ScrollBar {
@@ -361,10 +453,19 @@ Rectangle {
                 }
 
                 contentItem: Rectangle {
-                    implicitWidth: 6
+                    implicitWidth: eventScrollBar.hovered ? 8 : 6
                     implicitHeight: Math.max(26, eventScrollBar.availableHeight * eventScrollBar.visualSize)
                     radius: width / 2
-                    color: root.theme.surfaceStrong
+                    color: eventScrollBar.hovered
+                        ? root.theme.tint(root.theme.textSecondary, root.theme.darkMode ? 0.6 : 0.4)
+                        : root.theme.surfaceStrong
+
+                    Behavior on implicitWidth {
+                        NumberAnimation { duration: 120 }
+                    }
+                    Behavior on color {
+                        ColorAnimation { duration: 120 }
+                    }
                 }
             }
         }

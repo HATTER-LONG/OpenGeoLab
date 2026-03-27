@@ -41,7 +41,7 @@ Window {
     Connections {
         target: RequestService
 
-        function onResponseReady(requestId, responseJson) {
+        function onResponseReady(responseJson, muted) {
             const resp = JSON.parse(responseJson);
             if (resp.module === "plugins" && resp.action === "list" && resp.ok) {
                 root.pluginList = resp.result.plugins || [];
@@ -49,9 +49,9 @@ Window {
             }
         }
 
-        function onErrorOccurred(requestId, errorMessage) {
+        function onErrorOccurred(errorMessage, muted) {
             root.statusNote = qsTr("Error: %1").arg(errorMessage);
-            console.warn("[Main] Request error:", requestId, errorMessage);
+            console.warn("[Main] Request error:", errorMessage);
         }
     }
 
@@ -115,6 +115,27 @@ Window {
         }
 
         // Other actions — not yet implemented.
+        // Geometry creation actions
+        const geometryActions = {
+            "addBox":      { action: "create_box", param: { width: 1.0, height: 1.0, depth: 1.0 } },
+            "addCylinder": { action: "create_cylinder", param: { radius: 0.5, height: 1.0 } },
+            "addSphere":   { action: "create_sphere", param: { radius: 0.5 } },
+            "addTorus":    { action: "create_torus", param: { majorRadius: 1.0, minorRadius: 0.3 } }
+        };
+
+        if (actionKey in geometryActions) {
+            const spec = geometryActions[actionKey];
+            root.statusNote = qsTr("Creating %1...").arg(spec.action);
+            root.menuOpen = false;
+            RequestService.submitAsync(JSON.stringify({
+                module: "geometry",
+                action: spec.action,
+                param: spec.param,
+                mute: false
+            }));
+            return;
+        }
+
         root.statusNote = qsTr("Action: %1 (not yet implemented)").arg(actionKey);
         root.menuOpen = false;
         console.log("[Main] Action not implemented:", actionKey);
@@ -199,11 +220,24 @@ Window {
                     anchors.fill: parent
                     spacing: appTheme.gap
 
-                    SidebarPanel {
+                    ColumnLayout {
                         Layout.preferredWidth: 280
+                        Layout.maximumWidth: 280
                         Layout.fillHeight: true
-                        theme: appTheme
-                        boxListModel: boxListModel
+                        spacing: appTheme.gap
+
+                        SidebarPanel {
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                            theme: appTheme
+                            boxListModel: boxListModel
+                        }
+
+                        ProgressCard {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: implicitHeight
+                            theme: appTheme
+                        }
                     }
 
                     ViewportPanel {

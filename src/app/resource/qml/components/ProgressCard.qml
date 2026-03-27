@@ -2,21 +2,24 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
+import OpenGeoLab.Services 1.0
 import "../theme"
 
-/// @brief Compact progress card aligned to Activity button height.
-/// Two rows: icon + message, progress bar + percentage.
-/// @note ProgressTracker service not yet implemented — card stays hidden.
+/**
+ * @brief Compact progress card showing operation status.
+ *
+ * Two rows: icon + message, progress bar + percentage.
+ * Connects directly to RequestService signals.
+ */
 Item {
     id: root
 
     required property AppTheme theme
 
-    // TODO: bind to ProgressTracker service once implemented
-    readonly property bool active: false
-    readonly property real progress: 0
-    readonly property string description: ""
-    readonly property string message: ""
+    property bool active: false
+    property real progress: 0
+    property string description: ""
+    property string message: ""
 
     property string completionState: ""
     property string lastDescription: ""
@@ -32,10 +35,60 @@ Item {
             root.freshStart = false;
     }
 
-    visible: root.active || hideTimer.running || root.completionState !== ""
+    Connections {
+        target: RequestService
+
+        function onRequestSent(desc: string, requestJson: string, muted: bool): void {
+            if (muted)
+                return;
+            root.active = true;
+            root.progress = 0;
+            root.description = desc;
+            root.message = "";
+            root.freshStart = true;
+            root.completionState = "";
+        }
+
+        function onResponseReady(responseJson: string, muted: bool): void {
+            if (muted)
+                return;
+            root.completionState = "done";
+            root.active = false;
+            hideTimer.interval = 3000;
+            hideTimer.restart();
+        }
+
+        function onErrorOccurred(errorMessage: string, muted: bool): void {
+            if (muted)
+                return;
+            root.completionState = "failed";
+            root.active = false;
+            hideTimer.interval = 4000;
+            hideTimer.restart();
+        }
+
+        function onProgressUpdated(prog: double, msg: string): void {
+            root.progress = prog;
+            root.message = msg;
+        }
+    }
+
+    readonly property bool shown: root.active || hideTimer.running || root.completionState !== ""
+
+    visible: shown || slideAnimation.running
     implicitWidth: 280
-    implicitHeight: visible ? cardBg.height : 0
-    opacity: visible ? 1 : 0
+    implicitHeight: shown ? cardBg.height : 0
+    clip: true
+
+    Behavior on implicitHeight {
+        NumberAnimation {
+            id: slideAnimation
+            duration: 220
+            easing.type: Easing.OutCubic
+        }
+    }
+
+    opacity: shown ? 1 : 0
 
     Behavior on opacity {
         NumberAnimation {
@@ -52,8 +105,6 @@ Item {
             root.lastDescription = "";
         }
     }
-
-    // TODO: reconnect to ProgressTracker service when implemented
 
     readonly property string displayText: {
         if (root.completionState === "done")
@@ -73,7 +124,7 @@ Item {
 
     readonly property color iconColor: root.completionState === "done" ? root.theme.success : (root.completionState === "failed" ? root.theme.danger : root.theme.accentA)
 
-    readonly property string statusIcon: root.completionState === "done" ? "checkmarkCircleOutline" : (root.completionState === "failed" ? "closeCircleOutline" : "hourglassOutline")
+    readonly property string statusIcon: root.completionState === "done" ? "checkmarkCircleOutline" : (root.completionState === "failed" ? "closeCircleOutline" : "syncOutline")
 
     Rectangle {
         id: cardBg
@@ -92,8 +143,8 @@ Item {
             anchors.leftMargin: 8
             anchors.rightMargin: 8
             anchors.topMargin: 5
-            anchors.bottomMargin: 5
-            spacing: 3
+            anchors.bottomMargin: 3
+            spacing: 2
 
             RowLayout {
                 Layout.fillWidth: true
