@@ -26,6 +26,9 @@ target_link_libraries(
             Qt6::Widgets
             OpenGeoLab::Python_Embed)
 
+set_source_files_properties(resource/qml/MainPages.qml
+                            PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
+
 qt_add_qml_module(
     opengeolab_app
     URI

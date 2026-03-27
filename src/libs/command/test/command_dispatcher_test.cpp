@@ -28,13 +28,26 @@ TEST_CASE("CommandDispatcher dispatches to IOModule via request JSON") {
     CHECK(result["path"] == "test.brep");
 }
 
-TEST_CASE("CommandDispatcher throws on missing module field") {
+TEST_CASE("CommandDispatcher returns error on missing module field") {
     PluginComponentFactory factory;
     CommandDispatcher dispatcher(factory);
 
     nlohmann::json request = {{"action", "read_brep"}};
-    CHECK_THROWS_AS((void)dispatcher.dispatch(request, NO_PROGRESS_CALLBACK),
-                    std::invalid_argument);
+    auto result = dispatcher.dispatch(request, NO_PROGRESS_CALLBACK);
+    CHECK(result["ok"] == false);
+    CHECK(result.contains("summary"));
+}
+
+TEST_CASE("CommandDispatcher returns error for unknown module") {
+    PluginComponentFactory factory;
+    registerBuiltinModules(factory);
+
+    CommandDispatcher dispatcher(factory);
+    nlohmann::json request = {
+        {"module", "nonexistent"}, {"action", "foo"}, {"param", {}}};
+    auto result = dispatcher.dispatch(request, NO_PROGRESS_CALLBACK);
+    CHECK(result["ok"] == false);
+    CHECK(result.contains("summary"));
 }
 
 TEST_CASE("CommandDispatcher hasModule returns false for unknown") {

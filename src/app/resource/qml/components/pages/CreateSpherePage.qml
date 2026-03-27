@@ -90,16 +90,19 @@ FunctionPageBase {
                 spacing: 4
 
                 Text {
+                    Layout.preferredWidth: 86
                     text: qsTr("Volume:")
                     color: MainPages.theme.textSecondary
                     font.pixelSize: 11
                 }
 
                 Text {
+                    Layout.fillWidth: true
                     text: (4 / 3 * Math.PI * root.radius * root.radius * root.radius).toFixed(3)
                     color: MainPages.theme.textPrimary
                     font.pixelSize: 11
                     font.bold: true
+                    horizontalAlignment: Text.AlignLeft
                 }
             }
 
@@ -108,16 +111,19 @@ FunctionPageBase {
                 spacing: 4
 
                 Text {
+                    Layout.preferredWidth: 86
                     text: qsTr("Surface Area:")
                     color: MainPages.theme.textSecondary
                     font.pixelSize: 11
                 }
 
                 Text {
+                    Layout.fillWidth: true
                     text: (4 * Math.PI * root.radius * root.radius).toFixed(3)
                     color: MainPages.theme.textPrimary
                     font.pixelSize: 11
                     font.bold: true
+                    horizontalAlignment: Text.AlignLeft
                 }
             }
 
@@ -126,16 +132,19 @@ FunctionPageBase {
                 spacing: 4
 
                 Text {
+                    Layout.preferredWidth: 86
                     text: qsTr("Diameter:")
                     color: MainPages.theme.textSecondary
                     font.pixelSize: 11
                 }
 
                 Text {
+                    Layout.fillWidth: true
                     text: (2 * root.radius).toFixed(3)
                     color: MainPages.theme.textPrimary
                     font.pixelSize: 11
                     font.bold: true
+                    horizontalAlignment: Text.AlignLeft
                 }
             }
         }

@@ -26,7 +26,7 @@ Item {
 
     function open(payload) {
         root.x = 292;
-        root.y = 12;
+        root.y = 0;
         root.pageVisible = true;
         root.forceActiveFocus();
         if (payload !== undefined && payload !== null) {
@@ -121,7 +121,7 @@ Item {
                         const nextY = root.y + mouse.y - dragArea.pressOffsetY;
                         const minX = 292;
                         const maxX = Math.max(minX, root.parent.width - root.width);
-                        const minY = 12;
+                        const minY = 0;
                         const maxY = Math.max(minY, root.parent.height - root.height);
                         root.x = root.clamp(nextX, minX, maxX);
                         root.y = root.clamp(nextY, minY, maxY);
@@ -159,15 +159,13 @@ Item {
                         Layout.preferredHeight: 24
                         radius: MainPages.theme.radiusSmall
                         color: closeMouseArea.pressed
-                            ? MainPages.theme.surfaceStrong
+                            ? MainPages.theme.tint(MainPages.theme.danger, MainPages.theme.darkMode ? 0.38 : 0.22)
                             : (closeMouseArea.containsMouse
-                                   ? MainPages.theme.tint(MainPages.theme.surfaceStrong, MainPages.theme.darkMode ? 0.92 : 0.82)
+                                   ? MainPages.theme.tint(MainPages.theme.danger, MainPages.theme.darkMode ? 0.28 : 0.14)
                                    : "transparent")
-                        border.width: 1
-                        border.color: closeMouseArea.containsMouse
-                            ? MainPages.theme.tint(MainPages.theme.accentD, MainPages.theme.darkMode ? 0.46 : 0.28)
-                            : "transparent"
-                        scale: closeMouseArea.pressed ? 0.98 : (closeMouseArea.containsMouse ? 1.01 : 1.0)
+                        border.width: closeMouseArea.containsMouse ? 1 : 0
+                        border.color: MainPages.theme.tint(MainPages.theme.danger, MainPages.theme.darkMode ? 0.56 : 0.36)
+                        scale: closeMouseArea.pressed ? 0.92 : (closeMouseArea.containsMouse ? 1.06 : 1.0)
 
                         Behavior on color {
                             ColorAnimation {
@@ -185,9 +183,17 @@ Item {
                         Text {
                             anchors.centerIn: parent
                             text: qsTr("✕")
-                            color: MainPages.theme.textPrimary
+                            color: closeMouseArea.containsMouse
+                                ? MainPages.theme.danger
+                                : MainPages.theme.textSecondary
                             font.pixelSize: 13
                             font.bold: true
+
+                            Behavior on color {
+                                ColorAnimation {
+                                    duration: 140
+                                }
+                            }
                         }
 
                         MouseArea {
@@ -250,15 +256,15 @@ Item {
                         Layout.preferredHeight: 32
                         radius: MainPages.theme.radiusSmall
                         color: executeMouseArea.pressed
-                            ? MainPages.theme.tint(MainPages.theme.accentA, MainPages.theme.darkMode ? 0.3 : 0.18)
+                            ? Qt.darker(MainPages.theme.accentA, 1.15)
                             : (executeMouseArea.containsMouse
-                                   ? MainPages.theme.tint(MainPages.theme.accentA, MainPages.theme.darkMode ? 0.24 : 0.14)
-                                   : MainPages.theme.tint(MainPages.theme.accentA, MainPages.theme.darkMode ? 0.2 : 0.11))
+                                   ? Qt.lighter(MainPages.theme.accentA, 1.12)
+                                   : MainPages.theme.accentA)
                         border.width: 1
                         border.color: executeMouseArea.containsMouse
-                            ? MainPages.theme.tint(MainPages.theme.accentA, MainPages.theme.darkMode ? 0.58 : 0.34)
-                            : MainPages.theme.tint(MainPages.theme.borderSubtle, 0.45)
-                        scale: executeMouseArea.pressed ? 0.98 : (executeMouseArea.containsMouse ? 1.01 : 1.0)
+                            ? Qt.lighter(MainPages.theme.accentA, 1.3)
+                            : Qt.darker(MainPages.theme.accentA, 1.1)
+                        scale: executeMouseArea.pressed ? 0.97 : (executeMouseArea.containsMouse ? 1.02 : 1.0)
 
                         Behavior on color {
                             ColorAnimation {
@@ -276,7 +282,7 @@ Item {
                         Text {
                             anchors.centerIn: parent
                             text: qsTr("Execute")
-                            color: MainPages.theme.darkMode ? "#f4f7fb" : "#ffffff"
+                            color: "#ffffff"
                             font.pixelSize: 13
                             font.bold: true
                         }

@@ -121,16 +121,19 @@ FunctionPageBase {
             spacing: 4
 
             Text {
+                Layout.preferredWidth: 56
                 text: qsTr("Volume:")
                 color: MainPages.theme.textSecondary
                 font.pixelSize: 11
             }
 
             Text {
+                Layout.fillWidth: true
                 text: (root.dimW * root.dimH * root.dimD).toFixed(3)
                 color: MainPages.theme.textPrimary
                 font.pixelSize: 11
                 font.bold: true
+                horizontalAlignment: Text.AlignLeft
             }
         }
     }

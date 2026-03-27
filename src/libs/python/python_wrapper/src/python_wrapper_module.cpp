@@ -33,7 +33,16 @@ PYBIND11_MODULE(opengeolab_pywrapper, m) {
     m.def(
         "process",
         [](std::string_view request_json, Py::object progress_callback) -> std::string {
-            auto request = nlohmann::json::parse(request_json);
+            nlohmann::json request;
+            try {
+                request = nlohmann::json::parse(request_json);
+            } catch(const nlohmann::json::parse_error& e) {
+                nlohmann::json error_response = {
+                    {"ok", false},
+                    {"summary", "Invalid JSON in request"},
+                    {"errors", nlohmann::json::array({std::string(e.what())})}};
+                return error_response.dump();
+            }
 
             OpenGeoLab::Core::ProgressCallback cpp_progress;
             if(progress_callback.is_none()) {
@@ -52,8 +61,20 @@ PYBIND11_MODULE(opengeolab_pywrapper, m) {
                 };
             }
 
-            auto result = getDispatcher().dispatch(request, cpp_progress);
-            return result.dump();
+            try {
+                auto result = getDispatcher().dispatch(request, cpp_progress);
+                return result.dump();
+            } catch(const std::exception& e) {
+                const auto module = request.value("module", "unknown");
+                const auto action = request.value("action", "unknown");
+                nlohmann::json error_response = {
+                    {"ok", false},
+                    {"module", module},
+                    {"action", action},
+                    {"summary", std::string("Dispatch error: ") + e.what()},
+                    {"errors", nlohmann::json::array({std::string(e.what())})}};
+                return error_response.dump();
+            }
         },
         Py::arg("request_json"), Py::arg("progress_callback") = Py::none(),
         "Forward a JSON request to the appropriate C++ module.\n\n"

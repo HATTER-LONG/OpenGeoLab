@@ -280,7 +280,16 @@ def process(request_json: str, progress_callback=None) -> str:
     # Fallback to C++ wrapper.
     wrapper = _import_backend_wrapper()
     if wrapper is not None:
-        return wrapper.process(request_json, progress_callback)
+        try:
+            return wrapper.process(request_json, progress_callback)
+        except Exception as exc:
+            return _make_response(
+                module,
+                action,
+                False,
+                f"Backend error: {exc}",
+                errors=[str(exc)],
+            )
 
     return _make_response(
         module,

@@ -19,14 +19,31 @@ CommandDispatcher::~CommandDispatcher() = default;
 nlohmann::json CommandDispatcher::dispatch(const nlohmann::json& request,
                                            const Core::ProgressCallback& progress) const {
     if(!request.contains("module") || !request["module"].is_string()) {
-        throw std::invalid_argument("request must contain a string \"module\" field");
+        return {{"ok", false},
+                {"summary", "Request must contain a string \"module\" field"},
+                {"errors", nlohmann::json::array({"Missing or invalid 'module' field"})}};
     }
 
     const auto module_name = request["module"].get<std::string>();
     LOG_INFO("CommandDispatcher: dispatching to module '{}'", module_name);
 
-    auto module = m_factory.getSharedInstance<Core::ModuleBase>(module_name);
-    return module->process(request, progress);
+    if(!hasModule(module_name)) {
+        LOG_WARN("CommandDispatcher: module '{}' is not registered", module_name);
+        return {{"ok", false},
+                {"summary", "Module '" + module_name + "' is not registered."},
+                {"errors",
+                 nlohmann::json::array({"No module named '" + module_name + "' is available."})}};
+    }
+
+    try {
+        auto module = m_factory.getSharedInstance<Core::ModuleBase>(module_name);
+        return module->process(request, progress);
+    } catch(const std::exception& e) {
+        LOG_ERROR("CommandDispatcher: module '{}' threw: {}", module_name, e.what());
+        return {{"ok", false},
+                {"summary", "Module '" + module_name + "' threw an exception."},
+                {"errors", nlohmann::json::array({std::string(e.what())})}};
+    }
 }
 
 bool CommandDispatcher::hasModule(std::string_view module_name) const {
