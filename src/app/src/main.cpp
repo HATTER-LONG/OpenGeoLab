@@ -9,8 +9,12 @@
 #include "opengeolab/app/log_filter_proxy_model.h"
 #include "opengeolab/app/request_service.h"
 
+#include <opengeolab/command/command_dispatcher.hpp>
+#include <opengeolab/command/module_registry.hpp>
 #include <opengeolab/core/logger.hpp>
 #include <opengeolab/python_embed/embedded_python_runtime.hpp>
+
+#include <kangaroo/util/plugin_component_factory.hpp>
 
 #include <QApplication>
 #include <QQmlApplicationEngine>
@@ -45,9 +49,12 @@ int main(int argc, char* argv[]) {
     const auto runtime_dir = app_dir / "python";
     const auto plugin_dir = app_dir / "plugins";
 
+    OpenGeoLab::Command::registerBuiltinModules(g_PluginComponentFactory);
+    OpenGeoLab::Command::CommandDispatcher dispatcher(g_PluginComponentFactory);
+
     OpenGeoLab::PythonEmbed::EmbeddedPythonRuntime python_runtime(app_dir, runtime_dir, plugin_dir);
 
-    OpenGeoLab::App::RequestService request_service(python_runtime);
+    OpenGeoLab::App::RequestService request_service(dispatcher, python_runtime);
     qmlRegisterSingletonInstance("OpenGeoLab.Services", 1, 0, "RequestService", &request_service);
 
     OpenGeoLab::App::LogEventModel log_event_model;

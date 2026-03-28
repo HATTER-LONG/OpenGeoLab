@@ -26,7 +26,8 @@ target_link_libraries(
             Qt6::QuickLayouts
             Qt6::Svg
             Qt6::Widgets
-            OpenGeoLab::Python_Embed)
+            OpenGeoLab::Python_Embed
+            OpenGeoLab::Command)
 
 set_source_files_properties(resource/qml/MainPages.qml
                             PROPERTIES QT_QML_SINGLETON_TYPE TRUE)

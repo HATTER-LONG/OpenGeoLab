@@ -1,10 +1,12 @@
 #include "opengeolab/app/request_service.h"
 
+#include <opengeolab/command/command_dispatcher.hpp>
 #include <opengeolab/core/logger.hpp>
 #include <opengeolab/core/progress_callback.hpp>
 #include <opengeolab/python_embed/embedded_python_runtime.hpp>
 
 #include <kangaroo/util/stopwatch.hpp>
+#include <nlohmann/json.hpp>
 
 #include <QFutureWatcher>
 #include <QJsonDocument>
@@ -16,9 +18,10 @@
 
 namespace OpenGeoLab::App {
 
-RequestService::RequestService(OpenGeoLab::PythonEmbed::EmbeddedPythonRuntime& runtime,
+RequestService::RequestService(OpenGeoLab::Command::CommandDispatcher& dispatcher,
+                               OpenGeoLab::PythonEmbed::EmbeddedPythonRuntime& runtime,
                                QObject* parent)
-    : QObject(parent), m_runtime(runtime) {}
+    : QObject(parent), m_dispatcher(dispatcher), m_runtime(runtime) {}
 
 RequestService::~RequestService() {
     const std::lock_guard lock(m_futuresMutex);
@@ -28,7 +31,7 @@ RequestService::~RequestService() {
 }
 
 void RequestService::submitAsync(const QString& request_json) {
-    auto [description, process_json, muted] = prepareRequest(request_json);
+    auto [description, process_json, module_name, muted] = prepareRequest(request_json);
     if(!muted) {
         LOG_INFO("RequestService: submitting async [{}]", description.toStdString());
     }
@@ -51,15 +54,30 @@ void RequestService::submitAsync(const QString& request_json) {
         return true;
     };
 
-    auto future =
-        QtConcurrent::run([this, json = process_json.toStdString(), cb = std::move(progress_cb),
-                           muted, desc = description.toStdString()]() -> QString {
-            std::optional<Kangaroo::Util::Stopwatch> sw;
-            if(!muted) {
-                sw.emplace(desc, Core::getLoggerShared());
+    const bool use_cpp_path = m_dispatcher.hasModule(module_name);
+
+    auto future = QtConcurrent::run([this, json = process_json.toStdString(),
+                                     cb = std::move(progress_cb), muted,
+                                     desc = description.toStdString(), use_cpp_path]() -> QString {
+        std::optional<Kangaroo::Util::Stopwatch> sw;
+        if(!muted) {
+            sw.emplace(desc, Core::getLoggerShared());
+        }
+        if(use_cpp_path) {
+            nlohmann::json request;
+            try {
+                request = nlohmann::json::parse(json);
+            } catch(const nlohmann::json::parse_error& e) {
+                nlohmann::json err = {{"ok", false},
+                                      {"summary", "Invalid JSON in request"},
+                                      {"errors", nlohmann::json::array({std::string(e.what())})}};
+                return QString::fromStdString(err.dump());
             }
-            return QString::fromStdString(m_runtime.process(json, cb));
-        });
+            auto result = m_dispatcher.dispatch(request, cb);
+            return QString::fromStdString(result.dump());
+        }
+        return QString::fromStdString(m_runtime.process(json, cb));
+    });
 
     {
         const std::lock_guard lock(m_futuresMutex);
@@ -92,7 +110,7 @@ void RequestService::submitAsync(const QString& request_json) {
 }
 
 void RequestService::executeOnMainThread(const QString& request_json) {
-    auto [description, process_json, muted] = prepareRequest(request_json);
+    auto [description, process_json, module_name, muted] = prepareRequest(request_json);
 
     if(!muted) {
         LOG_INFO("RequestService: executing on main thread [{}]", description.toStdString());
@@ -105,12 +123,17 @@ void RequestService::executeOnMainThread(const QString& request_json) {
         if(!muted) {
             sw.emplace(description.toStdString(), Core::getLoggerShared());
         }
-        // main.cpp releases GIL before app.exec(). runtime.process() re-acquires
-        // GIL internally. This allows PySide6 launch_ui() to create Qt widgets on
-        // the main thread safely.
-        const auto response =
-            QString::fromStdString(m_runtime.process(process_json.toStdString(), nullptr));
-        emitResponse(response, muted);
+
+        if(m_dispatcher.hasModule(module_name)) {
+            auto request = nlohmann::json::parse(process_json.toStdString());
+            auto result = m_dispatcher.dispatch(request, nullptr);
+            emitResponse(QString::fromStdString(result.dump()), muted);
+        } else {
+            // Python path: process() re-acquires GIL internally.
+            const auto response =
+                QString::fromStdString(m_runtime.process(process_json.toStdString(), nullptr));
+            emitResponse(response, muted);
+        }
     } catch(const std::exception& exception) {
         LOG_ERROR("RequestService: main-thread request threw exception: {}{}", exception.what(),
                   muted ? " (muted)" : "");
@@ -131,6 +154,7 @@ RequestService::PreparedRequest RequestService::prepareRequest(const QString& js
     return {
         QStringLiteral("%1.%2").arg(module, action),
         json,
+        module.toStdString(),
         muted,
     };
 }

@@ -100,4 +100,12 @@ nlohmann::json CommandDispatcher::describe() const {
     return {{"request_schema", std::move(request_schema)}, {"modules", std::move(modules)}};
 }
 
+std::shared_ptr<Core::ModuleBase>
+CommandDispatcher::findModule(const std::string& module_name) const {
+    if(!hasModule(module_name)) {
+        return nullptr;
+    }
+    return getModule(module_name);
+}
+
 } // namespace OpenGeoLab::Command

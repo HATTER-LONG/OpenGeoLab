@@ -42,8 +42,7 @@ TEST_CASE("CommandDispatcher returns error for unknown module") {
     registerBuiltinModules(factory);
 
     CommandDispatcher dispatcher(factory);
-    nlohmann::json request = {
-        {"module", "nonexistent"}, {"action", "foo"}, {"param", {}}};
+    nlohmann::json request = {{"module", "nonexistent"}, {"action", "foo"}, {"param", {}}};
     auto result = dispatcher.dispatch(request, NO_PROGRESS_CALLBACK);
     CHECK(result["ok"] == false);
     CHECK(result.contains("summary"));
@@ -123,4 +122,33 @@ TEST_CASE("CommandDispatcher describe returns full system description") { // NOL
         }
     }
     CHECK(found_read_brep);
+}
+
+TEST_CASE("registerBuiltinModules is idempotent on same factory") {
+    PluginComponentFactory factory;
+    registerBuiltinModules(factory);
+    // Second call must not throw
+    CHECK_NOTHROW(registerBuiltinModules(factory));
+    // Module count unchanged
+    CommandDispatcher dispatcher(factory);
+    CHECK(dispatcher.listModules().size() == 2);
+}
+
+TEST_CASE("CommandDispatcher findModule returns shared_ptr for registered module") {
+    PluginComponentFactory factory;
+    registerBuiltinModules(factory);
+
+    CommandDispatcher dispatcher(factory);
+    auto io_module = dispatcher.findModule("io");
+    CHECK(io_module != nullptr);
+
+    auto geo_module = dispatcher.findModule("geometry");
+    CHECK(geo_module != nullptr);
+}
+
+TEST_CASE("CommandDispatcher findModule returns nullptr for unknown module") {
+    PluginComponentFactory factory;
+    CommandDispatcher dispatcher(factory);
+    auto result = dispatcher.findModule("nonexistent");
+    CHECK(result == nullptr);
 }

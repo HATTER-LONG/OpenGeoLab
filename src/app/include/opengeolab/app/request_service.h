@@ -15,11 +15,16 @@
 
 #include <atomic>
 #include <mutex>
+#include <string>
 #include <vector>
 
 namespace OpenGeoLab::PythonEmbed {
 class EmbeddedPythonRuntime;
 } // namespace OpenGeoLab::PythonEmbed
+
+namespace OpenGeoLab::Command {
+class CommandDispatcher;
+} // namespace OpenGeoLab::Command
 
 namespace OpenGeoLab::App {
 
@@ -38,7 +43,8 @@ class RequestService : public QObject {
     Q_PROPERTY(bool busy READ isBusy NOTIFY busyChanged)
 
 public:
-    explicit RequestService(OpenGeoLab::PythonEmbed::EmbeddedPythonRuntime& runtime,
+    explicit RequestService(OpenGeoLab::Command::CommandDispatcher& dispatcher,
+                            OpenGeoLab::PythonEmbed::EmbeddedPythonRuntime& runtime,
                             QObject* parent = nullptr);
 
     /** @brief Waits for all pending async futures before destruction. */
@@ -85,13 +91,15 @@ signals:
 private:
     struct PreparedRequest {
         QString description;
-        QString processJson; ///< JSON sent to the Python runtime (original, no injection).
+        QString processJson;    ///< JSON sent to the runtime (original, no injection).
+        std::string moduleName; ///< Module name for routing.
         bool muted = false;
     };
 
     static PreparedRequest prepareRequest(const QString& json);
     void emitResponse(const QString& response, bool muted);
 
+    OpenGeoLab::Command::CommandDispatcher& m_dispatcher;
     OpenGeoLab::PythonEmbed::EmbeddedPythonRuntime& m_runtime;
     std::atomic<int> m_pendingCount{0};
     mutable std::mutex m_futuresMutex;

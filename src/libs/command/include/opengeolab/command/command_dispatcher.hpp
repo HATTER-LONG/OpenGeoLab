@@ -58,9 +58,7 @@ public:
      * @brief Dispatch a request to the module named in request["module"].
      * @param request JSON with "module", "action", "param" fields
      * @param progress Callback for reporting progress
-     * @return Response JSON from the module
-     * @throws std::invalid_argument if "module" field is missing
-     * @throws Kangaroo::Util::ComponentFactoryNotRegisteredEx if module not found
+     * @return Response JSON; on error returns {"ok": false, "summary": "...", "errors": [...]}
      */
     [[nodiscard]] nlohmann::json dispatch(const nlohmann::json& request,
                                           const Core::ProgressCallback& progress) const;
@@ -88,6 +86,14 @@ public:
      * @return JSON system description
      */
     [[nodiscard]] nlohmann::json describe() const;
+
+    /**
+     * @brief Look up a registered module by name.
+     * @param module_name Module name to look up
+     * @return Shared pointer to the module; nullptr if not registered
+     */
+    [[nodiscard]] std::shared_ptr<Core::ModuleBase>
+    findModule(const std::string& module_name) const;
 
 private:
     /// Retrieve or cache a module singleton, keeping it alive across dispatches.
