@@ -75,7 +75,7 @@ FunctionPageBase {
         DimensionInput {
             Layout.fillWidth: true
             theme: root.theme
-            label: "W"
+            label: qsTr("W")
             value: root.dimW
             accentColor: root.theme.axisX
             tooltipText: qsTr("Width")
@@ -88,7 +88,7 @@ FunctionPageBase {
         DimensionInput {
             Layout.fillWidth: true
             theme: root.theme
-            label: "H"
+            label: qsTr("H")
             value: root.dimH
             accentColor: root.theme.axisY
             tooltipText: qsTr("Height")
@@ -101,7 +101,7 @@ FunctionPageBase {
         DimensionInput {
             Layout.fillWidth: true
             theme: root.theme
-            label: "D"
+            label: qsTr("D")
             value: root.dimD
             accentColor: root.theme.axisZ
             tooltipText: qsTr("Depth")

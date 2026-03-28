@@ -19,7 +19,7 @@ Item {
     visible: pageVisible
     focus: pageVisible
     z: 1000
-    width: 320
+    width: root.theme.functionPanelWidth
     height: panelColumn.implicitHeight
 
     function clamp(value, minimum, maximum) {
@@ -172,13 +172,13 @@ Item {
 
                         Behavior on color {
                             ColorAnimation {
-                                duration: 140
+                                duration: root.theme.animNormal
                             }
                         }
 
                         Behavior on scale {
                             NumberAnimation {
-                                duration: 120
+                                duration: root.theme.animFast
                                 easing.type: Easing.OutCubic
                             }
                         }
@@ -194,7 +194,7 @@ Item {
 
                             Behavior on color {
                                 ColorAnimation {
-                                    duration: 140
+                                    duration: root.theme.animNormal
                                 }
                             }
                         }
@@ -228,7 +228,7 @@ Item {
 
                 Behavior on height {
                     NumberAnimation {
-                        duration: 150
+                        duration: root.theme.animNormal
                         easing.type: Easing.OutCubic
                     }
                 }
@@ -302,27 +302,27 @@ Item {
 
                         Behavior on color {
                             ColorAnimation {
-                                duration: 140
+                                duration: root.theme.animNormal
                             }
                         }
 
                         Behavior on scale {
                             NumberAnimation {
-                                duration: 120
+                                duration: root.theme.animFast
                                 easing.type: Easing.OutCubic
                             }
                         }
 
                         Behavior on opacity {
                             NumberAnimation {
-                                duration: 140
+                                duration: root.theme.animNormal
                             }
                         }
 
                         Text {
                             anchors.centerIn: parent
                             text: qsTr("Execute")
-                            color: executeButton.canExecute ? "#ffffff" : root.theme.textSecondary
+                            color: executeButton.canExecute ? root.theme.textOnAccent : root.theme.textSecondary
                             font.pixelSize: 13
                             font.bold: true
                         }
@@ -357,13 +357,13 @@ Item {
 
                         Behavior on color {
                             ColorAnimation {
-                                duration: 140
+                                duration: root.theme.animNormal
                             }
                         }
 
                         Behavior on scale {
                             NumberAnimation {
-                                duration: 120
+                                duration: root.theme.animFast
                                 easing.type: Easing.OutCubic
                             }
                         }

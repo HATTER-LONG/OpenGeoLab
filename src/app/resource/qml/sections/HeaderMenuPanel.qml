@@ -22,7 +22,7 @@ Rectangle {
     z: 10
     x: 0
     y: 34
-    width: 248
+    width: panel.theme.headerMenuPanelWidth
     radius: 14
     color: panel.theme.surface
     border.width: 1

@@ -65,7 +65,7 @@ FunctionPageBase {
     DimensionInput {
         width: parent.width
         theme: root.theme
-        label: "R"
+        label: qsTr("R")
         value: root.radius
         accentColor: root.theme.axisX
         tooltipText: qsTr("Radius")

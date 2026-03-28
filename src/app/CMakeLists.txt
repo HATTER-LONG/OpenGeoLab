@@ -62,6 +62,7 @@ qt_add_qml_module(
     resource/qml/components/LogLevelChip.qml
     resource/qml/components/StatChip.qml
     resource/qml/components/LogEventsView.qml
+    resource/qml/components/CopyContextMenu.qml
     resource/qml/components/ActivityPanel.qml
     resource/qml/components/TerminalView.qml
     resource/qml/components/ProgressCard.qml

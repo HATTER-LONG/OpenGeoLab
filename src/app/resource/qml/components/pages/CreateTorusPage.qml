@@ -70,7 +70,7 @@ FunctionPageBase {
         DimensionInput {
             Layout.fillWidth: true
             theme: root.theme
-            label: "R1"
+            label: qsTr("R1")
             value: root.majorRadius
             accentColor: root.theme.axisX
             tooltipText: qsTr("Major Radius")
@@ -83,7 +83,7 @@ FunctionPageBase {
         DimensionInput {
             Layout.fillWidth: true
             theme: root.theme
-            label: "R2"
+            label: qsTr("R2")
             value: root.minorRadius
             accentColor: root.theme.axisY
             tooltipText: qsTr("Minor Radius")

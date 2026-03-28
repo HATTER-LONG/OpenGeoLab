@@ -28,7 +28,7 @@ Rectangle {
     color: "transparent"
     border.width: 0
     border.color: theme.borderSubtle
-    implicitHeight: 136
+    implicitHeight: header.theme.headerHeight
 
     ColumnLayout {
         anchors.fill: parent

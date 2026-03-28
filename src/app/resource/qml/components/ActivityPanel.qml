@@ -17,7 +17,7 @@ Item {
     readonly property int maximumHeight: Math.max(minimumHeight, Math.min(Math.floor(availableHeight), 560))
     readonly property int resolvedHeight: maximumHeight
 
-    implicitWidth: 360
+    implicitWidth: root.theme.activityPanelWidth
     height: resolvedHeight
     implicitHeight: resolvedHeight
 

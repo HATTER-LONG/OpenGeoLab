@@ -66,11 +66,25 @@ QtObject {
     readonly property color success: darkMode ? "#6fe3b0" : "#1f9d68"
     readonly property color warning: darkMode ? "#ffd071" : "#d89209"
     readonly property color danger: darkMode ? "#ff8d7d" : "#d9534f"
+    readonly property color textOnAccent: "#ffffff"
 
     // ── Axis colors ────────────────────────────────────────────────────
     readonly property color axisX: "#E53935"
     readonly property color axisY: "#43A047"
     readonly property color axisZ: "#1E88E5"
+
+    // ── Layout sizes ────────────────────────────────────────────────────
+    readonly property int functionPanelWidth: 320
+    readonly property int headerMenuPanelWidth: 248
+    readonly property int activityPanelWidth: 360
+    readonly property int headerHeight: 136
+    readonly property int viewportGridStep: 40
+
+    // ── Animation durations (ms) ────────────────────────────────────────
+    readonly property int animFast: 120
+    readonly property int animNormal: 140
+    readonly property int animMedium: 160
+    readonly property int animSlow: 180
 
     /// Return @p colorValue with its alpha replaced by @p alphaValue.
     function tint(colorValue: color, alphaValue: real): color {

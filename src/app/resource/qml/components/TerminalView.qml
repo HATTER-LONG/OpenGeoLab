@@ -18,79 +18,15 @@ Rectangle {
     border.color: root.theme.borderSubtle
     clip: true
 
+    CopyContextMenu {
+        id: terminalContextMenu
+        theme: root.theme
+    }
+
     function submitInput(): void {
         const submittedText = inputEdit.text;
         root.commandSubmitted(submittedText);
         inputEdit.clear();
-    }
-
-    Popup {
-        id: terminalContextMenu
-
-        property string targetJson: ""
-
-        width: copyRow.implicitWidth + 24
-        height: copyRow.implicitHeight + 16
-        padding: 0
-        modal: false
-        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
-
-        background: Rectangle {
-            radius: root.theme.radiusMedium
-            color: root.theme.surfaceStrong
-            border.width: 1
-            border.color: root.theme.tint(root.theme.borderSubtle, root.theme.darkMode ? 0.8 : 0.5)
-        }
-
-        contentItem: Rectangle {
-            color: copyMouseArea.containsMouse ? root.theme.tint(root.theme.accentA, root.theme.darkMode ? 0.18 : 0.08) : root.theme.surfaceStrong
-            radius: root.theme.radiusSmall
-
-            Row {
-                id: copyRow
-                anchors.centerIn: parent
-                spacing: 6
-
-                AppIcon {
-                    theme: root.theme
-                    iconKind: "copyOutline"
-                    useThemeContrast: false
-                    primaryColor: root.theme.textPrimary
-                    width: 14
-                    height: 14
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-
-                Text {
-                    text: qsTr("Copy")
-                    color: root.theme.textPrimary
-                    font.pixelSize: 12
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-            }
-
-            MouseArea {
-                id: copyMouseArea
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: {
-                    root.copyToClipboard(terminalContextMenu.targetJson);
-                    terminalContextMenu.close();
-                }
-            }
-        }
-    }
-
-    function copyToClipboard(text: string): void {
-        clipboardHelper.text = text;
-        clipboardHelper.selectAll();
-        clipboardHelper.copy();
-    }
-
-    TextEdit {
-        id: clipboardHelper
-        visible: false
     }
 
     ColumnLayout {
@@ -193,11 +129,8 @@ Rectangle {
                             acceptedButtons: Qt.RightButton
                             cursorShape: Qt.IBeamCursor
                             onClicked: function (mouse) {
-                                terminalContextMenu.targetJson = entryDelegate.json;
                                 const pos = mapToItem(root, mouse.x, mouse.y);
-                                terminalContextMenu.x = pos.x;
-                                terminalContextMenu.y = pos.y;
-                                terminalContextMenu.open();
+                                terminalContextMenu.showAt(pos.x, pos.y, entryDelegate.json);
                             }
                         }
                     }

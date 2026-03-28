@@ -24,7 +24,7 @@ Item {
                 ctx.clearRect(0, 0, width, height);
                 ctx.strokeStyle = root.theme.viewportGrid;
                 ctx.lineWidth = 0.5;
-                var step = 40;
+                var step = root.theme.viewportGridStep;
                 for (var x = 0; x < width; x += step) {
                     ctx.beginPath();
                     ctx.moveTo(x, 0);
