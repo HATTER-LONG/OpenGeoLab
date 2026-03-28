@@ -25,7 +25,11 @@
 #include <kangaroo/util/plugin_component_factory.hpp>
 #include <nlohmann/json.hpp>
 
+#include <memory>
+#include <mutex>
+#include <string>
 #include <string_view>
+#include <unordered_map>
 
 namespace OpenGeoLab::Command {
 
@@ -86,7 +90,12 @@ public:
     [[nodiscard]] nlohmann::json describe() const;
 
 private:
+    /// Retrieve or cache a module singleton, keeping it alive across dispatches.
+    [[nodiscard]] std::shared_ptr<Core::ModuleBase> getModule(const std::string& name) const;
+
     Kangaroo::Util::PluginComponentFactory& m_factory;
+    mutable std::mutex m_cacheMutex;
+    mutable std::unordered_map<std::string, std::shared_ptr<Core::ModuleBase>> m_moduleCache;
 };
 
 } // namespace OpenGeoLab::Command

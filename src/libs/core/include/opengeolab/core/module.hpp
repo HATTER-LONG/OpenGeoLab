@@ -17,8 +17,12 @@
 #include <kangaroo/util/plugin_component_factory.hpp>
 #include <nlohmann/json.hpp>
 
+#include <memory>
+#include <mutex>
 #include <string>
 #include <string_view>
+#include <unordered_map>
+#include <vector>
 
 namespace OpenGeoLab::Core {
 
@@ -74,23 +78,33 @@ protected:
      *
      * ActionT must provide `static constexpr std::string_view ACTION_NAME`.
      * The factory key will be "moduleName.ACTION_NAME".
+     * Extra arguments are forwarded to the ActionT constructor.
      *
      * @tparam ActionT Concrete action class to register as singleton
+     * @tparam Args    Types of extra constructor arguments
+     * @param  args    Arguments forwarded to the ActionT constructor
      */
-    template <class ActionT> void registerAction();
+    template <class ActionT, class... Args> void registerAction(Args&&... args);
 
     /// Access the component factory (for subclasses that need custom logic).
     [[nodiscard]] Kangaroo::Util::PluginComponentFactory& factory() const;
 
 private:
+    /// Retrieve or cache an action singleton by its factory key.
+    [[nodiscard]] std::shared_ptr<IAction> getAction(const std::string& key) const;
+
     std::string m_moduleName;
     std::string m_description;
     Kangaroo::Util::PluginComponentFactory& m_factory;
+    std::vector<std::string> m_registeredActionKeys; ///< Tracks keys for unregister on destruct
+    mutable std::mutex m_actionCacheMutex;
+    mutable std::unordered_map<std::string, std::shared_ptr<IAction>> m_actionCache;
 };
 
-template <class ActionT> void ModuleBase::registerAction() {
+template <class ActionT, class... Args> void ModuleBase::registerAction(Args&&... args) {
     std::string key = m_moduleName + "." + std::string(ActionT::ACTION_NAME);
-    m_factory.bindSingleton<IAction, ActionT>(key);
+    m_factory.bindSingleton<IAction, ActionT>(key, std::forward<Args>(args)...);
+    m_registeredActionKeys.push_back(key);
 }
 
 } // namespace OpenGeoLab::Core

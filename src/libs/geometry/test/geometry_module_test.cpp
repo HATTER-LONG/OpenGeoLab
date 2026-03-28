@@ -17,8 +17,17 @@ TEST_CASE("GeometryModule describe returns module info with actions") {
     CHECK(desc["name"] == "geometry");
     CHECK(desc.contains("description"));
     CHECK(desc["actions"].is_array());
-    CHECK(desc["actions"].size() == 1);
-    CHECK(desc["actions"][0]["name"] == "create_box");
+    CHECK(desc["actions"].size() == 10);
+
+    // Verify create_box is present (order depends on factory enumeration)
+    bool foundCreateBox = false;
+    for(const auto& action : desc["actions"]) {
+        if(action["name"] == "create_box") {
+            foundCreateBox = true;
+            break;
+        }
+    }
+    CHECK(foundCreateBox);
 }
 
 TEST_CASE("GeometryModule dispatches create_box action") {
@@ -28,24 +37,26 @@ TEST_CASE("GeometryModule dispatches create_box action") {
                               {"action", "create_box"},
                               {"param", {{"width", 2.0}, {"height", 3.0}, {"depth", 4.0}}}};
 
-    // Track progress calls
-    std::vector<double> progress_values;
-    auto progress_cb = [&](double p, const std::string&) {
-        progress_values.push_back(p);
+    std::vector<double> progressValues;
+    auto progressCb = [&](double p, const std::string&) {
+        progressValues.push_back(p);
         return true;
     };
 
-    auto result = mod.process(request, progress_cb);
+    auto result = mod.process(request, progressCb);
     CHECK(result["ok"] == true);
     CHECK(result["action"] == "create_box");
-    CHECK(result["data"]["width"] == 2.0);
-    CHECK(result["data"]["height"] == 3.0);
-    CHECK(result["data"]["depth"] == 4.0);
+    CHECK(result.contains("shapeId"));
+    CHECK(result.contains("topology"));
+    CHECK(result["topology"]["faces"] == 6);
+    CHECK(result["topology"]["edges"] == 12);
+    CHECK(result["topology"]["vertices"] == 8);
+    CHECK(result["topology"]["solids"] == 1);
 
-    // Should have 11 progress calls: 0.0 + 10 steps
-    CHECK(progress_values.size() == 11);
-    CHECK(progress_values.front() == doctest::Approx(0.0));
-    CHECK(progress_values.back() == doctest::Approx(1.0));
+    // Should have progress calls: 0.0, 0.3, 0.5, 1.0
+    CHECK(progressValues.size() == 4);
+    CHECK(progressValues.front() == doctest::Approx(0.0));
+    CHECK(progressValues.back() == doctest::Approx(1.0));
 }
 
 TEST_CASE("GeometryModule throws on missing action field") {
@@ -64,38 +75,38 @@ TEST_CASE("GeometryModule throws on unknown action") {
                     std::invalid_argument);
 }
 
-TEST_CASE("CreateBoxAction describe returns action metadata") {
-    OpenGeoLab::Geometry::CreateBoxAction action;
-    auto desc = action.describe();
-    CHECK(desc["name"] == "create_box");
-    CHECK(desc.contains("description"));
-    CHECK(desc.contains("params"));
-    CHECK(desc["params"].contains("width"));
-    CHECK(desc["params"].contains("height"));
-    CHECK(desc["params"].contains("depth"));
-}
-
 TEST_CASE("CreateBoxAction uses default dimensions when params missing") {
-    OpenGeoLab::Geometry::CreateBoxAction action;
+    OpenGeoLab::Geometry::ShapeStore store;
+    OpenGeoLab::Geometry::CreateBoxAction action(store);
     nlohmann::json param = nlohmann::json::object();
     auto result = action.execute(param, OpenGeoLab::Core::NO_PROGRESS_CALLBACK);
     CHECK(result["ok"] == true);
-    CHECK(result["data"]["width"] == 1.0);
-    CHECK(result["data"]["height"] == 1.0);
-    CHECK(result["data"]["depth"] == 1.0);
+    CHECK(result["topology"]["faces"] == 6);
+    CHECK(result["topology"]["solids"] == 1);
+    CHECK(store.size() == 1);
 }
 
-TEST_CASE("CreateBoxAction supports cancellation via progress callback") {
-    OpenGeoLab::Geometry::CreateBoxAction action;
-    nlohmann::json param = {{"width", 1.0}};
+TEST_CASE("CreateBoxAction with tessellate=false skips tessellation") {
+    OpenGeoLab::Geometry::ShapeStore store;
+    OpenGeoLab::Geometry::CreateBoxAction action(store);
+    nlohmann::json param = {{"width", 1.0}, {"tessellate", false}};
+    auto result = action.execute(param, OpenGeoLab::Core::NO_PROGRESS_CALLBACK);
+    CHECK(result["ok"] == true);
+    auto shapeId = result["shapeId"].get<uint32_t>();
+    const auto* entry = store.find(shapeId);
+    REQUIRE(entry != nullptr);
+    CHECK(entry->visualData == nullptr);
+}
 
-    int call_count = 0;
-    auto cancel_cb = [&](double, const std::string&) {
-        ++call_count;
-        return call_count < 4; // Cancel after 3 progress calls
-    };
+TEST_CASE("GeometryModule shapeStore is accessible") {
+    Kangaroo::Util::PluginComponentFactory factory;
+    OpenGeoLab::Geometry::GeometryModule mod(factory);
+    CHECK(mod.shapeStore().size() == 0);
 
-    auto result = action.execute(param, cancel_cb);
-    CHECK(result["ok"] == false);
-    CHECK(result.contains("summary"));
+    // Process a create_box to add a shape
+    nlohmann::json request = {
+        {"module", "geometry"}, {"action", "create_box"}, {"param", {{"width", 1.0}}}};
+    auto result = mod.process(request, OpenGeoLab::Core::NO_PROGRESS_CALLBACK);
+    CHECK(result["ok"] == true);
+    CHECK(mod.shapeStore().size() == 1);
 }

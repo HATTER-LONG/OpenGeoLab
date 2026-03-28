@@ -533,4 +533,55 @@
             <translation>外径：</translation>
         </message>
     </context>
+    <context>
+        <name>ImportModelPage</name>
+        <message>
+            <source>Import Model</source>
+            <translation>导入模型</translation>
+        </message>
+        <message>
+            <source>Select Model File</source>
+            <translation>选择模型文件</translation>
+        </message>
+        <message>
+            <source>All Supported Formats</source>
+            <translation>所有支持的格式</translation>
+        </message>
+        <message>
+            <source>BRep Files</source>
+            <translation>BRep 文件</translation>
+        </message>
+        <message>
+            <source>STEP Files</source>
+            <translation>STEP 文件</translation>
+        </message>
+        <message>
+            <source>No file selected</source>
+            <translation>未选择文件</translation>
+        </message>
+        <message>
+            <source>Browse</source>
+            <translation>浏览</translation>
+        </message>
+        <message>
+            <source>Shape Name</source>
+            <translation>形状名称</translation>
+        </message>
+        <message>
+            <source>Auto-generated from filename</source>
+            <translation>根据文件名自动生成</translation>
+        </message>
+        <message>
+            <source>Format:</source>
+            <translation>格式：</translation>
+        </message>
+        <message>
+            <source>Unknown</source>
+            <translation>未知</translation>
+        </message>
+        <message>
+            <source>Select a BRep (.brep, .brp) or STEP (.step, .stp) file to import.</source>
+            <translation>选择 BRep (.brep, .brp) 或 STEP (.step, .stp) 文件进行导入。</translation>
+        </message>
+    </context>
 </TS>

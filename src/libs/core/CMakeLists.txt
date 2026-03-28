@@ -1,9 +1,11 @@
 set(core_public_headers
     include/opengeolab/core/action.hpp
+    include/opengeolab/core/entity_tag.hpp
     include/opengeolab/core/logger.hpp
     include/opengeolab/core/module.hpp
     include/opengeolab/core/progress_callback.hpp
-    include/opengeolab/core/point_vector3d.hpp)
+    include/opengeolab/core/point_vector3d.hpp
+    include/opengeolab/core/visual_data.hpp)
 
 set(core_sources src/action.cpp src/logger.cpp src/module.cpp
                  src/process_callback.cpp)

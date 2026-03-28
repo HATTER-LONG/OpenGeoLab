@@ -16,6 +16,18 @@ CommandDispatcher::CommandDispatcher(Kangaroo::Util::PluginComponentFactory& fac
 
 CommandDispatcher::~CommandDispatcher() = default;
 
+std::shared_ptr<Core::ModuleBase> CommandDispatcher::getModule(const std::string& name) const {
+    const std::lock_guard lk(m_cacheMutex);
+    if(auto it = m_moduleCache.find(name); it != m_moduleCache.end()) {
+        return it->second;
+    }
+    auto module = m_factory.getSharedInstance<Core::ModuleBase>(name);
+    if(module) {
+        m_moduleCache.emplace(name, module);
+    }
+    return module;
+}
+
 nlohmann::json CommandDispatcher::dispatch(const nlohmann::json& request,
                                            const Core::ProgressCallback& progress) const {
     if(!request.contains("module") || !request["module"].is_string()) {
@@ -36,7 +48,14 @@ nlohmann::json CommandDispatcher::dispatch(const nlohmann::json& request,
     }
 
     try {
-        auto module = m_factory.getSharedInstance<Core::ModuleBase>(module_name);
+        auto module = getModule(module_name);
+        if(!module) {
+            LOG_ERROR("CommandDispatcher: failed to create module '{}'", module_name);
+            return {{"ok", false},
+                    {"summary", "Module '" + module_name + "' could not be created."},
+                    {"errors", nlohmann::json::array(
+                                   {"Factory returned null for module '" + module_name + "'."})}};
+        }
         return module->process(request, progress);
     } catch(const std::exception& e) {
         LOG_ERROR("CommandDispatcher: module '{}' threw: {}", module_name, e.what());
@@ -72,8 +91,10 @@ nlohmann::json CommandDispatcher::describe() const {
 
     nlohmann::json modules = nlohmann::json::array();
     for(const auto& info : m_factory.listFactories<Core::ModuleBase>()) {
-        auto module = m_factory.getSharedInstance<Core::ModuleBase>(info.m_moduleName);
-        modules.push_back(module->describe());
+        auto module = getModule(info.m_moduleName);
+        if(module) {
+            modules.push_back(module->describe());
+        }
     }
 
     return {{"request_schema", std::move(request_schema)}, {"modules", std::move(modules)}};

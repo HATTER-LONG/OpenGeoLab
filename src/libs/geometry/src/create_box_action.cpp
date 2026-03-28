@@ -1,43 +1,48 @@
 /**
  * @file create_box_action.cpp
- * @brief CreateBoxAction implementation — simulated time-consuming operation
- *
- * Iterates through 10 steps with 300ms sleeps, emitting LOG_INFO/WARN/DEBUG
- * at each stage and reporting progress via ProgressCallback. Designed to
- * exercise the Activity panel log view and progress indicators.
+ * @brief CreateBoxAction — creates an OCC box via BRepPrimAPI_MakeBox
  */
 
 #include <opengeolab/geometry/create_box_action.hpp>
+#include <opengeolab/geometry/shape_store.hpp>
 
 #include <opengeolab/core/logger.hpp>
 
-#include <fmt/format.h>
+#include <BRepPrimAPI_MakeBox.hxx>
+#include <gp_Pnt.hxx>
 
-#include <chrono>
-#include <thread>
+#include <array>
 
 namespace OpenGeoLab::Geometry {
 
-CreateBoxAction::CreateBoxAction() = default;
+CreateBoxAction::CreateBoxAction(ShapeStore& store) : m_store(store) {}
 CreateBoxAction::~CreateBoxAction() = default;
 
 nlohmann::json CreateBoxAction::describe() const {
     return {
         {"name", ACTION_NAME},
-        {"description", "Create a box primitive (simulated long-running operation for testing)."},
+        {"description", "Create a box primitive and register it in ShapeStore."},
         {"params",
          {{"width",
            {{"type", "number"}, {"required", false}, {"description", "Box width (default 1.0)"}}},
           {"height",
            {{"type", "number"}, {"required", false}, {"description", "Box height (default 1.0)"}}},
           {"depth",
-           {{"type", "number"}, {"required", false}, {"description", "Box depth (default 1.0)"}}}}},
+           {{"type", "number"}, {"required", false}, {"description", "Box depth (default 1.0)"}}},
+          {"origin",
+           {{"type", "array"}, {"required", false}, {"description", "[x,y,z] (default [0,0,0])"}}},
+          {"name",
+           {{"type", "string"}, {"required", false}, {"description", "Shape name (default Box)"}}},
+          {"tessellate",
+           {{"type", "boolean"},
+            {"required", false},
+            {"description", "Auto-tessellate (default true)"}}}}},
         {"returns",
          {{"ok", {{"type", "boolean"}, {"description", "true on success"}}},
           {"action", {{"type", "string"}, {"description", "Echo of the action name"}}},
-          {"data",
-           {{"type", "object"},
-            {"description", "Created box dimensions (width, height, depth)"}}}}}};
+          {"shapeId", {{"type", "integer"}, {"description", "Allocated shape id"}}},
+          {"topology",
+           {{"type", "object"}, {"description", "Topology counts (solids/faces/edges/..."}}}}}};
 }
 
 nlohmann::json CreateBoxAction::execute(const nlohmann::json& param,
@@ -45,43 +50,59 @@ nlohmann::json CreateBoxAction::execute(const nlohmann::json& param,
     const double width = param.value("width", 1.0);
     const double height = param.value("height", 1.0);
     const double depth = param.value("depth", 1.0);
+    auto name = param.value("name", std::string{});
+
+    std::array<double, 3> origin{0.0, 0.0, 0.0};
+    if(param.contains("origin") && param["origin"].is_array()) {
+        origin = param["origin"].get<std::array<double, 3>>();
+    }
 
     LOG_INFO("CreateBoxAction: creating box ({:.2f} x {:.2f} x {:.2f})", width, height, depth);
+    if(progress) {
+        progress(0.0, "Creating box...");
+    }
+
+    const gp_Pnt corner(origin[0], origin[1], origin[2]);
+    BRepPrimAPI_MakeBox maker(corner, width, height, depth);
+    maker.Build();
+    if(!maker.IsDone()) {
+        return {{"ok", false}, {"summary", "Box creation failed"}};
+    }
 
     if(progress) {
-        progress(0.0, "Initializing box creation...");
+        progress(0.3, "Registering shape...");
+    }
+    auto shape_id = m_store.add(name.empty() ? "Box" : name, maker.Shape());
+    if(name.empty()) {
+        name = "Box_" + std::to_string(shape_id);
+        m_store.rename(shape_id, name);
     }
 
-    constexpr int total_steps = 10;
-    constexpr auto step_delay = std::chrono::milliseconds(300);
-
-    for(int step = 1; step <= total_steps; ++step) {
-        std::this_thread::sleep_for(step_delay);
-
-        const double pct = static_cast<double>(step) / total_steps;
-
-        if(step <= 3) {
-            LOG_INFO("CreateBoxAction: step {}/{} — computing vertices...", step, total_steps);
-        } else if(step <= 6) {
-            LOG_INFO("CreateBoxAction: step {}/{} — generating faces...", step, total_steps);
-        } else if(step <= 8) {
-            LOG_DEBUG("CreateBoxAction: step {}/{} — optimizing mesh...", step, total_steps);
-        } else if(step == 9) {
-            LOG_WARN("CreateBoxAction: step {}/{} — heavy computation phase", step, total_steps);
-        } else {
-            LOG_INFO("CreateBoxAction: step {}/{} — finalizing...", step, total_steps);
+    const bool do_tessellate = param.value("tessellate", true);
+    if(do_tessellate) {
+        if(progress) {
+            progress(0.5, "Tessellating...");
         }
-
-        if(progress && !progress(pct, fmt::format("Step {}/{}", step, total_steps))) {
-            LOG_WARN("CreateBoxAction: cancelled at step {}", step);
-            return {{"ok", false}, {"summary", "Cancelled by user"}};
-        }
+        const double lin = param.value("linearDeflection", 0.1);
+        const double ang = param.value("angularDeflection", 0.5);
+        m_store.tessellate(shape_id, lin, ang);
     }
 
-    LOG_INFO("CreateBoxAction: box created successfully");
+    if(progress) {
+        progress(1.0, "Done");
+    }
+
+    const auto* entry = m_store.find(shape_id);
     return {{"ok", true},
             {"action", "create_box"},
-            {"data", {{"width", width}, {"height", height}, {"depth", depth}}}};
+            {"shapeId", shape_id},
+            {"name", name},
+            {"topology",
+             {{"solids", entry->solidMap.Extent()},
+              {"faces", entry->faceMap.Extent()},
+              {"edges", entry->edgeMap.Extent()},
+              {"vertices", entry->vertexMap.Extent()},
+              {"wires", entry->wireMap.Extent()}}}};
 }
 
 } // namespace OpenGeoLab::Geometry
