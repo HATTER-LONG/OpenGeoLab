@@ -51,6 +51,7 @@ Item {
     }
 
     function execute() {
+        if (RequestService.busy) return;
         RequestService.submitAsync(JSON.stringify(root.getParameters()));
         root.close();
     }
@@ -216,6 +217,30 @@ Item {
                 color: root.theme.borderSubtle
             }
 
+            Rectangle {
+                id: busyBanner
+
+                width: parent.width
+                height: RequestService.busy ? 28 : 0
+                visible: RequestService.busy
+                color: root.theme.tint(root.theme.warning, root.theme.darkMode ? 0.18 : 0.10)
+                clip: true
+
+                Behavior on height {
+                    NumberAnimation {
+                        duration: 150
+                        easing.type: Easing.OutCubic
+                    }
+                }
+
+                Text {
+                    anchors.centerIn: parent
+                    text: qsTr("A task is running…")
+                    color: root.theme.warning
+                    font.pixelSize: 11
+                }
+            }
+
             Flickable {
                 id: contentArea
 
@@ -254,18 +279,25 @@ Item {
                     Rectangle {
                         id: executeButton
 
+                        property bool canExecute: !RequestService.busy
+
                         Layout.preferredWidth: 112
                         Layout.preferredHeight: 32
                         radius: root.theme.radiusSmall
-                        color: executeMouseArea.pressed
-                            ? Qt.darker(root.theme.accentA, 1.15)
-                            : (executeMouseArea.containsMouse
-                                   ? Qt.lighter(root.theme.accentA, 1.12)
-                                   : root.theme.accentA)
+                        opacity: canExecute ? 1.0 : 0.5
+                        color: canExecute
+                            ? (executeMouseArea.pressed
+                                   ? Qt.darker(root.theme.accentA, 1.15)
+                                   : (executeMouseArea.containsMouse
+                                          ? Qt.lighter(root.theme.accentA, 1.12)
+                                          : root.theme.accentA))
+                            : root.theme.surfaceMuted
                         border.width: 1
-                        border.color: executeMouseArea.containsMouse
-                            ? Qt.lighter(root.theme.accentA, 1.3)
-                            : Qt.darker(root.theme.accentA, 1.1)
+                        border.color: canExecute
+                            ? (executeMouseArea.containsMouse
+                                   ? Qt.lighter(root.theme.accentA, 1.3)
+                                   : Qt.darker(root.theme.accentA, 1.1))
+                            : root.theme.borderSubtle
                         scale: executeMouseArea.pressed ? 0.97 : (executeMouseArea.containsMouse ? 1.02 : 1.0)
 
                         Behavior on color {
@@ -281,10 +313,16 @@ Item {
                             }
                         }
 
+                        Behavior on opacity {
+                            NumberAnimation {
+                                duration: 140
+                            }
+                        }
+
                         Text {
                             anchors.centerIn: parent
                             text: qsTr("Execute")
-                            color: "#ffffff"
+                            color: executeButton.canExecute ? "#ffffff" : root.theme.textSecondary
                             font.pixelSize: 13
                             font.bold: true
                         }
@@ -294,7 +332,8 @@ Item {
 
                             anchors.fill: parent
                             hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
+                            enabled: executeButton.canExecute
+                            cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
                             onClicked: root.execute()
                         }
                     }
