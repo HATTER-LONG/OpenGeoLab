@@ -32,6 +32,7 @@ FunctionPageBase {
 
     ParamField {
         width: parent.width
+        theme: root.theme
         label: qsTr("Torus Name")
         placeholder: qsTr("Auto-generated if empty")
         value: root.torusName
@@ -43,6 +44,7 @@ FunctionPageBase {
 
     CoordinateField {
         width: parent.width
+        theme: root.theme
         label: qsTr("Center Point")
         coordX: root.centerX
         coordY: root.centerY
@@ -57,7 +59,7 @@ FunctionPageBase {
 
     Text {
         text: qsTr("Dimensions")
-        color: MainPages.theme.textSecondary
+        color: root.theme.textSecondary
         font.pixelSize: 12
     }
 
@@ -67,9 +69,10 @@ FunctionPageBase {
 
         DimensionInput {
             Layout.fillWidth: true
+            theme: root.theme
             label: "R1"
             value: root.majorRadius
-            accentColor: "#E53935"
+            accentColor: root.theme.axisX
             tooltipText: qsTr("Major Radius")
 
             onValueEdited: function(newVal) {
@@ -79,9 +82,10 @@ FunctionPageBase {
 
         DimensionInput {
             Layout.fillWidth: true
+            theme: root.theme
             label: "R2"
             value: root.minorRadius
-            accentColor: "#43A047"
+            accentColor: root.theme.axisY
             tooltipText: qsTr("Minor Radius")
 
             onValueEdited: function(newVal) {
@@ -93,10 +97,10 @@ FunctionPageBase {
     Rectangle {
         width: parent.width
         height: warningText.implicitHeight + 12
-        radius: MainPages.theme.radiusSmall
-        color: Qt.rgba(MainPages.theme.accentC.r, MainPages.theme.accentC.g, MainPages.theme.accentC.b, 0.15)
+        radius: root.theme.radiusSmall
+        color: Qt.rgba(root.theme.accentC.r, root.theme.accentC.g, root.theme.accentC.b, 0.15)
         border.width: 1
-        border.color: Qt.rgba(MainPages.theme.accentC.r, MainPages.theme.accentC.g, MainPages.theme.accentC.b, 0.4)
+        border.color: Qt.rgba(root.theme.accentC.r, root.theme.accentC.g, root.theme.accentC.b, 0.4)
         visible: root.minorRadius >= root.majorRadius
 
         Text {
@@ -104,7 +108,7 @@ FunctionPageBase {
             anchors.centerIn: parent
             width: parent.width - 16
             text: qsTr("Minor radius should be less than major radius")
-            color: MainPages.theme.accentC
+            color: root.theme.accentC
             font.pixelSize: 11
             wrapMode: Text.WordWrap
             horizontalAlignment: Text.AlignHCenter
@@ -114,8 +118,8 @@ FunctionPageBase {
     Rectangle {
         width: parent.width
         height: infoColumn.implicitHeight + 16
-        radius: MainPages.theme.radiusSmall
-        color: MainPages.theme.surfaceMuted
+        radius: root.theme.radiusSmall
+        color: root.theme.surfaceMuted
 
         Column {
             id: infoColumn
@@ -131,14 +135,14 @@ FunctionPageBase {
                 Text {
                     Layout.preferredWidth: 100
                     text: qsTr("Volume:")
-                    color: MainPages.theme.textSecondary
+                    color: root.theme.textSecondary
                     font.pixelSize: 11
                 }
 
                 Text {
                     Layout.fillWidth: true
                     text: (2 * Math.PI * Math.PI * root.majorRadius * root.minorRadius * root.minorRadius).toFixed(3)
-                    color: MainPages.theme.textPrimary
+                    color: root.theme.textPrimary
                     font.pixelSize: 11
                     font.bold: true
                     horizontalAlignment: Text.AlignLeft
@@ -152,14 +156,14 @@ FunctionPageBase {
                 Text {
                     Layout.preferredWidth: 100
                     text: qsTr("Surface Area:")
-                    color: MainPages.theme.textSecondary
+                    color: root.theme.textSecondary
                     font.pixelSize: 11
                 }
 
                 Text {
                     Layout.fillWidth: true
                     text: (4 * Math.PI * Math.PI * root.majorRadius * root.minorRadius).toFixed(3)
-                    color: MainPages.theme.textPrimary
+                    color: root.theme.textPrimary
                     font.pixelSize: 11
                     font.bold: true
                     horizontalAlignment: Text.AlignLeft
@@ -173,14 +177,14 @@ FunctionPageBase {
                 Text {
                     Layout.preferredWidth: 100
                     text: qsTr("Outer Diameter:")
-                    color: MainPages.theme.textSecondary
+                    color: root.theme.textSecondary
                     font.pixelSize: 11
                 }
 
                 Text {
                     Layout.fillWidth: true
                     text: (2 * (root.majorRadius + root.minorRadius)).toFixed(3)
-                    color: MainPages.theme.textPrimary
+                    color: root.theme.textPrimary
                     font.pixelSize: 11
                     font.bold: true
                     horizontalAlignment: Text.AlignLeft

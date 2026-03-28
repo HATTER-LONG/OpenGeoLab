@@ -67,6 +67,11 @@ QtObject {
     readonly property color warning: darkMode ? "#ffd071" : "#d89209"
     readonly property color danger: darkMode ? "#ff8d7d" : "#d9534f"
 
+    // ── Axis colors ────────────────────────────────────────────────────
+    readonly property color axisX: "#E53935"
+    readonly property color axisY: "#43A047"
+    readonly property color axisZ: "#1E88E5"
+
     /// Return @p colorValue with its alpha replaced by @p alphaValue.
     function tint(colorValue: color, alphaValue: real): color {
         return Qt.rgba(colorValue.r, colorValue.g, colorValue.b, alphaValue);

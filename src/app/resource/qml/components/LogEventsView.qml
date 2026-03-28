@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls.Basic
+import OpenGeoLab.Services
 import "../theme"
 
 Rectangle {
@@ -13,6 +14,12 @@ Rectangle {
     property int runtimeMinLevel: 2
     property bool filterOpen: false
     color: "transparent"
+
+    LogFilterProxyModel {
+        id: filterProxy
+        sourceModel: root.model
+        enabledLevelMask: root.enabledLevelMask
+    }
 
     readonly property var levelOptions: [
         { "level": 0, "label": qsTr("Trace") },
@@ -309,7 +316,7 @@ Rectangle {
             rightMargin: eventScrollBar.width + root.theme.gapTight
             clip: true
             spacing: root.theme.gapTight
-            model: root.model
+            model: filterProxy
             boundsBehavior: Flickable.StopAtBounds
             property bool stickToEnd: true
 
@@ -333,8 +340,6 @@ Rectangle {
                 readonly property string displayLevelName: root.levelLabel(level).toUpperCase()
                 readonly property color entryAccent: root.levelTint(level)
 
-                visible: (root.enabledLevelMask & (1 << level)) !== 0
-                height: visible ? implicitHeight : 0
                 width: eventsList.width - eventsList.leftMargin - eventsList.rightMargin
                 implicitHeight: contentColumn.implicitHeight + 18
                 radius: root.theme.radiusSmall

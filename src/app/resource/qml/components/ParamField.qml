@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Controls
 import ".."
@@ -5,6 +7,7 @@ import ".."
 Item {
     id: root
 
+    property AppTheme theme: MainPages.theme
     property string label: ""
     property string placeholder: ""
     property string value: ""
@@ -25,17 +28,17 @@ Item {
         Text {
             text: root.label
             visible: root.label.length > 0
-            color: MainPages.theme.textSecondary
+            color: root.theme.textSecondary
             font.pixelSize: 12
         }
 
         Rectangle {
             width: parent.width
             height: 28
-            radius: MainPages.theme.radiusSmall
-            color: MainPages.theme.surface
+            radius: root.theme.radiusSmall
+            color: root.theme.surface
             border.width: inputField.activeFocus ? 2 : 1
-            border.color: inputField.activeFocus ? MainPages.theme.accentA : MainPages.theme.borderSubtle
+            border.color: inputField.activeFocus ? root.theme.accentA : root.theme.borderSubtle
 
             TextField {
                 id: inputField
@@ -44,9 +47,9 @@ Item {
                 anchors.leftMargin: 8
                 anchors.rightMargin: 8
                 text: root.value
-                color: MainPages.theme.textPrimary
+                color: root.theme.textPrimary
                 placeholderText: root.placeholder
-                placeholderTextColor: MainPages.theme.textSecondary
+                placeholderTextColor: root.theme.textSecondary
                 selectByMouse: true
                 verticalAlignment: TextInput.AlignVCenter
                 background: Item {}

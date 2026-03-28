@@ -7,6 +7,8 @@ import "../theme"
 Item {
     id: root
 
+    property AppTheme theme: MainPages.theme
+
     property string pageTitle: qsTr("Function")
     property string pageIcon: ""
     property string actionId: ""
@@ -61,17 +63,17 @@ Item {
         anchors.fill: panel
         anchors.margins: -2
         radius: panel.radius + 2
-        color: MainPages.theme.tint(MainPages.theme.shell, MainPages.theme.darkMode ? 0.18 : 0.08)
+        color: root.theme.tint(root.theme.shell, root.theme.darkMode ? 0.18 : 0.08)
     }
 
     Rectangle {
         id: panel
 
         anchors.fill: parent
-        radius: MainPages.theme.radiusMedium
-        color: MainPages.theme.surface
+        radius: root.theme.radiusMedium
+        color: root.theme.surface
         border.width: 1
-        border.color: MainPages.theme.borderSubtle
+        border.color: root.theme.borderSubtle
         clip: true
 
         Column {
@@ -86,14 +88,14 @@ Item {
 
                 width: parent.width
                 height: 36
-                radius: MainPages.theme.radiusMedium - 1
-                color: MainPages.theme.surfaceMuted
+                radius: root.theme.radiusMedium - 1
+                color: root.theme.surfaceMuted
 
                 Rectangle {
                     anchors.left: parent.left
                     anchors.right: parent.right
                     anchors.bottom: parent.bottom
-                    height: MainPages.theme.radiusMedium
+                    height: root.theme.radiusMedium
                     color: parent.color
                 }
 
@@ -135,7 +137,7 @@ Item {
                     spacing: 8
 
                     AppIcon {
-                        theme: MainPages.theme
+                        theme: root.theme
                         iconKind: root.pageIcon
                         width: 18
                         height: 18
@@ -145,7 +147,7 @@ Item {
                     Text {
                         Layout.fillWidth: true
                         text: root.pageTitle
-                        color: MainPages.theme.textPrimary
+                        color: root.theme.textPrimary
                         font.pixelSize: 13
                         font.bold: true
                         elide: Text.ElideRight
@@ -157,14 +159,14 @@ Item {
 
                         Layout.preferredWidth: 24
                         Layout.preferredHeight: 24
-                        radius: MainPages.theme.radiusSmall
+                        radius: root.theme.radiusSmall
                         color: closeMouseArea.pressed
-                            ? MainPages.theme.tint(MainPages.theme.danger, MainPages.theme.darkMode ? 0.38 : 0.22)
+                            ? root.theme.tint(root.theme.danger, root.theme.darkMode ? 0.38 : 0.22)
                             : (closeMouseArea.containsMouse
-                                   ? MainPages.theme.tint(MainPages.theme.danger, MainPages.theme.darkMode ? 0.28 : 0.14)
+                                   ? root.theme.tint(root.theme.danger, root.theme.darkMode ? 0.28 : 0.14)
                                    : "transparent")
                         border.width: closeMouseArea.containsMouse ? 1 : 0
-                        border.color: MainPages.theme.tint(MainPages.theme.danger, MainPages.theme.darkMode ? 0.56 : 0.36)
+                        border.color: root.theme.tint(root.theme.danger, root.theme.darkMode ? 0.56 : 0.36)
                         scale: closeMouseArea.pressed ? 0.92 : (closeMouseArea.containsMouse ? 1.06 : 1.0)
 
                         Behavior on color {
@@ -184,8 +186,8 @@ Item {
                             anchors.centerIn: parent
                             text: qsTr("✕")
                             color: closeMouseArea.containsMouse
-                                ? MainPages.theme.danger
-                                : MainPages.theme.textSecondary
+                                ? root.theme.danger
+                                : root.theme.textSecondary
                             font.pixelSize: 13
                             font.bold: true
 
@@ -211,7 +213,7 @@ Item {
             Rectangle {
                 width: parent.width
                 height: 1
-                color: MainPages.theme.borderSubtle
+                color: root.theme.borderSubtle
             }
 
             Flickable {
@@ -238,7 +240,7 @@ Item {
             Rectangle {
                 width: parent.width
                 height: 1
-                color: MainPages.theme.borderSubtle
+                color: root.theme.borderSubtle
             }
 
             Item {
@@ -254,16 +256,16 @@ Item {
 
                         Layout.preferredWidth: 112
                         Layout.preferredHeight: 32
-                        radius: MainPages.theme.radiusSmall
+                        radius: root.theme.radiusSmall
                         color: executeMouseArea.pressed
-                            ? Qt.darker(MainPages.theme.accentA, 1.15)
+                            ? Qt.darker(root.theme.accentA, 1.15)
                             : (executeMouseArea.containsMouse
-                                   ? Qt.lighter(MainPages.theme.accentA, 1.12)
-                                   : MainPages.theme.accentA)
+                                   ? Qt.lighter(root.theme.accentA, 1.12)
+                                   : root.theme.accentA)
                         border.width: 1
                         border.color: executeMouseArea.containsMouse
-                            ? Qt.lighter(MainPages.theme.accentA, 1.3)
-                            : Qt.darker(MainPages.theme.accentA, 1.1)
+                            ? Qt.lighter(root.theme.accentA, 1.3)
+                            : Qt.darker(root.theme.accentA, 1.1)
                         scale: executeMouseArea.pressed ? 0.97 : (executeMouseArea.containsMouse ? 1.02 : 1.0)
 
                         Behavior on color {
@@ -302,16 +304,16 @@ Item {
 
                         Layout.preferredWidth: 96
                         Layout.preferredHeight: 32
-                        radius: MainPages.theme.radiusSmall
+                        radius: root.theme.radiusSmall
                         color: cancelMouseArea.pressed
-                            ? MainPages.theme.surfaceStrong
+                            ? root.theme.surfaceStrong
                             : (cancelMouseArea.containsMouse
-                                   ? MainPages.theme.tint(MainPages.theme.surfaceMuted, MainPages.theme.darkMode ? 0.96 : 0.9)
-                                   : MainPages.theme.surfaceMuted)
+                                   ? root.theme.tint(root.theme.surfaceMuted, root.theme.darkMode ? 0.96 : 0.9)
+                                   : root.theme.surfaceMuted)
                         border.width: 1
                         border.color: cancelMouseArea.containsMouse
-                            ? MainPages.theme.tint(MainPages.theme.textPrimary, MainPages.theme.darkMode ? 0.52 : 0.3)
-                            : MainPages.theme.borderSubtle
+                            ? root.theme.tint(root.theme.textPrimary, root.theme.darkMode ? 0.52 : 0.3)
+                            : root.theme.borderSubtle
                         scale: cancelMouseArea.pressed ? 0.98 : (cancelMouseArea.containsMouse ? 1.01 : 1.0)
 
                         Behavior on color {
@@ -330,7 +332,7 @@ Item {
                         Text {
                             anchors.centerIn: parent
                             text: qsTr("Cancel")
-                            color: MainPages.theme.textPrimary
+                            color: root.theme.textPrimary
                             font.pixelSize: 13
                             font.bold: true
                         }

@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Layouts
 import ".."
@@ -5,6 +7,7 @@ import ".."
 Item {
     id: root
 
+    property AppTheme theme: MainPages.theme
     property string label: ""
     property real coordX: 0.0
     property real coordY: 0.0
@@ -25,7 +28,7 @@ Item {
         Text {
             text: root.label
             visible: root.label.length > 0
-            color: MainPages.theme.textSecondary
+            color: root.theme.textSecondary
             font.pixelSize: 12
         }
 
@@ -35,11 +38,12 @@ Item {
 
             DimensionInput {
                 Layout.fillWidth: true
+                theme: root.theme
                 label: qsTr("X")
                 value: root.coordX
                 decimals: root.decimals
                 minValue: -1e9
-                accentColor: "#E53935"
+                accentColor: root.theme.axisX
 
                 onValueEdited: function(newVal) {
                     root.coordX = newVal;
@@ -49,11 +53,12 @@ Item {
 
             DimensionInput {
                 Layout.fillWidth: true
+                theme: root.theme
                 label: qsTr("Y")
                 value: root.coordY
                 decimals: root.decimals
                 minValue: -1e9
-                accentColor: "#43A047"
+                accentColor: root.theme.axisY
 
                 onValueEdited: function(newVal) {
                     root.coordY = newVal;
@@ -63,11 +68,12 @@ Item {
 
             DimensionInput {
                 Layout.fillWidth: true
+                theme: root.theme
                 label: qsTr("Z")
                 value: root.coordZ
                 decimals: root.decimals
                 minValue: -1e9
-                accentColor: "#1E88E5"
+                accentColor: root.theme.axisZ
 
                 onValueEdited: function(newVal) {
                     root.coordZ = newVal;

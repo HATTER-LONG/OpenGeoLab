@@ -13,7 +13,7 @@ using OpenGeoLab::Command::CommandDispatcher;
 using OpenGeoLab::Command::registerBuiltinModules;
 using OpenGeoLab::Core::NO_PROGRESS_CALLBACK;
 
-TEST_CASE("CommandDispatcher dispatches to IOModule via request JSON") {
+TEST_CASE("CommandDispatcher dispatches to IOModule via request JSON (stub not-implemented)") {
     PluginComponentFactory factory;
     registerBuiltinModules(factory);
 
@@ -23,9 +23,8 @@ TEST_CASE("CommandDispatcher dispatches to IOModule via request JSON") {
     nlohmann::json request = {
         {"module", "io"}, {"action", "read_brep"}, {"param", {{"path", "test.brep"}}}};
     auto result = dispatcher.dispatch(request, NO_PROGRESS_CALLBACK);
-    CHECK(result["status"] == "ok");
-    CHECK(result["action"] == "read_brep");
-    CHECK(result["path"] == "test.brep");
+    CHECK(result["ok"] == false);
+    CHECK(result.contains("summary"));
 }
 
 TEST_CASE("CommandDispatcher returns error on missing module field") {

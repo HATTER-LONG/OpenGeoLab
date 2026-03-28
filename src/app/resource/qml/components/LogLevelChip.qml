@@ -28,7 +28,6 @@ Rectangle {
         text: chip.text
         color: chip.selected ? chip.theme.textPrimary : chip.theme.textSecondary
         font.pixelSize: 11
-        font.family: "Segoe UI"
         font.bold: chip.selected
     }
 

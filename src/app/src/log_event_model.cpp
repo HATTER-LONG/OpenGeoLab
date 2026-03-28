@@ -6,7 +6,6 @@
 #include "opengeolab/app/log_event_model.h"
 
 #include <QMetaObject>
-#include <QTime>
 
 #include <chrono>
 #include <ctime>

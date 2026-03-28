@@ -42,13 +42,7 @@ nlohmann::json ReadBrepAction::execute(const nlohmann::json& param,
     progress(0.0, "Reading BRep file...");
 
     // TODO(layton): Implement actual BRep file reading logic
-    nlohmann::json result;
-    result["status"] = "ok";
-    result["action"] = "read_brep";
-    result["path"] = path;
-
-    progress(1.0, "BRep file read complete");
-    return result;
+    throw std::runtime_error("read_brep: BRep reading is not yet implemented");
 }
 
 } // namespace OpenGeoLab::IO

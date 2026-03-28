@@ -37,6 +37,7 @@ FunctionPageBase {
 
     ParamField {
         width: parent.width
+        theme: root.theme
         label: qsTr("Box Name")
         placeholder: qsTr("Auto-generated if empty")
         value: root.boxName
@@ -48,6 +49,7 @@ FunctionPageBase {
 
     CoordinateField {
         width: parent.width
+        theme: root.theme
         label: qsTr("Origin Point")
         coordX: root.originX
         coordY: root.originY
@@ -62,7 +64,7 @@ FunctionPageBase {
 
     Text {
         text: qsTr("Dimensions")
-        color: MainPages.theme.textSecondary
+        color: root.theme.textSecondary
         font.pixelSize: 12
     }
 
@@ -72,9 +74,10 @@ FunctionPageBase {
 
         DimensionInput {
             Layout.fillWidth: true
+            theme: root.theme
             label: "W"
             value: root.dimW
-            accentColor: "#E53935"
+            accentColor: root.theme.axisX
             tooltipText: qsTr("Width")
 
             onValueEdited: function(newVal) {
@@ -84,9 +87,10 @@ FunctionPageBase {
 
         DimensionInput {
             Layout.fillWidth: true
+            theme: root.theme
             label: "H"
             value: root.dimH
-            accentColor: "#43A047"
+            accentColor: root.theme.axisY
             tooltipText: qsTr("Height")
 
             onValueEdited: function(newVal) {
@@ -96,9 +100,10 @@ FunctionPageBase {
 
         DimensionInput {
             Layout.fillWidth: true
+            theme: root.theme
             label: "D"
             value: root.dimD
-            accentColor: "#1E88E5"
+            accentColor: root.theme.axisZ
             tooltipText: qsTr("Depth")
 
             onValueEdited: function(newVal) {
@@ -110,8 +115,8 @@ FunctionPageBase {
     Rectangle {
         width: parent.width
         height: infoRow.implicitHeight + 16
-        radius: MainPages.theme.radiusSmall
-        color: MainPages.theme.surfaceMuted
+        radius: root.theme.radiusSmall
+        color: root.theme.surfaceMuted
 
         RowLayout {
             id: infoRow
@@ -123,14 +128,14 @@ FunctionPageBase {
             Text {
                 Layout.preferredWidth: 56
                 text: qsTr("Volume:")
-                color: MainPages.theme.textSecondary
+                color: root.theme.textSecondary
                 font.pixelSize: 11
             }
 
             Text {
                 Layout.fillWidth: true
                 text: (root.dimW * root.dimH * root.dimD).toFixed(3)
-                color: MainPages.theme.textPrimary
+                color: root.theme.textPrimary
                 font.pixelSize: 11
                 font.bold: true
                 horizontalAlignment: Text.AlignLeft

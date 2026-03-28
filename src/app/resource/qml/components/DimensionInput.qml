@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -10,8 +12,9 @@ Item {
     property real value: 0.0
     property int decimals: 3
     property real minValue: 0.001
-    property color accentColor: MainPages.theme.accentA
+    property color accentColor: root.theme.accentA
     property string tooltipText: ""
+    property AppTheme theme: MainPages.theme
 
     signal valueEdited(real newVal)
 
@@ -19,10 +22,10 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        radius: MainPages.theme.radiusSmall
-        color: MainPages.theme.surface
+        radius: root.theme.radiusSmall
+        color: root.theme.surface
         border.width: dimField.activeFocus ? 2 : 1
-        border.color: dimField.activeFocus ? root.accentColor : MainPages.theme.borderSubtle
+        border.color: dimField.activeFocus ? root.accentColor : root.theme.borderSubtle
 
         RowLayout {
             anchors.fill: parent
@@ -65,7 +68,7 @@ Item {
                 text: root.value.toFixed(root.decimals)
                 selectByMouse: true
                 font.pixelSize: 11
-                color: MainPages.theme.textPrimary
+                color: root.theme.textPrimary
                 background: Item {}
 
                 validator: DoubleValidator {

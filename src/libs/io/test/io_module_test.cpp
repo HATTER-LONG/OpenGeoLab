@@ -18,14 +18,12 @@ TEST_CASE("IOModule describe returns module info with actions") {
     CHECK(desc["actions"][0]["name"] == "read_brep");
 }
 
-TEST_CASE("IOModule dispatches read_brep action") {
+TEST_CASE("IOModule dispatches read_brep action (stub throws not-implemented)") {
     OpenGeoLab::IO::IOModule mod;
     nlohmann::json request = {
         {"module", "io"}, {"action", "read_brep"}, {"param", {{"path", "test.brep"}}}};
-    auto result = mod.process(request, OpenGeoLab::Core::NO_PROGRESS_CALLBACK);
-    CHECK(result["status"] == "ok");
-    CHECK(result["action"] == "read_brep");
-    CHECK(result["path"] == "test.brep");
+    CHECK_THROWS_AS((void)mod.process(request, OpenGeoLab::Core::NO_PROGRESS_CALLBACK),
+                    std::runtime_error);
 }
 
 TEST_CASE("IOModule throws on missing action field") {

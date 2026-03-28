@@ -6,6 +6,7 @@
 #include <pybind11/pybind11.h>
 
 #include "opengeolab/app/log_event_model.h"
+#include "opengeolab/app/log_filter_proxy_model.h"
 #include "opengeolab/app/request_service.h"
 
 #include <opengeolab/core/logger.hpp>
@@ -52,6 +53,8 @@ int main(int argc, char* argv[]) {
     OpenGeoLab::App::LogEventModel log_event_model;
     log_event_model.installSink(OpenGeoLab::Core::getLoggerShared());
     qmlRegisterSingletonInstance("OpenGeoLab.Services", 1, 0, "LogEventModel", &log_event_model);
+    qmlRegisterType<OpenGeoLab::App::LogFilterProxyModel>("OpenGeoLab.Services", 1, 0,
+                                                          "LogFilterProxyModel");
 
     QQmlApplicationEngine engine;
     engine.loadFromModule("OpenGeoLab.App", "Main");

@@ -31,6 +31,7 @@ FunctionPageBase {
 
     ParamField {
         width: parent.width
+        theme: root.theme
         label: qsTr("Sphere Name")
         placeholder: qsTr("Auto-generated if empty")
         value: root.sphereName
@@ -42,6 +43,7 @@ FunctionPageBase {
 
     CoordinateField {
         width: parent.width
+        theme: root.theme
         label: qsTr("Center Point")
         coordX: root.centerX
         coordY: root.centerY
@@ -56,15 +58,16 @@ FunctionPageBase {
 
     Text {
         text: qsTr("Dimensions")
-        color: MainPages.theme.textSecondary
+        color: root.theme.textSecondary
         font.pixelSize: 12
     }
 
     DimensionInput {
         width: parent.width
+        theme: root.theme
         label: "R"
         value: root.radius
-        accentColor: "#E53935"
+        accentColor: root.theme.axisX
         tooltipText: qsTr("Radius")
 
         onValueEdited: function(newVal) {
@@ -75,8 +78,8 @@ FunctionPageBase {
     Rectangle {
         width: parent.width
         height: infoColumn.implicitHeight + 16
-        radius: MainPages.theme.radiusSmall
-        color: MainPages.theme.surfaceMuted
+        radius: root.theme.radiusSmall
+        color: root.theme.surfaceMuted
 
         Column {
             id: infoColumn
@@ -92,14 +95,14 @@ FunctionPageBase {
                 Text {
                     Layout.preferredWidth: 86
                     text: qsTr("Volume:")
-                    color: MainPages.theme.textSecondary
+                    color: root.theme.textSecondary
                     font.pixelSize: 11
                 }
 
                 Text {
                     Layout.fillWidth: true
                     text: (4 / 3 * Math.PI * root.radius * root.radius * root.radius).toFixed(3)
-                    color: MainPages.theme.textPrimary
+                    color: root.theme.textPrimary
                     font.pixelSize: 11
                     font.bold: true
                     horizontalAlignment: Text.AlignLeft
@@ -113,14 +116,14 @@ FunctionPageBase {
                 Text {
                     Layout.preferredWidth: 86
                     text: qsTr("Surface Area:")
-                    color: MainPages.theme.textSecondary
+                    color: root.theme.textSecondary
                     font.pixelSize: 11
                 }
 
                 Text {
                     Layout.fillWidth: true
                     text: (4 * Math.PI * root.radius * root.radius).toFixed(3)
-                    color: MainPages.theme.textPrimary
+                    color: root.theme.textPrimary
                     font.pixelSize: 11
                     font.bold: true
                     horizontalAlignment: Text.AlignLeft
@@ -134,14 +137,14 @@ FunctionPageBase {
                 Text {
                     Layout.preferredWidth: 86
                     text: qsTr("Diameter:")
-                    color: MainPages.theme.textSecondary
+                    color: root.theme.textSecondary
                     font.pixelSize: 11
                 }
 
                 Text {
                     Layout.fillWidth: true
                     text: (2 * root.radius).toFixed(3)
-                    color: MainPages.theme.textPrimary
+                    color: root.theme.textPrimary
                     font.pixelSize: 11
                     font.bold: true
                     horizontalAlignment: Text.AlignLeft

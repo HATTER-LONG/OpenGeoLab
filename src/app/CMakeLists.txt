@@ -5,8 +5,10 @@
 find_package(Qt6 6.9 REQUIRED COMPONENTS Concurrent Core5Compat Svg
                                          QuickLayouts Widgets)
 
-qt_add_executable(opengeolab_app src/main.cpp src/translation_manager.cpp
-                  src/request_service.cpp src/log_event_model.cpp)
+qt_add_executable(
+    opengeolab_app src/main.cpp src/translation_manager.cpp
+    src/request_service.cpp src/log_event_model.cpp
+    src/log_filter_proxy_model.cpp)
 
 target_compile_features(opengeolab_app PRIVATE cxx_std_20)
 target_include_directories(
@@ -39,6 +41,7 @@ qt_add_qml_module(
     include/opengeolab/app/translation_manager.h
     include/opengeolab/app/request_service.h
     include/opengeolab/app/log_event_model.h
+    include/opengeolab/app/log_filter_proxy_model.h
     QML_FILES
     resource/qml/Main.qml
     resource/qml/RibbonConfig.qml
