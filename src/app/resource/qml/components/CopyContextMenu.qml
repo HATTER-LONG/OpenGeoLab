@@ -5,15 +5,17 @@ import QtQuick.Controls.Basic
 import "../theme"
 
 /**
- * A reusable context menu popup with a single "Copy" action.
+ * @brief A reusable context menu popup with a single "Copy" action.
  *
  * Usage:
+ * @code
  *   CopyContextMenu {
  *       id: contextMenu
  *       theme: root.theme
  *   }
  *   // To show:
  *   contextMenu.showAt(mouseX, mouseY, textToCopy)
+ * @endcode
  */
 Popup {
     id: popup
@@ -21,9 +23,9 @@ Popup {
     required property AppTheme theme
     property string copyText: ""
 
-    width: copyRow.implicitWidth + 24
-    height: copyRow.implicitHeight + 16
-    padding: 0
+    padding: 10
+    leftPadding: 14
+    rightPadding: 14
     modal: false
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
 
@@ -40,42 +42,21 @@ Popup {
     }
 
     background: Rectangle {
-        radius: popup.theme.radiusMedium
-        color: popup.theme.surfaceStrong
+        radius: popup.theme.radiusSmall
+        color: copyMouseArea.containsMouse
+            ? (popup.theme.darkMode ? "#232c38" : "#d0dded")
+            : popup.theme.surfaceStrong
         border.width: 1
-        border.color: popup.theme.tint(popup.theme.borderSubtle,
-                                       popup.theme.darkMode ? 0.8 : 0.5)
+        border.color: popup.theme.darkMode ? "#2e3a48" : "#c0cfe0"
+
+        Behavior on color {
+            ColorAnimation { duration: popup.theme.animFast }
+        }
     }
 
-    contentItem: Rectangle {
-        color: copyMouseArea.containsMouse
-            ? popup.theme.tint(popup.theme.accentA,
-                               popup.theme.darkMode ? 0.18 : 0.08)
-            : popup.theme.surfaceStrong
-        radius: popup.theme.radiusSmall
-
-        Row {
-            id: copyRow
-            anchors.centerIn: parent
-            spacing: 6
-
-            AppIcon {
-                theme: popup.theme
-                iconKind: "copyOutline"
-                useThemeContrast: false
-                primaryColor: popup.theme.textPrimary
-                width: 14
-                height: 14
-                anchors.verticalCenter: parent.verticalCenter
-            }
-
-            Text {
-                text: qsTr("Copy")
-                color: popup.theme.textPrimary
-                font.pixelSize: 12
-                anchors.verticalCenter: parent.verticalCenter
-            }
-        }
+    contentItem: Item {
+        implicitWidth: copyRow.implicitWidth
+        implicitHeight: copyRow.implicitHeight
 
         MouseArea {
             id: copyMouseArea
@@ -87,6 +68,29 @@ Popup {
                 clipboardHelper.selectAll();
                 clipboardHelper.copy();
                 popup.close();
+            }
+        }
+
+        Row {
+            id: copyRow
+            anchors.centerIn: parent
+            spacing: 8
+
+            AppIcon {
+                theme: popup.theme
+                iconKind: "copyOutline"
+                useThemeContrast: false
+                primaryColor: popup.theme.textPrimary
+                width: 16
+                height: 16
+                anchors.verticalCenter: parent.verticalCenter
+            }
+
+            Text {
+                text: qsTr("Copy")
+                color: popup.theme.textPrimary
+                font.pixelSize: 13
+                anchors.verticalCenter: parent.verticalCenter
             }
         }
     }

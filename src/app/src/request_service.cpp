@@ -56,7 +56,7 @@ void RequestService::submitAsync(const QString& request_json) {
                            muted, desc = description.toStdString()]() -> QString {
             std::optional<Kangaroo::Util::Stopwatch> sw;
             if(!muted) {
-                sw.emplace(desc);
+                sw.emplace(desc, Core::getLoggerShared());
             }
             return QString::fromStdString(m_runtime.process(json, cb));
         });
@@ -103,7 +103,7 @@ void RequestService::executeOnMainThread(const QString& request_json) {
     try {
         std::optional<Kangaroo::Util::Stopwatch> sw;
         if(!muted) {
-            sw.emplace(description.toStdString());
+            sw.emplace(description.toStdString(), Core::getLoggerShared());
         }
         // main.cpp releases GIL before app.exec(). runtime.process() re-acquires
         // GIL internally. This allows PySide6 launch_ui() to create Qt widgets on
@@ -139,15 +139,9 @@ void RequestService::emitResponse(const QString& response, bool muted) {
     const auto document = QJsonDocument::fromJson(response.toUtf8());
     const auto object = document.object();
     if(object.value("ok").toBool(false)) {
-        if(!muted) {
-            LOG_INFO("RequestService: request succeeded");
-        }
         emit responseReady(response, muted);
     } else {
         const auto summary = object.value("summary").toString(QStringLiteral("Unknown error"));
-        if(!muted) {
-            LOG_ERROR("RequestService: request failed: {}", summary.toStdString());
-        }
         emit errorOccurred(summary, muted);
     }
 }
