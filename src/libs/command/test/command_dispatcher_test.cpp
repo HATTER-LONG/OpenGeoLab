@@ -5,6 +5,7 @@
 
 #include <opengeolab/command/command_dispatcher.hpp>
 #include <opengeolab/command/module_registry.hpp>
+#include <opengeolab/core/module_data_event.hpp>
 
 #include <doctest/doctest.h>
 
@@ -151,4 +152,40 @@ TEST_CASE("CommandDispatcher findModule returns nullptr for unknown module") {
     CommandDispatcher dispatcher(factory);
     auto result = dispatcher.findModule("nonexistent");
     CHECK(result == nullptr);
+}
+
+TEST_CASE("onModuleDataChanged fires callback when module emits dataChanged") {
+    PluginComponentFactory factory;
+    registerBuiltinModules(factory);
+    CommandDispatcher dispatcher(factory);
+
+    int call_count = 0;
+    bool received_item_added = false;
+    auto conn =
+        dispatcher.onModuleDataChanged("geometry", [&](OpenGeoLab::Core::ModuleDataEvent event) {
+            ++call_count;
+            if(event == OpenGeoLab::Core::ModuleDataEvent::ItemAdded) {
+                received_item_added = true;
+            }
+        });
+
+    CHECK(conn.isConnected());
+
+    // Trigger via create_box (add → topology update → tessellation = multiple events)
+    const nlohmann::json req = {{"module", "geometry"},
+                                {"action", "create_box"},
+                                {"param", {{"width", 1.0}, {"height", 1.0}, {"depth", 1.0}}}};
+    const auto result = dispatcher.dispatch(req, NO_PROGRESS_CALLBACK);
+    CHECK(result["ok"] == true);
+    CHECK(call_count >= 1);
+    CHECK(received_item_added);
+}
+
+TEST_CASE("onModuleDataChanged returns disconnected handle for unknown module") {
+    PluginComponentFactory factory;
+    CommandDispatcher dispatcher(factory);
+
+    auto conn =
+        dispatcher.onModuleDataChanged("nonexistent", [](OpenGeoLab::Core::ModuleDataEvent) {});
+    CHECK_FALSE(conn.isConnected());
 }

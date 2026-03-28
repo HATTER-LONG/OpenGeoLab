@@ -15,6 +15,8 @@
 #include <opengeolab/geometry/query_shape_action.hpp>
 #include <opengeolab/geometry/tessellate_action.hpp>
 
+#include <opengeolab/core/module_data_event.hpp>
+
 #include <functional>
 
 namespace OpenGeoLab::Geometry {
@@ -31,6 +33,18 @@ GeometryModule::GeometryModule(Kangaroo::Util::PluginComponentFactory& factory)
     registerAction<QueryShapeAction>(std::ref(m_shapeStore));
     registerAction<ListShapesAction>(std::ref(m_shapeStore));
     registerAction<DeleteShapeAction>(std::ref(m_shapeStore));
+
+    // Bridge ShapeStore signals → ModuleBase::dataChanged for event bus
+    m_storeConnections.push_back(
+        m_shapeStore.shapeAdded.connect([this](uint32_t, const ShapeEntry&) {
+            dataChanged.emit(Core::ModuleDataEvent::ItemAdded);
+        }));
+    m_storeConnections.push_back(m_shapeStore.shapeRemoved.connect(
+        [this](uint32_t) { dataChanged.emit(Core::ModuleDataEvent::ItemRemoved); }));
+    m_storeConnections.push_back(
+        m_shapeStore.shapeUpdated.connect([this](uint32_t, const ShapeEntry&) {
+            dataChanged.emit(Core::ModuleDataEvent::ItemModified);
+        }));
 }
 
 GeometryModule::~GeometryModule() = default;

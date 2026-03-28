@@ -11,10 +11,12 @@
 
 #include <opengeolab/core/action.hpp>
 #include <opengeolab/core/core_export.hpp>
+#include <opengeolab/core/module_data_event.hpp>
 #include <opengeolab/core/progress_callback.hpp>
 
 #include <kangaroo/util/noncopyable.hpp>
 #include <kangaroo/util/plugin_component_factory.hpp>
+#include <kangaroo/util/signal.hpp>
 #include <nlohmann/json.hpp>
 
 #include <memory>
@@ -46,6 +48,14 @@ public:
                         std::string_view description,
                         Kangaroo::Util::PluginComponentFactory& factory);
     virtual ~ModuleBase();
+
+    /// @brief Signal emitted when module data changes.
+    ///
+    /// Each module fires this signal when its internal data is mutated.
+    /// Subscribers connect via CommandDispatcher::onModuleDataChanged().
+    ///
+    /// @note May be emitted on any thread; listeners must handle thread safety.
+    Kangaroo::Util::Signal<ModuleDataEvent> dataChanged;
 
     /// Module name (matches request["module"]).
     [[nodiscard]] std::string_view moduleName() const;

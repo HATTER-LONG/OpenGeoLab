@@ -6,11 +6,16 @@ find_package(Qt6 6.9 REQUIRED COMPONENTS Concurrent Core5Compat Svg
                                          QuickLayouts Widgets)
 
 qt_add_executable(
-    opengeolab_app src/main.cpp src/translation_manager.cpp
-    src/request_service.cpp src/log_event_model.cpp
-    src/log_filter_proxy_model.cpp)
+    opengeolab_app
+    src/main.cpp
+    src/translation_manager.cpp
+    src/request_service.cpp
+    src/log_event_model.cpp
+    src/log_filter_proxy_model.cpp
+    src/module_data_notifier.cpp)
 
 target_compile_features(opengeolab_app PRIVATE cxx_std_20)
+target_compile_definitions(opengeolab_app PRIVATE QT_NO_KEYWORDS)
 target_include_directories(
     opengeolab_app PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include"
                            "${CMAKE_CURRENT_SOURCE_DIR}/include/opengeolab/app")
@@ -43,6 +48,7 @@ qt_add_qml_module(
     include/opengeolab/app/request_service.h
     include/opengeolab/app/log_event_model.h
     include/opengeolab/app/log_filter_proxy_model.h
+    include/opengeolab/app/module_data_notifier.h
     QML_FILES
     resource/qml/Main.qml
     resource/qml/RibbonConfig.qml
@@ -67,7 +73,7 @@ qt_add_qml_module(
     resource/qml/components/ActivityPanel.qml
     resource/qml/components/TerminalView.qml
     resource/qml/components/ProgressCard.qml
-    resource/qml/components/BoxListItem.qml
+    resource/qml/components/ShapeListItem.qml
     resource/qml/components/FunctionPageBase.qml
     resource/qml/components/DimensionInput.qml
     resource/qml/components/ParamField.qml

@@ -43,7 +43,7 @@ public:
      */
     Q_INVOKABLE void switchLanguage(const QString& locale);
 
-signals:
+Q_SIGNALS:
     void currentLanguageChanged();
 
 private:

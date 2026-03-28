@@ -110,3 +110,49 @@ TEST_CASE("GeometryModule shapeStore is accessible") {
     CHECK(result["ok"] == true);
     CHECK(mod.shapeStore().size() == 1);
 }
+
+TEST_CASE("list_shapes returns enhanced fields: shapeType, boundingBox, wires") {
+    Kangaroo::Util::PluginComponentFactory factory;
+    OpenGeoLab::Geometry::GeometryModule mod(factory);
+
+    // Create a box first
+    nlohmann::json createReq = {{"module", "geometry"},
+                                {"action", "create_box"},
+                                {"param", {{"width", 10.0}, {"height", 20.0}, {"depth", 5.0}}}};
+    auto createResult = mod.process(createReq, OpenGeoLab::Core::NO_PROGRESS_CALLBACK);
+    REQUIRE(createResult["ok"] == true);
+
+    // List shapes
+    nlohmann::json listReq = {
+        {"module", "geometry"}, {"action", "list_shapes"}, {"param", nlohmann::json::object()}};
+    auto listResult = mod.process(listReq, OpenGeoLab::Core::NO_PROGRESS_CALLBACK);
+    REQUIRE(listResult["ok"] == true);
+    REQUIRE(listResult["shapes"].size() == 1);
+
+    auto& shape = listResult["shapes"][0];
+
+    // shapeType
+    CHECK(shape.contains("shapeType"));
+    CHECK(shape["shapeType"].is_string());
+    CHECK(shape["shapeType"] == "Solid");
+
+    // topology.wires
+    CHECK(shape["topology"].contains("wires"));
+    CHECK(shape["topology"]["wires"].is_number());
+    CHECK(shape["topology"]["wires"] == 6);
+
+    // boundingBox
+    CHECK(shape.contains("boundingBox"));
+    CHECK(shape["boundingBox"].contains("min"));
+    CHECK(shape["boundingBox"].contains("max"));
+    CHECK(shape["boundingBox"]["min"].is_array());
+    CHECK(shape["boundingBox"]["min"].size() == 3);
+    CHECK(shape["boundingBox"]["max"].is_array());
+    CHECK(shape["boundingBox"]["max"].size() == 3);
+
+    // Box at origin with w=10, h=20, d=5 → min ~[0,0,0], max ~[10,20,5]
+    auto maxBB = shape["boundingBox"]["max"];
+    CHECK(maxBB[0].get<double>() == doctest::Approx(10.0).epsilon(0.01));
+    CHECK(maxBB[1].get<double>() == doctest::Approx(20.0).epsilon(0.01));
+    CHECK(maxBB[2].get<double>() == doctest::Approx(5.0).epsilon(0.01));
+}

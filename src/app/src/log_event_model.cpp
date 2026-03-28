@@ -69,7 +69,7 @@ void LogEventModel::clear() {
     beginResetModel();
     m_entries.clear();
     endResetModel();
-    emit countChanged();
+    Q_EMIT countChanged();
 }
 
 int LogEventModel::runtimeMinLevel() const { return m_runtimeMinLevel; }
@@ -85,7 +85,7 @@ void LogEventModel::setRuntimeMinLevel(int level) {
         m_logger->set_level(static_cast<spdlog::level::level_enum>(level));
     }
 
-    emit runtimeMinLevelChanged();
+    Q_EMIT runtimeMinLevelChanged();
 }
 
 int LogEventModel::count() const { return static_cast<int>(m_entries.size()); }
@@ -118,8 +118,8 @@ void LogEventModel::appendEntry(int level,
     m_entries.push_back({level, level_name, source, message, time, thread_id, file, line});
     endInsertRows();
 
-    emit countChanged();
-    emit newEntryAdded(level);
+    Q_EMIT countChanged();
+    Q_EMIT newEntryAdded(level);
 }
 
 // ---------------------------------------------------------------------------

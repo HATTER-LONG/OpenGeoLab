@@ -16,10 +16,6 @@ Window {
     property var pluginList: []
     property string statusNote: qsTr("Viewport is active. Ribbon commands stay connected to the same controller pipeline.")
 
-    ListModel {
-        id: boxListModel
-    }
-
     width: 1500
     height: 1000
     minimumWidth: 1280
@@ -220,7 +216,6 @@ Window {
                             Layout.fillWidth: true
                             Layout.fillHeight: true
                             theme: appTheme
-                            boxListModel: boxListModel
                         }
 
                         ProgressCard {

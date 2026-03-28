@@ -11,6 +11,10 @@
 #include <opengeolab/geometry/geometry_export.hpp>
 #include <opengeolab/geometry/shape_store.hpp>
 
+#include <kangaroo/util/signal.hpp>
+
+#include <vector>
+
 namespace Kangaroo::Util {
 class PluginComponentFactory;
 } // namespace Kangaroo::Util
@@ -35,6 +39,7 @@ public:
 
 private:
     ShapeStore m_shapeStore;
+    std::vector<Kangaroo::Util::ScopedConnection> m_storeConnections;
 };
 
 } // namespace OpenGeoLab::Geometry

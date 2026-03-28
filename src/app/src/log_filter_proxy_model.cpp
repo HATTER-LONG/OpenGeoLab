@@ -19,11 +19,10 @@ void LogFilterProxyModel::setEnabledLevelMask(int mask) {
     }
     m_enabledLevelMask = mask;
     invalidateFilter();
-    emit enabledLevelMaskChanged();
+    Q_EMIT enabledLevelMaskChanged();
 }
 
-bool LogFilterProxyModel::filterAcceptsRow(int source_row,
-                                           const QModelIndex& source_parent) const {
+bool LogFilterProxyModel::filterAcceptsRow(int source_row, const QModelIndex& source_parent) const {
     const auto index = sourceModel()->index(source_row, 0, source_parent);
     const int level = sourceModel()->data(index, LogEventModel::LevelRole).toInt();
     return (m_enabledLevelMask & (1 << level)) != 0;

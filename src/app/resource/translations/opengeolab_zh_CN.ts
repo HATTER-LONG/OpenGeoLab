@@ -175,16 +175,51 @@
     <context>
         <name>SidebarPanel</name>
         <message>
-            <source>Scene</source>
-            <translation>场景</translation>
+            <source>Scene Explorer</source>
+            <translation>场景浏览器</translation>
         </message>
         <message>
-            <source>Explorer</source>
-            <translation>浏览器</translation>
+            <source>No geometry loaded.</source>
+            <translation>暂无几何体。</translation>
         </message>
         <message>
-            <source>Scene tree and tools will appear here.</source>
-            <translation>场景树和工具将在此处显示。</translation>
+            <source>Create a shape or import a model to get started.</source>
+            <translation>创建形状或导入模型以开始使用。</translation>
+        </message>
+    </context>
+    <context>
+        <name>ShapeListItem</name>
+        <message>
+            <source>Topology</source>
+            <translation>拓扑</translation>
+        </message>
+        <message>
+            <source>Faces</source>
+            <translation>面</translation>
+        </message>
+        <message>
+            <source>Edges</source>
+            <translation>边</translation>
+        </message>
+        <message>
+            <source>Vertices</source>
+            <translation>顶点</translation>
+        </message>
+        <message>
+            <source>Wires</source>
+            <translation>线框</translation>
+        </message>
+        <message>
+            <source>Bounds</source>
+            <translation>包围盒</translation>
+        </message>
+        <message>
+            <source>Tessellated</source>
+            <translation>已细分</translation>
+        </message>
+        <message>
+            <source>Not tessellated</source>
+            <translation>未细分</translation>
         </message>
     </context>
     <context>

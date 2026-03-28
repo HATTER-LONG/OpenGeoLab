@@ -108,4 +108,14 @@ CommandDispatcher::findModule(const std::string& module_name) const {
     return getModule(module_name);
 }
 
+Kangaroo::Util::ScopedConnection
+CommandDispatcher::onModuleDataChanged(const std::string& module_name,
+                                       std::function<void(Core::ModuleDataEvent)> callback) {
+    auto module = findModule(module_name);
+    if(!module) {
+        return {};
+    }
+    return module->dataChanged.connect(std::move(callback));
+}
+
 } // namespace OpenGeoLab::Command

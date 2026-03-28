@@ -68,14 +68,14 @@ public:
      */
     void installSink(const std::shared_ptr<spdlog::logger>& logger);
 
-signals:
+Q_SIGNALS:
     void runtimeMinLevelChanged();
     void countChanged();
 
     /** @brief Emitted when a new entry is added; level is 0-5. */
     void newEntryAdded(int level);
 
-public slots:
+public Q_SLOTS:
     /** @brief Append a log entry (called from QmlLogSink via QueuedConnection). */
     void appendEntry(int level,
                      const QString& level_name,

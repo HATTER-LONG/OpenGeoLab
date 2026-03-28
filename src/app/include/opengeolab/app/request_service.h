@@ -68,7 +68,7 @@ public:
     /** @brief True when at least one async request is in flight. */
     [[nodiscard]] bool isBusy() const;
 
-signals:
+Q_SIGNALS:
     void responseReady(const QString& response_json, bool muted);
     void errorOccurred(const QString& error_message, bool muted);
     void busyChanged();

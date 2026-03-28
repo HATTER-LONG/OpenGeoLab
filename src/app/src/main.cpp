@@ -7,6 +7,7 @@
 
 #include "opengeolab/app/log_event_model.h"
 #include "opengeolab/app/log_filter_proxy_model.h"
+#include "opengeolab/app/module_data_notifier.h"
 #include "opengeolab/app/request_service.h"
 
 #include <opengeolab/command/command_dispatcher.hpp>
@@ -56,6 +57,10 @@ int main(int argc, char* argv[]) {
 
     OpenGeoLab::App::RequestService request_service(dispatcher, python_runtime);
     qmlRegisterSingletonInstance("OpenGeoLab.Services", 1, 0, "RequestService", &request_service);
+
+    OpenGeoLab::App::ModuleDataNotifier module_notifier(dispatcher);
+    qmlRegisterSingletonInstance("OpenGeoLab.Services", 1, 0, "ModuleDataNotifier",
+                                 &module_notifier);
 
     OpenGeoLab::App::LogEventModel log_event_model;
     log_event_model.installSink(OpenGeoLab::Core::getLoggerShared());

@@ -36,10 +36,10 @@ void RequestService::submitAsync(const QString& request_json) {
         LOG_INFO("RequestService: submitting async [{}]", description.toStdString());
     }
 
-    emit requestSent(description, request_json, muted);
+    Q_EMIT requestSent(description, request_json, muted);
 
     m_pendingCount.fetch_add(1, std::memory_order_relaxed);
-    emit busyChanged();
+    Q_EMIT busyChanged();
 
     auto* watcher = new QFutureWatcher<QString>(this);
 
@@ -48,7 +48,7 @@ void RequestService::submitAsync(const QString& request_json) {
         QMetaObject::invokeMethod(
             this,
             [this, progress, msg = QString::fromStdString(message)]() {
-                emit progressUpdated(progress, msg);
+                Q_EMIT progressUpdated(progress, msg);
             },
             Qt::QueuedConnection);
         return true;
@@ -86,7 +86,7 @@ void RequestService::submitAsync(const QString& request_json) {
 
     connect(watcher, &QFutureWatcher<QString>::finished, this, [this, watcher, muted]() {
         m_pendingCount.fetch_sub(1, std::memory_order_relaxed);
-        emit busyChanged();
+        Q_EMIT busyChanged();
 
         try {
             const QString response = watcher->result();
@@ -94,7 +94,7 @@ void RequestService::submitAsync(const QString& request_json) {
         } catch(const std::exception& exception) {
             LOG_ERROR("RequestService: async request threw exception: {}{}", exception.what(),
                       muted ? " (muted)" : "");
-            emit errorOccurred(QString::fromStdString(exception.what()), muted);
+            Q_EMIT errorOccurred(QString::fromStdString(exception.what()), muted);
         }
 
         {
@@ -116,7 +116,7 @@ void RequestService::executeOnMainThread(const QString& request_json) {
         LOG_INFO("RequestService: executing on main thread [{}]", description.toStdString());
     }
 
-    emit requestSent(description, request_json, muted);
+    Q_EMIT requestSent(description, request_json, muted);
 
     try {
         std::optional<Kangaroo::Util::Stopwatch> sw;
@@ -137,7 +137,7 @@ void RequestService::executeOnMainThread(const QString& request_json) {
     } catch(const std::exception& exception) {
         LOG_ERROR("RequestService: main-thread request threw exception: {}{}", exception.what(),
                   muted ? " (muted)" : "");
-        emit errorOccurred(QString::fromStdString(exception.what()), muted);
+        Q_EMIT errorOccurred(QString::fromStdString(exception.what()), muted);
     }
 }
 
@@ -163,10 +163,10 @@ void RequestService::emitResponse(const QString& response, bool muted) {
     const auto document = QJsonDocument::fromJson(response.toUtf8());
     const auto object = document.object();
     if(object.value("ok").toBool(false)) {
-        emit responseReady(response, muted);
+        Q_EMIT responseReady(response, muted);
     } else {
         const auto summary = object.value("summary").toString(QStringLiteral("Unknown error"));
-        emit errorOccurred(summary, muted);
+        Q_EMIT errorOccurred(summary, muted);
     }
 }
 

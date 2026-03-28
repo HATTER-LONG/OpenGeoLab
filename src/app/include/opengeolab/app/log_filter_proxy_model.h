@@ -41,7 +41,7 @@ public:
     [[nodiscard]] int enabledLevelMask() const;
     void setEnabledLevelMask(int mask);
 
-signals:
+Q_SIGNALS:
     void enabledLevelMaskChanged();
 
 protected:

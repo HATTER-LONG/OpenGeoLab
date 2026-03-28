@@ -37,7 +37,7 @@ void TranslationManager::switchLanguage(const QString& locale) {
         m_engine->retranslate();
     }
 
-    emit currentLanguageChanged();
+    Q_EMIT currentLanguageChanged();
 }
 
 TranslationManager::TranslationManager(QQmlEngine* engine, QObject* parent)
