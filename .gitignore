@@ -88,6 +88,7 @@ CMakeLists.txt.user*
 .cache
 
 .qmlls.ini
+CMakeUserPresets.json
 
 openglunderqml
 __cmake_*

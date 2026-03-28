@@ -2,8 +2,8 @@
  * @file action.hpp
  * @brief IAction — abstract interface for module actions
  *
- * Each module maintains its own action registry.  process() dispatches
- * to the IAction matching the "action" field in the request.
+ * Each module registers its actions into the global PluginComponentFactory
+ * with keys in "module.action" format (e.g. "geometry.create_box").
  */
 
 #pragma once
@@ -11,6 +11,7 @@
 #include <opengeolab/core/core_export.hpp>
 #include <opengeolab/core/progress_callback.hpp>
 
+#include <kangaroo/util/plugin_component_factory.hpp>
 #include <nlohmann/json.hpp>
 
 namespace OpenGeoLab::Core {
@@ -49,3 +50,7 @@ public:
 };
 
 } // namespace OpenGeoLab::Core
+
+template <> struct Kangaroo::Util::PluginComponentInterfaceId<OpenGeoLab::Core::IAction> {
+    static constexpr std::string_view VALUE{"opengeolab.core.IAction"};
+};

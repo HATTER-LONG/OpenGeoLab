@@ -6,10 +6,13 @@
 #include <opengeolab/geometry/create_box_action.hpp>
 #include <opengeolab/geometry/geometry_module.hpp>
 
+#include <kangaroo/util/plugin_component_factory.hpp>
+
 #include <doctest/doctest.h>
 
 TEST_CASE("GeometryModule describe returns module info with actions") {
-    OpenGeoLab::Geometry::GeometryModule mod;
+    Kangaroo::Util::PluginComponentFactory factory;
+    OpenGeoLab::Geometry::GeometryModule mod(factory);
     auto desc = mod.describe();
     CHECK(desc["name"] == "geometry");
     CHECK(desc.contains("description"));
@@ -19,7 +22,8 @@ TEST_CASE("GeometryModule describe returns module info with actions") {
 }
 
 TEST_CASE("GeometryModule dispatches create_box action") {
-    OpenGeoLab::Geometry::GeometryModule mod;
+    Kangaroo::Util::PluginComponentFactory factory;
+    OpenGeoLab::Geometry::GeometryModule mod(factory);
     nlohmann::json request = {{"module", "geometry"},
                               {"action", "create_box"},
                               {"param", {{"width", 2.0}, {"height", 3.0}, {"depth", 4.0}}}};
@@ -45,14 +49,16 @@ TEST_CASE("GeometryModule dispatches create_box action") {
 }
 
 TEST_CASE("GeometryModule throws on missing action field") {
-    OpenGeoLab::Geometry::GeometryModule mod;
+    Kangaroo::Util::PluginComponentFactory factory;
+    OpenGeoLab::Geometry::GeometryModule mod(factory);
     nlohmann::json request = {{"module", "geometry"}, {"param", {{"width", 1.0}}}};
     CHECK_THROWS_AS((void)mod.process(request, OpenGeoLab::Core::NO_PROGRESS_CALLBACK),
                     std::invalid_argument);
 }
 
 TEST_CASE("GeometryModule throws on unknown action") {
-    OpenGeoLab::Geometry::GeometryModule mod;
+    Kangaroo::Util::PluginComponentFactory factory;
+    OpenGeoLab::Geometry::GeometryModule mod(factory);
     nlohmann::json request = {{"module", "geometry"}, {"action", "unknown_action"}};
     CHECK_THROWS_AS((void)mod.process(request, OpenGeoLab::Core::NO_PROGRESS_CALLBACK),
                     std::invalid_argument);

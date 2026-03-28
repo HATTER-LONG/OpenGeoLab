@@ -6,10 +6,13 @@
 #include <opengeolab/io/io_module.hpp>
 #include <opengeolab/io/read_brep_action.hpp>
 
+#include <kangaroo/util/plugin_component_factory.hpp>
+
 #include <doctest/doctest.h>
 
 TEST_CASE("IOModule describe returns module info with actions") {
-    OpenGeoLab::IO::IOModule mod;
+    Kangaroo::Util::PluginComponentFactory factory;
+    OpenGeoLab::IO::IOModule mod(factory);
     auto desc = mod.describe();
     CHECK(desc["name"] == "io");
     CHECK(desc.contains("description"));
@@ -19,7 +22,8 @@ TEST_CASE("IOModule describe returns module info with actions") {
 }
 
 TEST_CASE("IOModule dispatches read_brep action (stub throws not-implemented)") {
-    OpenGeoLab::IO::IOModule mod;
+    Kangaroo::Util::PluginComponentFactory factory;
+    OpenGeoLab::IO::IOModule mod(factory);
     nlohmann::json request = {
         {"module", "io"}, {"action", "read_brep"}, {"param", {{"path", "test.brep"}}}};
     CHECK_THROWS_AS((void)mod.process(request, OpenGeoLab::Core::NO_PROGRESS_CALLBACK),
@@ -27,14 +31,16 @@ TEST_CASE("IOModule dispatches read_brep action (stub throws not-implemented)") 
 }
 
 TEST_CASE("IOModule throws on missing action field") {
-    OpenGeoLab::IO::IOModule mod;
+    Kangaroo::Util::PluginComponentFactory factory;
+    OpenGeoLab::IO::IOModule mod(factory);
     nlohmann::json request = {{"module", "io"}, {"param", {{"path", "test.brep"}}}};
     CHECK_THROWS_AS((void)mod.process(request, OpenGeoLab::Core::NO_PROGRESS_CALLBACK),
                     std::invalid_argument);
 }
 
 TEST_CASE("IOModule throws on unknown action") {
-    OpenGeoLab::IO::IOModule mod;
+    Kangaroo::Util::PluginComponentFactory factory;
+    OpenGeoLab::IO::IOModule mod(factory);
     nlohmann::json request = {{"module", "io"}, {"action", "unknown_action"}};
     CHECK_THROWS_AS((void)mod.process(request, OpenGeoLab::Core::NO_PROGRESS_CALLBACK),
                     std::invalid_argument);
