@@ -13,7 +13,8 @@ opengeolab_add_module(
     PUBLIC_LINKS
     OpenGeoLab::Core
     OpenGeoLab::IO
-    OpenGeoLab::Geometry)
+    OpenGeoLab::Geometry
+    OpenGeoLab::Mesh)
 
 if (OPENGEOLAB_BUILD_TESTS)
     opengeolab_add_doctest_test(

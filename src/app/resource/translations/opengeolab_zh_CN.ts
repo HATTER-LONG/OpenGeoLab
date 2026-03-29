@@ -68,6 +68,14 @@
             <translation>平滑</translation>
         </message>
         <message>
+            <source>2D</source>
+            <translation>2D</translation>
+        </message>
+        <message>
+            <source>3D</source>
+            <translation>3D</translation>
+        </message>
+        <message>
             <source>Assist</source>
             <translation>辅助</translation>
         </message>
@@ -617,6 +625,175 @@
         <message>
             <source>Select a BRep (.brep, .brp) or STEP (.step, .stp) file to import.</source>
             <translation>选择 BRep (.brep, .brp) 或 STEP (.step, .stp) 文件进行导入。</translation>
+        </message>
+    </context>
+    <context>
+        <name>ShapeSelector</name>
+        <message>
+            <source>Target Shape</source>
+            <translation>目标形体</translation>
+        </message>
+        <message>
+            <source>No shapes available</source>
+            <translation>暂无可用形体</translation>
+        </message>
+        <message>
+            <source>Select a shape...</source>
+            <translation>选择一个形体…</translation>
+        </message>
+    </context>
+    <context>
+        <name>MeshSurfacePage</name>
+        <message>
+            <source>Surface Mesh (2D)</source>
+            <translation>面网格 (2D)</translation>
+        </message>
+        <message>
+            <source>Mesh Name</source>
+            <translation>网格名称</translation>
+        </message>
+        <message>
+            <source>Auto-generated if empty</source>
+            <translation>留空则自动生成</translation>
+        </message>
+        <message>
+            <source>Target Shape</source>
+            <translation>目标形体</translation>
+        </message>
+        <message>
+            <source>Element Size</source>
+            <translation>单元尺寸</translation>
+        </message>
+        <message>
+            <source>Min</source>
+            <translation>最小</translation>
+        </message>
+        <message>
+            <source>Max</source>
+            <translation>最大</translation>
+        </message>
+        <message>
+            <source>Minimum element size</source>
+            <translation>最小单元尺寸</translation>
+        </message>
+        <message>
+            <source>Maximum element size</source>
+            <translation>最大单元尺寸</translation>
+        </message>
+        <message>
+            <source>Algorithm</source>
+            <translation>算法</translation>
+        </message>
+        <message>
+            <source>Element Type</source>
+            <translation>单元类型</translation>
+        </message>
+        <message>
+            <source>Triangle</source>
+            <translation>三角形</translation>
+        </message>
+        <message>
+            <source>Quad</source>
+            <translation>四边形</translation>
+        </message>
+        <message>
+            <source>Order</source>
+            <translation>阶次</translation>
+        </message>
+        <message>
+            <source>1st (Linear)</source>
+            <translation>1阶 (线性)</translation>
+        </message>
+        <message>
+            <source>2nd (Quadratic)</source>
+            <translation>2阶 (二次)</translation>
+        </message>
+        <message>
+            <source>Optimize</source>
+            <translation>优化</translation>
+        </message>
+    </context>
+    <context>
+        <name>MeshVolumePage</name>
+        <message>
+            <source>Volume Mesh (3D)</source>
+            <translation>体网格 (3D)</translation>
+        </message>
+        <message>
+            <source>Mesh Name</source>
+            <translation>网格名称</translation>
+        </message>
+        <message>
+            <source>Auto-generated if empty</source>
+            <translation>留空则自动生成</translation>
+        </message>
+        <message>
+            <source>Target Shape</source>
+            <translation>目标形体</translation>
+        </message>
+        <message>
+            <source>Element Size</source>
+            <translation>单元尺寸</translation>
+        </message>
+        <message>
+            <source>Min</source>
+            <translation>最小</translation>
+        </message>
+        <message>
+            <source>Max</source>
+            <translation>最大</translation>
+        </message>
+        <message>
+            <source>Minimum element size</source>
+            <translation>最小单元尺寸</translation>
+        </message>
+        <message>
+            <source>Maximum element size</source>
+            <translation>最大单元尺寸</translation>
+        </message>
+        <message>
+            <source>Volume Algorithm</source>
+            <translation>体算法</translation>
+        </message>
+        <message>
+            <source>Element Type</source>
+            <translation>单元类型</translation>
+        </message>
+        <message>
+            <source>Tetrahedron</source>
+            <translation>四面体</translation>
+        </message>
+        <message>
+            <source>Hex</source>
+            <translation>六面体</translation>
+        </message>
+        <message>
+            <source>Order</source>
+            <translation>阶次</translation>
+        </message>
+        <message>
+            <source>1st (Linear)</source>
+            <translation>1阶 (线性)</translation>
+        </message>
+        <message>
+            <source>2nd (Quadratic)</source>
+            <translation>2阶 (二次)</translation>
+        </message>
+        <message>
+            <source>Optimize</source>
+            <translation>优化</translation>
+        </message>
+        <message>
+            <source>Optimize Algorithm</source>
+            <translation>优化算法</translation>
+        </message>
+        <message>
+            <source>Default</source>
+            <translation>默认</translation>
+        </message>
+        <message>
+            <source>High Order</source>
+            <translation>高阶</translation>
         </message>
     </context>
 </TS>

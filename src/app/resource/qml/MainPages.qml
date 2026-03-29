@@ -16,7 +16,9 @@ QtObject {
         "addCylinder": { path: "components/pages/CreateCylinderPage.qml" },
         "addSphere":   { path: "components/pages/CreateSpherePage.qml" },
         "addTorus":    { path: "components/pages/CreateTorusPage.qml" },
-        "importModel": { path: "components/pages/ImportModelPage.qml" }
+        "importModel": { path: "components/pages/ImportModelPage.qml" },
+        "meshSurface": { path: "components/pages/MeshSurfacePage.qml" },
+        "meshVolume":  { path: "components/pages/MeshVolumePage.qml" }
     })
 
     function hasPage(actionId) {

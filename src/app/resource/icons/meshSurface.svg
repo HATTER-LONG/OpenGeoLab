@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- Triangulated surface mesh on a flat plane -->
+  <!-- Outer boundary -->
+  <polygon points="64,400 256,80 448,400" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="28"/>
+  <!-- Internal triangle edges -->
+  <line x1="160" y1="240" x2="352" y2="240" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="28"/>
+  <line x1="256" y1="80" x2="160" y2="240" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="28"/>
+  <line x1="256" y1="80" x2="352" y2="240" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="28"/>
+  <line x1="160" y1="240" x2="256" y2="400" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="28"/>
+  <line x1="352" y1="240" x2="256" y2="400" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="28"/>
+  <!-- 2D label: small flat indicator at bottom -->
+  <line x1="64" y1="456" x2="448" y2="456" stroke="#000" stroke-linecap="round" stroke-width="20" stroke-dasharray="16,16"/>
+</svg>

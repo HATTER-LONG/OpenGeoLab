@@ -176,6 +176,7 @@ opengeolab_resolve_package(
 # OpenCASCADE Technology
 # ---------------------------------------------------------------------------
 find_package(OpenCASCADE REQUIRED)
+find_package(gmsh REQUIRED)
 
 # ---------------------------------------------------------------------------
 # Python: embedded runtime + pybind11 bridge
@@ -240,6 +241,7 @@ endif ()
 add_subdirectory(src/libs/core)
 add_subdirectory(src/libs/io)
 add_subdirectory(src/libs/geometry)
+add_subdirectory(src/libs/mesh)
 add_subdirectory(src/libs/command)
 add_subdirectory(src/libs/python)
 add_subdirectory(src/app)

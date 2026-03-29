@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- Isometric cube with mesh subdivision on visible faces -->
+  <!-- Outer hexagonal silhouette -->
+  <path d="M256,76 L88,173 L88,367 L256,464 L424,367 L424,173 Z"
+    fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="32"/>
+  <!-- Three inner edges from front vertex -->
+  <line x1="256" y1="270" x2="88" y2="173"
+    stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="32"/>
+  <line x1="256" y1="270" x2="424" y2="173"
+    stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="32"/>
+  <line x1="256" y1="270" x2="256" y2="464"
+    stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="32"/>
+  <!-- Left face grid -->
+  <line x1="172" y1="222" x2="172" y2="416"
+    stroke="#000" stroke-linecap="round" stroke-width="18"/>
+  <line x1="88" y1="270" x2="256" y2="367"
+    stroke="#000" stroke-linecap="round" stroke-width="18"/>
+  <!-- Right face grid -->
+  <line x1="340" y1="222" x2="340" y2="416"
+    stroke="#000" stroke-linecap="round" stroke-width="18"/>
+  <line x1="424" y1="270" x2="256" y2="367"
+    stroke="#000" stroke-linecap="round" stroke-width="18"/>
+  <!-- Top face cross -->
+  <line x1="172" y1="125" x2="340" y2="222"
+    stroke="#000" stroke-linecap="round" stroke-width="18"/>
+  <line x1="340" y1="125" x2="172" y2="222"
+    stroke="#000" stroke-linecap="round" stroke-width="18"/>
+</svg>

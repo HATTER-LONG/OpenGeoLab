@@ -117,6 +117,55 @@ TEST_CASE("CreateTorusPage defines the expected torus workflow") {
                               "majorRadius: root.majorRadius, minorRadius: root.minorRadius"});
 }
 
+TEST_CASE("MainPages registers mesh pages") {
+    const auto mainPagesPath = appSourceDir() / "resource/qml/MainPages.qml";
+    REQUIRE_MESSAGE(fs::exists(mainPagesPath), "Missing file: " << mainPagesPath.string());
+
+    const auto content = readFile(mainPagesPath);
+    requireSnippets(content,
+                    {"\"meshSurface\": { path: \"components/pages/MeshSurfacePage.qml\" }",
+                     "\"meshVolume\":  { path: \"components/pages/MeshVolumePage.qml\" }"});
+}
+
+TEST_CASE("App CMake packages mesh page QML files") {
+    const auto cmakePath = appSourceDir() / "CMakeLists.txt";
+    REQUIRE_MESSAGE(fs::exists(cmakePath), "Missing file: " << cmakePath.string());
+
+    const auto content = readFile(cmakePath);
+    requireSnippets(content, {"resource/qml/components/pages/MeshSurfacePage.qml",
+                              "resource/qml/components/pages/MeshVolumePage.qml",
+                              "resource/qml/components/ShapeSelector.qml"});
+}
+
+TEST_CASE("MeshSurfacePage defines the expected surface mesh workflow") {
+    const auto pagePath = appSourceDir() / "resource/qml/components/pages/MeshSurfacePage.qml";
+    REQUIRE_MESSAGE(fs::exists(pagePath), "Missing file: " << pagePath.string());
+
+    const auto content = readFile(pagePath);
+    requireSnippets(content, {"pageIcon: \"meshSurface\"",
+                              "actionId: \"meshSurface\"",
+                              "action: \"generate_surface_mesh\"",
+                              "property real minSize: 0.1",
+                              "property real maxSize: 10.0",
+                              "property int algorithm: 6",
+                              "ShapeSelector"});
+}
+
+TEST_CASE("MeshVolumePage defines the expected volume mesh workflow") {
+    const auto pagePath = appSourceDir() / "resource/qml/components/pages/MeshVolumePage.qml";
+    REQUIRE_MESSAGE(fs::exists(pagePath), "Missing file: " << pagePath.string());
+
+    const auto content = readFile(pagePath);
+    requireSnippets(content, {"pageIcon: \"meshVolume\"",
+                              "actionId: \"meshVolume\"",
+                              "action: \"generate_volume_mesh\"",
+                              "property real minSize: 0.1",
+                              "property real maxSize: 10.0",
+                              "property int algorithm: 1",
+                              "property int optimizeAlgorithm: 0",
+                              "ShapeSelector"});
+}
+
 TEST_CASE("Chinese translations cover the new geometry pages") {
     const auto translationPath = appSourceDir() / "resource/translations/opengeolab_zh_CN.ts";
     REQUIRE_MESSAGE(fs::exists(translationPath), "Missing file: " << translationPath.string());

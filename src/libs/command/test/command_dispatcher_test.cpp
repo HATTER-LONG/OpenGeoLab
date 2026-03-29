@@ -61,18 +61,22 @@ TEST_CASE("CommandDispatcher listModules returns registered modules") {
 
     CommandDispatcher dispatcher(factory);
     auto modules = dispatcher.listModules();
-    REQUIRE(modules.size() == 2);
+    REQUIRE(modules.size() == 3);
 
     bool found_io = false;
     bool found_geometry = false;
+    bool found_mesh = false;
     for(const auto& m : modules) {
         if(m.m_moduleName == "io")
             found_io = true;
         if(m.m_moduleName == "geometry")
             found_geometry = true;
+        if(m.m_moduleName == "mesh")
+            found_mesh = true;
     }
     CHECK(found_io);
     CHECK(found_geometry);
+    CHECK(found_mesh);
 }
 
 TEST_CASE("CommandDispatcher describe returns full system description") { // NOLINT
@@ -94,7 +98,7 @@ TEST_CASE("CommandDispatcher describe returns full system description") { // NOL
     REQUIRE(desc.contains("modules"));
     auto& modules = desc["modules"];
     REQUIRE(modules.is_array());
-    REQUIRE(modules.size() == 2);
+    REQUIRE(modules.size() == 3);
 
     // Find io module in the array
     const nlohmann::json* io_mod_ptr = nullptr;
@@ -132,7 +136,7 @@ TEST_CASE("registerBuiltinModules is idempotent on same factory") {
     CHECK_NOTHROW(registerBuiltinModules(factory));
     // Module count unchanged
     CommandDispatcher dispatcher(factory);
-    CHECK(dispatcher.listModules().size() == 2);
+    CHECK(dispatcher.listModules().size() == 3);
 }
 
 TEST_CASE("CommandDispatcher findModule returns shared_ptr for registered module") {

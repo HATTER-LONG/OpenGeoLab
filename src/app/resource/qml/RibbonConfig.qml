@@ -74,16 +74,16 @@ QtObject {
                 "title": qsTr("Mesh"),
                 "actions": [
                     {
-                        "key": "generateMesh",
-                        "title": qsTr("Generate"),
-                        "icon": "mesh",
+                        "key": "meshSurface",
+                        "title": qsTr("2D"),
+                        "icon": "meshSurface",
                         "accentOne": "accentB",
                         "accentTwo": "accentA"
                     },
                     {
-                        "key": "smoothMesh",
-                        "title": qsTr("Smooth"),
-                        "icon": "smoothMesh",
+                        "key": "meshVolume",
+                        "title": qsTr("3D"),
+                        "icon": "meshVolume",
                         "accentOne": "accentB",
                         "accentTwo": "accentA"
                     }

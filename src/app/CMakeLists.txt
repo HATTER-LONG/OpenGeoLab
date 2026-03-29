@@ -83,6 +83,9 @@ qt_add_qml_module(
     resource/qml/components/pages/CreateSpherePage.qml
     resource/qml/components/pages/CreateTorusPage.qml
     resource/qml/components/pages/ImportModelPage.qml
+    resource/qml/components/ShapeSelector.qml
+    resource/qml/components/pages/MeshSurfacePage.qml
+    resource/qml/components/pages/MeshVolumePage.qml
     RESOURCES
     resource/icons/menu.svg
     resource/icons/box.svg
@@ -127,7 +130,9 @@ qt_add_qml_module(
     resource/icons/closeCircleOutline.svg
     resource/icons/syncOutline.svg
     resource/icons/copyOutline.svg
-    resource/icons/exitOutline.svg)
+    resource/icons/exitOutline.svg
+    resource/icons/meshSurface.svg
+    resource/icons/meshVolume.svg)
 
 # Use console subsystem during development so errors are visible.
 option(OPENGEOLAB_WIN32_APP
