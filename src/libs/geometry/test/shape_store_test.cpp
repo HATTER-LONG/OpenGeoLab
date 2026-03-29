@@ -37,7 +37,7 @@ TEST_CASE("ShapeStore find returns entry after add") {
 }
 
 TEST_CASE("ShapeStore find returns nullptr for unknown id") {
-    ShapeStore store;
+    const ShapeStore store;
     CHECK(store.find(999) == nullptr);
 }
 
@@ -116,28 +116,28 @@ TEST_CASE("ShapeStore subShape returns valid sub-shapes") {
 TEST_CASE("ShapeStore emits shapeAdded signal on add") {
     ShapeStore store;
 
-    uint32_t signalId = UINT32_MAX;
-    std::string signalName;
+    uint32_t signal_id = UINT32_MAX;
+    std::string signal_name;
     auto conn =
         store.shapeAdded.connect([&](uint32_t id, const OpenGeoLab::Geometry::ShapeEntry& entry) {
-            signalId = id;
-            signalName = entry.name;
+            signal_id = id;
+            signal_name = entry.name;
         });
 
     auto id = store.add("SignalBox", makeBox());
-    CHECK(signalId == id);
-    CHECK(signalName == "SignalBox");
+    CHECK(signal_id == id);
+    CHECK(signal_name == "SignalBox");
 }
 
 TEST_CASE("ShapeStore emits shapeRemoved signal on remove") {
     ShapeStore store;
     auto id = store.add("Box", makeBox());
 
-    uint32_t removedId = UINT32_MAX;
-    auto conn = store.shapeRemoved.connect([&](uint32_t rid) { removedId = rid; });
+    uint32_t removed_id = UINT32_MAX;
+    auto conn = store.shapeRemoved.connect([&](uint32_t rid) { removed_id = rid; });
 
     store.remove(id);
-    CHECK(removedId == id);
+    CHECK(removed_id == id);
 }
 
 TEST_CASE("ShapeStore tessellate populates visualData") {
@@ -163,12 +163,12 @@ TEST_CASE("ShapeStore tessellate emits shapeUpdated signal") {
     ShapeStore store;
     auto id = store.add("Box", makeBox());
 
-    uint32_t updatedId = UINT32_MAX;
+    uint32_t updated_id = UINT32_MAX;
     auto conn = store.shapeUpdated.connect(
-        [&](uint32_t uid, const OpenGeoLab::Geometry::ShapeEntry&) { updatedId = uid; });
+        [&](uint32_t uid, const OpenGeoLab::Geometry::ShapeEntry&) { updated_id = uid; });
 
     store.tessellate(id);
-    CHECK(updatedId == id);
+    CHECK(updated_id == id);
 }
 
 TEST_CASE("ShapeStore tessellate throws for unknown shapeId") {

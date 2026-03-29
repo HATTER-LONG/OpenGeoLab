@@ -18,10 +18,10 @@ TEST_CASE("CommandDispatcher dispatches to IOModule via request JSON (stub not-i
     PluginComponentFactory factory;
     registerBuiltinModules(factory);
 
-    CommandDispatcher dispatcher(factory);
+    const CommandDispatcher dispatcher(factory);
     CHECK(dispatcher.hasModule("io"));
 
-    nlohmann::json request = {
+    const nlohmann::json request = {
         {"module", "io"}, {"action", "read_brep"}, {"param", {{"path", "test.brep"}}}};
     auto result = dispatcher.dispatch(request, NO_PROGRESS_CALLBACK);
     CHECK(result["ok"] == false);
@@ -30,9 +30,9 @@ TEST_CASE("CommandDispatcher dispatches to IOModule via request JSON (stub not-i
 
 TEST_CASE("CommandDispatcher returns error on missing module field") {
     PluginComponentFactory factory;
-    CommandDispatcher dispatcher(factory);
+    const CommandDispatcher dispatcher(factory);
 
-    nlohmann::json request = {{"action", "read_brep"}};
+    const nlohmann::json request = {{"action", "read_brep"}};
     auto result = dispatcher.dispatch(request, NO_PROGRESS_CALLBACK);
     CHECK(result["ok"] == false);
     CHECK(result.contains("summary"));
@@ -42,8 +42,8 @@ TEST_CASE("CommandDispatcher returns error for unknown module") {
     PluginComponentFactory factory;
     registerBuiltinModules(factory);
 
-    CommandDispatcher dispatcher(factory);
-    nlohmann::json request = {{"module", "nonexistent"}, {"action", "foo"}, {"param", {}}};
+    const CommandDispatcher dispatcher(factory);
+    const nlohmann::json request = {{"module", "nonexistent"}, {"action", "foo"}, {"param", {}}};
     auto result = dispatcher.dispatch(request, NO_PROGRESS_CALLBACK);
     CHECK(result["ok"] == false);
     CHECK(result.contains("summary"));
@@ -51,7 +51,7 @@ TEST_CASE("CommandDispatcher returns error for unknown module") {
 
 TEST_CASE("CommandDispatcher hasModule returns false for unknown") {
     PluginComponentFactory factory;
-    CommandDispatcher dispatcher(factory);
+    const CommandDispatcher dispatcher(factory);
     CHECK_FALSE(dispatcher.hasModule("nonexistent"));
 }
 
@@ -59,17 +59,19 @@ TEST_CASE("CommandDispatcher listModules returns registered modules") {
     PluginComponentFactory factory;
     registerBuiltinModules(factory);
 
-    CommandDispatcher dispatcher(factory);
+    const CommandDispatcher dispatcher(factory);
     auto modules = dispatcher.listModules();
     REQUIRE(modules.size() == 2);
 
     bool found_io = false;
     bool found_geometry = false;
     for(const auto& m : modules) {
-        if(m.m_moduleName == "io")
+        if(m.m_moduleName == "io") {
             found_io = true;
-        if(m.m_moduleName == "geometry")
+        }
+        if(m.m_moduleName == "geometry") {
             found_geometry = true;
+        }
     }
     CHECK(found_io);
     CHECK(found_geometry);
@@ -79,7 +81,7 @@ TEST_CASE("CommandDispatcher describe returns full system description") { // NOL
     PluginComponentFactory factory;
     registerBuiltinModules(factory);
 
-    CommandDispatcher dispatcher(factory);
+    const CommandDispatcher dispatcher(factory);
     auto desc = dispatcher.describe();
 
     // request_schema
@@ -131,7 +133,7 @@ TEST_CASE("registerBuiltinModules is idempotent on same factory") {
     // Second call must not throw
     CHECK_NOTHROW(registerBuiltinModules(factory));
     // Module count unchanged
-    CommandDispatcher dispatcher(factory);
+    const CommandDispatcher dispatcher(factory);
     CHECK(dispatcher.listModules().size() == 2);
 }
 
@@ -139,7 +141,7 @@ TEST_CASE("CommandDispatcher findModule returns shared_ptr for registered module
     PluginComponentFactory factory;
     registerBuiltinModules(factory);
 
-    CommandDispatcher dispatcher(factory);
+    const CommandDispatcher dispatcher(factory);
     auto io_module = dispatcher.findModule("io");
     CHECK(io_module != nullptr);
 
@@ -149,7 +151,7 @@ TEST_CASE("CommandDispatcher findModule returns shared_ptr for registered module
 
 TEST_CASE("CommandDispatcher findModule returns nullptr for unknown module") {
     PluginComponentFactory factory;
-    CommandDispatcher dispatcher(factory);
+    const CommandDispatcher dispatcher(factory);
     auto result = dispatcher.findModule("nonexistent");
     CHECK(result == nullptr);
 }

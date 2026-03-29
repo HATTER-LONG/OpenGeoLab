@@ -89,11 +89,11 @@ TEST_CASE("Tessellate sphere produces valid data") {
     CHECK_FALSE(result.triangleTags.empty());
 
     // Total triangle count should be reasonable for a sphere
-    std::size_t totalTri = 0;
+    std::size_t total_tri = 0;
     for(const auto& surf : result.visualData.surfaces) {
-        totalTri += surf.indices.size() / 3;
+        total_tri += surf.indices.size() / 3;
     }
-    CHECK(totalTri > 10); // At least some triangles
+    CHECK(total_tri > 10); // At least some triangles
 
     // Edges should be present (sphere has edges at seams)
     CHECK(result.visualData.edges.size() >= 1);

@@ -12,7 +12,7 @@
 
 TEST_CASE("GeometryModule describe returns module info with actions") {
     Kangaroo::Util::PluginComponentFactory factory;
-    OpenGeoLab::Geometry::GeometryModule mod(factory);
+    const OpenGeoLab::Geometry::GeometryModule mod(factory);
     auto desc = mod.describe();
     CHECK(desc["name"] == "geometry");
     CHECK(desc.contains("description"));
@@ -20,30 +20,30 @@ TEST_CASE("GeometryModule describe returns module info with actions") {
     CHECK(desc["actions"].size() == 10);
 
     // Verify create_box is present (order depends on factory enumeration)
-    bool foundCreateBox = false;
+    bool found_create_box = false;
     for(const auto& action : desc["actions"]) {
         if(action["name"] == "create_box") {
-            foundCreateBox = true;
+            found_create_box = true;
             break;
         }
     }
-    CHECK(foundCreateBox);
+    CHECK(found_create_box);
 }
 
 TEST_CASE("GeometryModule dispatches create_box action") {
     Kangaroo::Util::PluginComponentFactory factory;
-    OpenGeoLab::Geometry::GeometryModule mod(factory);
-    nlohmann::json request = {{"module", "geometry"},
-                              {"action", "create_box"},
-                              {"param", {{"width", 2.0}, {"height", 3.0}, {"depth", 4.0}}}};
+    const OpenGeoLab::Geometry::GeometryModule mod(factory);
+    const nlohmann::json request = {{"module", "geometry"},
+                                    {"action", "create_box"},
+                                    {"param", {{"width", 2.0}, {"height", 3.0}, {"depth", 4.0}}}};
 
-    std::vector<double> progressValues;
-    auto progressCb = [&](double p, const std::string&) {
-        progressValues.push_back(p);
+    std::vector<double> progress_values;
+    auto progress_cb = [&](double p, const std::string&) {
+        progress_values.push_back(p);
         return true;
     };
 
-    auto result = mod.process(request, progressCb);
+    auto result = mod.process(request, progress_cb);
     CHECK(result["ok"] == true);
     CHECK(result["action"] == "create_box");
     CHECK(result.contains("shapeId"));
@@ -54,23 +54,23 @@ TEST_CASE("GeometryModule dispatches create_box action") {
     CHECK(result["topology"]["solids"] == 1);
 
     // Should have progress calls: 0.0, 0.3, 0.5, 1.0
-    CHECK(progressValues.size() == 4);
-    CHECK(progressValues.front() == doctest::Approx(0.0));
-    CHECK(progressValues.back() == doctest::Approx(1.0));
+    CHECK(progress_values.size() == 4);
+    CHECK(progress_values.front() == doctest::Approx(0.0));
+    CHECK(progress_values.back() == doctest::Approx(1.0));
 }
 
 TEST_CASE("GeometryModule throws on missing action field") {
     Kangaroo::Util::PluginComponentFactory factory;
-    OpenGeoLab::Geometry::GeometryModule mod(factory);
-    nlohmann::json request = {{"module", "geometry"}, {"param", {{"width", 1.0}}}};
+    const OpenGeoLab::Geometry::GeometryModule mod(factory);
+    const nlohmann::json request = {{"module", "geometry"}, {"param", {{"width", 1.0}}}};
     CHECK_THROWS_AS((void)mod.process(request, OpenGeoLab::Core::NO_PROGRESS_CALLBACK),
                     std::invalid_argument);
 }
 
 TEST_CASE("GeometryModule throws on unknown action") {
     Kangaroo::Util::PluginComponentFactory factory;
-    OpenGeoLab::Geometry::GeometryModule mod(factory);
-    nlohmann::json request = {{"module", "geometry"}, {"action", "unknown_action"}};
+    const OpenGeoLab::Geometry::GeometryModule mod(factory);
+    const nlohmann::json request = {{"module", "geometry"}, {"action", "unknown_action"}};
     CHECK_THROWS_AS((void)mod.process(request, OpenGeoLab::Core::NO_PROGRESS_CALLBACK),
                     std::invalid_argument);
 }
@@ -78,7 +78,7 @@ TEST_CASE("GeometryModule throws on unknown action") {
 TEST_CASE("CreateBoxAction uses default dimensions when params missing") {
     OpenGeoLab::Geometry::ShapeStore store;
     OpenGeoLab::Geometry::CreateBoxAction action(store);
-    nlohmann::json param = nlohmann::json::object();
+    const nlohmann::json param = nlohmann::json::object();
     auto result = action.execute(param, OpenGeoLab::Core::NO_PROGRESS_CALLBACK);
     CHECK(result["ok"] == true);
     CHECK(result["topology"]["faces"] == 6);
@@ -89,11 +89,11 @@ TEST_CASE("CreateBoxAction uses default dimensions when params missing") {
 TEST_CASE("CreateBoxAction with tessellate=false skips tessellation") {
     OpenGeoLab::Geometry::ShapeStore store;
     OpenGeoLab::Geometry::CreateBoxAction action(store);
-    nlohmann::json param = {{"width", 1.0}, {"tessellate", false}};
+    const nlohmann::json param = {{"width", 1.0}, {"tessellate", false}};
     auto result = action.execute(param, OpenGeoLab::Core::NO_PROGRESS_CALLBACK);
     CHECK(result["ok"] == true);
-    auto shapeId = result["shapeId"].get<uint32_t>();
-    const auto* entry = store.find(shapeId);
+    auto shape_id = result["shapeId"].get<uint32_t>();
+    const auto* entry = store.find(shape_id);
     REQUIRE(entry != nullptr);
     CHECK(entry->visualData == nullptr);
 }
@@ -104,7 +104,7 @@ TEST_CASE("GeometryModule shapeStore is accessible") {
     CHECK(mod.shapeStore().size() == 0);
 
     // Process a create_box to add a shape
-    nlohmann::json request = {
+    const nlohmann::json request = {
         {"module", "geometry"}, {"action", "create_box"}, {"param", {{"width", 1.0}}}};
     auto result = mod.process(request, OpenGeoLab::Core::NO_PROGRESS_CALLBACK);
     CHECK(result["ok"] == true);
@@ -113,23 +113,24 @@ TEST_CASE("GeometryModule shapeStore is accessible") {
 
 TEST_CASE("list_shapes returns enhanced fields: shapeType, boundingBox, wires") {
     Kangaroo::Util::PluginComponentFactory factory;
-    OpenGeoLab::Geometry::GeometryModule mod(factory);
+    const OpenGeoLab::Geometry::GeometryModule mod(factory);
 
     // Create a box first
-    nlohmann::json createReq = {{"module", "geometry"},
-                                {"action", "create_box"},
-                                {"param", {{"width", 10.0}, {"height", 20.0}, {"depth", 5.0}}}};
-    auto createResult = mod.process(createReq, OpenGeoLab::Core::NO_PROGRESS_CALLBACK);
-    REQUIRE(createResult["ok"] == true);
+    const nlohmann::json create_req = {
+        {"module", "geometry"},
+        {"action", "create_box"},
+        {"param", {{"width", 10.0}, {"height", 20.0}, {"depth", 5.0}}}};
+    auto create_result = mod.process(create_req, OpenGeoLab::Core::NO_PROGRESS_CALLBACK);
+    REQUIRE(create_result["ok"] == true);
 
     // List shapes
-    nlohmann::json listReq = {
+    const nlohmann::json list_req = {
         {"module", "geometry"}, {"action", "list_shapes"}, {"param", nlohmann::json::object()}};
-    auto listResult = mod.process(listReq, OpenGeoLab::Core::NO_PROGRESS_CALLBACK);
-    REQUIRE(listResult["ok"] == true);
-    REQUIRE(listResult["shapes"].size() == 1);
+    auto list_result = mod.process(list_req, OpenGeoLab::Core::NO_PROGRESS_CALLBACK);
+    REQUIRE(list_result["ok"] == true);
+    REQUIRE(list_result["shapes"].size() == 1);
 
-    auto& shape = listResult["shapes"][0];
+    auto& shape = list_result["shapes"][0];
 
     // shapeType
     CHECK(shape.contains("shapeType"));
@@ -151,8 +152,8 @@ TEST_CASE("list_shapes returns enhanced fields: shapeType, boundingBox, wires") 
     CHECK(shape["boundingBox"]["max"].size() == 3);
 
     // Box at origin with w=10, h=20, d=5 → min ~[0,0,0], max ~[10,20,5]
-    auto maxBB = shape["boundingBox"]["max"];
-    CHECK(maxBB[0].get<double>() == doctest::Approx(10.0).epsilon(0.01));
-    CHECK(maxBB[1].get<double>() == doctest::Approx(20.0).epsilon(0.01));
-    CHECK(maxBB[2].get<double>() == doctest::Approx(5.0).epsilon(0.01));
+    auto max_bb = shape["boundingBox"]["max"];
+    CHECK(max_bb[0].get<double>() == doctest::Approx(10.0).epsilon(0.01));
+    CHECK(max_bb[1].get<double>() == doctest::Approx(20.0).epsilon(0.01));
+    CHECK(max_bb[2].get<double>() == doctest::Approx(5.0).epsilon(0.01));
 }

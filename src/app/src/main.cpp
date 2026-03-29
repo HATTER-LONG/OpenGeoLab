@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
     }
 #endif
 
-    QApplication app(argc, argv);
+    const QApplication app(argc, argv);
     QApplication::setStyle("Fusion");
     QQuickStyle::setStyle("Fusion");
     app.setApplicationName("OpenGeoLab");

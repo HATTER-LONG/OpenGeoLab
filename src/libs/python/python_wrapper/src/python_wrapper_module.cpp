@@ -37,7 +37,7 @@ PYBIND11_MODULE(opengeolab_pywrapper, m) {
             try {
                 request = nlohmann::json::parse(request_json);
             } catch(const nlohmann::json::parse_error& e) {
-                nlohmann::json error_response = {
+                const nlohmann::json error_response = {
                     {"ok", false},
                     {"summary", "Invalid JSON in request"},
                     {"errors", nlohmann::json::array({std::string(e.what())})}};
@@ -67,7 +67,7 @@ PYBIND11_MODULE(opengeolab_pywrapper, m) {
             } catch(const std::exception& e) {
                 const auto module = request.value("module", "unknown");
                 const auto action = request.value("action", "unknown");
-                nlohmann::json error_response = {
+                const nlohmann::json error_response = {
                     {"ok", false},
                     {"module", module},
                     {"action", action},

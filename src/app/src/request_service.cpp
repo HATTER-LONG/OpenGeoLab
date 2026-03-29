@@ -56,28 +56,29 @@ void RequestService::submitAsync(const QString& request_json) {
 
     const bool use_cpp_path = m_dispatcher.hasModule(module_name);
 
-    auto future = QtConcurrent::run([this, json = process_json.toStdString(),
-                                     cb = std::move(progress_cb), muted,
-                                     desc = description.toStdString(), use_cpp_path]() -> QString {
-        std::optional<Kangaroo::Util::Stopwatch> sw;
-        if(!muted) {
-            sw.emplace(desc, Core::getLoggerShared());
-        }
-        if(use_cpp_path) {
-            nlohmann::json request;
-            try {
-                request = nlohmann::json::parse(json);
-            } catch(const nlohmann::json::parse_error& e) {
-                nlohmann::json err = {{"ok", false},
-                                      {"summary", "Invalid JSON in request"},
-                                      {"errors", nlohmann::json::array({std::string(e.what())})}};
-                return QString::fromStdString(err.dump());
+    auto future =
+        QtConcurrent::run([this, json = process_json.toStdString(), cb = std::move(progress_cb),
+                           muted, desc = description.toStdString(), use_cpp_path]() -> QString {
+            std::optional<Kangaroo::Util::Stopwatch> sw;
+            if(!muted) {
+                sw.emplace(desc, Core::getLoggerShared());
             }
-            auto result = m_dispatcher.dispatch(request, cb);
-            return QString::fromStdString(result.dump());
-        }
-        return QString::fromStdString(m_runtime.process(json, cb));
-    });
+            if(use_cpp_path) {
+                nlohmann::json request;
+                try {
+                    request = nlohmann::json::parse(json);
+                } catch(const nlohmann::json::parse_error& e) {
+                    const nlohmann::json err = {
+                        {"ok", false},
+                        {"summary", "Invalid JSON in request"},
+                        {"errors", nlohmann::json::array({std::string(e.what())})}};
+                    return QString::fromStdString(err.dump());
+                }
+                auto result = m_dispatcher.dispatch(request, cb);
+                return QString::fromStdString(result.dump());
+            }
+            return QString::fromStdString(m_runtime.process(json, cb));
+        });
 
     {
         const std::lock_guard lock(m_futuresMutex);
