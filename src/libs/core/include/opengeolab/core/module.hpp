@@ -49,15 +49,17 @@ public:
                         Kangaroo::Util::PluginComponentFactory& factory);
     virtual ~ModuleBase();
 
-    /// @brief Signal emitted when module data changes.
-    ///
-    /// Each module fires this signal when its internal data is mutated.
-    /// Subscribers connect via CommandDispatcher::onModuleDataChanged().
-    ///
-    /// @note May be emitted on any thread; listeners must handle thread safety.
+    /**
+     * @brief Signal emitted when module data changes.
+     *
+     * Each module fires this signal when its internal data is mutated.
+     * Subscribers connect via CommandDispatcher::onModuleDataChanged().
+     *
+     * @note May be emitted on any thread; listeners must handle thread safety.
+     */
     Kangaroo::Util::Signal<ModuleDataEvent> dataChanged;
 
-    /// Module name (matches request["module"]).
+    /** @brief Module name (matches request["module"]). */
     [[nodiscard]] std::string_view moduleName() const;
 
     /**
@@ -96,11 +98,11 @@ protected:
      */
     template <class ActionT, class... Args> void registerAction(Args&&... args);
 
-    /// Access the component factory (for subclasses that need custom logic).
+    /** @brief Access the component factory (for subclasses that need custom logic). */
     [[nodiscard]] Kangaroo::Util::PluginComponentFactory& factory() const;
 
 private:
-    /// Retrieve or cache an action singleton by its factory key.
+    /** @brief Retrieve or cache an action singleton by its factory key. */
     [[nodiscard]] std::shared_ptr<IAction> getAction(const std::string& key) const;
 
     std::string m_moduleName;

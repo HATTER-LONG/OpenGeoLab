@@ -30,27 +30,27 @@ namespace OpenGeoLab::Geometry {
  * VisualData and tag vectors are populated lazily by tessellation.
  */
 struct ShapeEntry {
-    uint32_t id{0};   ///< Unique ShapeId allocated by ShapeStore
-    std::string name; ///< User-given or file-derived name
+    uint32_t id{0};   /**< Unique ShapeId allocated by ShapeStore */
+    std::string name; /**< User-given or file-derived name */
 
-    TopoDS_Shape shape; ///< The OCC topological shape
+    TopoDS_Shape shape; /**< The OCC topological shape */
 
-    /// @name Sub-shape index maps (1-based, built on add)
-    /// @{
+    /** @name Sub-shape index maps (1-based, built on add) */
+    /** @{ */
     TopTools_IndexedMapOfShape vertexMap;
     TopTools_IndexedMapOfShape edgeMap;
     TopTools_IndexedMapOfShape wireMap;
     TopTools_IndexedMapOfShape faceMap;
     TopTools_IndexedMapOfShape solidMap;
-    /// @}
+    /** @} */
 
-    /// @name Tessellation cache (populated by ShapeStore::tessellate)
-    /// @{
+    /** @name Tessellation cache (populated by ShapeStore::tessellate) */
+    /** @{ */
     std::shared_ptr<Core::VisualData> visualData;
-    std::vector<Core::EntityTag> triangleTags; ///< One tag per triangle
-    std::vector<Core::EntityTag> edgeTags;     ///< One tag per edge segment
-    std::vector<Core::EntityTag> vertexTags;   ///< One tag per point
-    /// @}
+    std::vector<Core::EntityTag> triangleTags; /**< One tag per triangle */
+    std::vector<Core::EntityTag> edgeTags;     /**< One tag per edge segment */
+    std::vector<Core::EntityTag> vertexTags;   /**< One tag per point */
+    /** @} */
 };
 
 } // namespace OpenGeoLab::Geometry

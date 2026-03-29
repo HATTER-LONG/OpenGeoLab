@@ -79,9 +79,7 @@ void ShapeStore::remove(uint32_t shape_id) {
     shapeRemoved.emit(shape_id);
 }
 
-void ShapeStore::tessellate(uint32_t shape_id,
-                            double linear_deflection,
-                            double angular_deflection) {
+void ShapeStore::tessellate(uint32_t shape_id, const TessellationParams& params) {
     const ShapeEntry* entry_ptr{};
     {
         const std::lock_guard lock(m_mutex);
@@ -89,8 +87,7 @@ void ShapeStore::tessellate(uint32_t shape_id,
             throw std::invalid_argument("ShapeStore::tessellate: unknown shapeId");
         }
         auto& entry = *m_slots[shape_id];
-        auto result =
-            OpenGeoLab::Geometry::tessellate(entry, linear_deflection, angular_deflection);
+        auto result = OpenGeoLab::Geometry::tessellate(entry, params);
         entry.visualData = std::make_shared<Core::VisualData>(std::move(result.visualData));
         entry.triangleTags = std::move(result.triangleTags);
         entry.edgeTags = std::move(result.edgeTags);

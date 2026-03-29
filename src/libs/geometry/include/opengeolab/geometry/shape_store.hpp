@@ -12,6 +12,7 @@
 #include <opengeolab/core/entity_tag.hpp>
 #include <opengeolab/geometry/geometry_export.hpp>
 #include <opengeolab/geometry/shape_entry.hpp>
+#include <opengeolab/geometry/tessellator.hpp>
 
 #include <kangaroo/util/signal.hpp>
 
@@ -67,13 +68,11 @@ public:
 
     /**
      * @brief Tessellate (or re-tessellate) a shape.
-     * @param shape_id           Target shape
-     * @param linear_deflection  Chord deviation (default 0.1)
-     * @param angular_deflection Angular deviation in radians (default 0.5)
+     * @param shape_id Target shape
+     * @param params   Tessellation quality parameters (default: TessellationParams{})
      * @post shapeUpdated signal is emitted.
      */
-    void
-    tessellate(uint32_t shape_id, double linear_deflection = 0.1, double angular_deflection = 0.5);
+    void tessellate(uint32_t shape_id, const TessellationParams& params = {});
 
     // ── Queries ──────────────────────────────────────────────────
 

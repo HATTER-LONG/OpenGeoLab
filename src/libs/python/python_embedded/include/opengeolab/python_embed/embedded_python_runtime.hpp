@@ -14,7 +14,7 @@
 #include <string_view>
 
 namespace OpenGeoLab::PythonEmbed {
-/// Reuse Core progress callback; Python bridge ignores the cancellation return.
+/** @brief Reuse Core progress callback; Python bridge ignores the cancellation return. */
 using ProgressCallback = Core::ProgressCallback;
 
 /**

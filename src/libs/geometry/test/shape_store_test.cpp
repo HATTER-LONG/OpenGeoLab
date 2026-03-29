@@ -12,7 +12,7 @@
 using OpenGeoLab::Core::EntityType;
 using OpenGeoLab::Geometry::ShapeStore;
 
-/// Helper: create a unit box shape
+/** @brief Helper: create a unit box shape. */
 static TopoDS_Shape makeBox(double w = 1.0, double h = 1.0, double d = 1.0) {
     return BRepPrimAPI_MakeBox(w, h, d).Shape();
 }

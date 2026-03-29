@@ -12,7 +12,7 @@
 
 namespace OpenGeoLab::Geometry {
 
-/// Map OCC ShapeType enum to human-readable string.
+/** @brief Map OCC ShapeType enum to human-readable string. */
 static const char* shapeTypeToString(TopAbs_ShapeEnum type) {
     switch(type) {
     case TopAbs_COMPOUND:

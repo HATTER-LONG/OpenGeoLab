@@ -31,7 +31,7 @@ public:
     explicit GeometryModule(Kangaroo::Util::PluginComponentFactory& factory);
     ~GeometryModule() override;
 
-    /// Access the geometry shape store.
+    /** @brief Access the geometry shape store. */
     [[nodiscard]] ShapeStore& shapeStore();
     [[nodiscard]] const ShapeStore& shapeStore() const;
 

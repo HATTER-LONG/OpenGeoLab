@@ -97,18 +97,20 @@ public:
     [[nodiscard]] std::shared_ptr<Core::ModuleBase>
     findModule(const std::string& module_name) const;
 
-    /// @brief Subscribe to data-change events from a named module.
-    ///
-    /// @param module_name Module identifier (e.g. "geometry")
-    /// @param callback    Invoked on the emitting thread (may be a worker thread)
-    /// @return ScopedConnection that auto-disconnects on destruction;
-    ///         default-constructed (isConnected() == false) if module not found.
+    /**
+     * @brief Subscribe to data-change events from a named module.
+     *
+     * @param module_name Module identifier (e.g. "geometry")
+     * @param callback    Invoked on the emitting thread (may be a worker thread)
+     * @return ScopedConnection that auto-disconnects on destruction;
+     *         default-constructed (isConnected() == false) if module not found.
+     */
     [[nodiscard]] Kangaroo::Util::ScopedConnection
     onModuleDataChanged(const std::string& module_name,
                         std::function<void(Core::ModuleDataEvent)> callback);
 
 private:
-    /// Retrieve or cache a module singleton, keeping it alive across dispatches.
+    /** @brief Retrieve or cache a module singleton, keeping it alive across dispatches. */
     [[nodiscard]] std::shared_ptr<Core::ModuleBase> getModule(const std::string& name) const;
 
     Kangaroo::Util::PluginComponentFactory& m_factory;

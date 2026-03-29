@@ -200,11 +200,10 @@ void extractVertices(const ShapeEntry& entry, TessellationResult& result) {
 
 } // namespace
 
-TessellationResult
-tessellate(const ShapeEntry& entry, double linearDeflection, double angularDeflection) {
+TessellationResult tessellate(const ShapeEntry& entry, const TessellationParams& params) {
     // Run incremental mesher
-    BRepMesh_IncrementalMesh mesher(entry.shape, linearDeflection, Standard_False,
-                                    angularDeflection);
+    BRepMesh_IncrementalMesh mesher(entry.shape, params.linearDeflection, Standard_False,
+                                    params.angularDeflection);
 
     TessellationResult result;
     extractFaces(entry, result);

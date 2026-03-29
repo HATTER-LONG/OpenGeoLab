@@ -1,5 +1,7 @@
-/// @file module_data_notifier.cpp
-/// @brief ModuleDataNotifier implementation
+/**
+ * @file module_data_notifier.cpp
+ * @brief ModuleDataNotifier implementation
+ */
 #include "opengeolab/app/module_data_notifier.h"
 
 #include <opengeolab/command/command_dispatcher.hpp>

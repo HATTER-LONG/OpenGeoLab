@@ -83,9 +83,8 @@ nlohmann::json CreateBoxAction::execute(const nlohmann::json& param,
         if(progress) {
             progress(0.5, "Tessellating...");
         }
-        const double lin = param.value("linearDeflection", 0.1);
-        const double ang = param.value("angularDeflection", 0.5);
-        m_store.tessellate(shape_id, lin, ang);
+        const auto tess_params = TessellationParams::fromJson(param);
+        m_store.tessellate(shape_id, tess_params);
     }
 
     if(progress) {

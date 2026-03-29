@@ -15,7 +15,7 @@ using OpenGeoLab::Core::EntityType;
 using OpenGeoLab::Geometry::ShapeEntry;
 using OpenGeoLab::Geometry::tessellate;
 
-/// Build a ShapeEntry with sub-shape maps from an OCC shape
+/** @brief Build a ShapeEntry with sub-shape maps from an OCC shape. */
 static ShapeEntry makeEntry(const TopoDS_Shape& shape, const std::string& name = "test") {
     ShapeEntry entry;
     entry.id = 0;
@@ -31,7 +31,7 @@ static ShapeEntry makeEntry(const TopoDS_Shape& shape, const std::string& name =
 
 TEST_CASE("Tessellate box produces surfaces, edges, and points") {
     auto entry = makeEntry(BRepPrimAPI_MakeBox(1.0, 1.0, 1.0).Shape());
-    auto result = tessellate(entry, 0.1, 0.5);
+    auto result = tessellate(entry);
 
     // Surfaces: one per face; box has 6 faces
     CHECK(result.visualData.surfaces.size() == 6);
@@ -82,7 +82,7 @@ TEST_CASE("Tessellate box produces surfaces, edges, and points") {
 
 TEST_CASE("Tessellate sphere produces valid data") {
     auto entry = makeEntry(BRepPrimAPI_MakeSphere(1.0).Shape());
-    auto result = tessellate(entry, 0.1, 0.5);
+    auto result = tessellate(entry);
 
     // Sphere has at least 1 face
     CHECK(result.visualData.surfaces.size() >= 1);

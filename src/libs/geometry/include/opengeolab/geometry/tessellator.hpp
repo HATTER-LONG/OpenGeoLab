@@ -15,30 +15,51 @@
 #include <opengeolab/geometry/geometry_export.hpp>
 #include <opengeolab/geometry/shape_entry.hpp>
 
+#include <nlohmann/json.hpp>
+
 #include <vector>
 
 namespace OpenGeoLab::Geometry {
+
+/**
+ * @brief Parameters controlling BRepMesh tessellation quality.
+ *
+ * Centralises all deflection-related knobs that were previously scattered
+ * as magic literals across actions.  Use the default-constructed instance
+ * for a sensible starting point.
+ */
+struct OPENGEOLAB_GEOMETRY_EXPORT TessellationParams {
+    double linearDeflection = 0.1;  /**< Maximum chord deviation from the true surface */
+    double angularDeflection = 0.5; /**< Maximum angular deviation (radians) */
+
+    /**
+     * @brief Build TessellationParams from a JSON object, falling back to defaults.
+     *
+     * Recognised keys: `"linearDeflection"`, `"angularDeflection"`.
+     */
+    static TessellationParams fromJson(const nlohmann::json& j) {
+        return {j.value("linearDeflection", 0.1), j.value("angularDeflection", 0.5)};
+    }
+};
 
 /**
  * @brief Result of tessellating a ShapeEntry.
  */
 struct OPENGEOLAB_GEOMETRY_EXPORT TessellationResult {
     Core::VisualData visualData;
-    std::vector<Core::EntityTag> triangleTags; ///< One per triangle (across all faces)
-    std::vector<Core::EntityTag> edgeTags;     ///< One per edge line-segment
-    std::vector<Core::EntityTag> vertexTags;   ///< One per topological vertex
+    std::vector<Core::EntityTag> triangleTags; /**< One per triangle (across all faces) */
+    std::vector<Core::EntityTag> edgeTags;     /**< One per edge line-segment */
+    std::vector<Core::EntityTag> vertexTags;   /**< One per topological vertex */
 };
 
 /**
  * @brief Tessellate a ShapeEntry into render-ready data.
  *
- * @param entry             ShapeEntry with valid shape and sub-shape maps
- * @param linearDeflection  Chord deviation for BRepMesh
- * @param angularDeflection Angular deviation in radians for BRepMesh
+ * @param entry  ShapeEntry with valid shape and sub-shape maps
+ * @param params Tessellation quality parameters
  * @return Populated TessellationResult
  */
-[[nodiscard]] OPENGEOLAB_GEOMETRY_EXPORT TessellationResult tessellate(const ShapeEntry& entry,
-                                                                       double linearDeflection,
-                                                                       double angularDeflection);
+[[nodiscard]] OPENGEOLAB_GEOMETRY_EXPORT TessellationResult
+tessellate(const ShapeEntry& entry, const TessellationParams& params = {});
 
 } // namespace OpenGeoLab::Geometry
