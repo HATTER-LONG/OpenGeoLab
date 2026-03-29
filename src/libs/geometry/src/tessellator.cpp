@@ -16,15 +16,14 @@
 #include <TopoDS_Vertex.hxx>
 #include <gp_Pnt.hxx>
 
+#include <array>
 #include <cmath>
 
 namespace OpenGeoLab::Geometry {
 
-namespace {
-
 /** @brief Computes face normal for a triangle when triangulation lacks per-vertex normals. */
-void computeTriangleNormal(
-    const gp_Pnt& p0, const gp_Pnt& p1, const gp_Pnt& p2, float& nx, float& ny, float& nz) {
+static std::array<float, 3>
+computeTriangleNormal(const gp_Pnt& p0, const gp_Pnt& p1, const gp_Pnt& p2) {
     const double ax = p1.X() - p0.X(), ay = p1.Y() - p0.Y(), az = p1.Z() - p0.Z();
     const double bx = p2.X() - p0.X(), by = p2.Y() - p0.Y(), bz = p2.Z() - p0.Z();
     double cx = ay * bz - az * by;
@@ -36,13 +35,11 @@ void computeTriangleNormal(
         cy /= len;
         cz /= len;
     }
-    nx = static_cast<float>(cx);
-    ny = static_cast<float>(cy);
-    nz = static_cast<float>(cz);
+    return {static_cast<float>(cx), static_cast<float>(cy), static_cast<float>(cz)};
 }
 
 /** @brief Extracts triangulated faces into SurfaceMesh and triangleTags. */
-void extractFaces(const ShapeEntry& entry, TessellationResult& result) {
+static void extractFaces(const ShapeEntry& entry, TessellationResult& result) {
     for(int fi = 1; fi <= entry.faceMap.Extent(); ++fi) {
         const auto face = TopoDS::Face(entry.faceMap.FindKey(fi));
         TopLoc_Location loc;
@@ -56,21 +53,21 @@ void extractFaces(const ShapeEntry& entry, TessellationResult& result) {
 
         Core::SurfaceMesh surface;
 
-        const int nbNodes = tri->NbNodes();
-        surface.positions.reserve(static_cast<std::size_t>(nbNodes) * 3);
-        surface.normals.reserve(static_cast<std::size_t>(nbNodes) * 3);
+        const int nb_nodes = tri->NbNodes();
+        surface.positions.reserve(static_cast<std::size_t>(nb_nodes) * 3);
+        surface.normals.reserve(static_cast<std::size_t>(nb_nodes) * 3);
 
-        for(int ni = 1; ni <= nbNodes; ++ni) {
-            gp_Pnt p = tri->Node(ni).Transformed(trsf);
+        for(int ni = 1; ni <= nb_nodes; ++ni) {
+            const gp_Pnt p = tri->Node(ni).Transformed(trsf);
             surface.positions.push_back(static_cast<float>(p.X()));
             surface.positions.push_back(static_cast<float>(p.Y()));
             surface.positions.push_back(static_cast<float>(p.Z()));
         }
 
         // Normals — use per-vertex normals if available, else compute per-triangle
-        const bool hasNormals = tri->HasNormals();
-        if(hasNormals) {
-            for(int ni = 1; ni <= nbNodes; ++ni) {
+        const bool has_normals = tri->HasNormals();
+        if(has_normals) {
+            for(int ni = 1; ni <= nb_nodes; ++ni) {
                 gp_Dir n = tri->Normal(ni);
                 // Apply rotation part of transformation
                 n = n.IsEqual(gp_Dir(0, 0, 0), 1e-12) ? gp_Dir(0, 0, 1) : n;
@@ -86,10 +83,10 @@ void extractFaces(const ShapeEntry& entry, TessellationResult& result) {
             }
         }
 
-        const int nbTri = tri->NbTriangles();
-        surface.indices.reserve(static_cast<std::size_t>(nbTri) * 3);
+        const int nb_tri = tri->NbTriangles();
+        surface.indices.reserve(static_cast<std::size_t>(nb_tri) * 3);
 
-        for(int ti = 1; ti <= nbTri; ++ti) {
+        for(int ti = 1; ti <= nb_tri; ++ti) {
             int n1{};
             int n2{};
             int n3{};
@@ -107,14 +104,11 @@ void extractFaces(const ShapeEntry& entry, TessellationResult& result) {
             }
 
             // Compute per-triangle normal if no per-vertex normals
-            if(!hasNormals) {
-                gp_Pnt p0 = tri->Node(n1).Transformed(trsf);
-                gp_Pnt p1 = tri->Node(n2).Transformed(trsf);
-                gp_Pnt p2 = tri->Node(n3).Transformed(trsf);
-                float nx{};
-                float ny{};
-                float nz{};
-                computeTriangleNormal(p0, p1, p2, nx, ny, nz);
+            if(!has_normals) {
+                const gp_Pnt p0 = tri->Node(n1).Transformed(trsf);
+                const gp_Pnt p1 = tri->Node(n2).Transformed(trsf);
+                const gp_Pnt p2 = tri->Node(n3).Transformed(trsf);
+                auto [nx, ny, nz] = computeTriangleNormal(p0, p1, p2);
                 if(reversed) {
                     nx = -nx;
                     ny = -ny;
@@ -124,10 +118,10 @@ void extractFaces(const ShapeEntry& entry, TessellationResult& result) {
                 // Note: this only works if each triangle has unique vertices,
                 // otherwise normals will be overwritten. Per-vertex normals
                 // from the triangulation are strongly preferred.
-                for(int vi : {n1, n2, n3}) {
+                for(const int vi : {n1, n2, n3}) {
                     const auto idx = static_cast<std::size_t>((vi - 1) * 3);
-                    if(surface.normals.size() < static_cast<std::size_t>(nbNodes) * 3) {
-                        surface.normals.resize(static_cast<std::size_t>(nbNodes) * 3, 0.0f);
+                    if(surface.normals.size() < static_cast<std::size_t>(nb_nodes) * 3) {
+                        surface.normals.resize(static_cast<std::size_t>(nb_nodes) * 3, 0.0f);
                     }
                     surface.normals[idx] = nx;
                     surface.normals[idx + 1] = ny;
@@ -143,8 +137,8 @@ void extractFaces(const ShapeEntry& entry, TessellationResult& result) {
 }
 
 /** @brief Extracts edge polylines into EdgeMesh and edgeTags. */
-void extractEdges(const ShapeEntry& entry, TessellationResult& result) {
-    constexpr int kSamples = 50;
+static void extractEdges(const ShapeEntry& entry, TessellationResult& result) {
+    constexpr int k_samples = 50;
 
     for(int ei = 1; ei <= entry.edgeMap.Extent(); ++ei) {
         const auto edge = TopoDS::Edge(entry.edgeMap.FindKey(ei));
@@ -152,41 +146,41 @@ void extractEdges(const ShapeEntry& entry, TessellationResult& result) {
             continue;
         }
 
-        BRepAdaptor_Curve curve(edge);
+        const BRepAdaptor_Curve curve(edge);
         const double first = curve.FirstParameter();
         const double last = curve.LastParameter();
 
-        Core::EdgeMesh edgeMesh;
-        edgeMesh.positions.reserve(static_cast<std::size_t>(kSamples + 1) * 3);
+        Core::EdgeMesh edge_mesh;
+        edge_mesh.positions.reserve(static_cast<std::size_t>(k_samples + 1) * 3);
 
-        for(int s = 0; s <= kSamples; ++s) {
-            const double u = first + (last - first) * s / kSamples;
-            gp_Pnt p = curve.Value(u);
-            edgeMesh.positions.push_back(static_cast<float>(p.X()));
-            edgeMesh.positions.push_back(static_cast<float>(p.Y()));
-            edgeMesh.positions.push_back(static_cast<float>(p.Z()));
+        for(int s = 0; s <= k_samples; ++s) {
+            const double u = first + (last - first) * s / k_samples;
+            const gp_Pnt p = curve.Value(u);
+            edge_mesh.positions.push_back(static_cast<float>(p.X()));
+            edge_mesh.positions.push_back(static_cast<float>(p.Y()));
+            edge_mesh.positions.push_back(static_cast<float>(p.Z()));
         }
 
         // Line-segment indices: [0,1], [1,2], ..., [n-1,n]
-        edgeMesh.indices.reserve(static_cast<std::size_t>(kSamples) * 2);
-        for(int s = 0; s < kSamples; ++s) {
-            edgeMesh.indices.push_back(static_cast<uint32_t>(s));
-            edgeMesh.indices.push_back(static_cast<uint32_t>(s + 1));
+        edge_mesh.indices.reserve(static_cast<std::size_t>(k_samples) * 2);
+        for(int s = 0; s < k_samples; ++s) {
+            edge_mesh.indices.push_back(static_cast<uint32_t>(s));
+            edge_mesh.indices.push_back(static_cast<uint32_t>(s + 1));
             result.edgeTags.push_back({Core::EntityType::GeoEdge, static_cast<uint32_t>(ei)});
         }
 
-        result.visualData.edges.push_back(std::move(edgeMesh));
+        result.visualData.edges.push_back(std::move(edge_mesh));
     }
 }
 
 /** @brief Extracts topological vertices into PointSet and vertexTags. */
-void extractVertices(const ShapeEntry& entry, TessellationResult& result) {
+static void extractVertices(const ShapeEntry& entry, TessellationResult& result) {
     Core::PointSet points;
     points.positions.reserve(static_cast<std::size_t>(entry.vertexMap.Extent()) * 3);
 
     for(int vi = 1; vi <= entry.vertexMap.Extent(); ++vi) {
         const auto vertex = TopoDS::Vertex(entry.vertexMap.FindKey(vi));
-        gp_Pnt p = BRep_Tool::Pnt(vertex);
+        const gp_Pnt p = BRep_Tool::Pnt(vertex);
         points.positions.push_back(static_cast<float>(p.X()));
         points.positions.push_back(static_cast<float>(p.Y()));
         points.positions.push_back(static_cast<float>(p.Z()));
@@ -198,12 +192,10 @@ void extractVertices(const ShapeEntry& entry, TessellationResult& result) {
     }
 }
 
-} // namespace
-
 TessellationResult tessellate(const ShapeEntry& entry, const TessellationParams& params) {
     // Run incremental mesher
-    BRepMesh_IncrementalMesh mesher(entry.shape, params.linearDeflection, Standard_False,
-                                    params.angularDeflection);
+    const BRepMesh_IncrementalMesh mesher(entry.shape, params.linearDeflection, Standard_False,
+                                          params.angularDeflection);
 
     TessellationResult result;
     extractFaces(entry, result);
