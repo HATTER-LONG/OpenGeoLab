@@ -4,6 +4,7 @@
  */
 
 #include <opengeolab/geometry/list_shapes_action.hpp>
+#include <opengeolab/core/shape_color_palette.hpp>
 #include <opengeolab/geometry/shape_store.hpp>
 
 #include <BRepBndLib.hxx>
@@ -68,6 +69,7 @@ nlohmann::json ListShapesAction::execute(const nlohmann::json& /*param*/,
                 {{"shapeId", id},
                  {"name", entry->name},
                  {"shapeType", shapeTypeToString(entry->shape.ShapeType())},
+                 {"color", Core::shapeColorHex(id)},
                  {"hasTessellation", entry->visualData != nullptr},
                  {"topology",
                   {{"solids", entry->solidMap.Extent()},

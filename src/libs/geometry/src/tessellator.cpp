@@ -22,6 +22,16 @@ namespace OpenGeoLab::Geometry {
 
 namespace {
 
+/** @brief Returns true when a triangle is degenerate (near-zero area). */
+bool isDegenerateTriangle(const gp_Pnt& p0, const gp_Pnt& p1, const gp_Pnt& p2) {
+    const double ax = p1.X() - p0.X(), ay = p1.Y() - p0.Y(), az = p1.Z() - p0.Z();
+    const double bx = p2.X() - p0.X(), by = p2.Y() - p0.Y(), bz = p2.Z() - p0.Z();
+    const double cx = ay * bz - az * by;
+    const double cy = az * bx - ax * bz;
+    const double cz = ax * by - ay * bx;
+    return (cx * cx + cy * cy + cz * cz) < 1e-20;
+}
+
 /** @brief Computes face normal for a triangle when triangulation lacks per-vertex normals. */
 void computeTriangleNormal(
     const gp_Pnt& p0, const gp_Pnt& p1, const gp_Pnt& p2, float& nx, float& ny, float& nz) {
@@ -72,10 +82,8 @@ void extractFaces(const ShapeEntry& entry, TessellationResult& result) {
         if(hasNormals) {
             for(int ni = 1; ni <= nbNodes; ++ni) {
                 gp_Dir n = tri->Normal(ni);
-                // Apply rotation part of transformation
-                n = n.IsEqual(gp_Dir(0, 0, 0), 1e-12) ? gp_Dir(0, 0, 1) : n;
                 if(loc.IsIdentity() == Standard_False) {
-                    n = n.IsEqual(gp_Dir(0, 0, 0), 1e-12) ? n : n.Transformed(trsf);
+                    n = n.Transformed(trsf);
                 }
                 if(reversed) {
                     n.Reverse();
@@ -94,6 +102,16 @@ void extractFaces(const ShapeEntry& entry, TessellationResult& result) {
             int n2{};
             int n3{};
             tri->Triangle(ti).Get(n1, n2, n3);
+
+            // Skip degenerate (zero-area) triangles — common at sphere/torus poles.
+            {
+                gp_Pnt p0 = tri->Node(n1).Transformed(trsf);
+                gp_Pnt p1 = tri->Node(n2).Transformed(trsf);
+                gp_Pnt p2 = tri->Node(n3).Transformed(trsf);
+                if(isDegenerateTriangle(p0, p1, p2)) {
+                    continue;
+                }
+            }
 
             // OCC indices are 1-based; convert to 0-based
             if(reversed) {
@@ -202,7 +220,7 @@ void extractVertices(const ShapeEntry& entry, TessellationResult& result) {
 
 TessellationResult
 tessellate(const ShapeEntry& entry, double linearDeflection, double angularDeflection) {
-    // Run incremental mesher
+    // Run incremental mesher with absolute deflection.
     BRepMesh_IncrementalMesh mesher(entry.shape, linearDeflection, Standard_False,
                                     angularDeflection);
 

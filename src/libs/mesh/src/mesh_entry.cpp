@@ -34,7 +34,7 @@ void ElementLocator::build(const std::vector<ElementBlock>& line_blocks,
 }
 
 ElementLocator::Location ElementLocator::locate(uint32_t element_id) const {
-    assert(elementId >= 1 && elementId <= totalCount());
+    assert(element_id >= 1 && element_id <= totalCount());
 
     // Binary search: find first prefix sum >= elementId
     auto it = std::lower_bound(m_prefixSums.begin(), m_prefixSums.end(), element_id);

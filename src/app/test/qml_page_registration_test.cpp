@@ -137,6 +137,32 @@ TEST_CASE("App CMake packages mesh page QML files") {
                               "resource/qml/components/ShapeSelector.qml"});
 }
 
+TEST_CASE("App CMake packages the custom view tooltip component") {
+    const auto cmakePath = appSourceDir() / "CMakeLists.txt";
+    REQUIRE_MESSAGE(fs::exists(cmakePath), "Missing file: " << cmakePath.string());
+
+    const auto content = readFile(cmakePath);
+    requireSnippets(content, {"resource/qml/components/ViewToolButton.qml",
+                              "resource/qml/components/ViewToolTip.qml"});
+}
+
+TEST_CASE("ViewToolButton uses the delayed custom tooltip") {
+    const auto buttonPath = appSourceDir() / "resource/qml/components/ViewToolButton.qml";
+    REQUIRE_MESSAGE(fs::exists(buttonPath), "Missing file: " << buttonPath.string());
+
+    const auto content = readFile(buttonPath);
+    requireSnippets(content, {"Timer {",
+                              "interval: 400",
+                              "tipDelay.restart()",
+                              "tipItem.shown = false",
+                              "ViewToolTip {",
+                              "text: button.toolTipText",
+                              "anchors.top: button.bottom"});
+    CHECK(content.find("ToolTip.visible:") == std::string::npos);
+    CHECK(content.find("ToolTip.text:") == std::string::npos);
+    CHECK(content.find("ToolTip.delay:") == std::string::npos);
+}
+
 TEST_CASE("MeshSurfacePage defines the expected surface mesh workflow") {
     const auto pagePath = appSourceDir() / "resource/qml/components/pages/MeshSurfacePage.qml";
     REQUIRE_MESSAGE(fs::exists(pagePath), "Missing file: " << pagePath.string());

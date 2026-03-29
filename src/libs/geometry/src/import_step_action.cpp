@@ -75,8 +75,8 @@ nlohmann::json ImportStepAction::execute(const nlohmann::json& param,
         if(progress) {
             progress(0.7, "Tessellating...");
         }
-        m_store.tessellate(shape_id, param.value("linearDeflection", 0.1),
-                           param.value("angularDeflection", 0.5));
+        m_store.tessellate(shape_id, param.value("linearDeflection", 0.005),
+                           param.value("angularDeflection", 0.05));
     }
 
     if(progress) {

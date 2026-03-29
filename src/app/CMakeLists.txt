@@ -12,7 +12,8 @@ qt_add_executable(
     src/request_service.cpp
     src/log_event_model.cpp
     src/log_filter_proxy_model.cpp
-    src/module_data_notifier.cpp)
+    src/module_data_notifier.cpp
+    src/scene_bridge.cpp)
 
 target_compile_features(opengeolab_app PRIVATE cxx_std_20)
 target_compile_definitions(opengeolab_app PRIVATE QT_NO_KEYWORDS)
@@ -32,7 +33,9 @@ target_link_libraries(
             Qt6::Svg
             Qt6::Widgets
             OpenGeoLab::Python_Embed
-            OpenGeoLab::Command)
+            OpenGeoLab::Command
+            OpenGeoLab::Scene
+            OpenGeoLab::Render)
 
 set_source_files_properties(resource/qml/MainPages.qml
                             PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
@@ -84,6 +87,8 @@ qt_add_qml_module(
     resource/qml/components/pages/CreateTorusPage.qml
     resource/qml/components/pages/ImportModelPage.qml
     resource/qml/components/ShapeSelector.qml
+    resource/qml/components/ViewToolButton.qml
+    resource/qml/components/ViewToolTip.qml
     resource/qml/components/pages/MeshSurfacePage.qml
     resource/qml/components/pages/MeshVolumePage.qml
     RESOURCES
@@ -132,7 +137,14 @@ qt_add_qml_module(
     resource/icons/copyOutline.svg
     resource/icons/exitOutline.svg
     resource/icons/meshSurface.svg
-    resource/icons/meshVolume.svg)
+    resource/icons/meshVolume.svg
+    resource/icons/view_fit.svg
+    resource/icons/view_front.svg
+    resource/icons/view_back.svg
+    resource/icons/view_top.svg
+    resource/icons/view_bottom.svg
+    resource/icons/view_left.svg
+    resource/icons/view_right.svg)
 
 # Use console subsystem during development so errors are visible.
 option(OPENGEOLAB_WIN32_APP

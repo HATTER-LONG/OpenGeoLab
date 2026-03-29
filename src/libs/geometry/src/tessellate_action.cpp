@@ -23,8 +23,8 @@ nlohmann::json TessellateAction::describe() const {
 nlohmann::json TessellateAction::execute(const nlohmann::json& param,
                                          const Core::ProgressCallback& progress) {
     const auto shape_id = param.value("shapeId", static_cast<uint32_t>(0));
-    const double lin = param.value("linearDeflection", 0.1);
-    const double ang = param.value("angularDeflection", 0.5);
+    const double lin = param.value("linearDeflection", 0.05);
+    const double ang = param.value("angularDeflection", 0.25);
 
     if(!m_store.find(shape_id)) {
         return {{"ok", false}, {"summary", "Unknown shapeId"}};

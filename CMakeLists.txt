@@ -3,7 +3,7 @@ project(
     OpenGeoLab
     VERSION 0.1.0
     DESCRIPTION "OpenGeoLab — Modern OpenGL 3D modeling application"
-    LANGUAGES CXX)
+    LANGUAGES CXX C)
 if (POLICY CMP0207)
     cmake_policy(SET CMP0207 NEW)
 endif ()
@@ -92,7 +92,7 @@ endif ()
 qt_standard_project_setup(REQUIRES 6.9)
 
 # ---------------------------------------------------------------------------
-# Third-party: fmt, spdlog, Kangaroo, nlohmann_json, GLM
+# Third-party: fmt, spdlog, Kangaroo, nlohmann_json, GLM, glad
 # ---------------------------------------------------------------------------
 
 opengeolab_resolve_package(
@@ -172,6 +172,30 @@ opengeolab_resolve_package(
     GIT_TAG
     v${OPENGEOLAB_NLOHMANN_JSON_VERSION})
 
+opengeolab_resolve_package(
+    glm
+    glm::glm
+    VERSION
+    ${OPENGEOLAB_GLM_VERSION}
+    GITHUB_REPOSITORY
+    g-truc/glm
+    GIT_TAG
+    ${OPENGEOLAB_GLM_VERSION}
+    CPM_OPTIONS
+    "GLM_BUILD_TESTS OFF")
+
+CPMAddPackage(
+    NAME
+    glad
+    GITHUB_REPOSITORY
+    Dav1dde/glad
+    VERSION
+    2.0.8
+    SOURCE_SUBDIR
+    cmake)
+
+glad_add_library(glad_gl_core_46 STATIC REPRODUCIBLE API gl:core=4.6)
+
 # ---------------------------------------------------------------------------
 # OpenCASCADE Technology
 # ---------------------------------------------------------------------------
@@ -244,4 +268,6 @@ add_subdirectory(src/libs/geometry)
 add_subdirectory(src/libs/mesh)
 add_subdirectory(src/libs/command)
 add_subdirectory(src/libs/python)
+add_subdirectory(src/libs/scene)
+add_subdirectory(src/libs/render)
 add_subdirectory(src/app)

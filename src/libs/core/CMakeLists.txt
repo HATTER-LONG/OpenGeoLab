@@ -6,10 +6,11 @@ set(core_public_headers
     include/opengeolab/core/module_data_event.hpp
     include/opengeolab/core/progress_callback.hpp
     include/opengeolab/core/point_vector3d.hpp
-    include/opengeolab/core/visual_data.hpp)
+    include/opengeolab/core/visual_data.hpp
+    include/opengeolab/core/shape_color_palette.hpp)
 
 set(core_sources src/action.cpp src/logger.cpp src/module.cpp
-                 src/process_callback.cpp)
+                 src/process_callback.cpp src/shape_color_palette.cpp)
 opengeolab_add_module(
     opengeolab_core
     ALIAS_NAME

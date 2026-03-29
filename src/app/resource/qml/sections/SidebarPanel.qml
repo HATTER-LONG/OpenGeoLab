@@ -33,6 +33,7 @@ Item {
         }
         state[shapeId].geo = !state[shapeId].geo
         root.visibilityState = state
+        SceneBridge.setGeoVisible(shapeId, state[shapeId].geo)
     }
 
     function toggleMeshVisibility(shapeId) {
@@ -42,6 +43,7 @@ Item {
         }
         state[shapeId].mesh = !state[shapeId].mesh
         root.visibilityState = state
+        SceneBridge.setMeshVisible(shapeId, state[shapeId].mesh)
     }
 
     function geoVisible(shapeId) {
@@ -142,6 +144,7 @@ Item {
                 shapeId: modelData.shapeId ?? 0
                 name: modelData.name ?? ""
                 shapeType: modelData.shapeType ?? "Shape"
+                shapeColor: modelData.color ?? "#808080"
                 hasTessellation: modelData.hasTessellation ?? false
                 topology: modelData.topology ?? {}
                 boundingBox: modelData.boundingBox ?? {}

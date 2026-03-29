@@ -71,8 +71,8 @@ nlohmann::json CreateTorusAction::execute(const nlohmann::json& param,
         if(progress) {
             progress(0.5, "Tessellating...");
         }
-        m_store.tessellate(shape_id, param.value("linearDeflection", 0.1),
-                           param.value("angularDeflection", 0.5));
+        m_store.tessellate(shape_id, param.value("linearDeflection", 0.05),
+                           param.value("angularDeflection", 0.25));
     }
 
     if(progress) {

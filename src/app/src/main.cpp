@@ -9,17 +9,21 @@
 #include "opengeolab/app/log_filter_proxy_model.h"
 #include "opengeolab/app/module_data_notifier.h"
 #include "opengeolab/app/request_service.h"
+#include "scene_bridge.h"
 
 #include <opengeolab/command/command_dispatcher.hpp>
 #include <opengeolab/command/module_registry.hpp>
 #include <opengeolab/core/logger.hpp>
 #include <opengeolab/python_embed/embedded_python_runtime.hpp>
+#include <opengeolab/render/viewport_item.hpp>
+#include <opengeolab/scene/scene_graph.hpp>
 
 #include <kangaroo/util/plugin_component_factory.hpp>
 
 #include <QApplication>
 #include <QQmlApplicationEngine>
 #include <QQuickStyle>
+#include <QQuickWindow>
 #include <QtQml/qqml.h>
 
 #include <filesystem>
@@ -29,6 +33,9 @@
 #endif
 
 int main(int argc, char* argv[]) {
+    // QQuickFramebufferObject requires OpenGL; Qt 6.x defaults to D3D11 on Windows.
+    QQuickWindow::setGraphicsApi(QSGRendererInterface::OpenGL);
+
 #if defined(_WIN32) && defined(OPENGEOLAB_QT_BIN_DIR)
     {
         const auto qt_bin = std::filesystem::path(OPENGEOLAB_QT_BIN_DIR);
@@ -62,6 +69,20 @@ int main(int argc, char* argv[]) {
     qmlRegisterSingletonInstance("OpenGeoLab.Services", 1, 0, "ModuleDataNotifier",
                                  &module_notifier);
 
+    // Scene graph and data-flow bridge
+    OpenGeoLab::Scene::SceneGraph scene_graph;
+    OpenGeoLab::App::SceneBridge scene_bridge(dispatcher, scene_graph);
+
+    QObject::connect(&module_notifier, &OpenGeoLab::App::ModuleDataNotifier::geometryDataChanged,
+                     &scene_bridge, &OpenGeoLab::App::SceneBridge::onGeometryDataChanged);
+    QObject::connect(&module_notifier, &OpenGeoLab::App::ModuleDataNotifier::meshDataChanged,
+                     &scene_bridge, &OpenGeoLab::App::SceneBridge::onMeshDataChanged);
+
+    qmlRegisterSingletonInstance("OpenGeoLab.Services", 1, 0, "SceneBridge", &scene_bridge);
+
+    // Register ViewportItem QML type
+    qmlRegisterType<OpenGeoLab::Render::ViewportItem>("OpenGeoLab.Render", 1, 0, "ViewportItem");
+
     OpenGeoLab::App::LogEventModel log_event_model;
     log_event_model.installSink(OpenGeoLab::Core::getLoggerShared());
     qmlRegisterSingletonInstance("OpenGeoLab.Services", 1, 0, "LogEventModel", &log_event_model);
@@ -73,6 +94,16 @@ int main(int argc, char* argv[]) {
 
     if(engine.rootObjects().isEmpty()) {
         return -1;
+    }
+
+    // Inject SceneGraph into all ViewportItem instances created by QML
+    for(QObject* root : engine.rootObjects()) {
+        auto viewports = root->findChildren<OpenGeoLab::Render::ViewportItem*>();
+        for(auto* vp : viewports) {
+            vp->setSceneGraph(&scene_graph);
+            QObject::connect(&scene_bridge, &OpenGeoLab::App::SceneBridge::sceneUpdated, vp,
+                             &QQuickItem::update);
+        }
     }
 
     // Release GIL before entering the event loop. EmbeddedPythonRuntime::process()

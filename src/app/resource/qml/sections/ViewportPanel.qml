@@ -1,63 +1,90 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
+import OpenGeoLab.Render
 import "../theme"
+import "../components"
 
-/** @brief Placeholder 3D viewport with a subtle grid background. */
+/** @brief 3D viewport backed by OpenGL + orthographic camera. */
 Item {
     id: root
 
     required property AppTheme theme
 
-    // ── Background gradient ────────────────────────────────────────────
-    Rectangle {
+    ViewportItem {
+        id: viewport
         anchors.fill: parent
-        radius: root.theme.radiusMedium
-        color: root.theme.viewportBase
+    }
 
-        // Grid pattern drawn on a Canvas
-        Canvas {
-            id: gridCanvas
-            anchors.fill: parent
-            onPaint: {
-                var ctx = getContext("2d");
-                ctx.clearRect(0, 0, width, height);
-                ctx.strokeStyle = root.theme.viewportGrid;
-                ctx.lineWidth = 0.5;
-                var step = root.theme.viewportGridStep;
-                for (var x = 0; x < width; x += step) {
-                    ctx.beginPath();
-                    ctx.moveTo(x, 0);
-                    ctx.lineTo(x, height);
-                    ctx.stroke();
-                }
-                for (var y = 0; y < height; y += step) {
-                    ctx.beginPath();
-                    ctx.moveTo(0, y);
-                    ctx.lineTo(width, y);
-                    ctx.stroke();
-                }
-            }
+    // ── View toolbar overlay ───────────────────────────────────────────
+    Rectangle {
+        id: toolbarBg
+        anchors {
+            top: parent.top
+            right: parent.right
+            margins: 8
         }
+        implicitWidth: toolbarRow.implicitWidth + 20
+        implicitHeight: 48
+        radius: 10
+        color: Qt.rgba(root.theme.surfaceCard.r,
+                       root.theme.surfaceCard.g,
+                       root.theme.surfaceCard.b, 0.88)
+        border.width: 1
+        border.color: root.theme.borderDefault
 
-        // Repaint when viewport changes size or theme toggles
-        Connections {
-            target: root.theme
-            function onDarkModeChanged() {
-                gridCanvas.requestPaint();
-            }
-        }
-
-        onWidthChanged: gridCanvas.requestPaint()
-        onHeightChanged: gridCanvas.requestPaint()
-
-        // Centered label
-        Text {
+        RowLayout {
+            id: toolbarRow
             anchors.centerIn: parent
-            text: qsTr("3D Viewport")
-            font.pixelSize: 28
-            font.weight: Font.Bold
-            color: root.theme.tint(root.theme.textTertiary, 0.35)
+            spacing: 4
+
+            ViewToolButton {
+                theme: root.theme
+                iconKind: "view_fit"
+                toolTipText: qsTr("Fit to scene")
+                onClicked: viewport.fitAll()
+            }
+
+            Rectangle { width: 1; height: 28; color: root.theme.borderSubtle; Layout.alignment: Qt.AlignVCenter }
+
+            ViewToolButton {
+                theme: root.theme
+                iconKind: "view_front"
+                toolTipText: qsTr("Front view")
+                onClicked: viewport.setFrontView()
+            }
+            ViewToolButton {
+                theme: root.theme
+                iconKind: "view_back"
+                toolTipText: qsTr("Back view")
+                onClicked: viewport.setBackView()
+            }
+            ViewToolButton {
+                theme: root.theme
+                iconKind: "view_top"
+                toolTipText: qsTr("Top view")
+                onClicked: viewport.setTopView()
+            }
+            ViewToolButton {
+                theme: root.theme
+                iconKind: "view_bottom"
+                toolTipText: qsTr("Bottom view")
+                onClicked: viewport.setBottomView()
+            }
+            ViewToolButton {
+                theme: root.theme
+                iconKind: "view_left"
+                toolTipText: qsTr("Left view")
+                onClicked: viewport.setLeftView()
+            }
+            ViewToolButton {
+                theme: root.theme
+                iconKind: "view_right"
+                toolTipText: qsTr("Right view")
+                onClicked: viewport.setRightView()
+            }
         }
     }
 }

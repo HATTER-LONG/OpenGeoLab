@@ -18,6 +18,16 @@ ModuleDataNotifier::ModuleDataNotifier(Command::CommandDispatcher& dispatcher, Q
     if(handle.isConnected()) {
         m_connections.push_back(std::move(handle));
     }
+
+    auto mesh_handle =
+        dispatcher.onModuleDataChanged("mesh", [this](Core::ModuleDataEvent /*event*/) {
+            QMetaObject::invokeMethod(this, &ModuleDataNotifier::meshDataChanged,
+                                      Qt::QueuedConnection);
+        });
+
+    if(mesh_handle.isConnected()) {
+        m_connections.push_back(std::move(mesh_handle));
+    }
 }
 
 ModuleDataNotifier::~ModuleDataNotifier() = default;

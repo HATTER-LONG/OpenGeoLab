@@ -35,6 +35,9 @@ Q_SIGNALS:
     /// @brief Emitted on main thread when geometry module data changes.
     void geometryDataChanged();
 
+    /// @brief Emitted on main thread when mesh module data changes.
+    void meshDataChanged();
+
 private:
     std::vector<Kangaroo::Util::ScopedConnection> m_connections;
 };

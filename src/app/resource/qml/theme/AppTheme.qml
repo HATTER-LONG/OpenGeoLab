@@ -42,6 +42,7 @@ QtObject {
     readonly property color surface: darkMode ? "#10151b" : "#ffffff"
     readonly property color surfaceMuted: darkMode ? "#151c24" : "#eef3f8"
     readonly property color surfaceStrong: darkMode ? "#1d2630" : "#dfe9f4"
+    readonly property color surfaceCard: darkMode ? "#131a22" : "#f7f9fc"
 
     // ── Text ───────────────────────────────────────────────────────────
     readonly property color textPrimary: darkMode ? "#f4f7fb" : "#16283c"
@@ -50,9 +51,11 @@ QtObject {
 
     // ── Border ─────────────────────────────────────────────────────────
     readonly property color borderSubtle: darkMode ? "#27313c" : "#d6e0eb"
+    readonly property color borderDefault: darkMode ? "#33404e" : "#c0ceda"
 
     // ── Accents ────────────────────────────────────────────────────────
     readonly property color accentA: darkMode ? "#5aa2ff" : "#1473e6"
+    readonly property color accentPrimary: accentA
     readonly property color accentB: darkMode ? "#85c0ff" : "#14ae8a"
     readonly property color accentC: darkMode ? "#ffca6b" : "#f59e0b"
     readonly property color accentD: darkMode ? "#ff9273" : "#e6613f"
