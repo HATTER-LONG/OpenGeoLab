@@ -68,7 +68,7 @@ set(OPENGEOLAB_FMT_VERSION 12.0.0)
 set(OPENGEOLAB_SPDLOG_VERSION 1.17.0)
 set(OPENGEOLAB_KANGAROO_VERSION 2.3.1)
 set(OPENGEOLAB_NLOHMANN_JSON_VERSION 3.12.0)
-set(OPENGEOLAB_DOCTEST_VERSION 2.4.12)
+set(OPENGEOLAB_DOCTEST_VERSION 2.5.0)
 set(OPENGEOLAB_GLM_VERSION 1.0.1)
 
 # ---------------------------------------------------------------------------
@@ -172,6 +172,18 @@ opengeolab_resolve_package(
     GIT_TAG
     v${OPENGEOLAB_NLOHMANN_JSON_VERSION})
 
+opengeolab_resolve_package(
+    glm
+    glm::glm
+    VERSION
+    ${OPENGEOLAB_GLM_VERSION}
+    GITHUB_REPOSITORY
+    g-truc/glm
+    GIT_TAG
+    ${OPENGEOLAB_GLM_VERSION}
+    CPM_OPTIONS
+    "GLM_ENABLE_CXX_20 ON")
+
 # ---------------------------------------------------------------------------
 # OpenCASCADE Technology
 # ---------------------------------------------------------------------------
@@ -240,6 +252,7 @@ endif ()
 add_subdirectory(src/libs/core)
 add_subdirectory(src/libs/io)
 add_subdirectory(src/libs/geometry)
+add_subdirectory(src/libs/scene)
 add_subdirectory(src/libs/command)
 add_subdirectory(src/libs/python)
 add_subdirectory(src/app)
