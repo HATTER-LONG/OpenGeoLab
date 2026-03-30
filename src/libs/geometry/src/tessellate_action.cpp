@@ -12,12 +12,27 @@ TessellateAction::TessellateAction(ShapeStore& store) : m_store(store) {}
 TessellateAction::~TessellateAction() = default;
 
 nlohmann::json TessellateAction::describe() const {
-    return {{"name", ACTION_NAME},
-            {"description", "Tessellate (or re-tessellate) a shape."},
-            {"params",
-             {{"shapeId", {{"type", "integer"}, {"required", true}}},
-              {"linearDeflection", {{"type", "number"}, {"required", false}}},
-              {"angularDeflection", {{"type", "number"}, {"required", false}}}}}};
+    return {
+        {"name", ACTION_NAME},
+        {"description", "Tessellate (or re-tessellate) a shape."},
+        {"params",
+         {{"shapeId",
+           {{"type", "integer"},
+            {"required", true},
+            {"description", "Shape identifier to tessellate."}}},
+          {"linearDeflection",
+           {{"type", "number"},
+            {"required", false},
+            {"description", "Tessellation linear deflection (default 0.1)"}}},
+          {"angularDeflection",
+           {{"type", "number"},
+            {"required", false},
+            {"description", "Tessellation angular deflection (default 0.5)"}}}}},
+        {"returns",
+         {{"ok",
+           {{"type", "boolean"}, {"description", "true when the action completes successfully."}}},
+          {"action", {{"type", "string"}, {"description", "Echo of the action name."}}},
+          {"shapeId", {{"type", "integer"}, {"description", "Tessellated shape identifier."}}}}}};
 }
 
 nlohmann::json TessellateAction::execute(const nlohmann::json& param,

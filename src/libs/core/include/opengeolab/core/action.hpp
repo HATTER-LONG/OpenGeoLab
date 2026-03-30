@@ -33,7 +33,20 @@ public:
      *   - "name"        — action identifier (matches request["action"])
      *   - "description" — human / LLM-readable summary
      *   - "params"      — parameter schema (key → {type, required, description})
-     *   - "returns"     — return value schema (key → {type, description})
+     *   - "returns"     — success response schema (key → {type, description})
+     *
+     * Keep the top-level field order stable as:
+     *   name, description, params, returns
+     *
+     * Keep each parameter field order stable as:
+     *   type, required, description
+     *
+     * Keep each return field order stable as:
+     *   type, description
+     *
+     * The "returns" schema must always include:
+     *   - "ok"     — boolean success flag
+     *   - "action" — echoed action name
      *
      * @return JSON object describing the action
      */

@@ -14,6 +14,52 @@ using OpenGeoLab::Command::CommandDispatcher;
 using OpenGeoLab::Command::registerBuiltinModules;
 using OpenGeoLab::Core::NO_PROGRESS_CALLBACK;
 
+namespace {
+
+void checkSchemaField(const nlohmann::json& schema, const bool require_required) {
+    REQUIRE(schema.is_object());
+    REQUIRE(schema.contains("type"));
+    CHECK(schema["type"].is_string());
+    REQUIRE(schema.contains("description"));
+    CHECK(schema["description"].is_string());
+    if(require_required) {
+        REQUIRE(schema.contains("required"));
+        CHECK(schema["required"].is_boolean());
+    }
+}
+
+void checkActionDescribeSchema(const nlohmann::json& action) {
+    REQUIRE(action.is_object());
+    CHECK(action.contains("name"));
+    CHECK(action.contains("description"));
+    REQUIRE(action.contains("params"));
+    REQUIRE(action.contains("returns"));
+
+    const auto& params = action["params"];
+    const auto& returns = action["returns"];
+    REQUIRE(params.is_object());
+    REQUIRE(returns.is_object());
+
+    for(const auto& [param_name, param_schema] : params.items()) {
+        INFO("param_name=" << param_name);
+        checkSchemaField(param_schema, true);
+    }
+
+    REQUIRE(returns.contains("ok"));
+    REQUIRE(returns.contains("action"));
+    CHECK(returns["ok"]["type"] == "boolean");
+    CHECK(returns["ok"]["description"] == "true when the action completes successfully.");
+    CHECK(returns["action"]["type"] == "string");
+    CHECK(returns["action"]["description"] == "Echo of the action name.");
+
+    for(const auto& [field_name, field_schema] : returns.items()) {
+        INFO("return_field=" << field_name);
+        checkSchemaField(field_schema, false);
+    }
+}
+
+} // namespace
+
 TEST_CASE("CommandDispatcher dispatches to IOModule via request JSON (stub not-implemented)") {
     PluginComponentFactory factory;
     registerBuiltinModules(factory);
@@ -125,6 +171,28 @@ TEST_CASE("CommandDispatcher describe returns full system description") { // NOL
         }
     }
     CHECK(found_read_brep);
+}
+
+TEST_CASE("CommandDispatcher describe exposes normalized action schemas") {
+    PluginComponentFactory factory;
+    registerBuiltinModules(factory);
+
+    const CommandDispatcher dispatcher(factory);
+    const auto desc = dispatcher.describe();
+
+    REQUIRE(desc.contains("modules"));
+    REQUIRE(desc["modules"].is_array());
+
+    for(const auto& module : desc["modules"]) {
+        INFO("module=" << module["name"]);
+        REQUIRE(module.contains("actions"));
+        REQUIRE(module["actions"].is_array());
+
+        for(const auto& action : module["actions"]) {
+            INFO("action=" << action["name"]);
+            checkActionDescribeSchema(action);
+        }
+    }
 }
 
 TEST_CASE("registerBuiltinModules is idempotent on same factory") {

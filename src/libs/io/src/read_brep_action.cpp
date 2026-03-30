@@ -24,10 +24,10 @@ nlohmann::json ReadBrepAction::describe() const {
             {"required", true},
             {"description", "File system path to the BRep file to read"}}}}},
         {"returns",
-         {{"status", {{"type", "string"}, {"description", "\"ok\" on success"}}},
-          {"action",
-           {{"type", "string"}, {"description", "Echo of the action name (\"read_brep\")"}}},
-          {"path", {{"type", "string"}, {"description", "Echo of the input file path"}}}}}};
+         {{"ok",
+           {{"type", "boolean"}, {"description", "true when the action completes successfully."}}},
+          {"action", {{"type", "string"}, {"description", "Echo of the action name."}}},
+          {"path", {{"type", "string"}, {"description", "Echo of the input file path."}}}}}};
 }
 
 nlohmann::json ReadBrepAction::execute(const nlohmann::json& param,

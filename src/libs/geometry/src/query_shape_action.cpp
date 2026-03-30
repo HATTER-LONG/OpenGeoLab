@@ -15,9 +15,24 @@ QueryShapeAction::QueryShapeAction(ShapeStore& store) : m_store(store) {}
 QueryShapeAction::~QueryShapeAction() = default;
 
 nlohmann::json QueryShapeAction::describe() const {
-    return {{"name", ACTION_NAME},
-            {"description", "Query topology info and bounding box of a shape."},
-            {"params", {{"shapeId", {{"type", "integer"}, {"required", true}}}}}};
+    return {
+        {"name", ACTION_NAME},
+        {"description", "Query topology info and bounding box of a shape."},
+        {"params",
+         {{"shapeId",
+           {{"type", "integer"},
+            {"required", true},
+            {"description", "Shape identifier to inspect."}}}}},
+        {"returns",
+         {{"ok",
+           {{"type", "boolean"}, {"description", "true when the action completes successfully."}}},
+          {"action", {{"type", "string"}, {"description", "Echo of the action name."}}},
+          {"shapeId", {{"type", "integer"}, {"description", "Queried shape identifier."}}},
+          {"name", {{"type", "string"}, {"description", "Registered shape name."}}},
+          {"topology", {{"type", "object"}, {"description", "Topology counts for the shape."}}},
+          {"boundingBox",
+           {{"type", "object"},
+            {"description", "Axis-aligned bounding box as {min: [x,y,z], max: [x,y,z]}."}}}}}};
 }
 
 nlohmann::json QueryShapeAction::execute(const nlohmann::json& param,

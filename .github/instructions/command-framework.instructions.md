@@ -29,11 +29,14 @@ applyTo: '**/libs/{core,io,command,python}/**/*.{h,hpp,cpp,cxx}'
 
 ### 1.2 Response 格式
 
-Response 为 JSON 对象，由 Action 自行定义。必须包含 `"status"` 字段表示成功/失败：
+Response 为 JSON 对象。
+
+- 成功响应统一以 `"ok": true` 开头，并携带 action 自身定义的结果字段
+- 失败响应统一返回 `"ok": false`，并补充 `"summary"` 描述失败原因
 
 ```json
-{ "status": "ok", ... }
-{ "status": "error", "message": "..." }
+{ "ok": true, "action": "read_brep", ... }
+{ "ok": false, "summary": "..." }
 ```
 
 ### 1.3 错误处理
@@ -108,8 +111,14 @@ Response 为 JSON 对象，由 Action 自行定义。必须包含 `"status"` 字
     }
   },
   "returns": {
-    "status": { "type": "string", "description": "Result status: ok / error" },
-    "action": { "type": "string", "description": "Echo of the action name" }
+    "ok": {
+      "type": "boolean",
+      "description": "true when the action completes successfully."
+    },
+    "action": {
+      "type": "string",
+      "description": "Echo of the action name."
+    }
   }
 }
 ```
@@ -119,15 +128,29 @@ Response 为 JSON 对象，由 Action 自行定义。必须包含 `"status"` 字
 | `name`        | string | 是   | 必须与 `ACTION_NAME` 一致 |
 | `description` | string | 是   | 人类 / LLM 可读的 action 功能描述 |
 | `params`      | object | 是   | 参数 schema，每个 key 对应一个参数 |
-| `returns`     | object | 是   | 返回值 schema |
+| `returns`     | object | 是   | 成功返回值 schema |
 
 参数/返回值 schema 的每个字段至少包含 `"type"` 和 `"description"`。参数还应包含 `"required"` 布尔值。
+
+`describe()` 中的字段顺序必须保持一致：
+
+1. 顶层固定顺序：`name` → `description` → `params` → `returns`
+2. 参数字段固定顺序：`type` → `required` → `description`
+3. 返回字段固定顺序：`type` → `description`
+
+所有 action 的 `returns` 必须至少声明两个公共字段：
+
+- `ok`: `{"type":"boolean","description":"true when the action completes successfully."}`
+- `action`: `{"type":"string","description":"Echo of the action name."}`
+
+其他返回字段按 action 自身语义补充，但描述风格要保持“类型明确 + 含义明确”，避免只写字段名或省略说明。
 
 ### 3.3 execute() 实现约定
 
 - 接收的 `param` 是 `request["param"]`（或默认空 object）
 - 必须校验必需参数存在且类型正确
-- 返回 JSON 对象，其结构应与 `describe()["returns"]` 一致
+- 成功返回 JSON 对象，其结构应与 `describe()["returns"]` 一致
+- 失败时返回 `{"ok": false, "summary": "..."}`，不要伪造成功结构
 
 ---
 

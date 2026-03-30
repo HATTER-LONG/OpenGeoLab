@@ -18,12 +18,39 @@ ImportStepAction::ImportStepAction(ShapeStore& store) : m_store(store) {}
 ImportStepAction::~ImportStepAction() = default;
 
 nlohmann::json ImportStepAction::describe() const {
-    return {{"name", ACTION_NAME},
-            {"description", "Import a STEP file into ShapeStore."},
-            {"params",
-             {{"path", {{"type", "string"}, {"required", true}, {"description", "File path"}}},
-              {"name", {{"type", "string"}, {"required", false}, {"description", "Shape name"}}},
-              {"tessellate", {{"type", "boolean"}, {"required", false}}}}}};
+    return {
+        {"name", ACTION_NAME},
+        {"description", "Import a STEP file into ShapeStore."},
+        {"params",
+         {{"path",
+           {{"type", "string"},
+            {"required", true},
+            {"description", "File system path to the STEP file."}}},
+          {"name",
+           {{"type", "string"},
+            {"required", false},
+            {"description", "Optional override for the registered shape name."}}},
+          {"tessellate",
+           {{"type", "boolean"},
+            {"required", false},
+            {"description", "Generate tessellation data after import (default true)"}}},
+          {"linearDeflection",
+           {{"type", "number"},
+            {"required", false},
+            {"description", "Tessellation linear deflection when tessellate=true (default 0.1)"}}},
+          {"angularDeflection",
+           {{"type", "number"},
+            {"required", false},
+            {"description",
+             "Tessellation angular deflection when tessellate=true (default 0.5)"}}}}},
+        {"returns",
+         {{"ok",
+           {{"type", "boolean"}, {"description", "true when the action completes successfully."}}},
+          {"action", {{"type", "string"}, {"description", "Echo of the action name."}}},
+          {"shapeId", {{"type", "integer"}, {"description", "Allocated shape identifier."}}},
+          {"name", {{"type", "string"}, {"description", "Resolved shape name."}}},
+          {"topology",
+           {{"type", "object"}, {"description", "Topology counts for the resulting shape."}}}}}};
 }
 
 nlohmann::json ImportStepAction::execute(const nlohmann::json& param,

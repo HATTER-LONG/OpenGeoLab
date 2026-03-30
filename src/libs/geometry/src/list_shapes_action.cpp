@@ -40,9 +40,17 @@ ListShapesAction::ListShapesAction(ShapeStore& store) : m_store(store) {}
 ListShapesAction::~ListShapesAction() = default;
 
 nlohmann::json ListShapesAction::describe() const {
-    return {{"name", ACTION_NAME},
-            {"description", "List all shapes in ShapeStore."},
-            {"params", nlohmann::json::object()}};
+    return {
+        {"name", ACTION_NAME},
+        {"description", "List all shapes in ShapeStore."},
+        {"params", nlohmann::json::object()},
+        {"returns",
+         {{"ok",
+           {{"type", "boolean"}, {"description", "true when the action completes successfully."}}},
+          {"action", {{"type", "string"}, {"description", "Echo of the action name."}}},
+          {"count", {{"type", "integer"}, {"description", "Number of shapes in the response."}}},
+          {"shapes",
+           {{"type", "array"}, {"description", "Array of registered shape summaries."}}}}}};
 }
 
 nlohmann::json ListShapesAction::execute(const nlohmann::json& /*param*/,
