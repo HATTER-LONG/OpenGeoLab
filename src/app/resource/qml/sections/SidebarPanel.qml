@@ -12,11 +12,8 @@ Item {
 
     required property AppTheme theme
 
-    /** @brief Reference to the GLViewport for controlling shape visibility. */
-    required property var viewport
-
     property var shapeList: []
-    property var visibilityState: ({})
+    property var nodeMap: ({})
 
     implicitWidth: 280
 
@@ -29,36 +26,57 @@ Item {
         }))
     }
 
-    function toggleGeoVisibility(shapeId) {
-        let state = root.visibilityState
-        if (!(shapeId in state)) {
-            state[shapeId] = { geo: true, mesh: false }
-        }
-        state[shapeId].geo = !state[shapeId].geo
-        root.visibilityState = state
+    function fetchNodeList() {
+        RequestService.submitAsync(JSON.stringify({
+            module: "scene",
+            action: "list_nodes",
+            param: {},
+            mute: true
+        }))
+    }
 
-        if (root.viewport) {
-            root.viewport.setShapeVisible(shapeId, state[shapeId].geo)
+    function toggleGeoVisibility(shapeId) {
+        let newVisible = !root.geoVisible(shapeId)
+
+        // Optimistic local update — prevents stale reads on rapid double-click
+        let map = root.nodeMap
+        if (!(shapeId in map)) {
+            map[shapeId] = { visible: newVisible, meshVisible: false }
+        } else {
+            map[shapeId].visible = newVisible
         }
+        root.nodeMap = map
+
+        RequestService.submitAsync(JSON.stringify({
+            module: "scene",
+            action: "set_visibility",
+            param: {
+                nodes: [{ nodeId: shapeId, visible: newVisible }]
+            },
+            mute: true
+        }))
     }
 
     function toggleMeshVisibility(shapeId) {
-        let state = root.visibilityState
-        if (!(shapeId in state)) {
-            state[shapeId] = { geo: true, mesh: false }
+        // Mesh visibility is a local UI concern (no scene graph involvement yet)
+        let map = root.nodeMap
+        if (!(shapeId in map)) {
+            map[shapeId] = { visible: true, meshVisible: false }
         }
-        state[shapeId].mesh = !state[shapeId].mesh
-        root.visibilityState = state
+        map[shapeId].meshVisible = !map[shapeId].meshVisible
+        root.nodeMap = map
     }
 
     function geoVisible(shapeId) {
-        return !(shapeId in root.visibilityState)
-               || root.visibilityState[shapeId].geo
+        if (shapeId in root.nodeMap && root.nodeMap[shapeId].visible !== undefined) {
+            return root.nodeMap[shapeId].visible
+        }
+        return true
     }
 
     function meshVisible(shapeId) {
-        return (shapeId in root.visibilityState)
-               && root.visibilityState[shapeId].mesh
+        return (shapeId in root.nodeMap)
+               && root.nodeMap[shapeId].meshVisible === true
     }
 
     Timer {
@@ -68,10 +86,20 @@ Item {
         onTriggered: root.fetchShapeList()
     }
 
+    Timer {
+        id: sceneRefreshTimer
+        interval: 100
+        repeat: false
+        onTriggered: root.fetchNodeList()
+    }
+
     Connections {
         target: ModuleDataNotifier
         function onGeometryDataChanged() {
             refreshTimer.restart()
+        }
+        function onSceneDataChanged() {
+            sceneRefreshTimer.restart()
         }
     }
 
@@ -83,13 +111,30 @@ Item {
                 if (resp.action === "list_shapes" && resp.ok) {
                     root.shapeList = resp.shapes || []
                 }
+                if (resp.action === "list_nodes" && resp.ok) {
+                    let map = {}
+                    let oldMap = root.nodeMap
+                    for (let i = 0; i < resp.nodes.length; ++i) {
+                        let n = resp.nodes[i]
+                        map[n.nodeId] = {
+                            visible: n.visible,
+                            meshVisible: (n.nodeId in oldMap)
+                                         ? oldMap[n.nodeId].meshVisible === true
+                                         : false
+                        }
+                    }
+                    root.nodeMap = map
+                }
             } catch (e) {
                 // Ignore non-JSON or unrelated responses
             }
         }
     }
 
-    Component.onCompleted: fetchShapeList()
+    Component.onCompleted: {
+        fetchShapeList()
+        fetchNodeList()
+    }
 
     SectionCard {
         anchors.fill: parent
