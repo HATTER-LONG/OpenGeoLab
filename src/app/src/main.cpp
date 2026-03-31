@@ -17,7 +17,7 @@
 #include <opengeolab/geometry/geometry_module.hpp>
 #include <opengeolab/python_embed/embedded_python_runtime.hpp>
 #include <opengeolab/scene/geometry_scene_bridge.hpp>
-#include <opengeolab/scene/scene_graph.hpp>
+#include <opengeolab/scene/scene_module.hpp>
 #include <opengeolab/scene/topology_index.hpp>
 
 #include <kangaroo/util/plugin_component_factory.hpp>
@@ -73,7 +73,10 @@ int main(int argc, char* argv[]) {
     OpenGeoLab::Command::CommandDispatcher dispatcher(g_PluginComponentFactory);
 
     // ── Scene infrastructure ──────────────────────────────────────────
-    OpenGeoLab::Scene::SceneGraph scene_graph;
+    auto scene_module_ptr = dispatcher.findModule("scene");
+    auto* scene_module =
+        dynamic_cast<OpenGeoLab::Scene::SceneModule*>(scene_module_ptr.get());
+
     OpenGeoLab::Scene::TopologyIndex topology_index;
 
     auto geometry_module_base = dispatcher.findModule("geometry");
@@ -81,9 +84,9 @@ int main(int argc, char* argv[]) {
         dynamic_cast<OpenGeoLab::Geometry::GeometryModule*>(geometry_module_base.get());
 
     std::unique_ptr<OpenGeoLab::Scene::GeometrySceneBridge> scene_bridge;
-    if(geometry_module != nullptr) {
+    if(geometry_module != nullptr && scene_module != nullptr) {
         scene_bridge = std::make_unique<OpenGeoLab::Scene::GeometrySceneBridge>(
-            scene_graph, geometry_module->shapeStore(), topology_index);
+            scene_module->sceneGraph(), geometry_module->shapeStore(), topology_index);
     }
 
     OpenGeoLab::PythonEmbed::EmbeddedPythonRuntime python_runtime(app_dir, runtime_dir, plugin_dir);
@@ -111,11 +114,15 @@ int main(int argc, char* argv[]) {
     // ── Wire GLViewport to the SceneGraph ─────────────────────────────
     auto* viewport =
         engine.rootObjects().first()->findChild<OpenGeoLab::App::GLViewport*>();
-    if(viewport != nullptr) {
-        viewport->setSceneGraph(&scene_graph);
+    if(viewport != nullptr && scene_module != nullptr) {
+        viewport->setSceneGraph(&scene_module->sceneGraph());
 
         QObject::connect(&module_notifier,
                          &OpenGeoLab::App::ModuleDataNotifier::geometryDataChanged, viewport,
+                         [viewport]() { viewport->update(); });
+
+        QObject::connect(&module_notifier,
+                         &OpenGeoLab::App::ModuleDataNotifier::sceneDataChanged, viewport,
                          [viewport]() { viewport->update(); });
     }
 
