@@ -196,3 +196,85 @@ TEST_SUITE("ListNodesAction") {
 } // TEST_SUITE
 
 } // namespace OpenGeoLab::Scene::Tests
+
+#include <opengeolab/scene/scene_module.hpp>
+#include <opengeolab/core/module_data_event.hpp>
+
+#include <kangaroo/util/plugin_component_factory.hpp>
+
+namespace OpenGeoLab::Scene::Tests {
+
+TEST_SUITE("SceneModule") {
+
+    TEST_CASE("module name is scene") {
+        Kangaroo::Util::PluginComponentFactory factory;
+        SceneModule module(factory);
+
+        CHECK(module.moduleName() == "scene");
+    }
+
+    TEST_CASE("sceneGraph accessor returns owned graph") {
+        Kangaroo::Util::PluginComponentFactory factory;
+        SceneModule module(factory);
+
+        auto* node = module.sceneGraph().addNode("TestNode");
+        REQUIRE(node != nullptr);
+        CHECK(module.sceneGraph().findNode(node->id()) == node);
+    }
+
+    TEST_CASE("set_visibility dispatches through module process") {
+        Kangaroo::Util::PluginComponentFactory factory;
+        SceneModule module(factory);
+
+        auto* node = module.sceneGraph().addNode("Box");
+        REQUIRE(node->isVisible());
+
+        nlohmann::json request = {
+            {"action", "set_visibility"},
+            {"param", {{"nodes", {{{"nodeId", node->id()}, {"visible", false}}}}}}};
+        auto result = module.process(request, nullptr);
+
+        CHECK(result["ok"] == true);
+        CHECK(result["updated"] == 1);
+        CHECK_FALSE(node->isVisible());
+    }
+
+    TEST_CASE("list_nodes dispatches through module process") {
+        Kangaroo::Util::PluginComponentFactory factory;
+        SceneModule module(factory);
+
+        module.sceneGraph().addNode("A");
+        module.sceneGraph().addNode("B");
+
+        nlohmann::json request = {{"action", "list_nodes"},
+                                  {"param", nlohmann::json::object()}};
+        auto result = module.process(request, nullptr);
+
+        CHECK(result["ok"] == true);
+        CHECK(result["nodes"].size() == 2);
+    }
+
+    TEST_CASE("dataChanged emitted on set_visibility mutation") {
+        Kangaroo::Util::PluginComponentFactory factory;
+        SceneModule module(factory);
+
+        auto* node = module.sceneGraph().addNode("Box");
+
+        int signal_count = 0;
+        auto conn =
+            module.dataChanged.connect([&](Core::ModuleDataEvent) { ++signal_count; });
+
+        signal_count = 0;
+
+        nlohmann::json request = {
+            {"action", "set_visibility"},
+            {"param", {{"nodes", {{{"nodeId", node->id()}, {"visible", false}}}}}}};
+        auto result = module.process(request, nullptr);
+
+        CHECK(result["ok"] == true);
+        CHECK(signal_count > 0);
+    }
+
+} // TEST_SUITE
+
+} // namespace OpenGeoLab::Scene::Tests

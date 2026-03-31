@@ -7,6 +7,7 @@ set(scene_public_headers
     include/opengeolab/scene/render_component.hpp
     include/opengeolab/scene/render_mesh_data.hpp
     include/opengeolab/scene/scene_graph.hpp
+    include/opengeolab/scene/scene_module.hpp
     include/opengeolab/scene/scene_node.hpp
     include/opengeolab/scene/list_nodes_action.hpp
     include/opengeolab/scene/set_visibility_action.hpp
@@ -16,6 +17,7 @@ set(scene_sources
     src/bounding_box3d.cpp
     src/geometry_scene_bridge.cpp
     src/scene_graph.cpp
+    src/scene_module.cpp
     src/scene_node.cpp
     src/list_nodes_action.cpp
     src/set_visibility_action.cpp
