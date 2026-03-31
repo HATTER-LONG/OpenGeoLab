@@ -24,9 +24,7 @@ FunctionPageBase {
             action: "create_box",
             param: {
                 name: root.boxName,
-                x: root.originX,
-                y: root.originY,
-                z: root.originZ,
+                origin: [root.originX, root.originY, root.originZ],
                 width: root.dimW,
                 height: root.dimH,
                 depth: root.dimD

@@ -52,6 +52,7 @@ Item {
 
     function execute() {
         if (RequestService.busy) return;
+        root.forceActiveFocus();
         RequestService.submitAsync(JSON.stringify(root.getParameters()));
         root.close();
     }

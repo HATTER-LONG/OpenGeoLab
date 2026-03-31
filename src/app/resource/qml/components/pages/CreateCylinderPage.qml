@@ -23,7 +23,7 @@ FunctionPageBase {
             action: "create_cylinder",
             param: {
                 name: root.cylinderName,
-                x: root.centerX, y: root.centerY, z: root.centerZ,
+                origin: [root.centerX, root.centerY, root.centerZ],
                 radius: root.radius, height: root.cylHeight
             },
             mute: false
