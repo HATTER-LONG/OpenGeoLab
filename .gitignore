@@ -98,3 +98,5 @@ out
 .worktrees/
 **/temp/**
 /pyvenv/
+
+.superpowers
