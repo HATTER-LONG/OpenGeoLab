@@ -41,6 +41,9 @@ Q_SIGNALS:
     /** @brief Emitted on main thread when geometry module data changes. */
     void geometryDataChanged();
 
+    /** @brief Emitted on main thread when scene module data changes. */
+    void sceneDataChanged();
+
 private:
     std::vector<Kangaroo::Util::ScopedConnection> m_connections;
 };
