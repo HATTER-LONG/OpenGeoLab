@@ -30,8 +30,7 @@ public:
      * Returns non-zero pickIds sorted by distance from center (center-first).
      * Default radius = 6 → 13×13 = 169 pixel region.
      */
-    [[nodiscard]] std::vector<uint64_t> readPickRegion(int cx, int cy,
-                                                       int radius = 6) const;
+    [[nodiscard]] std::vector<uint64_t> readPickRegion(int cx, int cy, int radius = 6) const;
 
 private:
     void createAttachments();

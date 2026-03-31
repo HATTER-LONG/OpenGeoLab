@@ -83,7 +83,7 @@ void WireframePass::render(const FrameState& state, const GpuBufferManager& buff
     }
 
     const glm::mat4 mvp = state.projMatrix * state.viewMatrix;
-    constexpr float ALPHA = 1.0f;
+    constexpr float alpha = 1.0f;
 
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
@@ -93,7 +93,7 @@ void WireframePass::render(const FrameState& state, const GpuBufferManager& buff
 
     m_lineShader.use();
     m_lineShader.setMat4("u_mvp", mvp);
-    m_lineShader.setFloat("u_alpha", ALPHA);
+    m_lineShader.setFloat("u_alpha", alpha);
     const auto line_batch = BatchUtils::buildIndexedBatch(
         buffers.lineRanges(), [](const Scene::DrawRange&) { return true; });
     BatchUtils::multiDrawElements(GL_LINES, line_batch);
@@ -102,7 +102,7 @@ void WireframePass::render(const FrameState& state, const GpuBufferManager& buff
 
     m_pointShader.use();
     m_pointShader.setMat4("u_mvp", mvp);
-    m_pointShader.setFloat("u_alpha", ALPHA);
+    m_pointShader.setFloat("u_alpha", alpha);
     m_pointShader.setFloat("u_pointSize", POINT_SIZE);
     const auto point_batch = BatchUtils::buildArrayBatch(
         buffers.pointRanges(), [](const Scene::DrawRange&) { return true; });

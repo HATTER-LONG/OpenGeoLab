@@ -28,6 +28,7 @@ namespace OpenGeoLab::Render {
  */
 using GlLoaderFunc = void* (*)(const char*);
 
+/** @brief Top-level rendering entry point managing the multi-pass pipeline. */
 class OPENGEOLAB_RENDER_EXPORT RenderPipeline final {
 public:
     RenderPipeline();
@@ -39,7 +40,7 @@ public:
      *        library calls gladLoadGL internally so that its function pointers
      *        are valid (necessary when the render library is a separate DLL).
      */
-    void initialize(GlLoaderFunc glLoader = nullptr);
+    void initialize(GlLoaderFunc gl_loader = nullptr);
 
     /**
      * @brief Upload scene geometry changes to GPU buffers.
@@ -72,8 +73,8 @@ public:
      * @param mask Bitmask controlling which entity types are considered.
      * @return All unique resolved results sorted by distance from center.
      */
-    [[nodiscard]] std::vector<PickResult> pickRegion(int cx, int cy, int radius,
-                                                     PickMask mask) const;
+    [[nodiscard]] std::vector<PickResult>
+    pickRegion(int cx, int cy, int radius, PickMask mask) const;
 
     /** @brief Release all GPU resources owned by the pipeline. */
     void cleanup();

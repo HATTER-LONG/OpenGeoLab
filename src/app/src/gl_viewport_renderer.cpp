@@ -66,13 +66,13 @@ void GLViewportRenderer::synchronize(QQuickFramebufferObject* item) {
     }
 
     if(!m_pipelineInitialized) {
-        auto glLoader = +[](const char* name) -> void* {
+        auto gl_loader = +[](const char* name) -> void* {
             if(const auto* const ctx = QOpenGLContext::currentContext(); ctx != nullptr) {
                 return reinterpret_cast<void*>(ctx->getProcAddress(name));
             }
             return nullptr;
         };
-        m_pipeline.initialize(glLoader);
+        m_pipeline.initialize(gl_loader);
         m_pipelineInitialized = true;
     }
 

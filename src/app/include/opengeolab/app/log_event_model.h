@@ -37,6 +37,7 @@ class LogEventModel : public QAbstractListModel {
     Q_PROPERTY(int count READ count NOTIFY countChanged)
 
 public:
+    /** @brief Custom roles exposed to QML delegates. */
     enum Roles {
         LevelRole = Qt::UserRole + 1,
         LevelNameRole,

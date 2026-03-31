@@ -114,7 +114,7 @@ private:
 };
 
 template <class ActionT, class... Args> void ModuleBase::registerAction(Args&&... args) {
-    std::string key = m_moduleName + "." + std::string(ActionT::ACTION_NAME);
+    std::string const key = m_moduleName + "." + std::string(ActionT::ACTION_NAME);
     m_factory.bindSingleton<IAction, ActionT>(key, std::forward<Args>(args)...);
     m_registeredActionKeys.push_back(key);
 }

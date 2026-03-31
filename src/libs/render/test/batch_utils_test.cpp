@@ -3,9 +3,9 @@
 #include <doctest/doctest.h>
 
 using OpenGeoLab::Render::BatchUtils::ArrayBatch;
-using OpenGeoLab::Render::BatchUtils::IndexedBatch;
 using OpenGeoLab::Render::BatchUtils::buildArrayBatch;
 using OpenGeoLab::Render::BatchUtils::buildIndexedBatch;
+using OpenGeoLab::Render::BatchUtils::IndexedBatch;
 using OpenGeoLab::Scene::DrawRange;
 using OpenGeoLab::Scene::PrimitiveTopology;
 

@@ -31,8 +31,8 @@ struct Ray3D {
 
 /** @brief Result of a pick hit. */
 struct PickHit {
-    float distance{};   /**< Distance along the ray */
-    uint64_t pickId{};  /**< Encoded pick identifier */
+    float distance{};  /**< Distance along the ray */
+    uint64_t pickId{}; /**< Encoded pick identifier */
 };
 
 /**

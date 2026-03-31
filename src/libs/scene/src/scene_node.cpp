@@ -58,9 +58,9 @@ SceneNode* SceneNode::addChild(std::unique_ptr<SceneNode> child) {
     return m_children.back().get();
 }
 
-std::unique_ptr<SceneNode> SceneNode::removeChild(NodeId childId) {
+std::unique_ptr<SceneNode> SceneNode::removeChild(NodeId child_id) {
     for(auto it = m_children.begin(); it != m_children.end(); ++it) {
-        if((*it)->id() != childId) {
+        if((*it)->id() != child_id) {
             continue;
         }
 
@@ -73,9 +73,9 @@ std::unique_ptr<SceneNode> SceneNode::removeChild(NodeId childId) {
     return nullptr;
 }
 
-SceneNode* SceneNode::findChild(NodeId childId) const {
+SceneNode* SceneNode::findChild(NodeId child_id) const {
     for(const std::unique_ptr<SceneNode>& child : m_children) {
-        if(child->id() == childId) {
+        if(child->id() == child_id) {
             return child.get();
         }
     }

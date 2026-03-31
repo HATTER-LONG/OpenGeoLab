@@ -22,8 +22,8 @@ struct PickId {
     /** @brief Encode shape, entity type, and local index into 64 bits. */
     static constexpr uint64_t encode(uint32_t shape_id, Core::EntityType type, uint32_t local_id) {
         assert(shape_id <= 0x00FF'FFFF && "shapeId exceeds 24-bit range");
-        return (static_cast<uint64_t>(shape_id) << 40) | (static_cast<uint64_t>(local_id) << 8)
-               | static_cast<uint64_t>(static_cast<uint8_t>(type));
+        return (static_cast<uint64_t>(shape_id) << 40) | (static_cast<uint64_t>(local_id) << 8) |
+               static_cast<uint64_t>(static_cast<uint8_t>(type));
     }
 
     /** @brief Extract EntityType from an encoded PickId. */
@@ -42,9 +42,7 @@ struct PickId {
     }
 
     /** @brief Check if the encoded value represents a valid pick target. */
-    static constexpr bool isValid(uint64_t encoded) {
-        return encoded != 0;
-    }
+    static constexpr bool isValid(uint64_t encoded) { return encoded != 0; }
 };
 
 } // namespace OpenGeoLab::Scene

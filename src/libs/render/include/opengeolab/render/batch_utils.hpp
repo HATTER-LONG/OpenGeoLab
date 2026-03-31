@@ -15,43 +15,46 @@
 
 namespace OpenGeoLab::Render::BatchUtils {
 
+/** @brief Pre-built glMultiDrawElements parameter arrays. */
 struct IndexedBatch {
     std::vector<GLsizei> counts;
     std::vector<const void*> offsets;
-    [[nodiscard]] GLsizei drawCount() const {
-        return static_cast<GLsizei>(counts.size());
-    }
+    [[nodiscard]] GLsizei drawCount() const { return static_cast<GLsizei>(counts.size()); }
 };
 
+/** @brief Pre-built glMultiDrawArrays parameter arrays. */
 struct ArrayBatch {
     std::vector<GLint> firsts;
     std::vector<GLsizei> counts;
-    [[nodiscard]] GLsizei drawCount() const {
-        return static_cast<GLsizei>(counts.size());
-    }
+    [[nodiscard]] GLsizei drawCount() const { return static_cast<GLsizei>(counts.size()); }
 };
 
+/**
+ * @brief Build an indexed batch from DrawRanges matching a predicate.
+ * @param predicate Callable `bool(const DrawRange&)` selecting which ranges to include.
+ */
 template <typename Predicate>
-IndexedBatch buildIndexedBatch(const std::vector<Scene::DrawRange>& ranges,
-                               Predicate&& predicate) {
+IndexedBatch buildIndexedBatch(const std::vector<Scene::DrawRange>& ranges, Predicate&& predicate) {
     IndexedBatch batch;
-    for (const auto& r : ranges) {
-        if (predicate(r)) {
+    for(const auto& r : ranges) {
+        if(predicate(r)) {
             batch.counts.push_back(static_cast<GLsizei>(r.indexCount));
-            batch.offsets.push_back(
-                reinterpret_cast<const void*>(
-                    static_cast<uintptr_t>(r.indexOffset) * sizeof(uint32_t)));
+            batch.offsets.push_back(reinterpret_cast<const void*>(
+                static_cast<uintptr_t>(r.indexOffset) * sizeof(uint32_t)));
         }
     }
     return batch;
 }
 
+/**
+ * @brief Build an array batch from DrawRanges matching a predicate.
+ * @param predicate Callable `bool(const DrawRange&)` selecting which ranges to include.
+ */
 template <typename Predicate>
-ArrayBatch buildArrayBatch(const std::vector<Scene::DrawRange>& ranges,
-                           Predicate&& predicate) {
+ArrayBatch buildArrayBatch(const std::vector<Scene::DrawRange>& ranges, Predicate&& predicate) {
     ArrayBatch batch;
-    for (const auto& r : ranges) {
-        if (predicate(r)) {
+    for(const auto& r : ranges) {
+        if(predicate(r)) {
             batch.firsts.push_back(static_cast<GLint>(r.vertexOffset));
             batch.counts.push_back(static_cast<GLsizei>(r.vertexCount));
         }
@@ -59,7 +62,10 @@ ArrayBatch buildArrayBatch(const std::vector<Scene::DrawRange>& ranges,
     return batch;
 }
 
+/** @brief Issue glMultiDrawElements for the given indexed batch. */
 OPENGEOLAB_RENDER_EXPORT void multiDrawElements(GLenum mode, const IndexedBatch& batch);
+
+/** @brief Issue glMultiDrawArrays for the given array batch. */
 OPENGEOLAB_RENDER_EXPORT void multiDrawArrays(GLenum mode, const ArrayBatch& batch);
 
 } // namespace OpenGeoLab::Render::BatchUtils

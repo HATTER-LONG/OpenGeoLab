@@ -11,12 +11,10 @@
 #include <array>
 #include <cstdint>
 
-static_assert(OpenGeoLab::Scene::PickId::decodeShapeId(
-                  OpenGeoLab::Scene::PickId::encode(42, OpenGeoLab::Core::EntityType::GeoFace, 3))
-              == 42);
-static_assert(OpenGeoLab::Scene::PickId::decodeLocalId(
-                  OpenGeoLab::Scene::PickId::encode(42, OpenGeoLab::Core::EntityType::GeoFace, 3))
-              == 3);
+static_assert(OpenGeoLab::Scene::PickId::decodeShapeId(OpenGeoLab::Scene::PickId::encode(
+                  42, OpenGeoLab::Core::EntityType::GeoFace, 3)) == 42);
+static_assert(OpenGeoLab::Scene::PickId::decodeLocalId(OpenGeoLab::Scene::PickId::encode(
+                  42, OpenGeoLab::Core::EntityType::GeoFace, 3)) == 3);
 
 namespace OpenGeoLab::Scene::Tests {
 
@@ -38,9 +36,7 @@ TEST_CASE("PickId encodes and decodes local id") {
     CHECK(PickId::decodeLocalId(encoded) == 3);
 }
 
-TEST_CASE("PickId zero is invalid") {
-    CHECK_FALSE(PickId::isValid(0));
-}
+TEST_CASE("PickId zero is invalid") { CHECK_FALSE(PickId::isValid(0)); }
 
 TEST_CASE("PickId non-zero value is valid") {
     CHECK(PickId::isValid(PickId::encode(1, Core::EntityType::GeoVertex, 1)));
@@ -60,18 +56,12 @@ TEST_CASE("PickId preserves maximum local id") {
 
 TEST_CASE("PickId round-trips all entity types") {
     constexpr std::array entity_types{
-        Core::EntityType::GeoVertex,
-        Core::EntityType::GeoEdge,
-        Core::EntityType::GeoWire,
-        Core::EntityType::GeoFace,
-        Core::EntityType::GeoSolid,
-        Core::EntityType::MeshNode,
-        Core::EntityType::MeshEdge,
-        Core::EntityType::MeshElement,
-        Core::EntityType::SceneNode,
+        Core::EntityType::GeoVertex, Core::EntityType::GeoEdge,     Core::EntityType::GeoWire,
+        Core::EntityType::GeoFace,   Core::EntityType::GeoSolid,    Core::EntityType::MeshNode,
+        Core::EntityType::MeshEdge,  Core::EntityType::MeshElement, Core::EntityType::SceneNode,
     };
 
-    for (const Core::EntityType entity_type : entity_types) {
+    for(const Core::EntityType entity_type : entity_types) {
         const uint64_t encoded = PickId::encode(42, entity_type, 3);
 
         CHECK(PickId::decodeType(encoded) == entity_type);

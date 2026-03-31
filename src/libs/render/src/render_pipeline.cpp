@@ -38,9 +38,9 @@ RenderPipeline::RenderPipeline() : m_impl(std::make_unique<Impl>()) {}
 
 RenderPipeline::~RenderPipeline() = default;
 
-void RenderPipeline::initialize(GlLoaderFunc glLoader) {
-    if(glLoader != nullptr) {
-        gladLoadGL(reinterpret_cast<GLADloadfunc>(glLoader));
+void RenderPipeline::initialize(GlLoaderFunc gl_loader) {
+    if(gl_loader != nullptr) {
+        gladLoadGL(reinterpret_cast<GLADloadfunc>(gl_loader));
     }
 
     m_impl->bufferManager.initialize();

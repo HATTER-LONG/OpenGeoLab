@@ -34,21 +34,21 @@ SceneGraph::SceneGraph() : m_root(std::make_unique<SceneNode>(0, "root")) {}
 SceneGraph::~SceneGraph() = default;
 
 NodeId SceneGraph::allocateNodeId() {
-    std::unique_lock lock(m_mutex);
+    std::unique_lock const lock(m_mutex);
     return m_nextNodeId++;
 }
 
 SceneNode* SceneGraph::root() const {
-    std::shared_lock lock(m_mutex);
+    std::shared_lock const lock(m_mutex);
     return m_root.get();
 }
 
-SceneNode* SceneGraph::addNode(std::string name, NodeId parentId) {
+SceneNode* SceneGraph::addNode(std::string name, NodeId parent_id) {
     SceneNode* added_node = nullptr;
     NodeId added_id = 0;
     {
-        std::unique_lock lock(m_mutex);
-        SceneNode* parent = findInSubtree(m_root.get(), parentId);
+        std::unique_lock const lock(m_mutex);
+        SceneNode* parent = findInSubtree(m_root.get(), parent_id);
         if(parent == nullptr) {
             return nullptr;
         }
@@ -76,7 +76,7 @@ bool SceneGraph::removeNode(NodeId id) {
     bool selection_changed = false;
     bool hovered_removed = false;
     {
-        std::unique_lock lock(m_mutex);
+        std::unique_lock const lock(m_mutex);
         SceneNode* node = findInSubtree(m_root.get(), id);
         if(node == nullptr || node->parent() == nullptr) {
             return false;
@@ -108,18 +108,18 @@ bool SceneGraph::removeNode(NodeId id) {
 }
 
 SceneNode* SceneGraph::findNode(NodeId id) const {
-    std::shared_lock lock(m_mutex);
+    std::shared_lock const lock(m_mutex);
     return findInSubtree(m_root.get(), id);
 }
 
-SceneNode* SceneGraph::findNodeBySource(std::string_view type, uint32_t srcId) const {
-    std::shared_lock lock(m_mutex);
+SceneNode* SceneGraph::findNodeBySource(std::string_view type, uint32_t src_id) const {
+    std::shared_lock const lock(m_mutex);
     SceneNode* result = nullptr;
     std::function<void(SceneNode*)> search = [&](SceneNode* node) {
         if(result != nullptr) {
             return;
         }
-        if(node->sourceType() == type && node->sourceId() == srcId) {
+        if(node->sourceType() == type && node->sourceId() == src_id) {
             result = node;
             return;
         }
@@ -133,7 +133,7 @@ SceneNode* SceneGraph::findNodeBySource(std::string_view type, uint32_t srcId) c
 
 bool SceneGraph::setNodeVisible(NodeId id, bool visible) {
     {
-        std::unique_lock lock(m_mutex);
+        std::unique_lock const lock(m_mutex);
         SceneNode* node = findInSubtree(m_root.get(), id);
         if(node == nullptr || node->isVisible() == visible) {
             return false;
@@ -147,12 +147,12 @@ bool SceneGraph::setNodeVisible(NodeId id, bool visible) {
 }
 
 void SceneGraph::traverseVisible(std::function<void(const SceneNode&)> visitor) const {
-    std::shared_lock lock(m_mutex);
+    std::shared_lock const lock(m_mutex);
     traverseVisibleImpl(m_root.get(), visitor);
 }
 
 void SceneGraph::forEachNode(std::function<void(const SceneNode&)> visitor) const {
-    std::shared_lock lock(m_mutex);
+    std::shared_lock const lock(m_mutex);
     std::function<void(const SceneNode&)> recurse = [&](const SceneNode& node) {
         visitor(node);
         for(const auto& child : node.children()) {
@@ -164,15 +164,15 @@ void SceneGraph::forEachNode(std::function<void(const SceneNode&)> visitor) cons
     }
 }
 
-void SceneGraph::traverseDirty(uint64_t sinceVersion,
+void SceneGraph::traverseDirty(uint64_t since_version,
                                std::function<void(const SceneNode&)> visitor) const {
-    std::shared_lock lock(m_mutex);
-    traverseDirtyImpl(m_root.get(), sinceVersion, visitor);
+    std::shared_lock const lock(m_mutex);
+    traverseDirtyImpl(m_root.get(), since_version, visitor);
 }
 
 std::vector<NodeId> SceneGraph::selectedNodes() const {
     std::vector<NodeId> selected;
-    std::shared_lock lock(m_mutex);
+    std::shared_lock const lock(m_mutex);
     visitAllNodes(m_root.get(), [&](SceneNode* node) {
         if(node->isSelected()) {
             selected.push_back(node->id());
@@ -185,7 +185,7 @@ void SceneGraph::selectNode(NodeId id, bool append) {
     std::vector<NodeId> updated_nodes;
     bool selection_changed = false;
     {
-        std::unique_lock lock(m_mutex);
+        std::unique_lock const lock(m_mutex);
         SceneNode* node = findInSubtree(m_root.get(), id);
         if(node == nullptr) {
             return;
@@ -227,7 +227,7 @@ void SceneGraph::selectNode(NodeId id, bool append) {
 void SceneGraph::deselectNode(NodeId id) {
     bool changed = false;
     {
-        std::unique_lock lock(m_mutex);
+        std::unique_lock const lock(m_mutex);
         SceneNode* node = findInSubtree(m_root.get(), id);
         if(node == nullptr || !node->isSelected()) {
             return;
@@ -248,7 +248,7 @@ void SceneGraph::deselectNode(NodeId id) {
 void SceneGraph::clearSelection() {
     std::vector<NodeId> updated_nodes;
     {
-        std::unique_lock lock(m_mutex);
+        std::unique_lock const lock(m_mutex);
         visitAllNodes(m_root.get(), [&](SceneNode* node) {
             if(!node->isSelected()) {
                 return;
@@ -273,14 +273,14 @@ void SceneGraph::clearSelection() {
 }
 
 std::optional<NodeId> SceneGraph::hoveredNode() const {
-    std::shared_lock lock(m_mutex);
+    std::shared_lock const lock(m_mutex);
     return m_hoveredNode;
 }
 
 void SceneGraph::setHoveredNode(std::optional<NodeId> id) {
     std::vector<NodeId> updated_nodes;
     {
-        std::unique_lock lock(m_mutex);
+        std::unique_lock const lock(m_mutex);
         if(id == m_hoveredNode) {
             return;
         }
@@ -323,7 +323,7 @@ void SceneGraph::setHoveredNode(std::optional<NodeId> id) {
 
 BoundingBox3D SceneGraph::sceneBounds() const {
     BoundingBox3D bounds;
-    std::shared_lock lock(m_mutex);
+    std::shared_lock const lock(m_mutex);
     traverseVisibleImpl(m_root.get(),
                         [&](const SceneNode& node) { bounds.expand(node.worldBounds()); });
     return bounds;
@@ -338,7 +338,7 @@ std::unique_lock<std::shared_mutex> SceneGraph::writeLock() {
 }
 
 uint64_t SceneGraph::version() const {
-    std::shared_lock lock(m_mutex);
+    std::shared_lock const lock(m_mutex);
     return m_version;
 }
 
@@ -372,18 +372,18 @@ void SceneGraph::traverseVisibleImpl(const SceneNode* node, // NOLINT
 }
 
 void SceneGraph::traverseDirtyImpl(const SceneNode* node,
-                                   uint64_t sinceVersion,
+                                   uint64_t since_version,
                                    const std::function<void(const SceneNode&)>& visitor) const {
     if(node == nullptr) {
         return;
     }
 
-    if(node->version() > sinceVersion) {
+    if(node->version() > since_version) {
         visitor(*node);
     }
 
     for(const std::unique_ptr<SceneNode>& child : node->children()) {
-        traverseDirtyImpl(child.get(), sinceVersion, visitor);
+        traverseDirtyImpl(child.get(), since_version, visitor);
     }
 }
 

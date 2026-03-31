@@ -14,6 +14,7 @@
 
 namespace OpenGeoLab::Render {
 
+/** @brief Immutable per-frame state consumed by every render pass. */
 struct FrameState {
     glm::mat4 viewMatrix{1.0f};
     glm::mat4 projMatrix{1.0f};
@@ -24,8 +25,8 @@ struct FrameState {
     int viewportHeight{0};
 
     bool xRayMode{false};
-    Scene::DisplayModeMask displayMask{
-        Scene::DisplayModeMask::Surface | Scene::DisplayModeMask::Wireframe};
+    Scene::DisplayModeMask displayMask{Scene::DisplayModeMask::Surface |
+                                       Scene::DisplayModeMask::Wireframe};
 
     std::vector<Scene::DrawRange> selectedDrawRanges;
     std::vector<Scene::DrawRange> hoveredDrawRanges;

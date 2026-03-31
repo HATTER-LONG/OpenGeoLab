@@ -16,7 +16,7 @@
 
 namespace OpenGeoLab::Scene {
 class SceneGraph;
-}
+} // namespace OpenGeoLab::Scene
 
 namespace OpenGeoLab::App {
 
@@ -128,8 +128,8 @@ Q_SIGNALS:
     void pickingEnabledChanged();
     void pickModeChanged();
     void xRayModeChanged();
-    void entityPicked(int shapeId, int entityType, int localId);
-    void entityHovered(int shapeId, int entityType, int localId);
+    void entityPicked(int shape_id, int entity_type, int local_id);
+    void entityHovered(int shape_id, int entity_type, int local_id);
     void pickCleared();
 
 protected:

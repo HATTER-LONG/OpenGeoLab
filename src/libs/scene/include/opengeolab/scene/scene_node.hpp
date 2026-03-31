@@ -108,13 +108,13 @@ public:
      * @brief Remove and return a child by id.
      * @return The removed child, or nullptr if not found.
      */
-    std::unique_ptr<SceneNode> removeChild(NodeId childId);
+    std::unique_ptr<SceneNode> removeChild(NodeId child_id);
 
     /**
      * @brief Find a direct child by id.
      * @return Raw pointer to the child, or nullptr if not found.
      */
-    [[nodiscard]] SceneNode* findChild(NodeId childId) const;
+    [[nodiscard]] SceneNode* findChild(NodeId child_id) const;
 
     /** @brief Set local-space bounding box. */
     void setLocalBounds(const BoundingBox3D& bounds);

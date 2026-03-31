@@ -40,8 +40,8 @@ private:
 
 class ShapePickComponent final : public IPickComponent {
 public:
-    explicit ShapePickComponent(const ShapeRenderComponent* renderComponent)
-        : m_renderComponent(renderComponent) {}
+    explicit ShapePickComponent(const ShapeRenderComponent* render_component)
+        : m_renderComponent(render_component) {}
 
     [[nodiscard]] PickStrategy strategy() const override { return PickStrategy::Gpu; }
 
@@ -56,40 +56,40 @@ private:
     const ShapeRenderComponent* m_renderComponent;
 };
 
-[[nodiscard]] std::optional<DrawRange> makeRange(uint32_t shapeId,
+[[nodiscard]] std::optional<DrawRange> makeRange(uint32_t shape_id,
                                                  PrimitiveTopology topology,
-                                                 uint32_t vertexOffset,
-                                                 uint32_t vertexCount,
-                                                 uint32_t indexOffset,
-                                                 uint32_t indexCount,
+                                                 uint32_t vertex_offset,
+                                                 uint32_t vertex_count,
+                                                 uint32_t index_offset,
+                                                 uint32_t index_count,
                                                  const std::optional<Core::EntityTag>& tag) {
-    if(vertexCount == 0U) {
+    if(vertex_count == 0U) {
         return std::nullopt;
     }
 
     DrawRange range;
-    range.shapeId = shapeId;
+    range.shapeId = shape_id;
     range.entityType = tag.has_value() ? tag->type : Core::EntityType::SceneNode;
     range.localId = tag.has_value() ? tag->localId : 0U;
-    range.vertexOffset = vertexOffset;
-    range.vertexCount = vertexCount;
-    range.indexOffset = indexOffset;
-    range.indexCount = indexCount;
+    range.vertexOffset = vertex_offset;
+    range.vertexCount = vertex_count;
+    range.indexOffset = index_offset;
+    range.indexCount = index_count;
     range.topology = topology;
     return range;
 }
 
 void attachComponents(SceneGraph& scene,
                       SceneNode& node,
-                      uint32_t shapeId,
+                      uint32_t shape_id,
                       const Geometry::ShapeEntry& entry) {
-    RenderMeshData meshData = GeometrySceneBridge::buildRenderData(shapeId, entry);
-    node.setLocalBounds(meshData.bounds);
+    RenderMeshData mesh_data = GeometrySceneBridge::buildRenderData(shape_id, entry);
+    node.setLocalBounds(mesh_data.bounds);
 
-    auto renderComponent = std::make_unique<ShapeRenderComponent>(std::move(meshData));
-    ShapeRenderComponent* renderComponentPtr = renderComponent.get();
-    node.setRenderComponent(std::move(renderComponent));
-    node.setPickComponent(std::make_unique<ShapePickComponent>(renderComponentPtr));
+    auto render_component = std::make_unique<ShapeRenderComponent>(std::move(mesh_data));
+    ShapeRenderComponent const* render_component_ptr = render_component.get();
+    node.setRenderComponent(std::move(render_component));
+    node.setPickComponent(std::make_unique<ShapePickComponent>(render_component_ptr));
     node.markDirty();
     scene.nodeUpdated(node.id());
 }
@@ -98,23 +98,23 @@ void attachComponents(SceneGraph& scene,
 
 GeometrySceneBridge::GeometrySceneBridge(SceneGraph& scene,
                                          Geometry::ShapeStore& store,
-                                         TopologyIndex& topoIndex)
-    : m_scene(scene), m_store(store), m_topoIndex(topoIndex) {
+                                         TopologyIndex& topo_index)
+    : m_scene(scene), m_store(store), m_topoIndex(topo_index) {
     m_connections.push_back(
-        store.shapeAdded.connect([this](uint32_t shapeId, const Geometry::ShapeEntry& entry) {
-            onShapeAdded(shapeId, entry);
+        store.shapeAdded.connect([this](uint32_t shape_id, const Geometry::ShapeEntry& entry) {
+            onShapeAdded(shape_id, entry);
         }));
     m_connections.push_back(
-        store.shapeRemoved.connect([this](uint32_t shapeId) { onShapeRemoved(shapeId); }));
+        store.shapeRemoved.connect([this](uint32_t shape_id) { onShapeRemoved(shape_id); }));
     m_connections.push_back(
-        store.shapeUpdated.connect([this](uint32_t shapeId, const Geometry::ShapeEntry& entry) {
-            onShapeUpdated(shapeId, entry);
+        store.shapeUpdated.connect([this](uint32_t shape_id, const Geometry::ShapeEntry& entry) {
+            onShapeUpdated(shape_id, entry);
         }));
 }
 
 GeometrySceneBridge::~GeometrySceneBridge() = default;
 
-RenderMeshData GeometrySceneBridge::buildRenderData(uint32_t shapeId,
+RenderMeshData GeometrySceneBridge::buildRenderData(uint32_t shape_id,
                                                     const Geometry::ShapeEntry& entry) {
     RenderMeshData result;
     if(entry.visualData == nullptr) {
@@ -122,48 +122,48 @@ RenderMeshData GeometrySceneBridge::buildRenderData(uint32_t shapeId,
     }
 
     const Core::VisualData& visual = *entry.visualData;
-    const Core::RenderColor shapeColor = Core::colorForShapeId(shapeId);
-    uint32_t globalVertexOffset = 0;
-    uint32_t globalIndexOffset = 0;
-    std::size_t triangleTagIndex = 0;
-    std::size_t edgeTagIndex = 0;
-    std::size_t vertexTagIndex = 0;
+    const Core::RenderColor shape_color = Core::colorForShapeId(shape_id);
+    uint32_t global_vertex_offset = 0;
+    uint32_t global_index_offset = 0;
+    std::size_t triangle_tag_index = 0;
+    std::size_t edge_tag_index = 0;
+    std::size_t vertex_tag_index = 0;
 
     for(const Core::SurfaceMesh& surface : visual.surfaces) {
         assert(surface.positions.size() / 3U <= std::numeric_limits<uint32_t>::max());
         assert(surface.indices.size() <= std::numeric_limits<uint32_t>::max());
-        const uint32_t vertexCount = static_cast<uint32_t>(surface.positions.size() / 3U);
-        const uint32_t indexCount = static_cast<uint32_t>(surface.indices.size());
-        const uint32_t triangleCount = indexCount / 3U;
-        const bool hasColors = !surface.colors.empty();
-        const std::size_t pickOffset = result.pickIds.size();
-        const std::size_t rangeTagIndex = triangleTagIndex;
+        const uint32_t vertex_count = static_cast<uint32_t>(surface.positions.size() / 3U);
+        const uint32_t index_count = static_cast<uint32_t>(surface.indices.size());
+        const uint32_t triangle_count = index_count / 3U;
+        const bool has_colors = !surface.colors.empty();
+        const std::size_t pick_offset = result.pickIds.size();
+        const std::size_t range_tag_index = triangle_tag_index;
 
-        result.pickIds.insert(result.pickIds.end(), vertexCount, PickIdEntry{});
+        result.pickIds.insert(result.pickIds.end(), vertex_count, PickIdEntry{});
 
-        for(uint32_t vertexIndex = 0; vertexIndex < vertexCount; ++vertexIndex) {
+        for(uint32_t vertex_index = 0; vertex_index < vertex_count; ++vertex_index) {
             RenderVertex vertex;
-            vertex.position[0] = surface.positions[vertexIndex * 3U];
-            vertex.position[1] = surface.positions[vertexIndex * 3U + 1U];
-            vertex.position[2] = surface.positions[vertexIndex * 3U + 2U];
+            vertex.position[0] = surface.positions[vertex_index * 3U];
+            vertex.position[1] = surface.positions[vertex_index * 3U + 1U];
+            vertex.position[2] = surface.positions[vertex_index * 3U + 2U];
 
-            if(surface.normals.size() >= (static_cast<std::size_t>(vertexIndex) + 1U) * 3U) {
-                vertex.normal[0] = surface.normals[vertexIndex * 3U];
-                vertex.normal[1] = surface.normals[vertexIndex * 3U + 1U];
-                vertex.normal[2] = surface.normals[vertexIndex * 3U + 2U];
+            if(surface.normals.size() >= (static_cast<std::size_t>(vertex_index) + 1U) * 3U) {
+                vertex.normal[0] = surface.normals[vertex_index * 3U];
+                vertex.normal[1] = surface.normals[vertex_index * 3U + 1U];
+                vertex.normal[2] = surface.normals[vertex_index * 3U + 2U];
             }
 
-            if(hasColors &&
-               surface.colors.size() >= (static_cast<std::size_t>(vertexIndex) + 1U) * 4U) {
-                vertex.color[0] = surface.colors[vertexIndex * 4U];
-                vertex.color[1] = surface.colors[vertexIndex * 4U + 1U];
-                vertex.color[2] = surface.colors[vertexIndex * 4U + 2U];
-                vertex.color[3] = surface.colors[vertexIndex * 4U + 3U];
+            if(has_colors &&
+               surface.colors.size() >= (static_cast<std::size_t>(vertex_index) + 1U) * 4U) {
+                vertex.color[0] = surface.colors[vertex_index * 4U];
+                vertex.color[1] = surface.colors[vertex_index * 4U + 1U];
+                vertex.color[2] = surface.colors[vertex_index * 4U + 2U];
+                vertex.color[3] = surface.colors[vertex_index * 4U + 3U];
             } else {
-                vertex.color[0] = shapeColor.r;
-                vertex.color[1] = shapeColor.g;
-                vertex.color[2] = shapeColor.b;
-                vertex.color[3] = shapeColor.a;
+                vertex.color[0] = shape_color.r;
+                vertex.color[1] = shape_color.g;
+                vertex.color[2] = shape_color.b;
+                vertex.color[3] = shape_color.a;
             }
 
             result.bounds.expand(
@@ -171,57 +171,57 @@ RenderMeshData GeometrySceneBridge::buildRenderData(uint32_t shapeId,
             result.vertices.push_back(vertex);
         }
 
-        for(uint32_t triangleIndex = 0; triangleIndex < triangleCount; ++triangleIndex) {
-            uint64_t pickId = 0;
-            if(triangleTagIndex < entry.triangleTags.size()) {
-                const Core::EntityTag& tag = entry.triangleTags[triangleTagIndex];
-                pickId = PickId::encode(shapeId, tag.type, tag.localId);
+        for(uint32_t triangle_index = 0; triangle_index < triangle_count; ++triangle_index) {
+            uint64_t pick_id = 0;
+            if(triangle_tag_index < entry.triangleTags.size()) {
+                const Core::EntityTag& tag = entry.triangleTags[triangle_tag_index];
+                pick_id = PickId::encode(shape_id, tag.type, tag.localId);
             }
 
             for(uint32_t corner = 0; corner < 3U; ++corner) {
-                const uint32_t localVertexIndex = surface.indices[triangleIndex * 3U + corner];
-                if(localVertexIndex < vertexCount) {
-                    result.pickIds[pickOffset + localVertexIndex].pickId = pickId;
+                const uint32_t local_vertex_index = surface.indices[triangle_index * 3U + corner];
+                if(local_vertex_index < vertex_count) {
+                    result.pickIds[pick_offset + local_vertex_index].pickId = pick_id;
                 }
             }
 
-            ++triangleTagIndex;
+            ++triangle_tag_index;
         }
 
         for(const uint32_t index : surface.indices) {
-            result.indices.push_back(globalVertexOffset + index);
+            result.indices.push_back(global_vertex_offset + index);
         }
 
-        const std::optional<Core::EntityTag> firstTriangleTag =
-            rangeTagIndex < entry.triangleTags.size()
-                ? std::optional<Core::EntityTag>{entry.triangleTags[rangeTagIndex]}
+        const std::optional<Core::EntityTag> first_triangle_tag =
+            range_tag_index < entry.triangleTags.size()
+                ? std::optional<Core::EntityTag>{entry.triangleTags[range_tag_index]}
                 : std::nullopt;
         if(const auto range =
-               makeRange(shapeId, PrimitiveTopology::Triangles, globalVertexOffset, vertexCount,
-                         globalIndexOffset, indexCount, firstTriangleTag)) {
+               makeRange(shape_id, PrimitiveTopology::Triangles, global_vertex_offset, vertex_count,
+                         global_index_offset, index_count, first_triangle_tag)) {
             result.triangleRanges.push_back(*range);
         }
 
-        globalVertexOffset += vertexCount;
-        globalIndexOffset += indexCount;
+        global_vertex_offset += vertex_count;
+        global_index_offset += index_count;
     }
 
     for(const Core::EdgeMesh& edge : visual.edges) {
         assert(edge.positions.size() / 3U <= std::numeric_limits<uint32_t>::max());
         assert(edge.indices.size() <= std::numeric_limits<uint32_t>::max());
-        const uint32_t vertexCount = static_cast<uint32_t>(edge.positions.size() / 3U);
-        const uint32_t indexCount = static_cast<uint32_t>(edge.indices.size());
-        const uint32_t segmentCount = indexCount / 2U;
-        const std::size_t pickOffset = result.pickIds.size();
-        const std::size_t rangeTagIndex = edgeTagIndex;
+        const uint32_t vertex_count = static_cast<uint32_t>(edge.positions.size() / 3U);
+        const uint32_t index_count = static_cast<uint32_t>(edge.indices.size());
+        const uint32_t segment_count = index_count / 2U;
+        const std::size_t pick_offset = result.pickIds.size();
+        const std::size_t range_tag_index = edge_tag_index;
 
-        result.pickIds.insert(result.pickIds.end(), vertexCount, PickIdEntry{});
+        result.pickIds.insert(result.pickIds.end(), vertex_count, PickIdEntry{});
 
-        for(uint32_t vertexIndex = 0; vertexIndex < vertexCount; ++vertexIndex) {
+        for(uint32_t vertex_index = 0; vertex_index < vertex_count; ++vertex_index) {
             RenderVertex vertex;
-            vertex.position[0] = edge.positions[vertexIndex * 3U];
-            vertex.position[1] = edge.positions[vertexIndex * 3U + 1U];
-            vertex.position[2] = edge.positions[vertexIndex * 3U + 2U];
+            vertex.position[0] = edge.positions[vertex_index * 3U];
+            vertex.position[1] = edge.positions[vertex_index * 3U + 1U];
+            vertex.position[2] = edge.positions[vertex_index * 3U + 2U];
             vertex.color[0] = Core::K_EDGE_COLOR.r;
             vertex.color[1] = Core::K_EDGE_COLOR.g;
             vertex.color[2] = Core::K_EDGE_COLOR.b;
@@ -231,50 +231,51 @@ RenderMeshData GeometrySceneBridge::buildRenderData(uint32_t shapeId,
             result.vertices.push_back(vertex);
         }
 
-        for(uint32_t segmentIndex = 0; segmentIndex < segmentCount; ++segmentIndex) {
-            uint64_t pickId = 0;
-            if(edgeTagIndex < entry.edgeTags.size()) {
-                const Core::EntityTag& tag = entry.edgeTags[edgeTagIndex];
-                pickId = PickId::encode(shapeId, tag.type, tag.localId);
+        for(uint32_t segment_index = 0; segment_index < segment_count; ++segment_index) {
+            uint64_t pick_id = 0;
+            if(edge_tag_index < entry.edgeTags.size()) {
+                const Core::EntityTag& tag = entry.edgeTags[edge_tag_index];
+                pick_id = PickId::encode(shape_id, tag.type, tag.localId);
             }
 
             for(uint32_t endpoint = 0; endpoint < 2U; ++endpoint) {
-                const uint32_t localVertexIndex = edge.indices[segmentIndex * 2U + endpoint];
-                if(localVertexIndex < vertexCount) {
-                    result.pickIds[pickOffset + localVertexIndex].pickId = pickId;
+                const uint32_t local_vertex_index = edge.indices[segment_index * 2U + endpoint];
+                if(local_vertex_index < vertex_count) {
+                    result.pickIds[pick_offset + local_vertex_index].pickId = pick_id;
                 }
             }
 
-            ++edgeTagIndex;
+            ++edge_tag_index;
         }
 
         for(const uint32_t index : edge.indices) {
-            result.indices.push_back(globalVertexOffset + index);
+            result.indices.push_back(global_vertex_offset + index);
         }
 
-        const std::optional<Core::EntityTag> firstEdgeTag =
-            rangeTagIndex < entry.edgeTags.size()
-                ? std::optional<Core::EntityTag>{entry.edgeTags[rangeTagIndex]}
+        const std::optional<Core::EntityTag> first_edge_tag =
+            range_tag_index < entry.edgeTags.size()
+                ? std::optional<Core::EntityTag>{entry.edgeTags[range_tag_index]}
                 : std::nullopt;
-        if(const auto range = makeRange(shapeId, PrimitiveTopology::Lines, globalVertexOffset,
-                                        vertexCount, globalIndexOffset, indexCount, firstEdgeTag)) {
+        if(const auto range =
+               makeRange(shape_id, PrimitiveTopology::Lines, global_vertex_offset, vertex_count,
+                         global_index_offset, index_count, first_edge_tag)) {
             result.lineRanges.push_back(*range);
         }
 
-        globalVertexOffset += vertexCount;
-        globalIndexOffset += indexCount;
+        global_vertex_offset += vertex_count;
+        global_index_offset += index_count;
     }
 
-    for(const Core::PointSet& pointSet : visual.points) {
-        assert(pointSet.positions.size() / 3U <= std::numeric_limits<uint32_t>::max());
-        const uint32_t vertexCount = static_cast<uint32_t>(pointSet.positions.size() / 3U);
-        const std::size_t rangeTagIndex = vertexTagIndex;
+    for(const Core::PointSet& point_set : visual.points) {
+        assert(point_set.positions.size() / 3U <= std::numeric_limits<uint32_t>::max());
+        const uint32_t vertex_count = static_cast<uint32_t>(point_set.positions.size() / 3U);
+        const std::size_t range_tag_index = vertex_tag_index;
 
-        for(uint32_t vertexIndex = 0; vertexIndex < vertexCount; ++vertexIndex) {
+        for(uint32_t vertex_index = 0; vertex_index < vertex_count; ++vertex_index) {
             RenderVertex vertex;
-            vertex.position[0] = pointSet.positions[vertexIndex * 3U];
-            vertex.position[1] = pointSet.positions[vertexIndex * 3U + 1U];
-            vertex.position[2] = pointSet.positions[vertexIndex * 3U + 2U];
+            vertex.position[0] = point_set.positions[vertex_index * 3U];
+            vertex.position[1] = point_set.positions[vertex_index * 3U + 1U];
+            vertex.position[2] = point_set.positions[vertex_index * 3U + 2U];
             vertex.color[0] = Core::K_VERTEX_COLOR.r;
             vertex.color[1] = Core::K_VERTEX_COLOR.g;
             vertex.color[2] = Core::K_VERTEX_COLOR.b;
@@ -283,34 +284,34 @@ RenderMeshData GeometrySceneBridge::buildRenderData(uint32_t shapeId,
                 glm::vec3{vertex.position[0], vertex.position[1], vertex.position[2]});
             result.vertices.push_back(vertex);
 
-            uint64_t pickId = 0;
-            if(vertexTagIndex < entry.vertexTags.size()) {
-                const Core::EntityTag& tag = entry.vertexTags[vertexTagIndex];
-                pickId = PickId::encode(shapeId, tag.type, tag.localId);
+            uint64_t pick_id = 0;
+            if(vertex_tag_index < entry.vertexTags.size()) {
+                const Core::EntityTag& tag = entry.vertexTags[vertex_tag_index];
+                pick_id = PickId::encode(shape_id, tag.type, tag.localId);
             }
-            result.pickIds.push_back(PickIdEntry{pickId});
-            ++vertexTagIndex;
+            result.pickIds.push_back(PickIdEntry{pick_id});
+            ++vertex_tag_index;
         }
 
-        const std::optional<Core::EntityTag> firstVertexTag =
-            rangeTagIndex < entry.vertexTags.size()
-                ? std::optional<Core::EntityTag>{entry.vertexTags[rangeTagIndex]}
+        const std::optional<Core::EntityTag> first_vertex_tag =
+            range_tag_index < entry.vertexTags.size()
+                ? std::optional<Core::EntityTag>{entry.vertexTags[range_tag_index]}
                 : std::nullopt;
-        if(const auto range = makeRange(shapeId, PrimitiveTopology::Points, globalVertexOffset,
-                                        vertexCount, 0U, 0U, firstVertexTag)) {
+        if(const auto range = makeRange(shape_id, PrimitiveTopology::Points, global_vertex_offset,
+                                        vertex_count, 0U, 0U, first_vertex_tag)) {
             result.pointRanges.push_back(*range);
         }
 
-        globalVertexOffset += vertexCount;
+        global_vertex_offset += vertex_count;
     }
 
     assert(result.pickIds.size() == result.vertices.size());
     return result;
 }
 
-void GeometrySceneBridge::onShapeAdded(uint32_t shapeId, const Geometry::ShapeEntry& entry) {
-    m_topoIndex.buildForShape(shapeId, entry);
-    if(entry.visualData == nullptr || m_shapeToNode.contains(shapeId)) {
+void GeometrySceneBridge::onShapeAdded(uint32_t shape_id, const Geometry::ShapeEntry& entry) {
+    m_topoIndex.buildForShape(shape_id, entry);
+    if(entry.visualData == nullptr || m_shapeToNode.contains(shape_id)) {
         return;
     }
 
@@ -319,25 +320,25 @@ void GeometrySceneBridge::onShapeAdded(uint32_t shapeId, const Geometry::ShapeEn
         return;
     }
 
-    m_shapeToNode[shapeId] = node->id();
-    node->setSource("geometry", shapeId);
-    attachComponents(m_scene, *node, shapeId, entry);
+    m_shapeToNode[shape_id] = node->id();
+    node->setSource("geometry", shape_id);
+    attachComponents(m_scene, *node, shape_id, entry);
 }
 
-void GeometrySceneBridge::onShapeRemoved(uint32_t shapeId) {
-    if(const auto iterator = m_shapeToNode.find(shapeId); iterator != m_shapeToNode.end()) {
+void GeometrySceneBridge::onShapeRemoved(uint32_t shape_id) {
+    if(const auto iterator = m_shapeToNode.find(shape_id); iterator != m_shapeToNode.end()) {
         m_scene.removeNode(iterator->second);
         m_shapeToNode.erase(iterator);
     }
 
-    m_topoIndex.removeShape(shapeId);
+    m_topoIndex.removeShape(shape_id);
 }
 
-void GeometrySceneBridge::onShapeUpdated(uint32_t shapeId, const Geometry::ShapeEntry& entry) {
-    m_topoIndex.buildForShape(shapeId, entry);
+void GeometrySceneBridge::onShapeUpdated(uint32_t shape_id, const Geometry::ShapeEntry& entry) {
+    m_topoIndex.buildForShape(shape_id, entry);
 
     SceneNode* node = nullptr;
-    if(const auto iterator = m_shapeToNode.find(shapeId); iterator != m_shapeToNode.end()) {
+    if(const auto iterator = m_shapeToNode.find(shape_id); iterator != m_shapeToNode.end()) {
         node = m_scene.findNode(iterator->second);
         if(node == nullptr) {
             m_shapeToNode.erase(iterator);
@@ -353,9 +354,9 @@ void GeometrySceneBridge::onShapeUpdated(uint32_t shapeId, const Geometry::Shape
         if(node == nullptr) {
             return;
         }
-        m_shapeToNode[shapeId] = node->id();
-        node->setSource("geometry", shapeId);
-        attachComponents(m_scene, *node, shapeId, entry);
+        m_shapeToNode[shape_id] = node->id();
+        node->setSource("geometry", shape_id);
+        attachComponents(m_scene, *node, shape_id, entry);
         return;
     }
 
@@ -366,24 +367,24 @@ void GeometrySceneBridge::onShapeUpdated(uint32_t shapeId, const Geometry::Shape
         return;
     }
 
-    RenderMeshData meshData = buildRenderData(shapeId, entry);
-    node->setLocalBounds(meshData.bounds);
+    RenderMeshData mesh_data = buildRenderData(shape_id, entry);
+    node->setLocalBounds(mesh_data.bounds);
 
-    if(auto* renderComponent = dynamic_cast<ShapeRenderComponent*>(node->renderComponent());
-       renderComponent != nullptr) {
-        renderComponent->updateData(std::move(meshData));
+    if(auto* render_component = dynamic_cast<ShapeRenderComponent*>(node->renderComponent());
+       render_component != nullptr) {
+        render_component->updateData(std::move(mesh_data));
     } else {
-        auto newRenderComponent = std::make_unique<ShapeRenderComponent>(std::move(meshData));
-        ShapeRenderComponent* renderComponentPtr = newRenderComponent.get();
+        auto new_render_component = std::make_unique<ShapeRenderComponent>(std::move(mesh_data));
+        ShapeRenderComponent const* render_component_ptr = new_render_component.get();
         node->setPickComponent(nullptr); // clear before destroying old render to avoid dangling ref
-        node->setRenderComponent(std::move(newRenderComponent));
-        node->setPickComponent(std::make_unique<ShapePickComponent>(renderComponentPtr));
+        node->setRenderComponent(std::move(new_render_component));
+        node->setPickComponent(std::make_unique<ShapePickComponent>(render_component_ptr));
     }
 
     if(node->pickComponent() == nullptr) {
-        if(auto* renderComponent = dynamic_cast<ShapeRenderComponent*>(node->renderComponent());
-           renderComponent != nullptr) {
-            node->setPickComponent(std::make_unique<ShapePickComponent>(renderComponent));
+        if(auto* render_component = dynamic_cast<ShapeRenderComponent*>(node->renderComponent());
+           render_component != nullptr) {
+            node->setPickComponent(std::make_unique<ShapePickComponent>(render_component));
         }
     }
 

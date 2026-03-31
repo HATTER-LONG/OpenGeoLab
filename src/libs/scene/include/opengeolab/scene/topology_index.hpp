@@ -39,31 +39,35 @@ public:
      * @param shapeId Top-level shape identifier
      * @param entry ShapeEntry containing the TopoDS_Shape and sub-shape maps
      */
-    void buildForShape(uint32_t shapeId, const Geometry::ShapeEntry& entry);
+    void buildForShape(uint32_t shape_id, const Geometry::ShapeEntry& entry);
 
     /**
      * @brief Remove all topology data for a shape.
      */
-    void removeShape(uint32_t shapeId);
+    void removeShape(uint32_t shape_id);
 
     // ── Forward lookups (child → parent) ──
 
     /** @brief Find the wire containing an edge. */
-    [[nodiscard]] std::optional<uint32_t> edgeToWire(uint32_t shapeId, uint32_t edgeLocalId) const;
+    [[nodiscard]] std::optional<uint32_t> edgeToWire(uint32_t shape_id,
+                                                     uint32_t edge_local_id) const;
 
     /** @brief Find the face containing a wire. */
-    [[nodiscard]] std::optional<uint32_t> wireToFace(uint32_t shapeId, uint32_t wireLocalId) const;
+    [[nodiscard]] std::optional<uint32_t> wireToFace(uint32_t shape_id,
+                                                     uint32_t wire_local_id) const;
 
     /** @brief Find the solid containing a face. */
-    [[nodiscard]] std::optional<uint32_t> faceToSolid(uint32_t shapeId, uint32_t faceLocalId) const;
+    [[nodiscard]] std::optional<uint32_t> faceToSolid(uint32_t shape_id,
+                                                      uint32_t face_local_id) const;
 
     // ── Reverse lookups (parent → children) ──
 
     /** @brief Get all edges belonging to a wire. */
-    [[nodiscard]] std::vector<uint32_t> wireEdges(uint32_t shapeId, uint32_t wireLocalId) const;
+    [[nodiscard]] std::vector<uint32_t> wireEdges(uint32_t shape_id, uint32_t wire_local_id) const;
 
     /** @brief Get all faces belonging to a solid. */
-    [[nodiscard]] std::vector<uint32_t> solidFaces(uint32_t shapeId, uint32_t solidLocalId) const;
+    [[nodiscard]] std::vector<uint32_t> solidFaces(uint32_t shape_id,
+                                                   uint32_t solid_local_id) const;
 
 private:
     /** @brief Per-shape topology relations. */

@@ -18,10 +18,10 @@ namespace OpenGeoLab::Render {
  * the raw RG32UI pick-id texture value through PickResolver.
  */
 struct PickResult {
-    uint32_t shapeId{0};            /**< Scene node (shape) identifier. */
-    Core::EntityType entityType{};  /**< Topological entity kind. */
-    uint32_t localId{0};            /**< Sub-entity index within the shape. */
-    bool valid{false};              /**< True when the result carries a real hit. */
+    uint32_t shapeId{0};           /**< Scene node (shape) identifier. */
+    Core::EntityType entityType{}; /**< Topological entity kind. */
+    uint32_t localId{0};           /**< Sub-entity index within the shape. */
+    bool valid{false};             /**< True when the result carries a real hit. */
 };
 
 } // namespace OpenGeoLab::Render

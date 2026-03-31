@@ -42,77 +42,78 @@ void GpuBufferManager::cleanup() {
 }
 
 void GpuBufferManager::synchronize(const Scene::SceneGraph& scene) {
-    const uint64_t sceneVer = scene.version();
-    if(sceneVer == m_uploadedVersion) {
+    const uint64_t scene_ver = scene.version();
+    if(scene_ver == m_uploadedVersion) {
         return;
     }
 
     rebuildBuffers(scene);
-    m_uploadedVersion = sceneVer;
+    m_uploadedVersion = scene_ver;
 }
 
 void GpuBufferManager::rebuildBuffers(const Scene::SceneGraph& scene) {
-    std::vector<Scene::RenderVertex> allVertices;
-    std::vector<Scene::PickIdEntry> allPickIds;
-    std::vector<uint32_t> allIndices;
+    std::vector<Scene::RenderVertex> all_vertices;
+    std::vector<Scene::PickIdEntry> all_pick_ids;
+    std::vector<uint32_t> all_indices;
 
     m_triangleRanges.clear();
     m_lineRanges.clear();
     m_pointRanges.clear();
 
     scene.traverseVisible([&](const Scene::SceneNode& node) {
-        const Scene::IRenderComponent* const renderComponent = node.renderComponent();
-        if(renderComponent == nullptr) {
+        const Scene::IRenderComponent* const render_component = node.renderComponent();
+        if(render_component == nullptr) {
             return;
         }
 
-        const auto& meshData = renderComponent->meshData();
-        if(meshData.vertices.empty()) {
+        const auto& mesh_data = render_component->meshData();
+        if(mesh_data.vertices.empty()) {
             return;
         }
 
-        const auto vertexBase = static_cast<uint32_t>(allVertices.size());
-        const auto indexBase = static_cast<uint32_t>(allIndices.size());
+        const auto vertex_base = static_cast<uint32_t>(all_vertices.size());
+        const auto index_base = static_cast<uint32_t>(all_indices.size());
 
-        allVertices.insert(allVertices.end(), meshData.vertices.begin(), meshData.vertices.end());
-        allPickIds.insert(allPickIds.end(), meshData.pickIds.begin(), meshData.pickIds.end());
+        all_vertices.insert(all_vertices.end(), mesh_data.vertices.begin(),
+                            mesh_data.vertices.end());
+        all_pick_ids.insert(all_pick_ids.end(), mesh_data.pickIds.begin(), mesh_data.pickIds.end());
 
-        for(const uint32_t index : meshData.indices) {
-            allIndices.push_back(index + vertexBase);
+        for(const uint32_t index : mesh_data.indices) {
+            all_indices.push_back(index + vertex_base);
         }
 
-        const auto adjustAndAppend = [&](const std::vector<Scene::DrawRange>& source,
-                                         std::vector<Scene::DrawRange>& destination) {
+        const auto adjust_and_append = [&](const std::vector<Scene::DrawRange>& source,
+                                           std::vector<Scene::DrawRange>& destination) {
             for(auto range : source) {
-                range.vertexOffset += vertexBase;
-                range.indexOffset += indexBase;
+                range.vertexOffset += vertex_base;
+                range.indexOffset += index_base;
                 destination.push_back(range);
             }
         };
 
-        adjustAndAppend(meshData.triangleRanges, m_triangleRanges);
-        adjustAndAppend(meshData.lineRanges, m_lineRanges);
-        adjustAndAppend(meshData.pointRanges, m_pointRanges);
+        adjust_and_append(mesh_data.triangleRanges, m_triangleRanges);
+        adjust_and_append(mesh_data.lineRanges, m_lineRanges);
+        adjust_and_append(mesh_data.pointRanges, m_pointRanges);
     });
 
-    m_hasData = !allVertices.empty();
+    m_hasData = !all_vertices.empty();
     if(!m_hasData) {
         return;
     }
 
     glBindBuffer(GL_ARRAY_BUFFER, m_mainVbo);
     glBufferData(GL_ARRAY_BUFFER,
-                 static_cast<GLsizeiptr>(allVertices.size() * sizeof(Scene::RenderVertex)),
-                 allVertices.data(), GL_STATIC_DRAW);
+                 static_cast<GLsizeiptr>(all_vertices.size() * sizeof(Scene::RenderVertex)),
+                 all_vertices.data(), GL_STATIC_DRAW);
 
     glBindBuffer(GL_ARRAY_BUFFER, m_pickVbo);
     glBufferData(GL_ARRAY_BUFFER,
-                 static_cast<GLsizeiptr>(allPickIds.size() * sizeof(Scene::PickIdEntry)),
-                 allPickIds.data(), GL_STATIC_DRAW);
+                 static_cast<GLsizeiptr>(all_pick_ids.size() * sizeof(Scene::PickIdEntry)),
+                 all_pick_ids.data(), GL_STATIC_DRAW);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                 static_cast<GLsizeiptr>(allIndices.size() * sizeof(uint32_t)), allIndices.data(),
+                 static_cast<GLsizeiptr>(all_indices.size() * sizeof(uint32_t)), all_indices.data(),
                  GL_STATIC_DRAW);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -123,20 +124,21 @@ void GpuBufferManager::rebuildBuffers(const Scene::SceneGraph& scene) {
 }
 
 void GpuBufferManager::setupMainVao() {
-    constexpr GLsizei kMainStride = sizeof(Scene::RenderVertex);
+    constexpr GLsizei k_main_stride = sizeof(Scene::RenderVertex);
 
     glBindVertexArray(m_mainVao);
     glBindBuffer(GL_ARRAY_BUFFER, m_mainVbo);
 
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, kMainStride, reinterpret_cast<const void*>(0));
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, k_main_stride,
+                          reinterpret_cast<const void*>(0));
 
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, kMainStride,
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, k_main_stride,
                           reinterpret_cast<const void*>(3 * sizeof(float)));
 
     glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, kMainStride,
+    glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, k_main_stride,
                           reinterpret_cast<const void*>(6 * sizeof(float)));
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
@@ -144,18 +146,19 @@ void GpuBufferManager::setupMainVao() {
 }
 
 void GpuBufferManager::setupPickVao() {
-    constexpr GLsizei kMainStride = sizeof(Scene::RenderVertex);
-    constexpr GLsizei kPickStride = sizeof(Scene::PickIdEntry);
+    constexpr GLsizei k_main_stride = sizeof(Scene::RenderVertex);
+    constexpr GLsizei k_pick_stride = sizeof(Scene::PickIdEntry);
 
     glBindVertexArray(m_pickVao);
 
     glBindBuffer(GL_ARRAY_BUFFER, m_mainVbo);
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, kMainStride, reinterpret_cast<const void*>(0));
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, k_main_stride,
+                          reinterpret_cast<const void*>(0));
 
     glBindBuffer(GL_ARRAY_BUFFER, m_pickVbo);
     glEnableVertexAttribArray(1);
-    glVertexAttribIPointer(1, 2, GL_UNSIGNED_INT, kPickStride, reinterpret_cast<const void*>(0));
+    glVertexAttribIPointer(1, 2, GL_UNSIGNED_INT, k_pick_stride, reinterpret_cast<const void*>(0));
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
     glBindVertexArray(0);

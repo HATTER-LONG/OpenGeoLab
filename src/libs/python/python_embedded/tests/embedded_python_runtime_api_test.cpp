@@ -11,7 +11,7 @@ namespace OpenGeoLab::PythonEmbed::Tests {
 
 static_assert(std::is_same_v<ProgressCallback, Core::ProgressCallback>);
 
-static_assert(requires(EmbeddedPythonRuntime & runtime,
+static_assert(requires(EmbeddedPythonRuntime& runtime,
                        std::string_view request_json,
                        ProgressCallback progress_callback) {
     { runtime.process(request_json) } -> std::same_as<std::string>;

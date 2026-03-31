@@ -12,7 +12,7 @@
 
 namespace OpenGeoLab::Command {
 class CommandDispatcher;
-}
+} // namespace OpenGeoLab::Command
 
 namespace OpenGeoLab::App {
 

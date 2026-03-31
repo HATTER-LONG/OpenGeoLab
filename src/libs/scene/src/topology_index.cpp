@@ -34,7 +34,7 @@ template <typename MapType> std::vector<uint32_t> lookupVector(const MapType& ma
 
 } // namespace
 
-void TopologyIndex::buildForShape(uint32_t shapeId, const Geometry::ShapeEntry& entry) {
+void TopologyIndex::buildForShape(uint32_t shape_id, const Geometry::ShapeEntry& entry) {
     ShapeRelations relations;
 
     for(TopExp_Explorer wire_explorer(entry.shape, TopAbs_WIRE); wire_explorer.More();
@@ -109,54 +109,55 @@ void TopologyIndex::buildForShape(uint32_t shapeId, const Geometry::ShapeEntry& 
         }
     }
 
-    m_relations[shapeId] = std::move(relations);
+    m_relations[shape_id] = std::move(relations);
 }
 
-void TopologyIndex::removeShape(uint32_t shapeId) { m_relations.erase(shapeId); }
+void TopologyIndex::removeShape(uint32_t shape_id) { m_relations.erase(shape_id); }
 
-std::optional<uint32_t> TopologyIndex::edgeToWire(uint32_t shapeId, uint32_t edgeLocalId) const {
-    const auto shape_iterator = m_relations.find(shapeId);
+std::optional<uint32_t> TopologyIndex::edgeToWire(uint32_t shape_id, uint32_t edge_local_id) const {
+    const auto shape_iterator = m_relations.find(shape_id);
     if(shape_iterator == m_relations.end()) {
         return std::nullopt;
     }
 
-    return lookupValue(shape_iterator->second.edgeToWireMap, edgeLocalId);
+    return lookupValue(shape_iterator->second.edgeToWireMap, edge_local_id);
 }
 
-std::optional<uint32_t> TopologyIndex::wireToFace(uint32_t shapeId, uint32_t wireLocalId) const {
-    const auto shape_iterator = m_relations.find(shapeId);
+std::optional<uint32_t> TopologyIndex::wireToFace(uint32_t shape_id, uint32_t wire_local_id) const {
+    const auto shape_iterator = m_relations.find(shape_id);
     if(shape_iterator == m_relations.end()) {
         return std::nullopt;
     }
 
-    return lookupValue(shape_iterator->second.wireToFaceMap, wireLocalId);
+    return lookupValue(shape_iterator->second.wireToFaceMap, wire_local_id);
 }
 
-std::optional<uint32_t> TopologyIndex::faceToSolid(uint32_t shapeId, uint32_t faceLocalId) const {
-    const auto shape_iterator = m_relations.find(shapeId);
+std::optional<uint32_t> TopologyIndex::faceToSolid(uint32_t shape_id,
+                                                   uint32_t face_local_id) const {
+    const auto shape_iterator = m_relations.find(shape_id);
     if(shape_iterator == m_relations.end()) {
         return std::nullopt;
     }
 
-    return lookupValue(shape_iterator->second.faceToSolidMap, faceLocalId);
+    return lookupValue(shape_iterator->second.faceToSolidMap, face_local_id);
 }
 
-std::vector<uint32_t> TopologyIndex::wireEdges(uint32_t shapeId, uint32_t wireLocalId) const {
-    const auto shape_iterator = m_relations.find(shapeId);
+std::vector<uint32_t> TopologyIndex::wireEdges(uint32_t shape_id, uint32_t wire_local_id) const {
+    const auto shape_iterator = m_relations.find(shape_id);
     if(shape_iterator == m_relations.end()) {
         return {};
     }
 
-    return lookupVector(shape_iterator->second.wireEdgesMap, wireLocalId);
+    return lookupVector(shape_iterator->second.wireEdgesMap, wire_local_id);
 }
 
-std::vector<uint32_t> TopologyIndex::solidFaces(uint32_t shapeId, uint32_t solidLocalId) const {
-    const auto shape_iterator = m_relations.find(shapeId);
+std::vector<uint32_t> TopologyIndex::solidFaces(uint32_t shape_id, uint32_t solid_local_id) const {
+    const auto shape_iterator = m_relations.find(shape_id);
     if(shape_iterator == m_relations.end()) {
         return {};
     }
 
-    return lookupVector(shape_iterator->second.solidFacesMap, solidLocalId);
+    return lookupVector(shape_iterator->second.solidFacesMap, solid_local_id);
 }
 
 } // namespace OpenGeoLab::Scene

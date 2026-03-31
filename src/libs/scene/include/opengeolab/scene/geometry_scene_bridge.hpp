@@ -42,7 +42,7 @@ public:
      * @param store ShapeStore to observe
      * @param topoIndex TopologyIndex to maintain
      */
-    GeometrySceneBridge(SceneGraph& scene, Geometry::ShapeStore& store, TopologyIndex& topoIndex);
+    GeometrySceneBridge(SceneGraph& scene, Geometry::ShapeStore& store, TopologyIndex& topo_index);
 
     ~GeometrySceneBridge();
 
@@ -57,13 +57,13 @@ public:
      * Converts SurfaceMesh → triangle DrawRanges + RenderVertex/PickIdEntry,
      * EdgeMesh → line DrawRanges, PointSet → point DrawRanges.
      */
-    [[nodiscard]] static RenderMeshData buildRenderData(uint32_t shapeId,
+    [[nodiscard]] static RenderMeshData buildRenderData(uint32_t shape_id,
                                                         const Geometry::ShapeEntry& entry);
 
 private:
-    void onShapeAdded(uint32_t shapeId, const Geometry::ShapeEntry& entry);
-    void onShapeRemoved(uint32_t shapeId);
-    void onShapeUpdated(uint32_t shapeId, const Geometry::ShapeEntry& entry);
+    void onShapeAdded(uint32_t shape_id, const Geometry::ShapeEntry& entry);
+    void onShapeRemoved(uint32_t shape_id);
+    void onShapeUpdated(uint32_t shape_id, const Geometry::ShapeEntry& entry);
 
     SceneGraph& m_scene;
     Geometry::ShapeStore& m_store;

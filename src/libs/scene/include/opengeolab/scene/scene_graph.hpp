@@ -54,7 +54,7 @@ public:
      * @param parentId Parent node id (0 = root).
      * @return Pointer to new node, or nullptr if parentId not found.
      */
-    SceneNode* addNode(std::string name, NodeId parentId = 0);
+    SceneNode* addNode(std::string name, NodeId parent_id = 0);
 
     /**
      * @brief Remove a node and all its descendants.
@@ -74,7 +74,7 @@ public:
      * @param srcId Source-domain identifier (e.g. shapeId).
      * @return Pointer to node, or nullptr if not found.
      */
-    [[nodiscard]] SceneNode* findNodeBySource(std::string_view type, uint32_t srcId) const;
+    [[nodiscard]] SceneNode* findNodeBySource(std::string_view type, uint32_t src_id) const;
 
     /**
      * @brief Set visibility of a node by id (thread-safe find+modify).
@@ -98,7 +98,7 @@ public:
     /**
      * @brief Visit nodes whose version > sinceVersion.
      */
-    void traverseDirty(uint64_t sinceVersion, std::function<void(const SceneNode&)> visitor) const;
+    void traverseDirty(uint64_t since_version, std::function<void(const SceneNode&)> visitor) const;
 
     /** @brief Get IDs of all selected nodes. */
     [[nodiscard]] std::vector<NodeId> selectedNodes() const;
@@ -149,7 +149,7 @@ private:
 
     /** @brief Recursive helper for dirty traversal. */
     void traverseDirtyImpl(const SceneNode* node,
-                           uint64_t sinceVersion,
+                           uint64_t since_version,
                            const std::function<void(const SceneNode&)>& visitor) const;
 
     std::unique_ptr<SceneNode> m_root;
