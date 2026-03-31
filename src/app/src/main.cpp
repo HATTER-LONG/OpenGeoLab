@@ -74,8 +74,7 @@ int main(int argc, char* argv[]) {
 
     // ── Scene infrastructure ──────────────────────────────────────────
     auto scene_module_ptr = dispatcher.findModule("scene");
-    auto* scene_module =
-        dynamic_cast<OpenGeoLab::Scene::SceneModule*>(scene_module_ptr.get());
+    auto* scene_module = dynamic_cast<OpenGeoLab::Scene::SceneModule*>(scene_module_ptr.get());
 
     OpenGeoLab::Scene::TopologyIndex topology_index;
 
@@ -112,8 +111,7 @@ int main(int argc, char* argv[]) {
     }
 
     // ── Wire GLViewport to the SceneGraph ─────────────────────────────
-    auto* viewport =
-        engine.rootObjects().first()->findChild<OpenGeoLab::App::GLViewport*>();
+    auto* viewport = engine.rootObjects().first()->findChild<OpenGeoLab::App::GLViewport*>();
     if(viewport != nullptr && scene_module != nullptr) {
         viewport->setSceneGraph(&scene_module->sceneGraph());
 
@@ -121,9 +119,8 @@ int main(int argc, char* argv[]) {
                          &OpenGeoLab::App::ModuleDataNotifier::geometryDataChanged, viewport,
                          [viewport]() { viewport->update(); });
 
-        QObject::connect(&module_notifier,
-                         &OpenGeoLab::App::ModuleDataNotifier::sceneDataChanged, viewport,
-                         [viewport]() { viewport->update(); });
+        QObject::connect(&module_notifier, &OpenGeoLab::App::ModuleDataNotifier::sceneDataChanged,
+                         viewport, [viewport]() { viewport->update(); });
     }
 
     // Release GIL before entering the event loop. EmbeddedPythonRuntime::process()

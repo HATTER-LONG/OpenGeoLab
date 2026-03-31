@@ -19,12 +19,12 @@ nlohmann::json ListNodesAction::describe() const {
         {"description", "List all scene nodes with visibility state."},
         {"params", nlohmann::json::object()},
         {"returns",
-         {{"ok", {{"type", "boolean"}, {"description", "true when the action completes successfully."}}},
+         {{"ok",
+           {{"type", "boolean"}, {"description", "true when the action completes successfully."}}},
           {"action", {{"type", "string"}, {"description", "Echo of the action name."}}},
           {"nodes",
            {{"type", "array"},
-            {"description",
-             "Array of {nodeId, name, visible, parentId} objects."}}}}}};
+            {"description", "Array of {nodeId, name, visible, parentId} objects."}}}}}};
 }
 
 nlohmann::json ListNodesAction::execute(const nlohmann::json& /*param*/,

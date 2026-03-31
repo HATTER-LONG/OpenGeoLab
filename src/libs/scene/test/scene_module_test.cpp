@@ -197,8 +197,8 @@ TEST_SUITE("ListNodesAction") {
 
 } // namespace OpenGeoLab::Scene::Tests
 
-#include <opengeolab/scene/scene_module.hpp>
 #include <opengeolab/core/module_data_event.hpp>
+#include <opengeolab/scene/scene_module.hpp>
 
 #include <kangaroo/util/plugin_component_factory.hpp>
 
@@ -246,8 +246,7 @@ TEST_SUITE("SceneModule") {
         module.sceneGraph().addNode("A");
         module.sceneGraph().addNode("B");
 
-        nlohmann::json request = {{"action", "list_nodes"},
-                                  {"param", nlohmann::json::object()}};
+        nlohmann::json request = {{"action", "list_nodes"}, {"param", nlohmann::json::object()}};
         auto result = module.process(request, nullptr);
 
         CHECK(result["ok"] == true);
@@ -261,8 +260,7 @@ TEST_SUITE("SceneModule") {
         auto* node = module.sceneGraph().addNode("Box");
 
         int signal_count = 0;
-        auto conn =
-            module.dataChanged.connect([&](Core::ModuleDataEvent) { ++signal_count; });
+        auto conn = module.dataChanged.connect([&](Core::ModuleDataEvent) { ++signal_count; });
 
         signal_count = 0;
 

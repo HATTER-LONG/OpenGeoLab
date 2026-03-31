@@ -36,8 +36,8 @@ void registerBuiltinModules(Kangaroo::Util::PluginComponentFactory& factory) {
         LOG_INFO("Registered module '{}'", Geometry::GeometryModule::MODULE_NAME);
     }
     if(!is_registered(Scene::SceneModule::MODULE_NAME)) {
-        factory.bindSingleton<Core::ModuleBase, Scene::SceneModule>(
-            Scene::SceneModule::MODULE_NAME, std::ref(factory));
+        factory.bindSingleton<Core::ModuleBase, Scene::SceneModule>(Scene::SceneModule::MODULE_NAME,
+                                                                    std::ref(factory));
         LOG_INFO("Registered module '{}'", Scene::SceneModule::MODULE_NAME);
     }
 }

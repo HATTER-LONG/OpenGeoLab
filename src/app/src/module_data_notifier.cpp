@@ -24,7 +24,7 @@ ModuleDataNotifier::ModuleDataNotifier(Command::CommandDispatcher& dispatcher, Q
     auto scene_handle =
         dispatcher.onModuleDataChanged("scene", [this](Core::ModuleDataEvent /*event*/) {
             QMetaObject::invokeMethod(this, &ModuleDataNotifier::sceneDataChanged,
-                                       Qt::QueuedConnection);
+                                      Qt::QueuedConnection);
         });
     if(scene_handle.isConnected()) {
         m_connections.push_back(std::move(scene_handle));
