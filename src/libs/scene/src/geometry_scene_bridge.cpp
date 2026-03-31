@@ -5,6 +5,7 @@
 
 #include <opengeolab/scene/geometry_scene_bridge.hpp>
 
+#include <opengeolab/core/color_map.hpp>
 #include <opengeolab/geometry/shape_entry.hpp>
 #include <opengeolab/geometry/shape_store.hpp>
 
@@ -121,6 +122,7 @@ RenderMeshData GeometrySceneBridge::buildRenderData(uint32_t shapeId,
     }
 
     const Core::VisualData& visual = *entry.visualData;
+    const Core::RenderColor shapeColor = Core::colorForShapeId(shapeId);
     uint32_t globalVertexOffset = 0;
     uint32_t globalIndexOffset = 0;
     std::size_t triangleTagIndex = 0;
@@ -158,10 +160,10 @@ RenderMeshData GeometrySceneBridge::buildRenderData(uint32_t shapeId,
                 vertex.color[2] = surface.colors[vertexIndex * 4U + 2U];
                 vertex.color[3] = surface.colors[vertexIndex * 4U + 3U];
             } else {
-                vertex.color[0] = surface.defaultColor[0];
-                vertex.color[1] = surface.defaultColor[1];
-                vertex.color[2] = surface.defaultColor[2];
-                vertex.color[3] = surface.defaultColor[3];
+                vertex.color[0] = shapeColor.r;
+                vertex.color[1] = shapeColor.g;
+                vertex.color[2] = shapeColor.b;
+                vertex.color[3] = shapeColor.a;
             }
 
             result.bounds.expand(
@@ -220,10 +222,10 @@ RenderMeshData GeometrySceneBridge::buildRenderData(uint32_t shapeId,
             vertex.position[0] = edge.positions[vertexIndex * 3U];
             vertex.position[1] = edge.positions[vertexIndex * 3U + 1U];
             vertex.position[2] = edge.positions[vertexIndex * 3U + 2U];
-            vertex.color[0] = edge.color[0];
-            vertex.color[1] = edge.color[1];
-            vertex.color[2] = edge.color[2];
-            vertex.color[3] = edge.color[3];
+            vertex.color[0] = Core::K_EDGE_COLOR.r;
+            vertex.color[1] = Core::K_EDGE_COLOR.g;
+            vertex.color[2] = Core::K_EDGE_COLOR.b;
+            vertex.color[3] = Core::K_EDGE_COLOR.a;
             result.bounds.expand(
                 glm::vec3{vertex.position[0], vertex.position[1], vertex.position[2]});
             result.vertices.push_back(vertex);
@@ -273,10 +275,10 @@ RenderMeshData GeometrySceneBridge::buildRenderData(uint32_t shapeId,
             vertex.position[0] = pointSet.positions[vertexIndex * 3U];
             vertex.position[1] = pointSet.positions[vertexIndex * 3U + 1U];
             vertex.position[2] = pointSet.positions[vertexIndex * 3U + 2U];
-            vertex.color[0] = pointSet.color[0];
-            vertex.color[1] = pointSet.color[1];
-            vertex.color[2] = pointSet.color[2];
-            vertex.color[3] = pointSet.color[3];
+            vertex.color[0] = Core::K_VERTEX_COLOR.r;
+            vertex.color[1] = Core::K_VERTEX_COLOR.g;
+            vertex.color[2] = Core::K_VERTEX_COLOR.b;
+            vertex.color[3] = Core::K_VERTEX_COLOR.a;
             result.bounds.expand(
                 glm::vec3{vertex.position[0], vertex.position[1], vertex.position[2]});
             result.vertices.push_back(vertex);

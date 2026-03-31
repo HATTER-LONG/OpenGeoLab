@@ -6,6 +6,8 @@
 #include <opengeolab/geometry/list_shapes_action.hpp>
 #include <opengeolab/geometry/shape_store.hpp>
 
+#include <opengeolab/core/color_map.hpp>
+
 #include <BRepBndLib.hxx>
 #include <Bnd_Box.hxx>
 #include <TopAbs_ShapeEnum.hxx>
@@ -77,6 +79,7 @@ nlohmann::json ListShapesAction::execute(const nlohmann::json& /*param*/,
                  {"name", entry->name},
                  {"shapeType", shapeTypeToString(entry->shape.ShapeType())},
                  {"hasTessellation", entry->visualData != nullptr},
+                 {"color", Core::colorToHex(Core::colorForShapeId(id))},
                  {"topology",
                   {{"solids", entry->solidMap.Extent()},
                    {"faces", entry->faceMap.Extent()},

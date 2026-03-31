@@ -3,7 +3,7 @@ project(
     OpenGeoLab
     VERSION 0.1.0
     DESCRIPTION "OpenGeoLab — Modern OpenGL 3D modeling application"
-    LANGUAGES CXX)
+    LANGUAGES C CXX)
 if (POLICY CMP0207)
     cmake_policy(SET CMP0207 NEW)
 endif ()
@@ -70,6 +70,7 @@ set(OPENGEOLAB_KANGAROO_VERSION 2.3.1)
 set(OPENGEOLAB_NLOHMANN_JSON_VERSION 3.12.0)
 set(OPENGEOLAB_DOCTEST_VERSION 2.5.0)
 set(OPENGEOLAB_GLM_VERSION 1.0.1)
+set(OPENGEOLAB_GLAD_VERSION 2.0.8)
 
 # ---------------------------------------------------------------------------
 # Qt
@@ -184,6 +185,36 @@ opengeolab_resolve_package(
     CPM_OPTIONS
     "GLM_ENABLE_CXX_20 ON")
 
+find_package(glad ${OPENGEOLAB_GLAD_VERSION} CONFIG QUIET)
+if (TARGET glad::glad)
+    message(STATUS "Using installed glad package")
+elseif (TARGET glad_gl_core_33)
+    add_library(glad::glad ALIAS glad_gl_core_33)
+elseif (glad_FOUND)
+    glad_add_library(glad_gl_core_33 REPRODUCIBLE API gl:core=3.3)
+    add_library(glad::glad ALIAS glad_gl_core_33)
+elseif (NOT OPENGEOLAB_FETCH_DEPENDENCIES)
+    message(
+        FATAL_ERROR
+            "glad was not found. Provide glad::glad, install glad, or enable OPENGEOLAB_FETCH_DEPENDENCIES."
+    )
+else ()
+    message(STATUS "Fetching glad from GitHub")
+    CPMAddPackage(
+        NAME glad
+        GITHUB_REPOSITORY Dav1dde/glad
+        GIT_TAG v${OPENGEOLAB_GLAD_VERSION})
+
+    if (NOT EXISTS "${glad_SOURCE_DIR}/cmake/GladConfig.cmake")
+        message(FATAL_ERROR "Fetched glad package does not provide cmake/GladConfig.cmake")
+    endif ()
+
+    set(GLAD_SOURCES_DIR "${glad_SOURCE_DIR}")
+    include("${glad_SOURCE_DIR}/cmake/GladConfig.cmake")
+    glad_add_library(glad_gl_core_33 REPRODUCIBLE API gl:core=3.3)
+    add_library(glad::glad ALIAS glad_gl_core_33)
+endif ()
+
 # ---------------------------------------------------------------------------
 # OpenCASCADE Technology
 # ---------------------------------------------------------------------------
@@ -253,6 +284,7 @@ add_subdirectory(src/libs/core)
 add_subdirectory(src/libs/io)
 add_subdirectory(src/libs/geometry)
 add_subdirectory(src/libs/scene)
+add_subdirectory(src/libs/render)
 add_subdirectory(src/libs/command)
 add_subdirectory(src/libs/python)
 add_subdirectory(src/app)

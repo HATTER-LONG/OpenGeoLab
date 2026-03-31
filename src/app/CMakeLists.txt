@@ -2,7 +2,7 @@
 # OpenGeoLab Application
 # ---------------------------------------------------------------------------
 
-find_package(Qt6 6.9 REQUIRED COMPONENTS Concurrent Core5Compat Svg
+find_package(Qt6 6.9 REQUIRED COMPONENTS Concurrent Core5Compat OpenGL Svg
                                          QuickLayouts Widgets)
 
 qt_add_executable(
@@ -12,7 +12,11 @@ qt_add_executable(
     src/request_service.cpp
     src/log_event_model.cpp
     src/log_filter_proxy_model.cpp
-    src/module_data_notifier.cpp)
+    src/module_data_notifier.cpp
+    src/camera_state.cpp
+    src/trackball_controller.cpp
+    src/gl_viewport.cpp
+    src/gl_viewport_renderer.cpp)
 
 target_compile_features(opengeolab_app PRIVATE cxx_std_20)
 target_compile_definitions(opengeolab_app PRIVATE QT_NO_KEYWORDS)
@@ -29,10 +33,15 @@ target_link_libraries(
             Qt6::Quick
             Qt6::QuickControls2
             Qt6::QuickLayouts
+            Qt6::OpenGL
             Qt6::Svg
             Qt6::Widgets
             OpenGeoLab::Python_Embed
-            OpenGeoLab::Command)
+            OpenGeoLab::Command
+            OpenGeoLab::Geometry
+            OpenGeoLab::Scene
+            OpenGeoLab::Render
+            glad::glad)
 
 set_source_files_properties(resource/qml/MainPages.qml
                             PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
@@ -49,6 +58,7 @@ qt_add_qml_module(
     include/opengeolab/app/log_event_model.h
     include/opengeolab/app/log_filter_proxy_model.h
     include/opengeolab/app/module_data_notifier.h
+    include/opengeolab/app/gl_viewport.hpp
     QML_FILES
     resource/qml/Main.qml
     resource/qml/RibbonConfig.qml
@@ -78,6 +88,8 @@ qt_add_qml_module(
     resource/qml/components/DimensionInput.qml
     resource/qml/components/ParamField.qml
     resource/qml/components/CoordinateField.qml
+    resource/qml/components/ViewportToolbar.qml
+    resource/qml/components/ViewportToolButton.qml
     resource/qml/components/pages/CreateBoxPage.qml
     resource/qml/components/pages/CreateCylinderPage.qml
     resource/qml/components/pages/CreateSpherePage.qml
@@ -127,7 +139,17 @@ qt_add_qml_module(
     resource/icons/closeCircleOutline.svg
     resource/icons/syncOutline.svg
     resource/icons/copyOutline.svg
-    resource/icons/exitOutline.svg)
+    resource/icons/exitOutline.svg
+    resource/icons/viewFit.svg
+    resource/icons/viewFront.svg
+    resource/icons/viewBack.svg
+    resource/icons/viewTop.svg
+    resource/icons/viewBottom.svg
+    resource/icons/viewLeft.svg
+    resource/icons/viewRight.svg
+    resource/icons/viewXray.svg
+    resource/icons/meshDisplay.svg
+    resource/icons/face.svg)
 
 # Use console subsystem during development so errors are visible.
 option(OPENGEOLAB_WIN32_APP
@@ -192,6 +214,23 @@ qt_add_translations(
 
 if (OPENGEOLAB_BUILD_TESTS)
     opengeolab_add_doctest_test(
+        opengeolab_camera_state_test SOURCES test/camera_state_test.cpp
+        src/camera_state.cpp LINKS OpenGeoLab::Scene)
+    target_include_directories(opengeolab_camera_state_test
+                               PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
+
+    opengeolab_add_doctest_test(
+        opengeolab_trackball_controller_test
+        SOURCES
+        test/trackball_controller_test.cpp
+        src/trackball_controller.cpp
+        src/camera_state.cpp
+        LINKS
+        OpenGeoLab::Scene)
+    target_include_directories(opengeolab_trackball_controller_test
+                               PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
+
+    opengeolab_add_doctest_test(
         opengeolab_app_qml_pages_test
         SOURCES
         test/qml_page_registration_test.cpp
@@ -199,4 +238,29 @@ if (OPENGEOLAB_BUILD_TESTS)
         Qt6::Core
         DEFINITIONS
         OPENGEOLAB_APP_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+
+    opengeolab_add_doctest_test(
+        opengeolab_gl_viewport_test
+        SOURCES
+        test/gl_viewport_test.cpp
+        include/opengeolab/app/gl_viewport.hpp
+        include/opengeolab/app/gl_viewport_renderer.hpp
+        src/gl_viewport.cpp
+        src/gl_viewport_renderer.cpp
+        src/camera_state.cpp
+        src/trackball_controller.cpp
+        LINKS
+        Qt6::Core
+        Qt6::Gui
+        Qt6::Qml
+        Qt6::Quick
+        Qt6::OpenGL
+        OpenGeoLab::Scene
+        OpenGeoLab::Render
+        glad::glad
+        DEFINITIONS
+        OPENGEOLAB_APP_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+    target_compile_definitions(opengeolab_gl_viewport_test PRIVATE QT_NO_KEYWORDS)
+    target_include_directories(opengeolab_gl_viewport_test
+                               PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
 endif ()

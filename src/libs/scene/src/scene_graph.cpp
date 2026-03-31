@@ -112,6 +112,21 @@ SceneNode* SceneGraph::findNode(NodeId id) const {
     return findInSubtree(m_root.get(), id);
 }
 
+bool SceneGraph::setNodeVisible(NodeId id, bool visible) {
+    {
+        std::unique_lock lock(m_mutex);
+        SceneNode* node = findInSubtree(m_root.get(), id);
+        if(node == nullptr || node->isVisible() == visible) {
+            return false;
+        }
+        node->setVisible(visible);
+        node->markDirty();
+        ++m_version;
+    }
+    nodeUpdated(id);
+    return true;
+}
+
 void SceneGraph::traverseVisible(std::function<void(const SceneNode&)> visitor) const {
     std::shared_lock lock(m_mutex);
     traverseVisibleImpl(m_root.get(), visitor);
@@ -295,7 +310,7 @@ uint64_t SceneGraph::version() const {
     return m_version;
 }
 
-SceneNode* SceneGraph::findInSubtree(SceneNode* node, NodeId id) const {
+SceneNode* SceneGraph::findInSubtree(SceneNode* node, NodeId id) const { // NOLINT
     if(node == nullptr) {
         return nullptr;
     }
@@ -312,7 +327,7 @@ SceneNode* SceneGraph::findInSubtree(SceneNode* node, NodeId id) const {
     return nullptr;
 }
 
-void SceneGraph::traverseVisibleImpl(const SceneNode* node,
+void SceneGraph::traverseVisibleImpl(const SceneNode* node, // NOLINT
                                      const std::function<void(const SceneNode&)>& visitor) const {
     if(node == nullptr || !node->isVisible()) {
         return;

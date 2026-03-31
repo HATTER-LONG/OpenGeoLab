@@ -2,62 +2,50 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import "../theme"
+import "../components"
+import OpenGeoLab.App
 
-/** @brief Placeholder 3D viewport with a subtle grid background. */
+/** @brief Interactive 3D viewport powered by OpenGL. */
 Item {
     id: root
 
     required property AppTheme theme
 
-    // ── Background gradient ────────────────────────────────────────────
-    Rectangle {
+    /** @brief Expose the GLViewport so other panels can call its methods. */
+    property alias glViewport: viewport
+
+    GLViewport {
+        id: viewport
         anchors.fill: parent
-        radius: root.theme.radiusMedium
-        color: root.theme.viewportBase
+        pickingEnabled: true
+        pickMode: 0
 
-        // Grid pattern drawn on a Canvas
-        Canvas {
-            id: gridCanvas
-            anchors.fill: parent
-            onPaint: {
-                var ctx = getContext("2d");
-                ctx.clearRect(0, 0, width, height);
-                ctx.strokeStyle = root.theme.viewportGrid;
-                ctx.lineWidth = 0.5;
-                var step = root.theme.viewportGridStep;
-                for (var x = 0; x < width; x += step) {
-                    ctx.beginPath();
-                    ctx.moveTo(x, 0);
-                    ctx.lineTo(x, height);
-                    ctx.stroke();
-                }
-                for (var y = 0; y < height; y += step) {
-                    ctx.beginPath();
-                    ctx.moveTo(0, y);
-                    ctx.lineTo(width, y);
-                    ctx.stroke();
-                }
-            }
+        onEntityPicked: (shapeId, entityType, localId) => {
+            console.log(qsTr("Picked: Shape %1, Type %2, Local %3")
+                .arg(shapeId)
+                .arg(entityType)
+                .arg(localId))
         }
 
-        // Repaint when viewport changes size or theme toggles
-        Connections {
-            target: root.theme
-            function onDarkModeChanged() {
-                gridCanvas.requestPaint();
-            }
+        onEntityHovered: (shapeId, entityType, localId) => {
+            // Future: update status bar.
         }
 
-        onWidthChanged: gridCanvas.requestPaint()
-        onHeightChanged: gridCanvas.requestPaint()
-
-        // Centered label
-        Text {
-            anchors.centerIn: parent
-            text: qsTr("3D Viewport")
-            font.pixelSize: 28
-            font.weight: Font.Bold
-            color: root.theme.tint(root.theme.textTertiary, 0.35)
+        onPickCleared: {
+            // Future: clear selection UI.
         }
+    }
+
+    ViewportToolbar {
+        anchors.top: parent.top
+        anchors.right: parent.right
+        anchors.topMargin: 12
+        anchors.rightMargin: 12
+        theme: root.theme
+        xRayActive: viewport.xRayMode
+
+        onFitRequested: viewport.fitToScene()
+        onPresetRequested: (preset) => viewport.setViewPreset(preset)
+        onXRayToggled: viewport.toggleXRay()
     }
 }

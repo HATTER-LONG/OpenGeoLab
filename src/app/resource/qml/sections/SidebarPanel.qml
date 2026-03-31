@@ -12,6 +12,9 @@ Item {
 
     required property AppTheme theme
 
+    /** @brief Reference to the GLViewport for controlling shape visibility. */
+    required property var viewport
+
     property var shapeList: []
     property var visibilityState: ({})
 
@@ -33,6 +36,10 @@ Item {
         }
         state[shapeId].geo = !state[shapeId].geo
         root.visibilityState = state
+
+        if (root.viewport) {
+            root.viewport.setShapeVisible(shapeId, state[shapeId].geo)
+        }
     }
 
     function toggleMeshVisibility(shapeId) {
@@ -145,6 +152,7 @@ Item {
                 hasTessellation: modelData.hasTessellation ?? false
                 topology: modelData.topology ?? {}
                 boundingBox: modelData.boundingBox ?? {}
+                shapeColor: modelData.color ?? ""
                 geoVisible: root.geoVisible(modelData.shapeId ?? 0)
                 meshVisible: root.meshVisible(modelData.shapeId ?? 0)
 

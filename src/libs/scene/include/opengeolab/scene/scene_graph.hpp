@@ -69,6 +69,12 @@ public:
     [[nodiscard]] SceneNode* findNode(NodeId id) const;
 
     /**
+     * @brief Set visibility of a node by id (thread-safe find+modify).
+     * @return true if node was found and its visibility changed.
+     */
+    bool setNodeVisible(NodeId id, bool visible);
+
+    /**
      * @brief Visit all visible nodes (skips invisible subtrees).
      */
     void traverseVisible(std::function<void(const SceneNode&)> visitor) const;

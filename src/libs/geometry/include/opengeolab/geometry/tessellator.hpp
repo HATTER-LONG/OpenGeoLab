@@ -29,8 +29,8 @@ namespace OpenGeoLab::Geometry {
  * for a sensible starting point.
  */
 struct OPENGEOLAB_GEOMETRY_EXPORT TessellationParams {
-    double linearDeflection = 0.1;  /**< Maximum chord deviation from the true surface */
-    double angularDeflection = 0.5; /**< Maximum angular deviation (radians) */
+    double linearDeflection = 0.05;  /**< Maximum chord deviation from the true surface */
+    double angularDeflection = 0.25; /**< Maximum angular deviation (radians) */
 
     /**
      * @brief Build TessellationParams from a JSON object, falling back to defaults.
@@ -38,7 +38,7 @@ struct OPENGEOLAB_GEOMETRY_EXPORT TessellationParams {
      * Recognised keys: `"linearDeflection"`, `"angularDeflection"`.
      */
     static TessellationParams fromJson(const nlohmann::json& j) {
-        return {j.value("linearDeflection", 0.1), j.value("angularDeflection", 0.5)};
+        return {j.value("linearDeflection", 0.05), j.value("angularDeflection", 0.25)};
     }
 };
 

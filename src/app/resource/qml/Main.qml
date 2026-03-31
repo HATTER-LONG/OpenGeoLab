@@ -216,6 +216,7 @@ Window {
                             Layout.fillWidth: true
                             Layout.fillHeight: true
                             theme: appTheme
+                            viewport: viewportPanel.glViewport
                         }
 
                         ProgressCard {
@@ -226,6 +227,7 @@ Window {
                     }
 
                     ViewportPanel {
+                        id: viewportPanel
                         Layout.fillWidth: true
                         Layout.fillHeight: true
                         theme: appTheme

@@ -17,16 +17,12 @@ Item {
     required property var boundingBox
     required property bool geoVisible
     required property bool meshVisible
+    property string shapeColor: ""
 
     signal toggleGeoVisibility(int shapeId)
     signal toggleMeshVisibility(int shapeId)
 
     property bool expanded: false
-
-    readonly property var palette: [
-        "#4FC3F7", "#81C784", "#FFB74D", "#E57373",
-        "#BA68C8", "#4DB6AC", "#FFD54F", "#90A4AE"
-    ]
 
     implicitWidth: parent ? parent.width : 260
     implicitHeight: col.implicitHeight
@@ -73,7 +69,7 @@ Item {
                     width: 4
                     height: 16
                     radius: 2
-                    color: root.palette[root.shapeId % root.palette.length]
+                    color: root.shapeColor.length > 0 ? root.shapeColor : "#808080"
                 }
 
                 // ID
