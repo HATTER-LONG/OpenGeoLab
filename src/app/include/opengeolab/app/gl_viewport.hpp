@@ -124,13 +124,6 @@ public:
     /** @brief Toggle x-ray rendering on or off. */
     Q_INVOKABLE void toggleXRay();
 
-    /**
-     * @brief Set the visibility of a scene node by its shape (node) id.
-     * @param shapeId Integer node id in the scene graph.
-     * @param visible Whether the shape should be visible.
-     */
-    Q_INVOKABLE void setShapeVisible(int shapeId, bool visible);
-
 Q_SIGNALS:
     void pickingEnabledChanged();
     void pickModeChanged();

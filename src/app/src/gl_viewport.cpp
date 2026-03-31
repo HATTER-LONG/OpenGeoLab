@@ -134,14 +134,6 @@ void GLViewport::setViewPreset(int preset) {
 
 void GLViewport::toggleXRay() { setXRayMode(!m_xRayMode); }
 
-void GLViewport::setShapeVisible(int shapeId, bool visible) {
-    if(m_sceneGraph == nullptr) {
-        return;
-    }
-    m_sceneGraph->setNodeVisible(static_cast<Scene::NodeId>(shapeId), visible);
-    update();
-}
-
 void GLViewport::mousePressEvent(QMouseEvent* event) {
     m_pressPos = event->position();
     m_movedSincePress = false;
