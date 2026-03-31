@@ -112,6 +112,25 @@ SceneNode* SceneGraph::findNode(NodeId id) const {
     return findInSubtree(m_root.get(), id);
 }
 
+SceneNode* SceneGraph::findNodeBySource(std::string_view type, uint32_t srcId) const {
+    std::shared_lock lock(m_mutex);
+    SceneNode* result = nullptr;
+    std::function<void(SceneNode*)> search = [&](SceneNode* node) {
+        if(result != nullptr) {
+            return;
+        }
+        if(node->sourceType() == type && node->sourceId() == srcId) {
+            result = node;
+            return;
+        }
+        for(const auto& child : node->children()) {
+            search(child.get());
+        }
+    };
+    search(m_root.get());
+    return result;
+}
+
 bool SceneGraph::setNodeVisible(NodeId id, bool visible) {
     {
         std::unique_lock lock(m_mutex);

@@ -17,39 +17,56 @@ nlohmann::json SetVisibilityAction::describe() const {
         {"name", ACTION_NAME},
         {"description", "Batch-set visibility of scene nodes."},
         {"params",
-         {{"nodes",
+         {{"type",
+           {{"type", "string"},
+            {"required", true},
+            {"description", "Source type: \"geometry\", \"mesh\", or \"node\" (internal)."}}},
+          {"nodes",
            {{"type", "array"},
             {"required", true},
-            {"description", "Array of {nodeId: int, visible: bool} pairs."}}}}},
+            {"description",
+             "Array of {id: int, visible: bool} pairs. "
+             "\"id\" is interpreted according to \"type\": "
+             "shapeId for \"geometry\", meshId for \"mesh\", nodeId for \"node\"."}}}}},
         {"returns",
          {{"ok",
            {{"type", "boolean"}, {"description", "true when the action completes successfully."}}},
           {"action", {{"type", "string"}, {"description", "Echo of the action name."}}},
-          {"updated", {{"type", "integer"}, {"description", "Nodes whose visibility changed."}}},
-          {"skipped", {{"type", "integer"}, {"description", "Node IDs not found."}}}}}};
+          {"updated",
+           {{"type", "integer"}, {"description", "Nodes whose visibility actually changed."}}},
+          {"skipped",
+           {{"type", "integer"},
+            {"description", "Entries skipped (malformed or source not found)."}}}}}};
 }
 
 nlohmann::json SetVisibilityAction::execute(const nlohmann::json& param,
                                             const Core::ProgressCallback& progress) {
+    const auto type = param.value("type", std::string{});
     const auto& nodes = param.value("nodes", nlohmann::json::array());
     int updated = 0;
     int skipped = 0;
 
     for(const auto& entry : nodes) {
-        if(!entry.contains("nodeId")) {
+        if(!entry.contains("id")) {
             ++skipped;
             continue;
         }
 
-        const auto node_id = entry.value("nodeId", static_cast<NodeId>(0));
+        const auto id = entry.value("id", static_cast<uint32_t>(0));
         const auto visible = entry.value("visible", true);
 
-        auto* node = m_graph.findNode(node_id);
+        SceneNode* node = nullptr;
+        if(type == "node") {
+            node = m_graph.findNode(static_cast<NodeId>(id));
+        } else {
+            node = m_graph.findNodeBySource(type, id);
+        }
+
         if(node == nullptr) {
             ++skipped;
             continue;
         }
-        if(m_graph.setNodeVisible(node_id, visible)) {
+        if(m_graph.setNodeVisible(node->id(), visible)) {
             ++updated;
         }
     }

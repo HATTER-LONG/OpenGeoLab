@@ -14,7 +14,7 @@ ListNodesAction::~ListNodesAction() = default;
 nlohmann::json ListNodesAction::describe() const {
     return {
         {"name", ACTION_NAME},
-        {"description", "List all scene nodes with visibility state."},
+        {"description", "List all scene nodes with visibility and source info."},
         {"params", nlohmann::json::object()},
         {"returns",
          {{"ok",
@@ -22,7 +22,7 @@ nlohmann::json ListNodesAction::describe() const {
           {"action", {{"type", "string"}, {"description", "Echo of the action name."}}},
           {"nodes",
            {{"type", "array"},
-            {"description", "Array of {nodeId, name, visible, parentId} objects."}}}}}};
+            {"description", "Array of {sourceType, sourceId, name, visible} objects."}}}}}};
 }
 
 nlohmann::json ListNodesAction::execute(const nlohmann::json& /*param*/,
@@ -30,10 +30,10 @@ nlohmann::json ListNodesAction::execute(const nlohmann::json& /*param*/,
     nlohmann::json nodes = nlohmann::json::array();
 
     m_graph.forEachNode([&](const SceneNode& node) {
-        nodes.push_back({{"nodeId", node.id()},
+        nodes.push_back({{"sourceType", std::string(node.sourceType())},
+                         {"sourceId", node.sourceId()},
                          {"name", std::string(node.name())},
-                         {"visible", node.isVisible()},
-                         {"parentId", node.parent() ? node.parent()->id() : 0}});
+                         {"visible", node.isVisible()}});
     });
 
     if(progress) {

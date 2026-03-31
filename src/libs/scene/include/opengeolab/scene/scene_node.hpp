@@ -73,6 +73,19 @@ public:
     /** @brief Set visibility. */
     void setVisible(bool visible);
 
+    /** @brief Source type tag (e.g. "geometry", "mesh"). Empty if unset. */
+    [[nodiscard]] std::string_view sourceType() const;
+
+    /** @brief Source-domain identifier (e.g. shapeId). Zero if unset. */
+    [[nodiscard]] uint32_t sourceId() const;
+
+    /**
+     * @brief Set the source origin of this node.
+     * @param type Domain tag, e.g. "geometry".
+     * @param id Domain-specific identifier, e.g. shapeId.
+     */
+    void setSource(std::string type, uint32_t id);
+
     /** @brief Current display mode. */
     [[nodiscard]] DisplayMode displayMode() const;
 
@@ -147,6 +160,8 @@ private:
     std::string m_name;
     glm::mat4 m_localTransform{1.0F};
     bool m_visible{true};
+    std::string m_sourceType;
+    uint32_t m_sourceId{0};
     DisplayMode m_displayMode{DisplayMode::SolidWithEdges};
     SceneNode* m_parent{nullptr};
     std::vector<std::unique_ptr<SceneNode>> m_children;

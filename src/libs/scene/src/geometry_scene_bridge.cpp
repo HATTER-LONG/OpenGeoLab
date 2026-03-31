@@ -320,6 +320,7 @@ void GeometrySceneBridge::onShapeAdded(uint32_t shapeId, const Geometry::ShapeEn
     }
 
     m_shapeToNode[shapeId] = node->id();
+    node->setSource("geometry", shapeId);
     attachComponents(m_scene, *node, shapeId, entry);
 }
 
@@ -353,6 +354,7 @@ void GeometrySceneBridge::onShapeUpdated(uint32_t shapeId, const Geometry::Shape
             return;
         }
         m_shapeToNode[shapeId] = node->id();
+        node->setSource("geometry", shapeId);
         attachComponents(m_scene, *node, shapeId, entry);
         return;
     }

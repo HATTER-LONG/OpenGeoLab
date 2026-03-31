@@ -31,6 +31,15 @@ bool SceneNode::isVisible() const { return m_visible; }
 
 void SceneNode::setVisible(bool visible) { m_visible = visible; }
 
+std::string_view SceneNode::sourceType() const { return m_sourceType; }
+
+uint32_t SceneNode::sourceId() const { return m_sourceId; }
+
+void SceneNode::setSource(std::string type, uint32_t id) {
+    m_sourceType = std::move(type);
+    m_sourceId = id;
+}
+
 DisplayMode SceneNode::displayMode() const { return m_displayMode; }
 
 void SceneNode::setDisplayMode(DisplayMode mode) { m_displayMode = mode; }

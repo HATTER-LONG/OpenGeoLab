@@ -69,6 +69,14 @@ public:
     [[nodiscard]] SceneNode* findNode(NodeId id) const;
 
     /**
+     * @brief Find a node by source type and source id.
+     * @param type Source type tag (e.g. "geometry").
+     * @param srcId Source-domain identifier (e.g. shapeId).
+     * @return Pointer to node, or nullptr if not found.
+     */
+    [[nodiscard]] SceneNode* findNodeBySource(std::string_view type, uint32_t srcId) const;
+
+    /**
      * @brief Set visibility of a node by id (thread-safe find+modify).
      * @return true if node was found and its visibility changed.
      */

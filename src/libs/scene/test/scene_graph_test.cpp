@@ -64,6 +64,19 @@ TEST_CASE("SceneGraph adds nodes to explicit parent") {
     CHECK(parent->children().front().get() == child);
 }
 
+TEST_CASE("SceneGraph finds node by source metadata") {
+    SceneGraph graph;
+    SceneNode* first = graph.addNode("First");
+    SceneNode* second = graph.addNode("Second");
+    REQUIRE(first != nullptr);
+    REQUIRE(second != nullptr);
+    second->setSource("geometry", 42U);
+
+    CHECK(graph.findNodeBySource("geometry", 42U) == second);
+    CHECK(graph.findNodeBySource("geometry", 99U) == nullptr);
+    CHECK(graph.findNodeBySource("mesh", 42U) == nullptr);
+}
+
 TEST_CASE("SceneGraph removes nodes and descendants") {
     SceneGraph graph;
     SceneNode* parent = graph.addNode("Parent");

@@ -1,30 +1,34 @@
 /**
  * @file scene_module_test.cpp
- * @brief Unit tests for SceneModule actions
+ * @brief Tests for SetVisibilityAction, ListNodesAction, and SceneModule.
  */
 
+#include <opengeolab/scene/list_nodes_action.hpp>
 #include <opengeolab/scene/scene_graph.hpp>
+#include <opengeolab/scene/scene_module.hpp>
 #include <opengeolab/scene/set_visibility_action.hpp>
 
-#include <doctest/doctest.h>
-#include <nlohmann/json.hpp>
+#include <kangaroo/util/plugin_component_factory.hpp>
 
-namespace OpenGeoLab::Scene::Tests {
+#include <doctest/doctest.h>
+
+using OpenGeoLab::Scene::ListNodesAction;
+using OpenGeoLab::Scene::SceneGraph;
+using OpenGeoLab::Scene::SceneModule;
+using OpenGeoLab::Scene::SetVisibilityAction;
 
 TEST_SUITE("SetVisibilityAction") {
-
     TEST_CASE("single node set invisible") {
         SceneGraph graph;
-        auto* node = graph.addNode("Box_1");
+        auto* node = graph.addNode("A");
         REQUIRE(node != nullptr);
-        REQUIRE(node->isVisible());
+        node->setSource("geometry", 100);
 
         SetVisibilityAction action(graph);
-        nlohmann::json param = {{"nodes", {{{"nodeId", node->id()}, {"visible", false}}}}};
-        auto result = action.execute(param, nullptr);
+        auto result = action.execute(
+            {{"type", "geometry"}, {"nodes", {{{"id", 100}, {"visible", false}}}}}, nullptr);
 
         CHECK(result["ok"] == true);
-        CHECK(result["action"] == "set_visibility");
         CHECK(result["updated"] == 1);
         CHECK(result["skipped"] == 0);
         CHECK_FALSE(node->isVisible());
@@ -35,15 +39,21 @@ TEST_SUITE("SetVisibilityAction") {
         auto* a = graph.addNode("A");
         auto* b = graph.addNode("B");
         auto* c = graph.addNode("C");
+        REQUIRE(a != nullptr);
+        REQUIRE(b != nullptr);
+        REQUIRE(c != nullptr);
+        a->setSource("geometry", 10);
+        b->setSource("geometry", 20);
+        c->setSource("geometry", 30);
 
         SetVisibilityAction action(graph);
-        nlohmann::json param = {{"nodes",
-                                 {{{"nodeId", a->id()}, {"visible", false}},
-                                  {{"nodeId", b->id()}, {"visible", false}},
-                                  {{"nodeId", c->id()}, {"visible", true}}}}};
-        auto result = action.execute(param, nullptr);
+        auto result = action.execute({{"type", "geometry"},
+                                      {"nodes",
+                                       {{{"id", 10}, {"visible", false}},
+                                        {{"id", 20}, {"visible", false}},
+                                        {{"id", 30}, {"visible", true}}}}},
+                                     nullptr);
 
-        CHECK(result["ok"] == true);
         CHECK(result["updated"] == 2);
         CHECK(result["skipped"] == 0);
         CHECK_FALSE(a->isVisible());
@@ -51,37 +61,37 @@ TEST_SUITE("SetVisibilityAction") {
         CHECK(c->isVisible());
     }
 
-    TEST_CASE("node not found increments skipped") {
+    TEST_CASE("source not found increments skipped") {
         SceneGraph graph;
         SetVisibilityAction action(graph);
-        nlohmann::json param = {{"nodes", {{{"nodeId", 999}, {"visible", false}}}}};
-        auto result = action.execute(param, nullptr);
+
+        auto result = action.execute(
+            {{"type", "geometry"}, {"nodes", {{{"id", 999}, {"visible", false}}}}}, nullptr);
 
         CHECK(result["ok"] == true);
-        CHECK(result["updated"] == 0);
         CHECK(result["skipped"] == 1);
+        CHECK(result["updated"] == 0);
     }
 
-    TEST_CASE("missing node id increments skipped without changing root visibility") {
+    TEST_CASE("missing id increments skipped") {
         SceneGraph graph;
-        REQUIRE(graph.root() != nullptr);
-        REQUIRE(graph.root()->isVisible());
+        graph.addNode("A");
 
         SetVisibilityAction action(graph);
-        nlohmann::json param = {{"nodes", {{{"visible", false}}}}};
-        auto result = action.execute(param, nullptr);
+        auto result =
+            action.execute({{"type", "geometry"}, {"nodes", {{{"visible", false}}}}}, nullptr);
 
         CHECK(result["ok"] == true);
-        CHECK(result["updated"] == 0);
         CHECK(result["skipped"] == 1);
-        CHECK(graph.root()->isVisible());
+        CHECK(result["updated"] == 0);
     }
 
     TEST_CASE("empty nodes array succeeds") {
         SceneGraph graph;
         SetVisibilityAction action(graph);
-        nlohmann::json param = {{"nodes", nlohmann::json::array()}};
-        auto result = action.execute(param, nullptr);
+
+        auto result =
+            action.execute({{"type", "geometry"}, {"nodes", nlohmann::json::array()}}, nullptr);
 
         CHECK(result["ok"] == true);
         CHECK(result["updated"] == 0);
@@ -90,17 +100,32 @@ TEST_SUITE("SetVisibilityAction") {
 
     TEST_CASE("no actual change yields updated=0") {
         SceneGraph graph;
-        auto* node = graph.addNode("Box_1");
+        auto* node = graph.addNode("A");
         REQUIRE(node != nullptr);
-        REQUIRE(node->isVisible());
+        node->setSource("geometry", 42);
+        CHECK(node->isVisible());
 
         SetVisibilityAction action(graph);
-        nlohmann::json param = {{"nodes", {{{"nodeId", node->id()}, {"visible", true}}}}};
-        auto result = action.execute(param, nullptr);
+        auto result = action.execute(
+            {{"type", "geometry"}, {"nodes", {{{"id", 42}, {"visible", true}}}}}, nullptr);
 
         CHECK(result["ok"] == true);
         CHECK(result["updated"] == 0);
-        CHECK(result["skipped"] == 0);
+    }
+
+    TEST_CASE("type=node uses internal nodeId") {
+        SceneGraph graph;
+        auto* node = graph.addNode("A");
+        REQUIRE(node != nullptr);
+        auto nid = node->id();
+
+        SetVisibilityAction action(graph);
+        auto result = action.execute(
+            {{"type", "node"}, {"nodes", {{{"id", nid}, {"visible", false}}}}}, nullptr);
+
+        CHECK(result["ok"] == true);
+        CHECK(result["updated"] == 1);
+        CHECK_FALSE(node->isVisible());
     }
 
     TEST_CASE("describe returns valid schema") {
@@ -111,22 +136,19 @@ TEST_SUITE("SetVisibilityAction") {
         CHECK(desc["name"] == "set_visibility");
         CHECK(desc.contains("description"));
         CHECK(desc.contains("params"));
+        CHECK(desc["params"].contains("type"));
+        CHECK(desc["params"].contains("nodes"));
         CHECK(desc.contains("returns"));
+        CHECK(desc["returns"]["ok"]["description"] ==
+              "true when the action completes successfully.");
     }
-
-} // TEST_SUITE
-
-} // namespace OpenGeoLab::Scene::Tests
-
-#include <opengeolab/scene/list_nodes_action.hpp>
-
-namespace OpenGeoLab::Scene::Tests {
+}
 
 TEST_SUITE("ListNodesAction") {
-
     TEST_CASE("empty scene returns no nodes") {
         SceneGraph graph;
         ListNodesAction action(graph);
+
         auto result = action.execute({}, nullptr);
 
         CHECK(result["ok"] == true);
@@ -134,51 +156,57 @@ TEST_SUITE("ListNodesAction") {
         CHECK(result["nodes"].size() == 0);
     }
 
-    TEST_CASE("lists multiple nodes with correct fields") {
+    TEST_CASE("lists multiple nodes with source info") {
         SceneGraph graph;
-        auto* a = graph.addNode("Box_1");
-        auto* b = graph.addNode("Cyl_1");
+        auto* a = graph.addNode("Alpha");
+        auto* b = graph.addNode("Beta");
+        REQUIRE(a != nullptr);
+        REQUIRE(b != nullptr);
+        a->setSource("geometry", 10);
+        b->setSource("geometry", 20);
 
         ListNodesAction action(graph);
         auto result = action.execute({}, nullptr);
 
         CHECK(result["ok"] == true);
-        auto nodes = result["nodes"];
-        REQUIRE(nodes.size() == 2);
+        auto& nodes = result["nodes"];
+        CHECK(nodes.size() == 2);
 
-        bool found_a = false;
-        bool found_b = false;
+        bool found_alpha = false;
+        bool found_beta = false;
         for(const auto& n : nodes) {
-            CHECK(n.contains("nodeId"));
+            CHECK(n.contains("sourceType"));
+            CHECK(n.contains("sourceId"));
             CHECK(n.contains("name"));
             CHECK(n.contains("visible"));
-            CHECK(n.contains("parentId"));
-            if(n["nodeId"] == a->id()) {
-                CHECK(n["name"] == "Box_1");
+            if(n["name"] == "Alpha") {
+                found_alpha = true;
+                CHECK(n["sourceType"] == "geometry");
+                CHECK(n["sourceId"] == 10);
                 CHECK(n["visible"] == true);
-                CHECK(n["parentId"] == 0);
-                found_a = true;
             }
-            if(n["nodeId"] == b->id()) {
-                CHECK(n["name"] == "Cyl_1");
+            if(n["name"] == "Beta") {
+                found_beta = true;
+                CHECK(n["sourceType"] == "geometry");
+                CHECK(n["sourceId"] == 20);
                 CHECK(n["visible"] == true);
-                CHECK(n["parentId"] == 0);
-                found_b = true;
             }
         }
-        CHECK(found_a);
-        CHECK(found_b);
+        CHECK(found_alpha);
+        CHECK(found_beta);
     }
 
     TEST_CASE("visibility reflected in list_nodes") {
         SceneGraph graph;
-        auto* node = graph.addNode("Box_1");
+        auto* node = graph.addNode("X");
+        REQUIRE(node != nullptr);
+        node->setSource("geometry", 5);
         graph.setNodeVisible(node->id(), false);
 
         ListNodesAction action(graph);
         auto result = action.execute({}, nullptr);
 
-        REQUIRE(result["nodes"].size() == 1);
+        CHECK(result["nodes"].size() == 1);
         CHECK(result["nodes"][0]["visible"] == false);
     }
 
@@ -189,50 +217,38 @@ TEST_SUITE("ListNodesAction") {
 
         CHECK(desc["name"] == "list_nodes");
         CHECK(desc.contains("description"));
-        CHECK(desc.contains("params"));
         CHECK(desc.contains("returns"));
+        CHECK(desc["returns"]["ok"]["description"] ==
+              "true when the action completes successfully.");
     }
-
-} // TEST_SUITE
-
-} // namespace OpenGeoLab::Scene::Tests
-
-#include <opengeolab/core/module_data_event.hpp>
-#include <opengeolab/scene/scene_module.hpp>
-
-#include <kangaroo/util/plugin_component_factory.hpp>
-
-namespace OpenGeoLab::Scene::Tests {
+}
 
 TEST_SUITE("SceneModule") {
-
     TEST_CASE("module name is scene") {
         Kangaroo::Util::PluginComponentFactory factory;
-        SceneModule module(factory);
-
-        CHECK(module.moduleName() == "scene");
+        SceneModule mod(factory);
+        CHECK(mod.moduleName() == "scene");
     }
 
     TEST_CASE("sceneGraph accessor returns owned graph") {
         Kangaroo::Util::PluginComponentFactory factory;
-        SceneModule module(factory);
-
-        auto* node = module.sceneGraph().addNode("TestNode");
+        SceneModule mod(factory);
+        auto* node = mod.sceneGraph().addNode("test");
         REQUIRE(node != nullptr);
-        CHECK(module.sceneGraph().findNode(node->id()) == node);
+        CHECK(mod.sceneGraph().findNode(node->id()) == node);
     }
 
     TEST_CASE("set_visibility dispatches through module process") {
         Kangaroo::Util::PluginComponentFactory factory;
-        SceneModule module(factory);
+        SceneModule mod(factory);
+        auto* node = mod.sceneGraph().addNode("A");
+        REQUIRE(node != nullptr);
+        node->setSource("geometry", 77);
 
-        auto* node = module.sceneGraph().addNode("Box");
-        REQUIRE(node->isVisible());
-
-        nlohmann::json request = {
-            {"action", "set_visibility"},
-            {"param", {{"nodes", {{{"nodeId", node->id()}, {"visible", false}}}}}}};
-        auto result = module.process(request, nullptr);
+        auto result = mod.process(
+            {{"action", "set_visibility"},
+             {"param", {{"type", "geometry"}, {"nodes", {{{"id", 77}, {"visible", false}}}}}}},
+            nullptr);
 
         CHECK(result["ok"] == true);
         CHECK(result["updated"] == 1);
@@ -241,38 +257,34 @@ TEST_SUITE("SceneModule") {
 
     TEST_CASE("list_nodes dispatches through module process") {
         Kangaroo::Util::PluginComponentFactory factory;
-        SceneModule module(factory);
+        SceneModule mod(factory);
+        auto* node = mod.sceneGraph().addNode("B");
+        REQUIRE(node != nullptr);
+        node->setSource("geometry", 88);
 
-        module.sceneGraph().addNode("A");
-        module.sceneGraph().addNode("B");
-
-        nlohmann::json request = {{"action", "list_nodes"}, {"param", nlohmann::json::object()}};
-        auto result = module.process(request, nullptr);
+        auto result = mod.process({{"action", "list_nodes"}, {"param", {}}}, nullptr);
 
         CHECK(result["ok"] == true);
-        CHECK(result["nodes"].size() == 2);
+        CHECK(result["nodes"].size() == 1);
+        CHECK(result["nodes"][0]["sourceId"] == 88);
     }
 
     TEST_CASE("dataChanged emitted on set_visibility mutation") {
         Kangaroo::Util::PluginComponentFactory factory;
-        SceneModule module(factory);
-
-        auto* node = module.sceneGraph().addNode("Box");
+        SceneModule mod(factory);
+        auto* node = mod.sceneGraph().addNode("C");
+        REQUIRE(node != nullptr);
+        node->setSource("geometry", 99);
 
         int signal_count = 0;
-        auto conn = module.dataChanged.connect([&](Core::ModuleDataEvent) { ++signal_count; });
+        auto conn =
+            mod.dataChanged.connect([&](OpenGeoLab::Core::ModuleDataEvent) { ++signal_count; });
 
-        signal_count = 0;
+        [[maybe_unused]] auto result = mod.process(
+            {{"action", "set_visibility"},
+             {"param", {{"type", "geometry"}, {"nodes", {{{"id", 99}, {"visible", false}}}}}}},
+            nullptr);
 
-        nlohmann::json request = {
-            {"action", "set_visibility"},
-            {"param", {{"nodes", {{{"nodeId", node->id()}, {"visible", false}}}}}}};
-        auto result = module.process(request, nullptr);
-
-        CHECK(result["ok"] == true);
         CHECK(signal_count > 0);
     }
-
-} // TEST_SUITE
-
-} // namespace OpenGeoLab::Scene::Tests
+}

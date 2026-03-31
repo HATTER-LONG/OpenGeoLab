@@ -51,7 +51,8 @@ Item {
             module: "scene",
             action: "set_visibility",
             param: {
-                nodes: [{ nodeId: shapeId, visible: newVisible }]
+                type: "geometry",
+                nodes: [{ id: shapeId, visible: newVisible }]
             },
             mute: true
         }))
@@ -116,10 +117,11 @@ Item {
                     let oldMap = root.nodeMap
                     for (let i = 0; i < resp.nodes.length; ++i) {
                         let n = resp.nodes[i]
-                        map[n.nodeId] = {
+                        let sid = n.sourceId
+                        map[sid] = {
                             visible: n.visible,
-                            meshVisible: (n.nodeId in oldMap)
-                                         ? oldMap[n.nodeId].meshVisible === true
+                            meshVisible: (sid in oldMap)
+                                         ? oldMap[sid].meshVisible === true
                                          : false
                         }
                     }

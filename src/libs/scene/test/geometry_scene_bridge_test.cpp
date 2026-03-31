@@ -54,6 +54,8 @@ TEST_CASE("GeometrySceneBridge creates renderable node after tessellation") {
     CHECK_FALSE(meshData.lineRanges.empty());
     CHECK(meshData.bounds.isValid());
     CHECK(fixture.topoIndex.edgeToWire(shapeId, 1).has_value());
+    CHECK(node->sourceType() == "geometry");
+    CHECK(node->sourceId() == shapeId);
 }
 
 TEST_CASE("GeometrySceneBridge removes scene node and topology data") {
