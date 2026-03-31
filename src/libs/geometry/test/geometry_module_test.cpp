@@ -4,7 +4,13 @@
  */
 
 #include <opengeolab/geometry/create_box_action.hpp>
+#include <opengeolab/geometry/delete_shape_action.hpp>
 #include <opengeolab/geometry/geometry_module.hpp>
+#include <opengeolab/geometry/import_brep_action.hpp>
+#include <opengeolab/geometry/import_step_action.hpp>
+#include <opengeolab/geometry/query_shape_action.hpp>
+#include <opengeolab/geometry/shape_store.hpp>
+#include <opengeolab/geometry/tessellate_action.hpp>
 
 #include <kangaroo/util/plugin_component_factory.hpp>
 
@@ -96,6 +102,60 @@ TEST_CASE("CreateBoxAction with tessellate=false skips tessellation") {
     const auto* entry = store.find(shape_id);
     REQUIRE(entry != nullptr);
     CHECK(entry->visualData == nullptr);
+}
+
+TEST_CASE("Geometry actions include action in direct error responses") {
+    using OpenGeoLab::Core::NO_PROGRESS_CALLBACK;
+    OpenGeoLab::Geometry::ShapeStore store;
+
+    SUBCASE("delete_shape unknown shapeId") {
+        OpenGeoLab::Geometry::DeleteShapeAction action(store);
+        const auto result = action.execute({{"shapeId", 999U}}, NO_PROGRESS_CALLBACK);
+        CHECK(result["ok"] == false);
+        CHECK(result["action"] == "delete_shape");
+    }
+
+    SUBCASE("query_shape unknown shapeId") {
+        OpenGeoLab::Geometry::QueryShapeAction action(store);
+        const auto result = action.execute({{"shapeId", 999U}}, NO_PROGRESS_CALLBACK);
+        CHECK(result["ok"] == false);
+        CHECK(result["action"] == "query_shape");
+    }
+
+    SUBCASE("tessellate unknown shapeId") {
+        OpenGeoLab::Geometry::TessellateAction action(store);
+        const auto result = action.execute({{"shapeId", 999U}}, NO_PROGRESS_CALLBACK);
+        CHECK(result["ok"] == false);
+        CHECK(result["action"] == "tessellate");
+    }
+
+    SUBCASE("import_step missing path") {
+        OpenGeoLab::Geometry::ImportStepAction action(store);
+        const auto result = action.execute(nlohmann::json::object(), NO_PROGRESS_CALLBACK);
+        CHECK(result["ok"] == false);
+        CHECK(result["action"] == "import_step");
+    }
+
+    SUBCASE("import_step file not found") {
+        OpenGeoLab::Geometry::ImportStepAction action(store);
+        const auto result = action.execute({{"path", "does_not_exist.step"}}, NO_PROGRESS_CALLBACK);
+        CHECK(result["ok"] == false);
+        CHECK(result["action"] == "import_step");
+    }
+
+    SUBCASE("import_brep missing path") {
+        OpenGeoLab::Geometry::ImportBrepAction action(store);
+        const auto result = action.execute(nlohmann::json::object(), NO_PROGRESS_CALLBACK);
+        CHECK(result["ok"] == false);
+        CHECK(result["action"] == "import_brep");
+    }
+
+    SUBCASE("import_brep file not found") {
+        OpenGeoLab::Geometry::ImportBrepAction action(store);
+        const auto result = action.execute({{"path", "does_not_exist.brep"}}, NO_PROGRESS_CALLBACK);
+        CHECK(result["ok"] == false);
+        CHECK(result["action"] == "import_brep");
+    }
 }
 
 TEST_CASE("GeometryModule shapeStore is accessible") {

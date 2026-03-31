@@ -57,11 +57,13 @@ nlohmann::json ImportStepAction::execute(const nlohmann::json& param,
                                          const Core::ProgressCallback& progress) {
     const auto path = param.value("path", std::string{});
     if(path.empty()) {
-        return {{"ok", false}, {"summary", "Missing required 'path' parameter"}};
+        return {{"ok", false},
+                {"action", ACTION_NAME},
+                {"summary", "Missing required 'path' parameter"}};
     }
 
     if(!std::filesystem::exists(path)) {
-        return {{"ok", false}, {"summary", "File not found: " + path}};
+        return {{"ok", false}, {"action", ACTION_NAME}, {"summary", "File not found: " + path}};
     }
 
     auto name = param.value("name", std::string{});
@@ -76,7 +78,9 @@ nlohmann::json ImportStepAction::execute(const nlohmann::json& param,
     STEPControl_Reader reader;
     auto status = reader.ReadFile(path.c_str());
     if(status != IFSelect_RetDone) {
-        return {{"ok", false}, {"summary", "Failed to read STEP file: " + path}};
+        return {{"ok", false},
+                {"action", ACTION_NAME},
+                {"summary", "Failed to read STEP file: " + path}};
     }
 
     if(progress) {
@@ -86,7 +90,8 @@ nlohmann::json ImportStepAction::execute(const nlohmann::json& param,
     const TopoDS_Shape shape = reader.OneShape();
 
     if(shape.IsNull()) {
-        return {{"ok", false}, {"summary", "STEP file produced null shape"}};
+        return {
+            {"ok", false}, {"action", ACTION_NAME}, {"summary", "STEP file produced null shape"}};
     }
 
     if(progress) {

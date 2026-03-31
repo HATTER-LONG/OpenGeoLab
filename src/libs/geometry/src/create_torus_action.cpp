@@ -82,7 +82,7 @@ nlohmann::json CreateTorusAction::execute(const nlohmann::json& param,
     BRepPrimAPI_MakeTorus maker(axis, major_radius, minor_radius);
     maker.Build();
     if(!maker.IsDone()) {
-        return {{"ok", false}, {"summary", "Torus creation failed"}};
+        return {{"ok", false}, {"action", ACTION_NAME}, {"summary", "Torus creation failed"}};
     }
 
     if(progress) {

@@ -77,7 +77,7 @@ nlohmann::json CreateBoxAction::execute(const nlohmann::json& param,
     BRepPrimAPI_MakeBox maker(corner, width, height, depth);
     maker.Build();
     if(!maker.IsDone()) {
-        return {{"ok", false}, {"summary", "Box creation failed"}};
+        return {{"ok", false}, {"action", ACTION_NAME}, {"summary", "Box creation failed"}};
     }
 
     if(progress) {

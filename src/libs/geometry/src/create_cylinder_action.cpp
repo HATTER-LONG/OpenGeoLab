@@ -78,7 +78,7 @@ nlohmann::json CreateCylinderAction::execute(const nlohmann::json& param,
     BRepPrimAPI_MakeCylinder maker(axis, radius, height);
     maker.Build();
     if(!maker.IsDone()) {
-        return {{"ok", false}, {"summary", "Cylinder creation failed"}};
+        return {{"ok", false}, {"action", ACTION_NAME}, {"summary", "Cylinder creation failed"}};
     }
 
     if(progress) {

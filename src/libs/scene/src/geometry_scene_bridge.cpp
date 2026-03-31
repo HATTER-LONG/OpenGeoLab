@@ -80,18 +80,17 @@ private:
 }
 
 void attachComponents(SceneGraph& scene,
-                      SceneNode& node,
+                      NodeId node_id,
                       uint32_t shape_id,
                       const Geometry::ShapeEntry& entry) {
     RenderMeshData mesh_data = GeometrySceneBridge::buildRenderData(shape_id, entry);
-    node.setLocalBounds(mesh_data.bounds);
-
-    auto render_component = std::make_unique<ShapeRenderComponent>(std::move(mesh_data));
-    ShapeRenderComponent const* render_component_ptr = render_component.get();
-    node.setRenderComponent(std::move(render_component));
-    node.setPickComponent(std::make_unique<ShapePickComponent>(render_component_ptr));
-    node.markDirty();
-    scene.nodeUpdated(node.id());
+    scene.configureNode(node_id, [&](SceneNode& node) {
+        node.setLocalBounds(mesh_data.bounds);
+        auto render_component = std::make_unique<ShapeRenderComponent>(std::move(mesh_data));
+        ShapeRenderComponent const* render_component_ptr = render_component.get();
+        node.setRenderComponent(std::move(render_component));
+        node.setPickComponent(std::make_unique<ShapePickComponent>(render_component_ptr));
+    });
 }
 
 } // namespace
@@ -315,14 +314,14 @@ void GeometrySceneBridge::onShapeAdded(uint32_t shape_id, const Geometry::ShapeE
         return;
     }
 
-    SceneNode* node = m_scene.addNode(entry.name);
-    if(node == nullptr) {
+    const NodeId node_id = m_scene.addNode(entry.name);
+    if(node_id == 0) {
         return;
     }
 
-    m_shapeToNode[shape_id] = node->id();
-    node->setSource("geometry", shape_id);
-    attachComponents(m_scene, *node, shape_id, entry);
+    m_shapeToNode[shape_id] = node_id;
+    m_scene.setNodeSource(node_id, "geometry", shape_id);
+    attachComponents(m_scene, node_id, shape_id, entry);
 }
 
 void GeometrySceneBridge::onShapeRemoved(uint32_t shape_id) {
@@ -337,59 +336,59 @@ void GeometrySceneBridge::onShapeRemoved(uint32_t shape_id) {
 void GeometrySceneBridge::onShapeUpdated(uint32_t shape_id, const Geometry::ShapeEntry& entry) {
     m_topoIndex.buildForShape(shape_id, entry);
 
-    SceneNode* node = nullptr;
+    NodeId node_id = 0;
     if(const auto iterator = m_shapeToNode.find(shape_id); iterator != m_shapeToNode.end()) {
-        node = m_scene.findNode(iterator->second);
-        if(node == nullptr) {
+        if(m_scene.findNode(iterator->second) != nullptr) {
+            node_id = iterator->second;
+        } else {
             m_shapeToNode.erase(iterator);
         }
     }
 
-    if(node == nullptr) {
+    if(node_id == 0) {
         if(entry.visualData == nullptr) {
             return;
         }
 
-        node = m_scene.addNode(entry.name);
-        if(node == nullptr) {
+        node_id = m_scene.addNode(entry.name);
+        if(node_id == 0) {
             return;
         }
-        m_shapeToNode[shape_id] = node->id();
-        node->setSource("geometry", shape_id);
-        attachComponents(m_scene, *node, shape_id, entry);
+        m_shapeToNode[shape_id] = node_id;
+        m_scene.setNodeSource(node_id, "geometry", shape_id);
+        attachComponents(m_scene, node_id, shape_id, entry);
         return;
     }
 
-    node->setName(entry.name);
     if(entry.visualData == nullptr) {
-        node->markDirty();
-        m_scene.nodeUpdated(node->id());
+        m_scene.configureNode(node_id, [&](SceneNode& node) { node.setName(entry.name); });
         return;
     }
 
     RenderMeshData mesh_data = buildRenderData(shape_id, entry);
-    node->setLocalBounds(mesh_data.bounds);
+    m_scene.configureNode(node_id, [&](SceneNode& node) {
+        node.setName(entry.name);
+        node.setLocalBounds(mesh_data.bounds);
 
-    if(auto* render_component = dynamic_cast<ShapeRenderComponent*>(node->renderComponent());
-       render_component != nullptr) {
-        render_component->updateData(std::move(mesh_data));
-    } else {
-        auto new_render_component = std::make_unique<ShapeRenderComponent>(std::move(mesh_data));
-        ShapeRenderComponent const* render_component_ptr = new_render_component.get();
-        node->setPickComponent(nullptr); // clear before destroying old render to avoid dangling ref
-        node->setRenderComponent(std::move(new_render_component));
-        node->setPickComponent(std::make_unique<ShapePickComponent>(render_component_ptr));
-    }
-
-    if(node->pickComponent() == nullptr) {
-        if(auto* render_component = dynamic_cast<ShapeRenderComponent*>(node->renderComponent());
+        if(auto* render_component = dynamic_cast<ShapeRenderComponent*>(node.renderComponent());
            render_component != nullptr) {
-            node->setPickComponent(std::make_unique<ShapePickComponent>(render_component));
+            render_component->updateData(std::move(mesh_data));
+        } else {
+            auto new_render_component =
+                std::make_unique<ShapeRenderComponent>(std::move(mesh_data));
+            ShapeRenderComponent const* render_component_ptr = new_render_component.get();
+            node.setPickComponent(nullptr);
+            node.setRenderComponent(std::move(new_render_component));
+            node.setPickComponent(std::make_unique<ShapePickComponent>(render_component_ptr));
         }
-    }
 
-    node->markDirty();
-    m_scene.nodeUpdated(node->id());
+        if(node.pickComponent() == nullptr) {
+            if(auto* render_component = dynamic_cast<ShapeRenderComponent*>(node.renderComponent());
+               render_component != nullptr) {
+                node.setPickComponent(std::make_unique<ShapePickComponent>(render_component));
+            }
+        }
+    });
 }
 
 } // namespace OpenGeoLab::Scene

@@ -51,10 +51,10 @@ public:
     /**
      * @brief Create a new node and add it as a child of parentId.
      * @param name Human-readable name.
-     * @param parentId Parent node id (0 = root).
-     * @return Pointer to new node, or nullptr if parentId not found.
+     * @param parent_id Parent node id (0 = root).
+     * @return NodeId of the new node, or 0 if parentId not found.
      */
-    SceneNode* addNode(std::string name, NodeId parent_id = 0);
+    NodeId addNode(std::string name, NodeId parent_id = 0);
 
     /**
      * @brief Remove a node and all its descendants.
@@ -81,6 +81,37 @@ public:
      * @return true if node was found and its visibility changed.
      */
     bool setNodeVisible(NodeId id, bool visible);
+
+    /**
+     * @brief Set visibility of a node by source metadata (atomic find+modify).
+     * @param source_type Source type tag (e.g. "geometry").
+     * @param source_id Source-domain identifier.
+     * @param visible Desired visibility state.
+     * @return true if a matching node was found and its visibility changed.
+     */
+    bool setVisibleBySource(std::string_view source_type, uint32_t source_id, bool visible);
+
+    /**
+     * @brief Set source metadata on a node by id (thread-safe).
+     * @param id Node id.
+     * @param source_type Source type tag (e.g. "geometry").
+     * @param source_id Source-domain identifier.
+     * @return true if node was found.
+     */
+    bool setNodeSource(NodeId id, std::string_view source_type, uint32_t source_id);
+
+    /**
+     * @brief Apply a mutation to a node under write lock.
+     *
+     * Acquires a write lock, finds the node, calls @p fn, marks the
+     * node dirty, and bumps the scene version. Avoids exposing raw
+     * SceneNode pointers outside the lock scope.
+     *
+     * @param id Node to configure.
+     * @param fn Callable `void(SceneNode&)` invoked under write lock.
+     * @return true if node was found and fn was called.
+     */
+    bool configureNode(NodeId id, const std::function<void(SceneNode&)>& fn);
 
     /**
      * @brief Visit all visible nodes (skips invisible subtrees).

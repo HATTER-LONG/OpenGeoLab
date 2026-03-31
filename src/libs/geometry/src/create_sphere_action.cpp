@@ -73,7 +73,7 @@ nlohmann::json CreateSphereAction::execute(const nlohmann::json& param,
     BRepPrimAPI_MakeSphere maker(gp_Pnt(center[0], center[1], center[2]), radius);
     maker.Build();
     if(!maker.IsDone()) {
-        return {{"ok", false}, {"summary", "Sphere creation failed"}};
+        return {{"ok", false}, {"action", ACTION_NAME}, {"summary", "Sphere creation failed"}};
     }
 
     if(progress) {

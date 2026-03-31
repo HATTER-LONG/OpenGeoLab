@@ -55,19 +55,17 @@ nlohmann::json SetVisibilityAction::execute(const nlohmann::json& param,
         const auto id = entry.value("id", static_cast<uint32_t>(0));
         const auto visible = entry.value("visible", true);
 
-        SceneNode const* node = nullptr;
+        bool changed = false;
         if(type == "node") {
-            node = m_graph.findNode(static_cast<NodeId>(id));
+            changed = m_graph.setNodeVisible(static_cast<NodeId>(id), visible);
         } else {
-            node = m_graph.findNodeBySource(type, id);
+            changed = m_graph.setVisibleBySource(type, id, visible);
         }
 
-        if(node == nullptr) {
-            ++skipped;
-            continue;
-        }
-        if(m_graph.setNodeVisible(node->id(), visible)) {
+        if(changed) {
             ++updated;
+        } else {
+            ++skipped;
         }
     }
 

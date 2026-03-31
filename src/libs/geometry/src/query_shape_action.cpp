@@ -40,7 +40,7 @@ nlohmann::json QueryShapeAction::execute(const nlohmann::json& param,
     const auto shape_id = param.value("shapeId", static_cast<uint32_t>(0));
     const auto* entry = m_store.find(shape_id);
     if(!entry) {
-        return {{"ok", false}, {"summary", "Unknown shapeId"}};
+        return {{"ok", false}, {"action", ACTION_NAME}, {"summary", "Unknown shapeId"}};
     }
 
     if(progress) {

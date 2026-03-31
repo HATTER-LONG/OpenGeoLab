@@ -59,11 +59,13 @@ nlohmann::json ImportBrepAction::execute(const nlohmann::json& param,
                                          const Core::ProgressCallback& progress) {
     const auto path = param.value("path", std::string{});
     if(path.empty()) {
-        return {{"ok", false}, {"summary", "Missing required 'path' parameter"}};
+        return {{"ok", false},
+                {"action", ACTION_NAME},
+                {"summary", "Missing required 'path' parameter"}};
     }
 
     if(!std::filesystem::exists(path)) {
-        return {{"ok", false}, {"summary", "File not found: " + path}};
+        return {{"ok", false}, {"action", ACTION_NAME}, {"summary", "File not found: " + path}};
     }
 
     auto name = param.value("name", std::string{});
@@ -78,11 +80,14 @@ nlohmann::json ImportBrepAction::execute(const nlohmann::json& param,
     const BRep_Builder builder;
     TopoDS_Shape shape;
     if(!BRepTools::Read(shape, path.c_str(), builder)) {
-        return {{"ok", false}, {"summary", "Failed to read BRep file: " + path}};
+        return {{"ok", false},
+                {"action", ACTION_NAME},
+                {"summary", "Failed to read BRep file: " + path}};
     }
 
     if(shape.IsNull()) {
-        return {{"ok", false}, {"summary", "BRep file produced null shape"}};
+        return {
+            {"ok", false}, {"action", ACTION_NAME}, {"summary", "BRep file produced null shape"}};
     }
 
     if(progress) {

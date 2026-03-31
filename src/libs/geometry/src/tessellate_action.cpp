@@ -41,7 +41,7 @@ nlohmann::json TessellateAction::execute(const nlohmann::json& param,
     const auto tess_params = TessellationParams::fromJson(param);
 
     if(!m_store.find(shape_id)) {
-        return {{"ok", false}, {"summary", "Unknown shapeId"}};
+        return {{"ok", false}, {"action", ACTION_NAME}, {"summary", "Unknown shapeId"}};
     }
 
     if(progress) {

@@ -43,20 +43,20 @@ SceneNode* SceneGraph::root() const {
     return m_root.get();
 }
 
-SceneNode* SceneGraph::addNode(std::string name, NodeId parent_id) {
-    SceneNode* added_node = nullptr;
+NodeId SceneGraph::addNode(std::string name, NodeId parent_id) {
     NodeId added_id = 0;
     {
         std::unique_lock const lock(m_mutex);
         SceneNode* parent = findInSubtree(m_root.get(), parent_id);
         if(parent == nullptr) {
-            return nullptr;
+            return 0;
         }
 
         added_id = m_nextNodeId++;
-        added_node = parent->addChild(std::make_unique<SceneNode>(added_id, std::move(name)));
+        SceneNode* added_node =
+            parent->addChild(std::make_unique<SceneNode>(added_id, std::move(name)));
         if(added_node == nullptr) {
-            return nullptr;
+            return 0;
         }
 
         added_node->markDirty();
@@ -64,7 +64,7 @@ SceneNode* SceneGraph::addNode(std::string name, NodeId parent_id) {
     }
 
     nodeAdded(added_id);
-    return added_node;
+    return added_id;
 }
 
 bool SceneGraph::removeNode(NodeId id) {
@@ -139,6 +139,69 @@ bool SceneGraph::setNodeVisible(NodeId id, bool visible) {
             return false;
         }
         node->setVisible(visible);
+        node->markDirty();
+        ++m_version;
+    }
+    nodeUpdated(id);
+    return true;
+}
+
+bool SceneGraph::setVisibleBySource(std::string_view source_type,
+                                    uint32_t source_id,
+                                    bool visible) {
+    NodeId matched_id = 0;
+    {
+        std::unique_lock const lock(m_mutex);
+        SceneNode* node = nullptr;
+        std::function<void(SceneNode*)> search = [&](SceneNode* current) {
+            if(node != nullptr) {
+                return;
+            }
+            if(current->sourceType() == source_type && current->sourceId() == source_id) {
+                node = current;
+                return;
+            }
+            for(const auto& child : current->children()) {
+                search(child.get());
+            }
+        };
+        search(m_root.get());
+
+        if(node == nullptr || node->isVisible() == visible) {
+            return false;
+        }
+        matched_id = node->id();
+        node->setVisible(visible);
+        node->markDirty();
+        ++m_version;
+    }
+    nodeUpdated(matched_id);
+    return true;
+}
+
+bool SceneGraph::setNodeSource(NodeId id, std::string_view source_type, uint32_t source_id) {
+    {
+        std::unique_lock const lock(m_mutex);
+        SceneNode* node = findInSubtree(m_root.get(), id);
+        if(node == nullptr) {
+            return false;
+        }
+        node->setSource(std::string{source_type}, source_id);
+        node->markDirty();
+        ++m_version;
+    }
+    nodeUpdated(id);
+    return true;
+}
+
+bool SceneGraph::configureNode(NodeId id, const std::function<void(SceneNode&)>& fn) {
+    {
+        std::unique_lock const lock(m_mutex);
+        SceneNode* node = findInSubtree(m_root.get(), id);
+        if(node == nullptr) {
+            return false;
+        }
+        fn(*node);
         node->markDirty();
         ++m_version;
     }

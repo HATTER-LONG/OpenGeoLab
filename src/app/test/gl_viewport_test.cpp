@@ -162,7 +162,9 @@ TEST_CASE("GLViewport fits the camera to the scene and creates a renderer") {
     static_cast<void>(ensureGuiApplication());
 
     Scene::SceneGraph scene;
-    Scene::SceneNode* node = scene.addNode("box");
+    const Scene::NodeId node_id = scene.addNode("box");
+    REQUIRE(node_id != 0);
+    Scene::SceneNode* node = scene.findNode(node_id);
     REQUIRE(node != nullptr);
 
     Scene::BoundingBox3D bounds;

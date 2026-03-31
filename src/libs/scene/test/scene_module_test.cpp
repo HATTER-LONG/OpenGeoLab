@@ -13,16 +13,20 @@
 #include <doctest/doctest.h>
 
 using OpenGeoLab::Scene::ListNodesAction;
+using OpenGeoLab::Scene::NodeId;
 using OpenGeoLab::Scene::SceneGraph;
 using OpenGeoLab::Scene::SceneModule;
+using OpenGeoLab::Scene::SceneNode;
 using OpenGeoLab::Scene::SetVisibilityAction;
 
 TEST_SUITE("SetVisibilityAction") {
     TEST_CASE("single node set invisible") {
         SceneGraph graph;
-        auto* node = graph.addNode("A");
+        const NodeId node_id = graph.addNode("A");
+        REQUIRE(node_id != 0);
+        SceneNode* node = graph.findNode(node_id);
         REQUIRE(node != nullptr);
-        node->setSource("geometry", 100);
+        graph.setNodeSource(node_id, "geometry", 100);
 
         SetVisibilityAction action(graph);
         auto result = action.execute(
@@ -36,15 +40,21 @@ TEST_SUITE("SetVisibilityAction") {
 
     TEST_CASE("batch set visibility") {
         SceneGraph graph;
-        auto* a = graph.addNode("A");
-        auto* b = graph.addNode("B");
-        auto* c = graph.addNode("C");
+        const NodeId a_id = graph.addNode("A");
+        const NodeId b_id = graph.addNode("B");
+        const NodeId c_id = graph.addNode("C");
+        REQUIRE(a_id != 0);
+        REQUIRE(b_id != 0);
+        REQUIRE(c_id != 0);
+        SceneNode* a = graph.findNode(a_id);
+        SceneNode* b = graph.findNode(b_id);
+        SceneNode* c = graph.findNode(c_id);
         REQUIRE(a != nullptr);
         REQUIRE(b != nullptr);
         REQUIRE(c != nullptr);
-        a->setSource("geometry", 10);
-        b->setSource("geometry", 20);
-        c->setSource("geometry", 30);
+        graph.setNodeSource(a_id, "geometry", 10);
+        graph.setNodeSource(b_id, "geometry", 20);
+        graph.setNodeSource(c_id, "geometry", 30);
 
         SetVisibilityAction action(graph);
         auto result = action.execute({{"type", "geometry"},
@@ -55,7 +65,7 @@ TEST_SUITE("SetVisibilityAction") {
                                      nullptr);
 
         CHECK(result["updated"] == 2);
-        CHECK(result["skipped"] == 0);
+        CHECK(result["skipped"] == 1);
         CHECK_FALSE(a->isVisible());
         CHECK_FALSE(b->isVisible());
         CHECK(c->isVisible());
@@ -100,9 +110,11 @@ TEST_SUITE("SetVisibilityAction") {
 
     TEST_CASE("no actual change yields updated=0") {
         SceneGraph graph;
-        auto* node = graph.addNode("A");
+        const NodeId node_id = graph.addNode("A");
+        REQUIRE(node_id != 0);
+        SceneNode* node = graph.findNode(node_id);
         REQUIRE(node != nullptr);
-        node->setSource("geometry", 42);
+        graph.setNodeSource(node_id, "geometry", 42);
         CHECK(node->isVisible());
 
         SetVisibilityAction action(graph);
@@ -115,13 +127,14 @@ TEST_SUITE("SetVisibilityAction") {
 
     TEST_CASE("type=node uses internal nodeId") {
         SceneGraph graph;
-        auto* node = graph.addNode("A");
+        const NodeId node_id = graph.addNode("A");
+        REQUIRE(node_id != 0);
+        SceneNode* node = graph.findNode(node_id);
         REQUIRE(node != nullptr);
-        auto nid = node->id();
 
         SetVisibilityAction action(graph);
         auto result = action.execute(
-            {{"type", "node"}, {"nodes", {{{"id", nid}, {"visible", false}}}}}, nullptr);
+            {{"type", "node"}, {"nodes", {{{"id", node_id}, {"visible", false}}}}}, nullptr);
 
         CHECK(result["ok"] == true);
         CHECK(result["updated"] == 1);
@@ -158,12 +171,16 @@ TEST_SUITE("ListNodesAction") {
 
     TEST_CASE("lists multiple nodes with source info") {
         SceneGraph graph;
-        auto* a = graph.addNode("Alpha");
-        auto* b = graph.addNode("Beta");
+        const NodeId a_id = graph.addNode("Alpha");
+        const NodeId b_id = graph.addNode("Beta");
+        REQUIRE(a_id != 0);
+        REQUIRE(b_id != 0);
+        SceneNode* a = graph.findNode(a_id);
+        SceneNode* b = graph.findNode(b_id);
         REQUIRE(a != nullptr);
         REQUIRE(b != nullptr);
-        a->setSource("geometry", 10);
-        b->setSource("geometry", 20);
+        graph.setNodeSource(a_id, "geometry", 10);
+        graph.setNodeSource(b_id, "geometry", 20);
 
         ListNodesAction action(graph);
         auto result = action.execute({}, nullptr);
@@ -198,10 +215,12 @@ TEST_SUITE("ListNodesAction") {
 
     TEST_CASE("visibility reflected in list_nodes") {
         SceneGraph graph;
-        auto* node = graph.addNode("X");
+        const NodeId node_id = graph.addNode("X");
+        REQUIRE(node_id != 0);
+        SceneNode* node = graph.findNode(node_id);
         REQUIRE(node != nullptr);
-        node->setSource("geometry", 5);
-        graph.setNodeVisible(node->id(), false);
+        graph.setNodeSource(node_id, "geometry", 5);
+        graph.setNodeVisible(node_id, false);
 
         ListNodesAction action(graph);
         auto result = action.execute({}, nullptr);
@@ -233,17 +252,21 @@ TEST_SUITE("SceneModule") {
     TEST_CASE("sceneGraph accessor returns owned graph") {
         Kangaroo::Util::PluginComponentFactory factory;
         SceneModule mod(factory);
-        auto* node = mod.sceneGraph().addNode("test");
+        const NodeId node_id = mod.sceneGraph().addNode("test");
+        REQUIRE(node_id != 0);
+        SceneNode* node = mod.sceneGraph().findNode(node_id);
         REQUIRE(node != nullptr);
-        CHECK(mod.sceneGraph().findNode(node->id()) == node);
+        CHECK(mod.sceneGraph().findNode(node_id) == node);
     }
 
     TEST_CASE("set_visibility dispatches through module process") {
         Kangaroo::Util::PluginComponentFactory factory;
         SceneModule mod(factory);
-        auto* node = mod.sceneGraph().addNode("A");
+        const NodeId node_id = mod.sceneGraph().addNode("A");
+        REQUIRE(node_id != 0);
+        SceneNode* node = mod.sceneGraph().findNode(node_id);
         REQUIRE(node != nullptr);
-        node->setSource("geometry", 77);
+        mod.sceneGraph().setNodeSource(node_id, "geometry", 77);
 
         auto result = mod.process(
             {{"action", "set_visibility"},
@@ -258,9 +281,11 @@ TEST_SUITE("SceneModule") {
     TEST_CASE("list_nodes dispatches through module process") {
         Kangaroo::Util::PluginComponentFactory factory;
         SceneModule mod(factory);
-        auto* node = mod.sceneGraph().addNode("B");
+        const NodeId node_id = mod.sceneGraph().addNode("B");
+        REQUIRE(node_id != 0);
+        SceneNode* node = mod.sceneGraph().findNode(node_id);
         REQUIRE(node != nullptr);
-        node->setSource("geometry", 88);
+        mod.sceneGraph().setNodeSource(node_id, "geometry", 88);
 
         auto result = mod.process({{"action", "list_nodes"}, {"param", {}}}, nullptr);
 
@@ -272,9 +297,11 @@ TEST_SUITE("SceneModule") {
     TEST_CASE("dataChanged emitted on set_visibility mutation") {
         Kangaroo::Util::PluginComponentFactory factory;
         SceneModule mod(factory);
-        auto* node = mod.sceneGraph().addNode("C");
+        const NodeId node_id = mod.sceneGraph().addNode("C");
+        REQUIRE(node_id != 0);
+        SceneNode* node = mod.sceneGraph().findNode(node_id);
         REQUIRE(node != nullptr);
-        node->setSource("geometry", 99);
+        mod.sceneGraph().setNodeSource(node_id, "geometry", 99);
 
         int signal_count = 0;
         auto conn =
