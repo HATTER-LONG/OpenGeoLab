@@ -1,4 +1,9 @@
-#include "opengeolab/app/request_service.h"
+/**
+ * @file request_service.cpp
+ * @brief RequestService implementation — async and main-thread request dispatch
+ */
+
+#include "opengeolab/app/request_service.hpp"
 
 #include <opengeolab/command/command_dispatcher.hpp>
 #include <opengeolab/core/logger.hpp>

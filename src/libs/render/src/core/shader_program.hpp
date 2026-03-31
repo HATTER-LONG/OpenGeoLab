@@ -8,7 +8,6 @@
 #include <glad/gl.h>
 #include <glm/glm.hpp>
 
-#include <string>
 #include <string_view>
 
 namespace OpenGeoLab::Render {
@@ -33,7 +32,7 @@ public:
      * @brief Compile vertex + fragment source and link into a program.
      * @return true on success, false on compile/link error (logged via Core::getLogger).
      */
-    bool create(std::string_view vertexSrc, std::string_view fragmentSrc);
+    bool create(std::string_view vertex_src, std::string_view fragment_src);
 
     /** @brief Activate this program for subsequent draw calls. */
     void use() const;

@@ -1,5 +1,5 @@
 /**
- * @file log_filter_proxy_model.h
+ * @file log_filter_proxy_model.hpp
  * @brief QSortFilterProxyModel that filters log entries by severity level bitmask.
  *
  * Designed to wrap LogEventModel and provide filtered output to QML ListView,

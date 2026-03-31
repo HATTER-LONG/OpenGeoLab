@@ -1,5 +1,5 @@
 /**
- * @file translation_manager.h
+ * @file translation_manager.hpp
  * @brief Declares the runtime QML singleton used to switch application language.
  */
 

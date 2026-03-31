@@ -84,11 +84,16 @@ constexpr glm::vec4 HOVERED_COLOR{0.4f, 0.7f, 1.0f, 0.4f};
 constexpr float HIGHLIGHT_LINE_WIDTH = 1.5f;
 constexpr float DEFAULT_LINE_WIDTH = 1.0f;
 
+/// Bundled transform matrices for face highlight rendering.
+struct FaceTransforms {
+    glm::mat4 mvp;
+    glm::mat4 modelView;
+    glm::mat3 normalMatrix;
+};
+
 void drawHighlightedFaces(ShaderProgram& shader,
                           const std::vector<Scene::DrawRange>& ranges,
-                          const glm::mat4& mvp,
-                          const glm::mat4& model_view,
-                          const glm::mat3& normal_matrix,
+                          const FaceTransforms& transforms,
                           const glm::vec4& highlight_color,
                           const float alpha) {
     if(ranges.empty()) {
@@ -99,11 +104,12 @@ void drawHighlightedFaces(ShaderProgram& shader,
     glPolygonOffset(1.0f, 5.0f);
 
     shader.use();
-    shader.setMat4("u_mvp", mvp);
-    shader.setMat4("u_modelView", model_view);
+    shader.setMat4("u_mvp", transforms.mvp);
+    shader.setMat4("u_modelView", transforms.modelView);
 
     const GLint normal_matrix_location = glGetUniformLocation(shader.id(), "u_normalMatrix");
-    glUniformMatrix3fv(normal_matrix_location, 1, GL_FALSE, glm::value_ptr(normal_matrix));
+    glUniformMatrix3fv(normal_matrix_location, 1, GL_FALSE,
+                       glm::value_ptr(transforms.normalMatrix));
 
     shader.setVec4("u_highlightColor", highlight_color);
     shader.setFloat("u_alpha", alpha);
@@ -163,6 +169,7 @@ void HighlightPass::render(const FrameState& state, const GpuBufferManager& buff
     const glm::mat4 mvp = state.projMatrix * state.viewMatrix;
     const glm::mat3 normal_matrix = glm::inverseTranspose(glm::mat3(state.viewMatrix));
     const float alpha = 1.0f;
+    const FaceTransforms transforms{mvp, state.viewMatrix, normal_matrix};
 
     buffers.bindMainVao();
 
@@ -171,12 +178,10 @@ void HighlightPass::render(const FrameState& state, const GpuBufferManager& buff
 
     glLineWidth(HIGHLIGHT_LINE_WIDTH);
 
-    drawHighlightedFaces(m_faceShader, state.selectedDrawRanges, mvp, state.viewMatrix,
-                         normal_matrix, SELECTED_COLOR, alpha);
+    drawHighlightedFaces(m_faceShader, state.selectedDrawRanges, transforms, SELECTED_COLOR, alpha);
     drawHighlightedEdges(m_edgeShader, state.selectedDrawRanges, mvp, SELECTED_COLOR, alpha);
 
-    drawHighlightedFaces(m_faceShader, state.hoveredDrawRanges, mvp, state.viewMatrix,
-                         normal_matrix, HOVERED_COLOR, alpha);
+    drawHighlightedFaces(m_faceShader, state.hoveredDrawRanges, transforms, HOVERED_COLOR, alpha);
     drawHighlightedEdges(m_edgeShader, state.hoveredDrawRanges, mvp, HOVERED_COLOR, alpha);
 
     glLineWidth(DEFAULT_LINE_WIDTH);

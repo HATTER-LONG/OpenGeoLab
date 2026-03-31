@@ -2,7 +2,7 @@
  * @file module_data_notifier.cpp
  * @brief ModuleDataNotifier implementation
  */
-#include "opengeolab/app/module_data_notifier.h"
+#include "opengeolab/app/module_data_notifier.hpp"
 
 #include <opengeolab/command/command_dispatcher.hpp>
 #include <opengeolab/core/module_data_event.hpp>

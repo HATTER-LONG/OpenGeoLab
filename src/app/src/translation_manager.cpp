@@ -1,4 +1,9 @@
-#include "opengeolab/app/translation_manager.h"
+/**
+ * @file translation_manager.cpp
+ * @brief TranslationManager implementation — runtime language switching
+ */
+
+#include "opengeolab/app/translation_manager.hpp"
 
 #include <QCoreApplication>
 #include <QQmlEngine>

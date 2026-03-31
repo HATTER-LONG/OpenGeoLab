@@ -7,8 +7,6 @@
 
 #include <opengeolab/core/logger.hpp>
 
-#include <stdexcept>
-
 namespace OpenGeoLab::Command {
 
 CommandDispatcher::CommandDispatcher(Kangaroo::Util::PluginComponentFactory& factory)

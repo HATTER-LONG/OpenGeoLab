@@ -53,11 +53,11 @@ qt_add_qml_module(
     VERSION
     1.0
     SOURCES
-    include/opengeolab/app/translation_manager.h
-    include/opengeolab/app/request_service.h
-    include/opengeolab/app/log_event_model.h
-    include/opengeolab/app/log_filter_proxy_model.h
-    include/opengeolab/app/module_data_notifier.h
+    include/opengeolab/app/translation_manager.hpp
+    include/opengeolab/app/request_service.hpp
+    include/opengeolab/app/log_event_model.hpp
+    include/opengeolab/app/log_filter_proxy_model.hpp
+    include/opengeolab/app/module_data_notifier.hpp
     include/opengeolab/app/gl_viewport.hpp
     QML_FILES
     resource/qml/Main.qml
@@ -260,7 +260,8 @@ if (OPENGEOLAB_BUILD_TESTS)
         glad::glad
         DEFINITIONS
         OPENGEOLAB_APP_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
-    target_compile_definitions(opengeolab_gl_viewport_test PRIVATE QT_NO_KEYWORDS)
+    target_compile_definitions(opengeolab_gl_viewport_test
+                               PRIVATE QT_NO_KEYWORDS)
     target_include_directories(opengeolab_gl_viewport_test
                                PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
 endif ()

@@ -6,6 +6,7 @@ namespace OpenGeoLab::Scene {
 
 namespace {
 
+// NOLINTBEGIN(misc-no-recursion) — tree traversal is inherently recursive
 template <typename Visitor> void visitAllNodes(SceneNode* node, const Visitor& visitor) {
     if(node == nullptr) {
         return;
@@ -28,6 +29,7 @@ template <typename Visitor> void visitAllNodes(SceneNode* node, const Visitor& v
 }
 
 } // namespace
+// NOLINTEND(misc-no-recursion)
 
 SceneGraph::SceneGraph() : m_root(std::make_unique<SceneNode>(0, "root")) {}
 
@@ -434,7 +436,7 @@ void SceneGraph::traverseVisibleImpl(const SceneNode* node, // NOLINT
     }
 }
 
-void SceneGraph::traverseDirtyImpl(const SceneNode* node,
+void SceneGraph::traverseDirtyImpl(const SceneNode* node, // NOLINT(misc-no-recursion)
                                    uint64_t since_version,
                                    const std::function<void(const SceneNode&)>& visitor) const {
     if(node == nullptr) {

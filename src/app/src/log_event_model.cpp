@@ -3,7 +3,7 @@
  * @brief Implementation of LogEventModel and QmlLogSink.
  */
 
-#include "opengeolab/app/log_event_model.h"
+#include "opengeolab/app/log_event_model.hpp"
 
 #include <QMetaObject>
 
@@ -97,6 +97,17 @@ void LogEventModel::installSink(const std::shared_ptr<spdlog::logger>& logger) {
     logger->sinks().push_back(sink);
 }
 
+void LogEventModel::trimOldEntries() {
+    if(static_cast<int>(m_entries.size()) < MAX_ENTRIES) {
+        return;
+    }
+    const int remove_count = MAX_ENTRIES / 4;
+    beginRemoveRows(QModelIndex(), 0, remove_count - 1);
+    m_entries.erase(m_entries.begin(), m_entries.begin() + remove_count);
+    endRemoveRows();
+}
+
+// NOLINTBEGIN(readability-function-size) — 8 params required by QMetaObject::invokeMethod Q_ARG
 void LogEventModel::appendEntry(int level,
                                 const QString& level_name,
                                 const QString& source,
@@ -105,13 +116,7 @@ void LogEventModel::appendEntry(int level,
                                 int thread_id,
                                 const QString& file,
                                 int line) {
-    // Trim old entries if exceeding capacity
-    if(static_cast<int>(m_entries.size()) >= MAX_ENTRIES) {
-        const int remove_count = MAX_ENTRIES / 4;
-        beginRemoveRows(QModelIndex(), 0, remove_count - 1);
-        m_entries.erase(m_entries.begin(), m_entries.begin() + remove_count);
-        endRemoveRows();
-    }
+    trimOldEntries();
 
     const int row = static_cast<int>(m_entries.size());
     beginInsertRows(QModelIndex(), row, row);
@@ -121,6 +126,7 @@ void LogEventModel::appendEntry(int level,
     Q_EMIT countChanged();
     Q_EMIT newEntryAdded(level);
 }
+// NOLINTEND(readability-function-size)
 
 // ---------------------------------------------------------------------------
 // QmlLogSink

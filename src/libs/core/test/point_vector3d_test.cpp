@@ -7,8 +7,6 @@
 
 #include <doctest/doctest.h>
 
-#include <cmath>
-#include <limits>
 #include <type_traits>
 
 namespace OpenGeoLab::Core::Tests {

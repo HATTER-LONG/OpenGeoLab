@@ -5,10 +5,10 @@
 
 #include <pybind11/pybind11.h>
 
-#include "opengeolab/app/log_event_model.h"
-#include "opengeolab/app/log_filter_proxy_model.h"
-#include "opengeolab/app/module_data_notifier.h"
-#include "opengeolab/app/request_service.h"
+#include "opengeolab/app/log_event_model.hpp"
+#include "opengeolab/app/log_filter_proxy_model.hpp"
+#include "opengeolab/app/module_data_notifier.hpp"
+#include "opengeolab/app/request_service.hpp"
 
 #include <opengeolab/app/gl_viewport.hpp>
 #include <opengeolab/command/command_dispatcher.hpp>

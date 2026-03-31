@@ -1,5 +1,5 @@
 /**
- * @file request_service.h
+ * @file request_service.hpp
  * @brief Async request-response service bridging QML to embedded Python runtime.
  *
  * Async requests execute on a worker thread; main-thread requests are

@@ -28,12 +28,15 @@ public:
         }
     }
 
+    [[nodiscard]] bool isInitialized() const { return m_initialized; }
+
     virtual void render(const FrameState& state, const GpuBufferManager& buffers) = 0;
 
 protected:
     virtual bool onInitialize() = 0;
     virtual void onCleanup() {}
 
+private:
     bool m_initialized{false};
 };
 

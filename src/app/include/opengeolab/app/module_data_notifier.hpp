@@ -1,5 +1,5 @@
 /**
- * @file module_data_notifier.h
+ * @file module_data_notifier.hpp
  * @brief ModuleDataNotifier — bridges module data-change events to Qt signals
  */
 #pragma once
@@ -31,8 +31,9 @@ class ModuleDataNotifier : public QObject {
 
 public:
     /**
-     * @param dispatcher CommandDispatcher reference (caller owns lifetime)
-     * @param parent QObject parent
+     * @brief Subscribe to module data-change events and forward as Qt signals.
+     * @param dispatcher CommandDispatcher reference (caller owns lifetime).
+     * @param parent QObject parent.
      */
     explicit ModuleDataNotifier(Command::CommandDispatcher& dispatcher, QObject* parent = nullptr);
     ~ModuleDataNotifier() override;

@@ -3,9 +3,9 @@
  * @brief Implementation of LogFilterProxyModel.
  */
 
-#include "opengeolab/app/log_filter_proxy_model.h"
+#include "opengeolab/app/log_filter_proxy_model.hpp"
 
-#include "opengeolab/app/log_event_model.h"
+#include "opengeolab/app/log_event_model.hpp"
 
 namespace OpenGeoLab::App {
 

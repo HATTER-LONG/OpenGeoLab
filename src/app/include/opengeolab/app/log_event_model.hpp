@@ -1,5 +1,5 @@
 /**
- * @file log_event_model.h
+ * @file log_event_model.hpp
  * @brief QAbstractListModel bridging spdlog to QML, plus a custom spdlog sink.
  *
  * LogEventModel stores log entries and exposes them as a QML list model.
@@ -51,7 +51,7 @@ public:
 
     explicit LogEventModel(QObject* parent = nullptr);
 
-    [[nodiscard]] int rowCount(const QModelIndex& parent = QModelIndex()) const override;
+    [[nodiscard]] int rowCount(const QModelIndex& parent) const override;
     [[nodiscard]] QVariant data(const QModelIndex& index, int role) const override;
     [[nodiscard]] QHash<int, QByteArray> roleNames() const override;
 
@@ -103,6 +103,9 @@ private:
     int m_runtimeMinLevel{2}; ///< Default: INFO
     std::shared_ptr<spdlog::logger> m_logger;
     static constexpr int MAX_ENTRIES = 2000;
+
+    /** @brief Evict oldest entries when at capacity. */
+    void trimOldEntries();
 };
 
 /**
