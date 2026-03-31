@@ -1,11 +1,12 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import Qt5Compat.GraphicalEffects
 import "../theme"
 import "../components"
 import OpenGeoLab.App
 
-/** @brief Interactive 3D viewport powered by OpenGL. */
+/** @brief Interactive 3D viewport powered by OpenGL, with rounded-corner mask. */
 Item {
     id: root
 
@@ -14,26 +15,49 @@ Item {
     /** @brief Expose the GLViewport so other panels can call its methods. */
     property alias glViewport: viewport
 
-    GLViewport {
-        id: viewport
+    /** @brief Rounded-corner container that masks the FBO output. */
+    Item {
+        id: viewportContainer
         anchors.fill: parent
-        pickingEnabled: true
-        pickMode: 0
-
-        onEntityPicked: (shapeId, entityType, localId) => {
-            console.log(qsTr("Picked: Shape %1, Type %2, Local %3")
-                .arg(shapeId)
-                .arg(entityType)
-                .arg(localId))
+        layer.enabled: true
+        layer.effect: OpacityMask {
+            maskSource: Rectangle {
+                width: viewportContainer.width
+                height: viewportContainer.height
+                radius: root.theme.radiusMedium
+            }
         }
 
-        onEntityHovered: (shapeId, entityType, localId) => {
-            // Future: update status bar.
-        }
+        GLViewport {
+            id: viewport
+            anchors.fill: parent
+            pickingEnabled: true
+            pickMode: 0
 
-        onPickCleared: {
-            // Future: clear selection UI.
+            onEntityPicked: (shapeId, entityType, localId) => {
+                console.log(qsTr("Picked: Shape %1, Type %2, Local %3")
+                    .arg(shapeId)
+                    .arg(entityType)
+                    .arg(localId))
+            }
+
+            onEntityHovered: (shapeId, entityType, localId) => {
+                // Future: update status bar.
+            }
+
+            onPickCleared: {
+                // Future: clear selection UI.
+            }
         }
+    }
+
+    /** @brief Rounded border drawn on top of the masked viewport. */
+    Rectangle {
+        anchors.fill: parent
+        radius: root.theme.radiusMedium
+        color: "transparent"
+        border.width: 1
+        border.color: root.theme.borderSubtle
     }
 
     ViewportToolbar {
