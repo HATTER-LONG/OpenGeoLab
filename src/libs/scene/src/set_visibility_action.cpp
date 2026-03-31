@@ -22,7 +22,7 @@ nlohmann::json SetVisibilityAction::describe() const {
             {"required", true},
             {"description", "Array of {nodeId: int, visible: bool} pairs."}}}}},
         {"returns",
-         {{"ok", {{"type", "boolean"}, {"description", "Always true."}}},
+         {{"ok", {{"type", "boolean"}, {"description", "true when the action completes successfully."}}},
           {"action", {{"type", "string"}, {"description", "Echo of the action name."}}},
           {"updated", {{"type", "integer"}, {"description", "Nodes whose visibility changed."}}},
           {"skipped", {{"type", "integer"}, {"description", "Node IDs not found."}}}}}};
