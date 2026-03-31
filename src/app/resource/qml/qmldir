@@ -1,0 +1,3 @@
+MenuConfig 1.0 MenuConfig.qml
+RibbonConfig 1.0 RibbonConfig.qml
+singleton MainPages 1.0 MainPages.qml

@@ -1,0 +1,64 @@
+set(geometry_public_headers
+    include/opengeolab/geometry/geometry_module.hpp
+    include/opengeolab/geometry/create_box_action.hpp
+    include/opengeolab/geometry/create_cylinder_action.hpp
+    include/opengeolab/geometry/create_sphere_action.hpp
+    include/opengeolab/geometry/create_torus_action.hpp
+    include/opengeolab/geometry/delete_shape_action.hpp
+    include/opengeolab/geometry/import_brep_action.hpp
+    include/opengeolab/geometry/import_step_action.hpp
+    include/opengeolab/geometry/list_shapes_action.hpp
+    include/opengeolab/geometry/query_shape_action.hpp
+    include/opengeolab/geometry/shape_entry.hpp
+    include/opengeolab/geometry/shape_store.hpp
+    include/opengeolab/geometry/tessellate_action.hpp
+    include/opengeolab/geometry/tessellator.hpp)
+set(geometry_sources
+    src/geometry_module.cpp
+    src/create_box_action.cpp
+    src/create_cylinder_action.cpp
+    src/create_sphere_action.cpp
+    src/create_torus_action.cpp
+    src/delete_shape_action.cpp
+    src/import_brep_action.cpp
+    src/import_step_action.cpp
+    src/list_shapes_action.cpp
+    src/query_shape_action.cpp
+    src/shape_store.cpp
+    src/tessellate_action.cpp
+    src/tessellator.cpp)
+
+opengeolab_add_module(
+    opengeolab_geometry
+    ALIAS_NAME
+    Geometry
+    SOURCES
+    ${geometry_sources}
+    PUBLIC_HEADERS
+    ${geometry_public_headers}
+    PUBLIC_LINKS
+    OpenGeoLab::Core
+    TKernel
+    TKMath
+    TKG3d
+    TKGeomBase
+    TKBRep
+    TKTopAlgo
+    TKPrim
+    TKMesh
+    TKDESTEP
+    TKDE
+    TKXSBase
+    TKShHealing)
+
+if (OPENGEOLAB_BUILD_TESTS)
+    opengeolab_add_doctest_test(
+        opengeolab_geometry_test SOURCES test/geometry_module_test.cpp LINKS
+        OpenGeoLab::Geometry)
+    opengeolab_add_doctest_test(
+        opengeolab_shape_store_test SOURCES test/shape_store_test.cpp LINKS
+        OpenGeoLab::Geometry)
+    opengeolab_add_doctest_test(
+        opengeolab_tessellator_test SOURCES test/tessellator_test.cpp LINKS
+        OpenGeoLab::Geometry)
+endif ()

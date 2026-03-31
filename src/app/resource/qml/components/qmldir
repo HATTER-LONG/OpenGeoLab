@@ -1,0 +1,13 @@
+module OpenGeoLab.App.Components
+ActionButton 1.0 ActionButton.qml
+ActivityPanel 1.0 ActivityPanel.qml
+AppIcon 1.0 AppIcon.qml
+LogEventsView 1.0 LogEventsView.qml
+LogLevelChip 1.0 LogLevelChip.qml
+PluginRibbonGroup 1.0 PluginRibbonGroup.qml
+ProgressCard 1.0 ProgressCard.qml
+RibbonTile 1.0 RibbonTile.qml
+SectionCard 1.0 SectionCard.qml
+ShapeListItem 1.0 ShapeListItem.qml
+StatChip 1.0 StatChip.qml
+TerminalView 1.0 TerminalView.qml
