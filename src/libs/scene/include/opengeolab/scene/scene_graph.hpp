@@ -80,6 +80,14 @@ public:
     void traverseVisible(std::function<void(const SceneNode&)> visitor) const;
 
     /**
+     * @brief Visit every non-root node in the tree (thread-safe).
+     *
+     * Acquires a read lock and traverses the entire tree, invoking
+     * @p visitor for each node except the root.
+     */
+    void forEachNode(std::function<void(const SceneNode&)> visitor) const;
+
+    /**
      * @brief Visit nodes whose version > sinceVersion.
      */
     void traverseDirty(uint64_t sinceVersion, std::function<void(const SceneNode&)> visitor) const;

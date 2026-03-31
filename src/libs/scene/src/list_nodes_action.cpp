@@ -6,8 +6,6 @@
 #include <opengeolab/scene/list_nodes_action.hpp>
 #include <opengeolab/scene/scene_graph.hpp>
 
-#include <functional>
-
 namespace OpenGeoLab::Scene {
 
 ListNodesAction::ListNodesAction(const SceneGraph& graph) : m_graph(graph) {}
@@ -29,22 +27,14 @@ nlohmann::json ListNodesAction::describe() const {
 
 nlohmann::json ListNodesAction::execute(const nlohmann::json& /*param*/,
                                         const Core::ProgressCallback& progress) {
-    auto lock = m_graph.readLock();
     nlohmann::json nodes = nlohmann::json::array();
 
-    std::function<void(const SceneNode&)> collect = [&](const SceneNode& node) {
+    m_graph.forEachNode([&](const SceneNode& node) {
         nodes.push_back({{"nodeId", node.id()},
                          {"name", std::string(node.name())},
                          {"visible", node.isVisible()},
                          {"parentId", node.parent() ? node.parent()->id() : 0}});
-        for(const auto& child : node.children()) {
-            collect(*child);
-        }
-    };
-
-    for(const auto& child : m_graph.root()->children()) {
-        collect(*child);
-    }
+    });
 
     if(progress) {
         progress(1.0, "Done");

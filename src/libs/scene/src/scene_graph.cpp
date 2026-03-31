@@ -132,6 +132,19 @@ void SceneGraph::traverseVisible(std::function<void(const SceneNode&)> visitor) 
     traverseVisibleImpl(m_root.get(), visitor);
 }
 
+void SceneGraph::forEachNode(std::function<void(const SceneNode&)> visitor) const {
+    std::shared_lock lock(m_mutex);
+    std::function<void(const SceneNode&)> recurse = [&](const SceneNode& node) {
+        visitor(node);
+        for(const auto& child : node.children()) {
+            recurse(*child);
+        }
+    };
+    for(const auto& child : m_root->children()) {
+        recurse(*child);
+    }
+}
+
 void SceneGraph::traverseDirty(uint64_t sinceVersion,
                                std::function<void(const SceneNode&)> visitor) const {
     std::shared_lock lock(m_mutex);

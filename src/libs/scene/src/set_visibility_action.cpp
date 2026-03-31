@@ -49,8 +49,7 @@ nlohmann::json SetVisibilityAction::execute(const nlohmann::json& param,
             ++skipped;
             continue;
         }
-        if(node->isVisible() != visible) {
-            m_graph.setNodeVisible(node_id, visible);
+        if(m_graph.setNodeVisible(node_id, visible)) {
             ++updated;
         }
     }
