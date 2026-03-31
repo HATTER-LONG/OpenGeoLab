@@ -8,6 +8,7 @@ set(scene_public_headers
     include/opengeolab/scene/render_mesh_data.hpp
     include/opengeolab/scene/scene_graph.hpp
     include/opengeolab/scene/scene_node.hpp
+    include/opengeolab/scene/set_visibility_action.hpp
     include/opengeolab/scene/topology_index.hpp)
 
 set(scene_sources
@@ -15,6 +16,7 @@ set(scene_sources
     src/geometry_scene_bridge.cpp
     src/scene_graph.cpp
     src/scene_node.cpp
+    src/set_visibility_action.cpp
     src/topology_index.cpp)
 
 opengeolab_add_module(
@@ -59,5 +61,10 @@ if (OPENGEOLAB_BUILD_TESTS)
     opengeolab_add_doctest_test(
         opengeolab_geometry_scene_bridge_test
         SOURCES test/geometry_scene_bridge_test.cpp
+        LINKS OpenGeoLab::Scene)
+
+    opengeolab_add_doctest_test(
+        opengeolab_scene_module_test
+        SOURCES test/scene_module_test.cpp
         LINKS OpenGeoLab::Scene)
 endif ()
