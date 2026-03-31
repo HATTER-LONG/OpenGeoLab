@@ -35,6 +35,11 @@ nlohmann::json SetVisibilityAction::execute(const nlohmann::json& param,
     int skipped = 0;
 
     for(const auto& entry : nodes) {
+        if(!entry.contains("nodeId")) {
+            ++skipped;
+            continue;
+        }
+
         const auto node_id = entry.value("nodeId", static_cast<NodeId>(0));
         const auto visible = entry.value("visible", true);
 

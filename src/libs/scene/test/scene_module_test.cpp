@@ -62,6 +62,21 @@ TEST_SUITE("SetVisibilityAction") {
         CHECK(result["skipped"] == 1);
     }
 
+    TEST_CASE("missing node id increments skipped without changing root visibility") {
+        SceneGraph graph;
+        REQUIRE(graph.root() != nullptr);
+        REQUIRE(graph.root()->isVisible());
+
+        SetVisibilityAction action(graph);
+        nlohmann::json param = {{"nodes", {{{"visible", false}}}}};
+        auto result = action.execute(param, nullptr);
+
+        CHECK(result["ok"] == true);
+        CHECK(result["updated"] == 0);
+        CHECK(result["skipped"] == 1);
+        CHECK(graph.root()->isVisible());
+    }
+
     TEST_CASE("empty nodes array succeeds") {
         SceneGraph graph;
         SetVisibilityAction action(graph);
@@ -94,6 +109,85 @@ TEST_SUITE("SetVisibilityAction") {
         auto desc = action.describe();
 
         CHECK(desc["name"] == "set_visibility");
+        CHECK(desc.contains("description"));
+        CHECK(desc.contains("params"));
+        CHECK(desc.contains("returns"));
+    }
+
+} // TEST_SUITE
+
+} // namespace OpenGeoLab::Scene::Tests
+
+#include <opengeolab/scene/list_nodes_action.hpp>
+
+namespace OpenGeoLab::Scene::Tests {
+
+TEST_SUITE("ListNodesAction") {
+
+    TEST_CASE("empty scene returns no nodes") {
+        SceneGraph graph;
+        ListNodesAction action(graph);
+        auto result = action.execute({}, nullptr);
+
+        CHECK(result["ok"] == true);
+        CHECK(result["action"] == "list_nodes");
+        CHECK(result["nodes"].size() == 0);
+    }
+
+    TEST_CASE("lists multiple nodes with correct fields") {
+        SceneGraph graph;
+        auto* a = graph.addNode("Box_1");
+        auto* b = graph.addNode("Cyl_1");
+
+        ListNodesAction action(graph);
+        auto result = action.execute({}, nullptr);
+
+        CHECK(result["ok"] == true);
+        auto nodes = result["nodes"];
+        REQUIRE(nodes.size() == 2);
+
+        bool found_a = false;
+        bool found_b = false;
+        for(const auto& n : nodes) {
+            CHECK(n.contains("nodeId"));
+            CHECK(n.contains("name"));
+            CHECK(n.contains("visible"));
+            CHECK(n.contains("parentId"));
+            if(n["nodeId"] == a->id()) {
+                CHECK(n["name"] == "Box_1");
+                CHECK(n["visible"] == true);
+                CHECK(n["parentId"] == 0);
+                found_a = true;
+            }
+            if(n["nodeId"] == b->id()) {
+                CHECK(n["name"] == "Cyl_1");
+                CHECK(n["visible"] == true);
+                CHECK(n["parentId"] == 0);
+                found_b = true;
+            }
+        }
+        CHECK(found_a);
+        CHECK(found_b);
+    }
+
+    TEST_CASE("visibility reflected in list_nodes") {
+        SceneGraph graph;
+        auto* node = graph.addNode("Box_1");
+        graph.setNodeVisible(node->id(), false);
+
+        ListNodesAction action(graph);
+        auto result = action.execute({}, nullptr);
+
+        REQUIRE(result["nodes"].size() == 1);
+        CHECK(result["nodes"][0]["visible"] == false);
+    }
+
+    TEST_CASE("describe returns valid schema") {
+        SceneGraph graph;
+        ListNodesAction action(graph);
+        auto desc = action.describe();
+
+        CHECK(desc["name"] == "list_nodes");
         CHECK(desc.contains("description"));
         CHECK(desc.contains("params"));
         CHECK(desc.contains("returns"));
