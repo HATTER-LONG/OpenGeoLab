@@ -107,4 +107,9 @@ void RenderPipeline::cleanup() {
     m_impl->initialized = false;
 }
 
+std::span<const Scene::DrawRange> RenderPipeline::resolveEntityDrawRanges(
+    uint32_t shape_id, Core::EntityType entity_type, uint32_t local_id) const {
+    return m_impl->bufferManager.lookupEntity(shape_id, entity_type, local_id);
+}
+
 } // namespace OpenGeoLab::Render

@@ -38,6 +38,7 @@ void GpuBufferManager::cleanup() {
     m_triangleRanges.clear();
     m_lineRanges.clear();
     m_pointRanges.clear();
+    m_entityIndex.clear();
     m_hasData = false;
 }
 
@@ -121,6 +122,7 @@ void GpuBufferManager::rebuildBuffers(const Scene::SceneGraph& scene) {
 
     setupMainVao();
     setupPickVao();
+    rebuildEntityIndex();
 }
 
 void GpuBufferManager::setupMainVao() {
@@ -169,6 +171,31 @@ void GpuBufferManager::bindMainVao() const { glBindVertexArray(m_mainVao); }
 void GpuBufferManager::bindPickVao() const { glBindVertexArray(m_pickVao); }
 
 void GpuBufferManager::unbind() const { glBindVertexArray(0); }
+
+void GpuBufferManager::rebuildEntityIndex() {
+    m_entityIndex.clear();
+
+    const auto index_ranges = [this](const std::vector<Scene::DrawRange>& ranges) {
+        for(const auto& range : ranges) {
+            const EntityRefKey key{range.shapeId, range.entityType, range.localId};
+            m_entityIndex[key].push_back(range);
+        }
+    };
+
+    index_ranges(m_triangleRanges);
+    index_ranges(m_lineRanges);
+    index_ranges(m_pointRanges);
+}
+
+std::span<const Scene::DrawRange> GpuBufferManager::lookupEntity(
+    uint32_t shape_id, Core::EntityType entity_type, uint32_t local_id) const {
+    const EntityRefKey key{shape_id, entity_type, local_id};
+    const auto it = m_entityIndex.find(key);
+    if(it == m_entityIndex.end()) {
+        return {};
+    }
+    return it->second;
+}
 
 const std::vector<Scene::DrawRange>& GpuBufferManager::triangleRanges() const noexcept {
     return m_triangleRanges;

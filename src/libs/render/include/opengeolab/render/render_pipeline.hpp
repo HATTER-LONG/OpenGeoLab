@@ -10,12 +10,16 @@
 #include <opengeolab/render/pick_result.hpp>
 #include <opengeolab/render/render_export.hpp>
 
+#include <opengeolab/core/entity_ref.hpp>
+
 #include <memory>
+#include <span>
 #include <vector>
 
 namespace OpenGeoLab::Scene {
 class SceneGraph;
 class TopologyIndex;
+struct DrawRange;
 } // namespace OpenGeoLab::Scene
 
 namespace OpenGeoLab::Render {
@@ -75,6 +79,13 @@ public:
      */
     [[nodiscard]] std::vector<PickResult>
     pickRegion(int cx, int cy, int radius, PickMask mask) const;
+
+    /**
+     * @brief Resolve an entity to its DrawRanges via the internal entity index.
+     * @return DrawRanges for the entity (may span multiple primitive types). Empty if not found.
+     */
+    [[nodiscard]] std::span<const Scene::DrawRange> resolveEntityDrawRanges(
+        uint32_t shape_id, Core::EntityType entity_type, uint32_t local_id) const;
 
     /** @brief Release all GPU resources owned by the pipeline. */
     void cleanup();
