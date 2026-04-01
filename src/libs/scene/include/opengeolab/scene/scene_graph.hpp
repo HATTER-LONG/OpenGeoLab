@@ -10,6 +10,7 @@
 #pragma once
 
 #include <opengeolab/scene/bounding_box3d.hpp>
+#include <opengeolab/scene/selection_state.hpp>
 #include <opengeolab/scene/scene_export.hpp>
 #include <opengeolab/scene/scene_node.hpp>
 
@@ -152,6 +153,10 @@ public:
     /** @brief Set hovered node (nullopt = none). */
     void setHoveredNode(std::optional<NodeId> id);
 
+    /** @brief Entity-level selection state for 3D picking. */
+    [[nodiscard]] SelectionState& selectionState() { return m_selectionState; }
+    [[nodiscard]] const SelectionState& selectionState() const { return m_selectionState; }
+
     /** @brief Compute scene-wide AABB from all visible nodes. */
     [[nodiscard]] BoundingBox3D sceneBounds() const;
 
@@ -186,6 +191,7 @@ private:
     uint32_t m_nextNodeId{1};
     uint64_t m_version{0};
     std::optional<NodeId> m_hoveredNode;
+    SelectionState m_selectionState;
     mutable std::shared_mutex m_mutex;
 };
 

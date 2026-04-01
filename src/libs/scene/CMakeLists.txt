@@ -6,6 +6,7 @@ set(scene_public_headers
     include/opengeolab/scene/pick_id.hpp
     include/opengeolab/scene/render_component.hpp
     include/opengeolab/scene/render_mesh_data.hpp
+    include/opengeolab/scene/selection_state.hpp
     include/opengeolab/scene/scene_graph.hpp
     include/opengeolab/scene/scene_module.hpp
     include/opengeolab/scene/scene_node.hpp
@@ -16,6 +17,7 @@ set(scene_public_headers
 set(scene_sources
     src/bounding_box3d.cpp
     src/geometry_scene_bridge.cpp
+    src/selection_state.cpp
     src/scene_graph.cpp
     src/scene_module.cpp
     src/scene_node.cpp
@@ -55,6 +57,11 @@ if (OPENGEOLAB_BUILD_TESTS)
     opengeolab_add_doctest_test(
         opengeolab_scene_graph_test
         SOURCES test/scene_graph_test.cpp
+        LINKS OpenGeoLab::Scene)
+
+    opengeolab_add_doctest_test(
+        opengeolab_selection_state_test
+        SOURCES test/selection_state_test.cpp
         LINKS OpenGeoLab::Scene)
 
     opengeolab_add_doctest_test(
