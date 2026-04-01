@@ -7,11 +7,13 @@
 
 #include <opengeolab/app/camera_state.hpp>
 #include <opengeolab/app/trackball_controller.hpp>
+#include <opengeolab/core/pick_action.hpp>
 #include <opengeolab/render/pick_mask.hpp>
 #include <opengeolab/render/pick_result.hpp>
 
 #include <QPointF>
 #include <QQuickFramebufferObject>
+#include <QRectF>
 #include <QtQml/qqmlregistration.h>
 
 namespace OpenGeoLab::Scene {
@@ -36,6 +38,8 @@ class GLViewport : public QQuickFramebufferObject {
                    pickingEnabledChanged)
     Q_PROPERTY(int pickMode READ pickMode WRITE setPickMode NOTIFY pickModeChanged)
     Q_PROPERTY(bool xRayMode READ xRayMode WRITE setXRayMode NOTIFY xRayModeChanged)
+    Q_PROPERTY(bool boxSelectActive READ boxSelectActive NOTIFY boxSelectActiveChanged)
+    Q_PROPERTY(QRectF boxSelectRect READ boxSelectRect NOTIFY boxSelectRectChanged)
 
 public:
     /**
@@ -92,6 +96,17 @@ public:
         bool active{false};
         float x{0.0F};
         float y{0.0F};
+        Core::PickAction action{Core::PickAction::Add};
+    };
+
+    /// Pending box-select request consumed by the renderer.
+    struct PendingBoxSelect {
+        bool active{false};
+        float x1{0.0F};
+        float y1{0.0F};
+        float x2{0.0F};
+        float y2{0.0F};
+        Core::PickAction action{Core::PickAction::Add};
     };
 
     /**
@@ -99,6 +114,24 @@ public:
      * @return Snapshot of the pending click pick, if any.
      */
     [[nodiscard]] PendingPick consumePendingPick();
+
+    /**
+     * @brief Return and clear the pending box-select request.
+     * @return Snapshot of the pending box select, if any.
+     */
+    [[nodiscard]] PendingBoxSelect consumePendingBoxSelect();
+
+    /** @brief Whether a box-select drag is in progress. */
+    [[nodiscard]] bool boxSelectActive() const { return m_boxSelectActive; }
+
+    /** @brief Current rubber-band rectangle in item coordinates. */
+    [[nodiscard]] QRectF boxSelectRect() const { return m_boxSelectRect; }
+
+    /** @brief Whether selection mode is active (from SelectionState). */
+    [[nodiscard]] bool selectionActive() const { return m_selectionActive; }
+
+    /** @brief Set selection-active flag (called from synchronize()). */
+    void setSelectionActive(bool active) { m_selectionActive = active; }
 
     /**
      * @brief Forward a resolved click pick result to QML observers.
@@ -131,6 +164,8 @@ Q_SIGNALS:
     void entityPicked(int shape_id, int entity_type, int local_id);
     void entityHovered(int shape_id, int entity_type, int local_id);
     void pickCleared();
+    void boxSelectActiveChanged();
+    void boxSelectRectChanged();
 
 protected:
     void mousePressEvent(QMouseEvent* event) override;
@@ -154,8 +189,12 @@ private:
     bool m_xRayMode{false};
 
     PendingPick m_pendingPick;
+    PendingBoxSelect m_pendingBoxSelect;
     QPointF m_hoverPos;
     bool m_hoverActive{false};
+    bool m_boxSelectActive{false};
+    QRectF m_boxSelectRect;
+    bool m_selectionActive{false}; ///< Synced from SelectionState::pickEnabled()
 
     QPointF m_pressPos;
     bool m_movedSincePress{false};
