@@ -6,6 +6,7 @@ set(core_public_headers
     include/opengeolab/core/module.hpp
     include/opengeolab/core/module_data_event.hpp
     include/opengeolab/core/pick_action.hpp
+    include/opengeolab/core/pick_mask.hpp
     include/opengeolab/core/progress_callback.hpp
     include/opengeolab/core/point_vector3d.hpp
     include/opengeolab/core/visual_data.hpp)
