@@ -263,6 +263,12 @@ if (OPENGEOLAB_BUILD_TESTS)
     include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/testing.cmake)
     enable_testing()
 
+    # Temporarily disable clang-tidy for third-party doctest.
+    set(_saved_cxx_clang_tidy "${CMAKE_CXX_CLANG_TIDY}")
+    set(_saved_c_clang_tidy "${CMAKE_C_CLANG_TIDY}")
+    set(CMAKE_CXX_CLANG_TIDY "")
+    set(CMAKE_C_CLANG_TIDY "")
+
     opengeolab_resolve_package(
         doctest
         doctest::doctest_with_main
@@ -275,6 +281,9 @@ if (OPENGEOLAB_BUILD_TESTS)
         CPM_OPTIONS
         "DOCTEST_WITH_TESTS OFF"
         "DOCTEST_NO_INSTALL ON")
+
+    set(CMAKE_CXX_CLANG_TIDY "${_saved_cxx_clang_tidy}")
+    set(CMAKE_C_CLANG_TIDY "${_saved_c_clang_tidy}")
 endif ()
 
 # ---------------------------------------------------------------------------
