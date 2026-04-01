@@ -154,7 +154,11 @@ qt_add_qml_module(
     resource/icons/viewRight.svg
     resource/icons/viewXray.svg
     resource/icons/meshDisplay.svg
-    resource/icons/face.svg)
+    resource/icons/face.svg
+    resource/icons/entityVertex.svg
+    resource/icons/entityEdge.svg
+    resource/icons/entityFace.svg
+    resource/icons/entitySolid.svg)
 
 # Use console subsystem during development so errors are visible.
 option(OPENGEOLAB_WIN32_APP

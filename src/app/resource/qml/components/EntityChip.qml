@@ -48,6 +48,7 @@ Rectangle {
                 .arg(root.shapeId)
             color: root.theme.textPrimary
             font.pixelSize: 11
+            font.family: root.theme.monoFontFamily
         }
 
         Rectangle {

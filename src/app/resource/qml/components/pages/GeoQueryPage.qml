@@ -49,31 +49,72 @@ FunctionPageBase {
 
         width: parent.width
         theme: root.theme
-        mask: 7
+        mask: 11
 
         onMaskChanged: {
             SelectionService.setPickMask(typeSelector.mask);
         }
     }
 
-    // ── Pick status indicator ──────────────────────────────────────────
+    // ── Pick mode indicator with pulsing dot ───────────────────────────
     Rectangle {
         width: parent.width
         height: 28
         radius: root.theme.radiusSmall
         color: SelectionService.pickEnabled
-            ? root.theme.tint(root.theme.success, root.theme.darkMode ? 0.18 : 0.10)
+            ? root.theme.tint(root.theme.accentA, root.theme.darkMode ? 0.14 : 0.08)
             : root.theme.surfaceMuted
 
-        Text {
+        Behavior on color {
+            ColorAnimation { duration: root.theme.animNormal }
+        }
+
+        Row {
             anchors.centerIn: parent
-            text: SelectionService.pickEnabled
-                ? qsTr("Pick mode active — click to select")
-                : qsTr("Pick mode inactive")
-            color: SelectionService.pickEnabled
-                ? root.theme.success
-                : root.theme.textSecondary
-            font.pixelSize: 11
+            spacing: 6
+
+            Rectangle {
+                id: pulsingDot
+
+                width: 8
+                height: 8
+                radius: 4
+                anchors.verticalCenter: parent.verticalCenter
+                color: SelectionService.pickEnabled
+                    ? root.theme.accentA
+                    : root.theme.textTertiary
+                visible: SelectionService.pickEnabled
+
+                SequentialAnimation on opacity {
+                    running: SelectionService.pickEnabled
+                    loops: Animation.Infinite
+
+                    NumberAnimation {
+                        from: 1.0
+                        to: 0.3
+                        duration: 800
+                        easing.type: Easing.InOutQuad
+                    }
+
+                    NumberAnimation {
+                        from: 0.3
+                        to: 1.0
+                        duration: 800
+                        easing.type: Easing.InOutQuad
+                    }
+                }
+            }
+
+            Text {
+                text: SelectionService.pickEnabled
+                    ? qsTr("Pick mode active — click to select")
+                    : qsTr("Pick mode inactive")
+                color: SelectionService.pickEnabled
+                    ? root.theme.accentA
+                    : root.theme.textSecondary
+                font.pixelSize: 11
+                anchors.verticalCenter: parent.verticalCenter
+            }
         }
     }
 
@@ -82,28 +123,41 @@ FunctionPageBase {
         text: qsTr("Selected: %1").arg(SelectionService.selections.length)
         color: root.theme.textSecondary
         font.pixelSize: 12
+        visible: SelectionService.selections.length > 0
     }
 
-    // ── Selected entity chips ──────────────────────────────────────────
-    Flow {
-        id: chipFlow
+    // ── Selected entity chips (scrollable) ─────────────────────────────
+    Flickable {
+        id: chipFlickable
 
         width: parent.width
-        spacing: 6
+        height: Math.min(chipFlow.implicitHeight, 100)
+        contentHeight: chipFlow.implicitHeight
+        clip: true
+        boundsBehavior: Flickable.StopAtBounds
+        interactive: contentHeight > height
+        visible: SelectionService.selections.length > 0
 
-        Repeater {
-            model: SelectionService.selections
+        Flow {
+            id: chipFlow
 
-            EntityChip {
-                required property var modelData
+            width: chipFlickable.width
+            spacing: 6
 
-                theme: root.theme
-                shapeId: modelData.shapeId
-                entityType: modelData.entityType
-                localId: modelData.localId
+            Repeater {
+                model: SelectionService.selections
 
-                onRemoveRequested: function(sid, etype, lid) {
-                    SelectionService.removeSelection(sid, etype, lid);
+                EntityChip {
+                    required property var modelData
+
+                    theme: root.theme
+                    shapeId: modelData.shapeId
+                    entityType: modelData.entityType
+                    localId: modelData.localId
+
+                    onRemoveRequested: function(sid, etype, lid) {
+                        SelectionService.removeSelection(sid, etype, lid);
+                    }
                 }
             }
         }
@@ -119,10 +173,13 @@ FunctionPageBase {
 
         Text {
             anchors.centerIn: parent
-            text: qsTr("No entities selected.\nLeft-click to add, right-click to remove.")
-            color: root.theme.textSecondary
+            text: SelectionService.pickEnabled
+                ? qsTr("Click entities in the viewport to select them.\nRight-click to remove from selection.")
+                : qsTr("No entities selected.\nActivate pick mode to begin.")
+            color: root.theme.textTertiary
             font.pixelSize: 11
             horizontalAlignment: Text.AlignHCenter
+            lineHeight: 1.3
         }
     }
 

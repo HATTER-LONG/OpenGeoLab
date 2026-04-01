@@ -27,8 +27,8 @@ struct EntityRef {
     EntityType entityType{}; ///< Entity classification
     uint32_t localId{};      ///< Type-scoped local ID within the shape
 
-    /// True when this ref points to a real entity.
-    [[nodiscard]] constexpr bool isValid() const noexcept { return shapeId != 0 && localId != 0; }
+    /// True when this ref points to a real entity (localId is 1-based).
+    [[nodiscard]] constexpr bool isValid() const noexcept { return localId != 0; }
 
     /// True for geometry entities (GeoVertex..GeoSolid).
     [[nodiscard]] constexpr bool isGeometry() const noexcept {

@@ -58,6 +58,8 @@ private:
     uint64_t m_cachedHoverVersion{0};
     std::vector<Scene::DrawRange> m_resolvedSelectedRanges;
     std::vector<Scene::DrawRange> m_resolvedHoveredRanges;
+    bool m_selectionActive{false};
+    Render::PickMask m_selectionPickMask{Render::PickMask::None};
 };
 
 } // namespace OpenGeoLab::App

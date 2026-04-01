@@ -39,6 +39,27 @@ namespace {
     return Render::PickMask::Vertex | Render::PickMask::Edge | Render::PickMask::Face;
 }
 
+/// Map EntityType to the corresponding PickMask bit for entity-type filtering.
+[[nodiscard]] Core::PickMask maskForEntityType(Core::EntityType type) noexcept {
+    switch(type) {
+    case Core::EntityType::GeoVertex:
+    case Core::EntityType::MeshNode:
+        return Core::PickMask::Vertex;
+    case Core::EntityType::GeoEdge:
+    case Core::EntityType::MeshEdge:
+        return Core::PickMask::Edge;
+    case Core::EntityType::GeoWire:
+        return Core::PickMask::Wire;
+    case Core::EntityType::GeoFace:
+    case Core::EntityType::MeshElement:
+        return Core::PickMask::Face;
+    case Core::EntityType::GeoSolid:
+        return Core::PickMask::Solid;
+    default:
+        return Core::PickMask::None;
+    }
+}
+
 } // namespace
 
 GLViewportRenderer::GLViewportRenderer() = default;
@@ -137,8 +158,10 @@ void GLViewportRenderer::synchronize(QQuickFramebufferObject* item) {
             m_cachedHoverVersion = hov_ver;
         }
 
-        // Sync selection-active flag for mouse mode mapping
+        // Sync selection-active flag and pick mask for mouse mode mapping
         viewport->setSelectionActive(sel.pickEnabled());
+        m_selectionActive = sel.pickEnabled();
+        m_selectionPickMask = sel.pickMask();
     }
 
     m_frameState.selectedDrawRanges = m_resolvedSelectedRanges;
@@ -191,7 +214,14 @@ bool GLViewportRenderer::ensureGladInitialized() {
     return m_gladInitialized;
 }
 
-Render::PickMask GLViewportRenderer::pickMask() const { return pickMaskFromMode(m_pickMode); }
+Render::PickMask GLViewportRenderer::pickMask() const {
+    // When selection mode is active, use SelectionState's pickMask
+    // so the GPU pick pass only matches the entity types the user selected.
+    if(m_selectionActive && m_selectionPickMask != Render::PickMask::None) {
+        return m_selectionPickMask;
+    }
+    return pickMaskFromMode(m_pickMode);
+}
 
 Render::PickResult GLViewportRenderer::pickAtItemPosition(float x, float y) const {
     if(m_frameState.viewportWidth <= 0 || m_frameState.viewportHeight <= 0) {
@@ -228,6 +258,11 @@ void GLViewportRenderer::dispatchPickResult(const Render::PickResult& result,
             }
             auto& sel = viewport->sceneGraph()->selectionState();
             if(!sel.pickEnabled() || !result.valid) {
+                return;
+            }
+            // Filter: only act on entity types included in the pick mask
+            if((maskForEntityType(result.entityType) & sel.pickMask()) ==
+               Core::PickMask::None) {
                 return;
             }
             const Core::EntityRef entity{result.shapeId, result.entityType, result.localId};
@@ -273,8 +308,15 @@ void GLViewportRenderer::dispatchHoverResult(const Render::PickResult& result) c
             viewport->notifyHoverResult(result);
             if(viewport->sceneGraph() != nullptr &&
                viewport->sceneGraph()->selectionState().pickEnabled()) {
+                auto& sel = viewport->sceneGraph()->selectionState();
+                // Filter: only hover entities matching the pick mask
+                if((maskForEntityType(result.entityType) & sel.pickMask()) ==
+                   Core::PickMask::None) {
+                    sel.clearHover();
+                    return;
+                }
                 const Core::EntityRef entity{result.shapeId, result.entityType, result.localId};
-                viewport->sceneGraph()->selectionState().setHovered(entity);
+                sel.setHovered(entity);
             }
         },
         Qt::QueuedConnection);

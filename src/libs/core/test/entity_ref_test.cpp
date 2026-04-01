@@ -25,6 +25,12 @@ TEST_SUITE("EntityRef") {
         CHECK_FALSE(ref.isMesh());
     }
 
+    TEST_CASE("shapeId 0 is valid") {
+        EntityRef ref{0, EntityType::GeoEdge, 1};
+        CHECK(ref.isValid());
+        CHECK(ref.isGeometry());
+    }
+
     TEST_CASE("valid mesh ref") {
         EntityRef ref{2, EntityType::MeshNode, 5};
         CHECK(ref.isValid());
