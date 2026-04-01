@@ -277,14 +277,17 @@ void processPointSet(BuildState& state,
         ++vertex_tag_index;
     }
 
-    const std::optional<Core::EntityTag> first_tag =
-        range_tag_index < vertex_tags.size()
-            ? std::optional<Core::EntityTag>{vertex_tags[range_tag_index]}
-            : std::nullopt;
-    if(vertex_count > 0U) {
-        const RangeSpan span{state.globalVertexOffset, vertex_count, 0U, 0U};
+    // Create one DrawRange per vertex so each vertex is individually
+    // addressable in the entity index for highlight and selection.
+    for(uint32_t vi = 0; vi < vertex_count; ++vi) {
+        const std::size_t tag_idx = range_tag_index + vi;
+        const std::optional<Core::EntityTag> tag =
+            tag_idx < vertex_tags.size()
+                ? std::optional<Core::EntityTag>{vertex_tags[tag_idx]}
+                : std::nullopt;
+        const RangeSpan span{state.globalVertexOffset + vi, 1U, 0U, 0U};
         state.result.pointRanges.push_back(
-            taggedRange(state.shapeId, PrimitiveTopology::Points, span, first_tag));
+            taggedRange(state.shapeId, PrimitiveTopology::Points, span, tag));
     }
 
     state.globalVertexOffset += vertex_count;

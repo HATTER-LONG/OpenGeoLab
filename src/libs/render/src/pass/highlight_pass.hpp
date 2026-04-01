@@ -19,8 +19,9 @@ protected:
     void onCleanup() override;
 
 private:
-    ShaderProgram m_faceShader; /**< Lit faces with highlight color mix */
-    ShaderProgram m_edgeShader; /**< Flat-color edges with highlight */
+    ShaderProgram m_faceShader;  /**< Lit faces with highlight color mix */
+    ShaderProgram m_edgeShader;  /**< Flat-color edges with highlight */
+    ShaderProgram m_pointShader; /**< Flat-color points with highlight */
 };
 
 } // namespace OpenGeoLab::Render

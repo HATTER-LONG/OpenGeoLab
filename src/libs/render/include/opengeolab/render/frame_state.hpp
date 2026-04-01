@@ -5,6 +5,8 @@
 
 #pragma once
 
+#include <opengeolab/core/entity_tag.hpp>
+#include <opengeolab/core/pick_mask.hpp>
 #include <opengeolab/scene/display_mode.hpp>
 #include <opengeolab/scene/render_mesh_data.hpp>
 
@@ -13,6 +15,12 @@
 #include <vector>
 
 namespace OpenGeoLab::Render {
+
+/// A draw range annotated with entity type for style-differentiated highlighting.
+struct HighlightEntry {
+    Scene::DrawRange range;
+    Core::EntityType entityType{Core::EntityType::GeoFace};
+};
 
 /** @brief Immutable per-frame state consumed by every render pass. */
 struct FrameState {
@@ -28,8 +36,11 @@ struct FrameState {
     Scene::DisplayModeMask displayMask{Scene::DisplayModeMask::Surface |
                                        Scene::DisplayModeMask::Wireframe};
 
-    std::vector<Scene::DrawRange> selectedDrawRanges;
-    std::vector<Scene::DrawRange> hoveredDrawRanges;
+    std::vector<HighlightEntry> selectedEntries;
+    std::vector<HighlightEntry> hoveredEntries;
+
+    /// Pick mask passed to SelectionPass for GPU-level entity filtering.
+    Core::PickMask activePickMask{Core::PickMask::All};
 };
 
 } // namespace OpenGeoLab::Render

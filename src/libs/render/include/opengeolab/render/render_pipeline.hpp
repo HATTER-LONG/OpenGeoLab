@@ -96,6 +96,13 @@ public:
     [[nodiscard]] std::span<const Scene::DrawRange> resolveEntityDrawRanges(
         uint32_t shape_id, Core::EntityType entity_type, uint32_t local_id) const;
 
+    /**
+     * @brief Collect all DrawRanges belonging to a shape (all topologies).
+     *
+     * Used for compound-entity expansion (e.g. highlighting all VEF when a solid is selected).
+     */
+    [[nodiscard]] std::vector<Scene::DrawRange> resolveShapeDrawRanges(uint32_t shape_id) const;
+
     /** @brief Release all GPU resources owned by the pipeline. */
     void cleanup();
 

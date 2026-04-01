@@ -9,9 +9,10 @@ set(core_public_headers
     include/opengeolab/core/pick_mask.hpp
     include/opengeolab/core/progress_callback.hpp
     include/opengeolab/core/point_vector3d.hpp
-    include/opengeolab/core/visual_data.hpp)
+    include/opengeolab/core/visual_data.hpp
+    include/opengeolab/core/color_map.hpp)
 
-set(core_sources src/action.cpp src/logger.cpp src/module.cpp
+set(core_sources src/action.cpp src/color_map.cpp src/logger.cpp src/module.cpp
                  src/process_callback.cpp)
 opengeolab_add_module(
     opengeolab_core
@@ -32,5 +33,8 @@ if (OPENGEOLAB_BUILD_TESTS)
         OpenGeoLab::Core)
     opengeolab_add_doctest_test(
         opengeolab_entity_ref_test SOURCES test/entity_ref_test.cpp LINKS
+        OpenGeoLab::Core)
+    opengeolab_add_doctest_test(
+        opengeolab_color_map_test SOURCES test/color_map_test.cpp LINKS
         OpenGeoLab::Core)
 endif ()

@@ -7,11 +7,13 @@
 
 #include <opengeolab/app/gl_viewport.hpp>
 #include <opengeolab/core/entity_ref.hpp>
+#include <opengeolab/core/entity_tag.hpp>
 #include <opengeolab/scene/scene_graph.hpp>
 #include <opengeolab/scene/selection_state.hpp>
 
 #include <glad/gl.h>
 
+#include <QDebug>
 #include <QMetaObject>
 #include <QOpenGLContext>
 #include <QOpenGLFramebufferObject>
@@ -37,27 +39,6 @@ namespace {
     }
 
     return Render::PickMask::Vertex | Render::PickMask::Edge | Render::PickMask::Face;
-}
-
-/// Map EntityType to the corresponding PickMask bit for entity-type filtering.
-[[nodiscard]] Core::PickMask maskForEntityType(Core::EntityType type) noexcept {
-    switch(type) {
-    case Core::EntityType::GeoVertex:
-    case Core::EntityType::MeshNode:
-        return Core::PickMask::Vertex;
-    case Core::EntityType::GeoEdge:
-    case Core::EntityType::MeshEdge:
-        return Core::PickMask::Edge;
-    case Core::EntityType::GeoWire:
-        return Core::PickMask::Wire;
-    case Core::EntityType::GeoFace:
-    case Core::EntityType::MeshElement:
-        return Core::PickMask::Face;
-    case Core::EntityType::GeoSolid:
-        return Core::PickMask::Solid;
-    default:
-        return Core::PickMask::None;
-    }
 }
 
 } // namespace
@@ -137,23 +118,46 @@ void GLViewportRenderer::synchronize(QQuickFramebufferObject* item) {
         const uint64_t hov_ver = sel.hoverVersion();
 
         if(sel_ver != m_cachedSelectionVersion) {
-            m_resolvedSelectedRanges.clear();
+            m_resolvedSelectedEntries.clear();
             for(const auto& entity : sel.selections()) {
-                auto ranges = m_pipeline.resolveEntityDrawRanges(entity.shapeId, entity.entityType,
-                                                                entity.localId);
-                m_resolvedSelectedRanges.insert(m_resolvedSelectedRanges.end(), ranges.begin(),
-                                                ranges.end());
+                qDebug("[Sync] sel entity: shape=%u type=%u local=%u",
+                       entity.shapeId, static_cast<unsigned>(entity.entityType), entity.localId);
+                // Solid / Wire: expand to all shape DrawRanges (face, edge, vertex).
+                if(entity.entityType == Core::EntityType::GeoSolid ||
+                   entity.entityType == Core::EntityType::GeoWire) {
+                    auto shape_ranges = m_pipeline.resolveShapeDrawRanges(entity.shapeId);
+                    qDebug("[Sync] Solid/Wire expand: shapeId=%u, ranges=%zu",
+                           entity.shapeId, shape_ranges.size());
+                    for(const auto& r : shape_ranges) {
+                        m_resolvedSelectedEntries.push_back({r, r.entityType});
+                    }
+                } else {
+                    auto ranges = m_pipeline.resolveEntityDrawRanges(
+                        entity.shapeId, entity.entityType, entity.localId);
+                    for(const auto& r : ranges) {
+                        m_resolvedSelectedEntries.push_back({r, entity.entityType});
+                    }
+                }
             }
             m_cachedSelectionVersion = sel_ver;
         }
 
         if(hov_ver != m_cachedHoverVersion) {
-            m_resolvedHoveredRanges.clear();
+            m_resolvedHoveredEntries.clear();
             if(const auto hovered = sel.hovered(); hovered.has_value()) {
-                auto ranges = m_pipeline.resolveEntityDrawRanges(
-                    hovered->shapeId, hovered->entityType, hovered->localId);
-                m_resolvedHoveredRanges.insert(m_resolvedHoveredRanges.end(), ranges.begin(),
-                                               ranges.end());
+                if(hovered->entityType == Core::EntityType::GeoSolid ||
+                   hovered->entityType == Core::EntityType::GeoWire) {
+                    auto shape_ranges = m_pipeline.resolveShapeDrawRanges(hovered->shapeId);
+                    for(const auto& r : shape_ranges) {
+                        m_resolvedHoveredEntries.push_back({r, r.entityType});
+                    }
+                } else {
+                    auto ranges = m_pipeline.resolveEntityDrawRanges(
+                        hovered->shapeId, hovered->entityType, hovered->localId);
+                    for(const auto& r : ranges) {
+                        m_resolvedHoveredEntries.push_back({r, hovered->entityType});
+                    }
+                }
             }
             m_cachedHoverVersion = hov_ver;
         }
@@ -164,8 +168,11 @@ void GLViewportRenderer::synchronize(QQuickFramebufferObject* item) {
         m_selectionPickMask = sel.pickMask();
     }
 
-    m_frameState.selectedDrawRanges = m_resolvedSelectedRanges;
-    m_frameState.hoveredDrawRanges = m_resolvedHoveredRanges;
+    m_frameState.selectedEntries = m_resolvedSelectedEntries;
+    m_frameState.hoveredEntries = m_resolvedHoveredEntries;
+    m_frameState.activePickMask = m_selectionActive
+        ? m_selectionPickMask
+        : Core::PickMask::All;
 }
 
 void GLViewportRenderer::render() {
@@ -261,7 +268,7 @@ void GLViewportRenderer::dispatchPickResult(const Render::PickResult& result,
                 return;
             }
             // Filter: only act on entity types included in the pick mask
-            if((maskForEntityType(result.entityType) & sel.pickMask()) ==
+            if((Core::maskForEntityType(result.entityType) & sel.pickMask()) ==
                Core::PickMask::None) {
                 return;
             }
@@ -310,7 +317,7 @@ void GLViewportRenderer::dispatchHoverResult(const Render::PickResult& result) c
                viewport->sceneGraph()->selectionState().pickEnabled()) {
                 auto& sel = viewport->sceneGraph()->selectionState();
                 // Filter: only hover entities matching the pick mask
-                if((maskForEntityType(result.entityType) & sel.pickMask()) ==
+                if((Core::maskForEntityType(result.entityType) & sel.pickMask()) ==
                    Core::PickMask::None) {
                     sel.clearHover();
                     return;
@@ -343,6 +350,10 @@ void GLViewportRenderer::dispatchBoxSelectResults(
     entities.reserve(results.size());
     for(const auto& r : results) {
         if(r.valid) {
+            // Filter: only accept entity types included in the pick mask.
+            if((Core::maskForEntityType(r.entityType) & pickMask()) == Core::PickMask::None) {
+                continue;
+            }
             entities.push_back({r.shapeId, r.entityType, r.localId});
         }
     }

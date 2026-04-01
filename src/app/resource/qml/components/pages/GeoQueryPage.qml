@@ -52,7 +52,7 @@ FunctionPageBase {
         mask: 11
 
         onMaskChanged: {
-            SelectionService.setPickMask(typeSelector.mask);
+            SelectionService.pickMask = typeSelector.mask;
         }
     }
 

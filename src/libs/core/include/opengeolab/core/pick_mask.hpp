@@ -5,6 +5,8 @@
 
 #pragma once
 
+#include <opengeolab/core/entity_tag.hpp>
+
 #include <cstdint>
 
 namespace OpenGeoLab::Core {
@@ -33,6 +35,27 @@ constexpr PickMask operator|(PickMask a, PickMask b) {
 
 constexpr PickMask operator&(PickMask a, PickMask b) {
     return static_cast<PickMask>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
+}
+
+/// Map an EntityType to the corresponding single PickMask bit.
+constexpr PickMask maskForEntityType(EntityType type) noexcept {
+    switch(type) {
+    case EntityType::GeoVertex:
+    case EntityType::MeshNode:
+        return PickMask::Vertex;
+    case EntityType::GeoEdge:
+    case EntityType::MeshEdge:
+        return PickMask::Edge;
+    case EntityType::GeoWire:
+        return PickMask::Wire;
+    case EntityType::GeoFace:
+    case EntityType::MeshElement:
+        return PickMask::Face;
+    case EntityType::GeoSolid:
+        return PickMask::Solid;
+    default:
+        return PickMask::None;
+    }
 }
 
 } // namespace OpenGeoLab::Core
