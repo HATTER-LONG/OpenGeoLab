@@ -921,7 +921,7 @@ public:
 
     [[nodiscard]] nlohmann::json describe() const override;
     [[nodiscard]] nlohmann::json execute(const nlohmann::json& param,
-                                         Core::ActionContext* ctx) override;
+                                         const Core::ProgressCallback& progress) override;
 
 private:
     SelectionState& m_state;
@@ -956,7 +956,7 @@ nlohmann::json SelectAction::describe() const {
               {"selected", {{"description", "Number of entities added."}}}}}};
 }
 
-nlohmann::json SelectAction::execute(const nlohmann::json& param, Core::ActionContext* /*ctx*/) {
+nlohmann::json SelectAction::execute(const nlohmann::json& param, const Core::ProgressCallback& /*progress*/) {
     bool append = true;
     if(param.contains("append") && param["append"].is_boolean()) {
         append = param["append"].get<bool>();
@@ -1018,7 +1018,7 @@ public:
 
     [[nodiscard]] nlohmann::json describe() const override;
     [[nodiscard]] nlohmann::json execute(const nlohmann::json& param,
-                                         Core::ActionContext* ctx) override;
+                                         const Core::ProgressCallback& progress) override;
 
 private:
     SelectionState& m_state;
@@ -1049,7 +1049,7 @@ nlohmann::json DeselectAction::describe() const {
               {"removed", {{"description", "Number of entities removed."}}}}}};
 }
 
-nlohmann::json DeselectAction::execute(const nlohmann::json& param, Core::ActionContext* /*ctx*/) {
+nlohmann::json DeselectAction::execute(const nlohmann::json& param, const Core::ProgressCallback& /*progress*/) {
     int removed = 0;
     if(param.contains("entities") && param["entities"].is_array()) {
         for(const auto& e : param["entities"]) {
@@ -1103,7 +1103,7 @@ public:
 
     [[nodiscard]] nlohmann::json describe() const override;
     [[nodiscard]] nlohmann::json execute(const nlohmann::json& param,
-                                         Core::ActionContext* ctx) override;
+                                         const Core::ProgressCallback& progress) override;
 
 private:
     SelectionState& m_state;
@@ -1129,7 +1129,7 @@ nlohmann::json ClearSelectionAction::describe() const {
 }
 
 nlohmann::json ClearSelectionAction::execute(const nlohmann::json& /*param*/,
-                                             Core::ActionContext* /*ctx*/) {
+                                             const Core::ProgressCallback& /*progress*/) {
     m_state.clearSelection();
     return {{"ok", true}, {"action", ACTION_NAME}};
 }
@@ -1162,7 +1162,7 @@ public:
 
     [[nodiscard]] nlohmann::json describe() const override;
     [[nodiscard]] nlohmann::json execute(const nlohmann::json& param,
-                                         Core::ActionContext* ctx) override;
+                                         const Core::ProgressCallback& progress) override;
 
 private:
     const SelectionState& m_state;
@@ -1208,7 +1208,7 @@ nlohmann::json QuerySelectionAction::describe() const {
 }
 
 nlohmann::json QuerySelectionAction::execute(const nlohmann::json& /*param*/,
-                                             Core::ActionContext* /*ctx*/) {
+                                             const Core::ProgressCallback& /*progress*/) {
     auto selections = m_state.selections();
     auto json_selections = nlohmann::json::array();
     for(const auto& ref : selections) {
@@ -1247,7 +1247,7 @@ public:
 
     [[nodiscard]] nlohmann::json describe() const override;
     [[nodiscard]] nlohmann::json execute(const nlohmann::json& param,
-                                         Core::ActionContext* ctx) override;
+                                         const Core::ProgressCallback& progress) override;
 
 private:
     SelectionState& m_state;
@@ -1276,7 +1276,7 @@ nlohmann::json SetPickModeAction::describe() const {
 }
 
 nlohmann::json SetPickModeAction::execute(const nlohmann::json& param,
-                                          Core::ActionContext* /*ctx*/) {
+                                          const Core::ProgressCallback& /*progress*/) {
     if(param.contains("pickMask") && param["pickMask"].is_number_integer()) {
         m_state.setPickMask(
             static_cast<Core::PickMask>(param["pickMask"].get<uint32_t>()));
@@ -1315,7 +1315,7 @@ public:
 
     [[nodiscard]] nlohmann::json describe() const override;
     [[nodiscard]] nlohmann::json execute(const nlohmann::json& param,
-                                         Core::ActionContext* ctx) override;
+                                         const Core::ProgressCallback& progress) override;
 
 private:
     SelectionState& m_state;
@@ -1348,7 +1348,7 @@ nlohmann::json SetHoverAction::describe() const {
 }
 
 nlohmann::json SetHoverAction::execute(const nlohmann::json& param,
-                                       Core::ActionContext* /*ctx*/) {
+                                       const Core::ProgressCallback& /*progress*/) {
     if(!param.contains("entity") || param["entity"].is_null()) {
         m_state.clearHover();
         return {{"ok", true}, {"action", ACTION_NAME}};
@@ -2192,6 +2192,7 @@ Add private members:
 PendingBoxSelect m_pendingBoxSelect;
 bool m_boxSelectActive{false};
 QRectF m_boxSelectRect;
+bool m_selectionActive{false};  ///< Synced from SelectionState::pickEnabled()
 ```
 
 - [ ] **Step 2: Modify mouse event handlers**
@@ -2210,7 +2211,8 @@ void GLViewport::mouseReleaseEvent(QMouseEvent* event) {
                              static_cast<float>(event->position().y()),
                              Core::PickAction::Add};
             update();
-        } else if(event->button() == Qt::RightButton) {
+        } else if(event->button() == Qt::RightButton && m_selectionActive) {
+            // Right-click deselect only when selection mode is active
             m_pendingPick = {true, static_cast<float>(event->position().x()),
                              static_cast<float>(event->position().y()),
                              Core::PickAction::Remove};
@@ -2240,7 +2242,7 @@ void GLViewport::mouseReleaseEvent(QMouseEvent* event) {
 }
 ```
 
-**mouseMoveEvent** — box-select rubber-band when pickEnabled + left/right drag with no modifier:
+**mouseMoveEvent** — box-select rubber-band when selectionActive + left/right drag with no modifier:
 ```cpp
 void GLViewport::mouseMoveEvent(QMouseEvent* event) {
     if(m_trackball.isActive()) {
@@ -2267,8 +2269,8 @@ void GLViewport::mouseMoveEvent(QMouseEvent* event) {
             m_trackball.begin(..., mode, m_camera);
             m_trackball.update(...);
             update();
-        } else if(m_pickingEnabled) {
-            // Box select start (left or right drag with no camera modifier)
+        } else if(m_selectionActive) {
+            // Box select start — only when selection mode is active
             m_boxSelectActive = true;
             Q_EMIT boxSelectActiveChanged();
         }
@@ -2284,7 +2286,7 @@ void GLViewport::mouseMoveEvent(QMouseEvent* event) {
 }
 ```
 
-**mapMouseMode** — in pick mode, right-drag no longer maps to zoom:
+**mapMouseMode** — in selection mode, right-drag no longer maps to zoom:
 ```cpp
 TrackballController::Mode GLViewport::mapMouseMode(Qt::MouseButtons buttons,
                                                     Qt::KeyboardModifiers modifiers) const {
@@ -2295,8 +2297,10 @@ TrackballController::Mode GLViewport::mapMouseMode(Qt::MouseButtons buttons,
        (buttons & Qt::MiddleButton)) {
         return TrackballController::Mode::Pan;
     }
-    // Right-drag is zoom ONLY when picking is disabled
-    if((buttons & Qt::RightButton) && !m_pickingEnabled) {
+    // Right-drag is zoom ONLY when selection mode is NOT active.
+    // m_selectionActive is synced from SelectionState::pickEnabled()
+    // during synchronize(). m_pickingEnabled (hover picking) is unaffected.
+    if((buttons & Qt::RightButton) && !m_selectionActive) {
         return TrackballController::Mode::Zoom;
     }
     return TrackballController::Mode::None;
@@ -2358,7 +2362,7 @@ if(const auto* scene = viewport->sceneGraph(); scene != nullptr) {
     if(sel_ver != m_cachedSelectionVersion) {
         m_resolvedSelectedRanges.clear();
         for(const auto& entity : sel.selections()) {
-            auto ranges = m_pipeline.bufferManager().lookupEntity(
+            auto ranges = m_pipeline.resolveEntityDrawRanges(
                 entity.shapeId, entity.entityType, entity.localId);
             m_resolvedSelectedRanges.insert(
                 m_resolvedSelectedRanges.end(), ranges.begin(), ranges.end());
@@ -2369,23 +2373,32 @@ if(const auto* scene = viewport->sceneGraph(); scene != nullptr) {
     if(hov_ver != m_cachedHoverVersion) {
         m_resolvedHoveredRanges.clear();
         if(auto hovered = sel.hovered(); hovered.has_value()) {
-            auto ranges = m_pipeline.bufferManager().lookupEntity(
+            auto ranges = m_pipeline.resolveEntityDrawRanges(
                 hovered->shapeId, hovered->entityType, hovered->localId);
             m_resolvedHoveredRanges.insert(
                 m_resolvedHoveredRanges.end(), ranges.begin(), ranges.end());
         }
         m_cachedHoverVersion = hov_ver;
     }
+
+    // Sync selection-active flag for mouse mode mapping
+    m_selectionActive = sel.pickEnabled();
 }
 
 m_frameState.selectedDrawRanges = m_resolvedSelectedRanges;
 m_frameState.hoveredDrawRanges = m_resolvedHoveredRanges;
 ```
 
-Note: This requires `GpuBufferManager::lookupEntity()` to be accessible. Add a public accessor in `RenderPipeline`:
+Note: GpuBufferManager is a private implementation detail of the render library.
+Add a public forwarding method to `RenderPipeline` instead of exposing the internal type:
 ```cpp
 // render_pipeline.hpp
-[[nodiscard]] const GpuBufferManager& bufferManager() const;
+/**
+ * @brief Resolve an entity to its DrawRanges via the internal entity index.
+ * @return DrawRanges for the entity (may span multiple primitive types). Empty if not found.
+ */
+[[nodiscard]] std::vector<Scene::DrawRange> resolveEntityDrawRanges(
+    uint32_t shapeId, Core::EntityType entityType, uint32_t localId) const;
 ```
 
 - [ ] **Step 2: Handle pick dispatch with PickAction**
@@ -2415,7 +2428,8 @@ void GLViewportRenderer::render() {
 }
 ```
 
-Update `dispatchPickResult` to include PickAction and invoke SelectionState on main thread:
+Update `dispatchPickResult` to include PickAction. Preserves existing signal behavior
+AND adds SelectionState modification when selection mode is active:
 ```cpp
 void GLViewportRenderer::dispatchPickResult(const Render::PickResult& result,
                                             Core::PickAction action) const {
@@ -2427,9 +2441,14 @@ void GLViewportRenderer::dispatchPickResult(const Render::PickResult& result,
 
     QMetaObject::invokeMethod(
         viewport.data(),
-        [viewport, entity, action]() {
-            if(viewport.isNull() || viewport->sceneGraph() == nullptr) return;
+        [viewport, entity, action, result]() {
+            if(viewport.isNull()) return;
+            // Preserve existing signal behavior (always emitted)
+            viewport->notifyPickResult(result);
+            // Selection behavior (only when selection mode is active)
+            if(viewport->sceneGraph() == nullptr) return;
             auto& sel = viewport->sceneGraph()->selectionState();
+            if(!sel.pickEnabled()) return;
             if(action == Core::PickAction::Add) {
                 sel.addSelection(entity);
             } else {
@@ -2440,7 +2459,7 @@ void GLViewportRenderer::dispatchPickResult(const Render::PickResult& result,
 }
 ```
 
-Add `dispatchHoverResult` that updates SelectionState hover:
+Update `dispatchHoverResult` to update SelectionState hover alongside existing signals:
 ```cpp
 void GLViewportRenderer::dispatchHoverResult(const Render::PickResult& result) const {
     if(m_viewport.isNull()) return;
@@ -2448,15 +2467,19 @@ void GLViewportRenderer::dispatchHoverResult(const Render::PickResult& result) c
 
     if(!result.valid) {
         QMetaObject::invokeMethod(viewport.data(), [viewport]() {
-            if(!viewport.isNull() && viewport->sceneGraph())
+            if(viewport.isNull()) return;
+            viewport->notifyHoverResult(Render::PickResult{});
+            if(viewport->sceneGraph() && viewport->sceneGraph()->selectionState().pickEnabled())
                 viewport->sceneGraph()->selectionState().clearHover();
         }, Qt::QueuedConnection);
         return;
     }
 
     const Core::EntityRef entity{result.shapeId, result.entityType, result.localId};
-    QMetaObject::invokeMethod(viewport.data(), [viewport, entity]() {
-        if(!viewport.isNull() && viewport->sceneGraph())
+    QMetaObject::invokeMethod(viewport.data(), [viewport, entity, result]() {
+        if(viewport.isNull()) return;
+        viewport->notifyHoverResult(result);
+        if(viewport->sceneGraph() && viewport->sceneGraph()->selectionState().pickEnabled())
             viewport->sceneGraph()->selectionState().setHovered(entity);
     }, Qt::QueuedConnection);
 }

@@ -218,7 +218,7 @@ public:
     void addLabel(Label3D label);
     void removeByEntity(const EntityRef& entity);
     void clearLabels();
-    [[nodiscard]] std::span<const Label3D> labels() const;
+    [[nodiscard]] std::vector<Label3D> labels() const;
     [[nodiscard]] uint64_t version() const;
 
     Kangaroo::Util::Signal<> labelsChanged;
@@ -318,18 +318,21 @@ Q_SIGNALS:
 
 | Action | Condition | Behavior |
 |--------|-----------|----------|
-| Mouse move | pickEnabled | Update hover via SelectionState.setHovered() |
-| Left click (no drag) | pickEnabled | SelectionState.addSelection(pickResult) |
-| Left drag | pickEnabled + distance > 4px | Box select: pickRect() → batch addSelection() |
-| Right click (no drag) | pickEnabled | SelectionState.removeSelection(pickResult) |
-| Right drag | pickEnabled + distance > 4px | Box deselect: pickRect() → batch removeSelection() |
+| Mouse move | pickingEnabled | Update hover via existing signals; when selectionActive, also update SelectionState.setHovered() |
+| Left click (no drag) | pickingEnabled | Emit entityPicked signal; when selectionActive, also SelectionState.addSelection(pickResult) |
+| Left drag | selectionActive + distance > 4px | Box select: pickRect() → batch addSelection() |
+| Right click (no drag) | selectionActive | SelectionState.removeSelection(pickResult) |
+| Right drag | selectionActive + distance > 4px | Box deselect: pickRect() → batch removeSelection() |
 | Ctrl+Left drag | any | Camera orbit (existing trackball) |
 | Shift+Left drag / Middle drag | any | Camera pan (existing trackball) |
 | Ctrl+Wheel | any | Camera zoom (existing wheelZoom) |
+| Right drag | !selectionActive | Camera zoom (existing trackball) |
 
-**Camera control in pick mode:** When pickEnabled, right-drag is reassigned from camera zoom to box-deselect. Zoom remains available via Ctrl+Wheel. Orbit and pan are unaffected (Ctrl+Left, Shift+Left, Middle).
+**Selection mode distinction:** `pickingEnabled` (existing, default true) controls GPU pick FBO readback for hover and click signals. `selectionActive` (new, default false, synced from `SelectionState::pickEnabled()`) controls selection-specific behaviors: right-click deselect, box select/deselect, right-drag reassignment from zoom to box-deselect.
 
-**When pickEnabled is false:** All camera controls work as before (including right-drag zoom).
+**Camera control in selection mode:** When selectionActive, right-drag is reassigned from camera zoom to box-deselect. Zoom remains available via Ctrl+Wheel. Orbit and pan are unaffected (Ctrl+Left, Shift+Left, Middle).
+
+**When selectionActive is false:** All camera controls work as before (including right-drag zoom). Hover picking still works via pickingEnabled.
 
 **Box selection visual feedback:**
 - Left drag: blue rubber-band rectangle
@@ -364,7 +367,7 @@ Q_SIGNALS:
 
 ### 9. Query Panel (QML) — Phase 1
 
-**File:** `src/app/resource/qml/pages/GeoQueryPage.qml`
+**File:** `src/app/resource/qml/components/pages/GeoQueryPage.qml`
 
 **Components:**
 - `EntityTypeSelector.qml` — Pick type toggle buttons (Vertex/Edge/Face/Solid)
