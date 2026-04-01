@@ -96,6 +96,15 @@ RenderPipeline::pickRegion(int cx, int cy, int radius, PickMask mask) const {
     return m_impl->pickResolver->resolveAll(raw_pick_ids, Detail::pickModeFromMask(mask));
 }
 
+std::vector<PickResult>
+RenderPipeline::pickRect(int x0, int y0, int x1, int y1, PickMask mask) const {
+    if(!m_impl->pickResolver) {
+        return {};
+    }
+    const auto raw_pick_ids = m_impl->selectionPass.pickFbo().readPickRect(x0, y0, x1, y1);
+    return m_impl->pickResolver->resolveAll(raw_pick_ids, Detail::pickModeFromMask(mask));
+}
+
 void RenderPipeline::cleanup() {
     m_impl->selectionPass.cleanup();
     m_impl->highlightPass.cleanup();

@@ -81,6 +81,15 @@ public:
     pickRegion(int cx, int cy, int radius, PickMask mask) const;
 
     /**
+     * @brief Resolve all picks within an arbitrary rectangle (box-select).
+     * @param x0,y0,x1,y1 Rectangle in item-space pixels.
+     * @param mask Bitmask controlling which entity types are considered.
+     * @return All unique resolved results in the rectangle.
+     */
+    [[nodiscard]] std::vector<PickResult>
+    pickRect(int x0, int y0, int x1, int y1, PickMask mask) const;
+
+    /**
      * @brief Resolve an entity to its DrawRanges via the internal entity index.
      * @return DrawRanges for the entity (may span multiple primitive types). Empty if not found.
      */
