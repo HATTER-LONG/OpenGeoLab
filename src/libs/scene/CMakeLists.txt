@@ -1,11 +1,17 @@
 set(scene_public_headers
     include/opengeolab/scene/bounding_box3d.hpp
+    include/opengeolab/scene/clear_selection_action.hpp
+    include/opengeolab/scene/deselect_action.hpp
     include/opengeolab/scene/display_mode.hpp
     include/opengeolab/scene/geometry_scene_bridge.hpp
     include/opengeolab/scene/pick_component.hpp
     include/opengeolab/scene/pick_id.hpp
+    include/opengeolab/scene/query_selection_action.hpp
     include/opengeolab/scene/render_component.hpp
+    include/opengeolab/scene/select_action.hpp
     include/opengeolab/scene/render_mesh_data.hpp
+    include/opengeolab/scene/set_hover_action.hpp
+    include/opengeolab/scene/set_pick_mode_action.hpp
     include/opengeolab/scene/selection_state.hpp
     include/opengeolab/scene/scene_graph.hpp
     include/opengeolab/scene/scene_module.hpp
@@ -16,8 +22,14 @@ set(scene_public_headers
 
 set(scene_sources
     src/bounding_box3d.cpp
+    src/clear_selection_action.cpp
+    src/deselect_action.cpp
     src/geometry_scene_bridge.cpp
+    src/query_selection_action.cpp
+    src/select_action.cpp
     src/selection_state.cpp
+    src/set_hover_action.cpp
+    src/set_pick_mode_action.cpp
     src/scene_graph.cpp
     src/scene_module.cpp
     src/scene_node.cpp
@@ -77,5 +89,10 @@ if (OPENGEOLAB_BUILD_TESTS)
     opengeolab_add_doctest_test(
         opengeolab_scene_module_test
         SOURCES test/scene_module_test.cpp
+        LINKS OpenGeoLab::Scene)
+
+    opengeolab_add_doctest_test(
+        opengeolab_selection_actions_test
+        SOURCES test/selection_actions_test.cpp
         LINKS OpenGeoLab::Scene)
 endif ()

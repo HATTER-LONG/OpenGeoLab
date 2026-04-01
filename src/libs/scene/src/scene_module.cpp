@@ -6,7 +6,13 @@
 #include <opengeolab/scene/scene_module.hpp>
 
 #include <opengeolab/core/module_data_event.hpp>
+#include <opengeolab/scene/clear_selection_action.hpp>
+#include <opengeolab/scene/deselect_action.hpp>
 #include <opengeolab/scene/list_nodes_action.hpp>
+#include <opengeolab/scene/query_selection_action.hpp>
+#include <opengeolab/scene/select_action.hpp>
+#include <opengeolab/scene/set_hover_action.hpp>
+#include <opengeolab/scene/set_pick_mode_action.hpp>
 #include <opengeolab/scene/set_visibility_action.hpp>
 
 #include <functional>
@@ -17,6 +23,12 @@ SceneModule::SceneModule(Kangaroo::Util::PluginComponentFactory& factory)
     : ModuleBase(MODULE_NAME, "Scene state management module.", factory) {
     registerAction<SetVisibilityAction>(std::ref(m_sceneGraph));
     registerAction<ListNodesAction>(std::cref(m_sceneGraph));
+    registerAction<SelectAction>(std::ref(m_sceneGraph.selectionState()));
+    registerAction<DeselectAction>(std::ref(m_sceneGraph.selectionState()));
+    registerAction<ClearSelectionAction>(std::ref(m_sceneGraph.selectionState()));
+    registerAction<QuerySelectionAction>(std::cref(m_sceneGraph.selectionState()));
+    registerAction<SetPickModeAction>(std::ref(m_sceneGraph.selectionState()));
+    registerAction<SetHoverAction>(std::ref(m_sceneGraph.selectionState()));
 
     m_graphConnections.push_back(m_sceneGraph.nodeAdded.connect(
         [this](NodeId) { dataChanged.emit(Core::ModuleDataEvent::ItemAdded); }));
