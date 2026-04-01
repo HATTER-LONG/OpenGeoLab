@@ -10,9 +10,10 @@
 #pragma once
 
 #include <opengeolab/scene/bounding_box3d.hpp>
-#include <opengeolab/scene/selection_state.hpp>
+#include <opengeolab/scene/label_manager.hpp>
 #include <opengeolab/scene/scene_export.hpp>
 #include <opengeolab/scene/scene_node.hpp>
+#include <opengeolab/scene/selection_state.hpp>
 
 #include <kangaroo/util/signal.hpp>
 
@@ -157,6 +158,10 @@ public:
     [[nodiscard]] SelectionState& selectionState() { return m_selectionState; }
     [[nodiscard]] const SelectionState& selectionState() const { return m_selectionState; }
 
+    /** @brief 3D annotation label manager. */
+    [[nodiscard]] LabelManager& labelManager() { return m_labelManager; }
+    [[nodiscard]] const LabelManager& labelManager() const { return m_labelManager; }
+
     /** @brief Compute scene-wide AABB from all visible nodes. */
     [[nodiscard]] BoundingBox3D sceneBounds() const;
 
@@ -192,6 +197,7 @@ private:
     uint64_t m_version{0};
     std::optional<NodeId> m_hoveredNode;
     SelectionState m_selectionState;
+    LabelManager m_labelManager;
     mutable std::shared_mutex m_mutex;
 };
 

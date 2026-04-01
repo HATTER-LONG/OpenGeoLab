@@ -4,6 +4,7 @@ set(scene_public_headers
     include/opengeolab/scene/deselect_action.hpp
     include/opengeolab/scene/display_mode.hpp
     include/opengeolab/scene/geometry_scene_bridge.hpp
+    include/opengeolab/scene/label_manager.hpp
     include/opengeolab/scene/pick_component.hpp
     include/opengeolab/scene/pick_id.hpp
     include/opengeolab/scene/query_selection_action.hpp
@@ -25,6 +26,7 @@ set(scene_sources
     src/clear_selection_action.cpp
     src/deselect_action.cpp
     src/geometry_scene_bridge.cpp
+    src/label_manager.cpp
     src/query_selection_action.cpp
     src/select_action.cpp
     src/selection_state.cpp
@@ -74,6 +76,11 @@ if (OPENGEOLAB_BUILD_TESTS)
     opengeolab_add_doctest_test(
         opengeolab_selection_state_test
         SOURCES test/selection_state_test.cpp
+        LINKS OpenGeoLab::Scene)
+
+    opengeolab_add_doctest_test(
+        opengeolab_label_manager_test
+        SOURCES test/label_manager_test.cpp
         LINKS OpenGeoLab::Scene)
 
     opengeolab_add_doctest_test(
