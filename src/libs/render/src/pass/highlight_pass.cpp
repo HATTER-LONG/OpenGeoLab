@@ -1,6 +1,7 @@
 #include "pass/highlight_pass.hpp"
 
 #include "core/gpu_buffer_manager.hpp"
+#include "core/thick_line_renderer.hpp"
 
 #include <opengeolab/core/color_map.hpp>
 #include <opengeolab/render/batch_utils.hpp>
@@ -9,14 +10,13 @@
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include <cstdio>
 #include <string_view>
 
 namespace OpenGeoLab::Render {
 
 namespace {
 
-// --- Shaders ---
+// --- Shaders (face + point only; edges use ThickLineRenderer) ---
 
 constexpr std::string_view HIGHLIGHT_FACE_VS = R"glsl(
 #version 330 core
@@ -59,35 +59,6 @@ void main() {
 }
 )glsl";
 
-constexpr std::string_view HIGHLIGHT_EDGE_VS = R"glsl(
-#version 330 core
-layout(location = 0) in vec3 a_position;
-layout(location = 2) in vec4 a_color;
-uniform mat4 u_mvp;
-out vec4 v_color;
-void main() {
-    vec4 pos = u_mvp * vec4(a_position, 1.0);
-    // Depth bias: push highlighted edges slightly towards camera so that
-    // wide-line extra-width fragments pass GL_LEQUAL against face depth.
-    pos.z -= 0.0005 * pos.w;
-    gl_Position = pos;
-    v_color = a_color;
-}
-)glsl";
-
-constexpr std::string_view HIGHLIGHT_EDGE_FS = R"glsl(
-#version 330 core
-in vec4 v_color;
-uniform vec4 u_highlightColor;
-uniform float u_alpha;
-out vec4 fragColor;
-void main() {
-    vec3 finalColor = mix(v_color.rgb, u_highlightColor.rgb, u_highlightColor.a);
-    float a = v_color.a * u_alpha;
-    fragColor = vec4(finalColor * a, a);
-}
-)glsl";
-
 constexpr std::string_view HIGHLIGHT_POINT_VS = R"glsl(
 #version 330 core
 layout(location = 0) in vec3 a_position;
@@ -97,7 +68,7 @@ uniform float u_pointSize;
 out vec4 v_color;
 void main() {
     vec4 pos = u_mvp * vec4(a_position, 1.0);
-    pos.z -= 0.0005 * pos.w;
+    pos.z -= 0.003 * pos.w;
     gl_Position = pos;
     gl_PointSize = u_pointSize;
     v_color = a_color;
@@ -115,8 +86,6 @@ void main() {
     fragColor = vec4(finalColor, u_alpha);
 }
 )glsl";
-
-constexpr float DEFAULT_LINE_WIDTH = 1.0F;
 
 /// Bundled transform matrices for face highlight rendering.
 struct FaceTransforms {
@@ -168,12 +137,7 @@ bool HighlightPass::onInitialize() {
     if(!m_faceShader.create(HIGHLIGHT_FACE_VS, HIGHLIGHT_FACE_FS)) {
         return false;
     }
-    if(!m_edgeShader.create(HIGHLIGHT_EDGE_VS, HIGHLIGHT_EDGE_FS)) {
-        m_faceShader.destroy();
-        return false;
-    }
     if(!m_pointShader.create(HIGHLIGHT_POINT_VS, HIGHLIGHT_POINT_FS)) {
-        m_edgeShader.destroy();
         m_faceShader.destroy();
         return false;
     }
@@ -182,7 +146,6 @@ bool HighlightPass::onInitialize() {
 
 void HighlightPass::onCleanup() {
     m_pointShader.destroy();
-    m_edgeShader.destroy();
     m_faceShader.destroy();
 }
 
@@ -197,6 +160,9 @@ void HighlightPass::render(const FrameState& state, const GpuBufferManager& buff
     const FaceTransforms transforms{mvp, state.viewMatrix, normal_matrix};
     constexpr float alpha = 1.0F;
 
+    const glm::vec2 viewport{static_cast<float>(state.viewportWidth) * state.devicePixelRatio,
+                             static_cast<float>(state.viewportHeight) * state.devicePixelRatio};
+
     buffers.bindMainVao();
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
@@ -204,8 +170,6 @@ void HighlightPass::render(const FrameState& state, const GpuBufferManager& buff
     // --- Selection highlight ---
     {
         auto [faces, edges, vertices] = partition(state.selectedEntries);
-        std::fprintf(stderr, "[Highlight] sel: faces=%zu edges=%zu verts=%zu\n",
-                     faces.size(), edges.size(), vertices.size());
 
         if(!faces.empty()) {
             glEnable(GL_POLYGON_OFFSET_FILL);
@@ -217,21 +181,26 @@ void HighlightPass::render(const FrameState& state, const GpuBufferManager& buff
             glUniformMatrix3fv(loc, 1, GL_FALSE, glm::value_ptr(transforms.normalMatrix));
             m_faceShader.setVec4("u_highlightColor", toVec4(cfg.selectionFace.color));
             m_faceShader.setFloat("u_alpha", alpha);
-            const auto batch = BatchUtils::buildIndexedBatch(
-                faces, [](const Scene::DrawRange&) { return true; });
+            const auto batch =
+                BatchUtils::buildIndexedBatch(faces, [](const Scene::DrawRange&) { return true; });
             BatchUtils::multiDrawElements(GL_TRIANGLES, batch);
             glDisable(GL_POLYGON_OFFSET_FILL);
         }
 
-        if(!edges.empty()) {
-            glLineWidth(cfg.selectionEdgeVertex.lineWidth);
-            m_edgeShader.use();
-            m_edgeShader.setMat4("u_mvp", mvp);
-            m_edgeShader.setVec4("u_highlightColor", toVec4(cfg.selectionEdgeVertex.color));
-            m_edgeShader.setFloat("u_alpha", alpha);
-            const auto batch = BatchUtils::buildIndexedBatch(
-                edges, [](const Scene::DrawRange&) { return true; });
-            BatchUtils::multiDrawElements(GL_LINES, batch);
+        if(!edges.empty() && m_thickLine != nullptr) {
+            buffers.unbind();
+            m_thickLine->drawLines(
+                {.positionVbo = buffers.mainVbo(),
+                 .indexBuffer = buffers.ibo(),
+                 .mvp = mvp,
+                 .viewport = viewport,
+                 .lineWidth = cfg.selectionEdgeVertex.lineWidth * state.devicePixelRatio,
+                 .color = toVec4(cfg.selectionEdgeVertex.color),
+                 .useVertexColor = false,
+                 .colorMix = 0.0F,
+                 .depthBias = 0.001F},
+                edges);
+            buffers.bindMainVao();
         }
 
         if(!vertices.empty()) {
@@ -242,8 +211,8 @@ void HighlightPass::render(const FrameState& state, const GpuBufferManager& buff
             m_pointShader.setFloat("u_pointSize", pt_size);
             m_pointShader.setVec4("u_highlightColor", toVec4(cfg.selectionEdgeVertex.color));
             m_pointShader.setFloat("u_alpha", alpha);
-            const auto batch = BatchUtils::buildArrayBatch(
-                vertices, [](const Scene::DrawRange&) { return true; });
+            const auto batch =
+                BatchUtils::buildArrayBatch(vertices, [](const Scene::DrawRange&) { return true; });
             BatchUtils::multiDrawArrays(GL_POINTS, batch);
             glDisable(GL_PROGRAM_POINT_SIZE);
         }
@@ -252,10 +221,6 @@ void HighlightPass::render(const FrameState& state, const GpuBufferManager& buff
     // --- Hover highlight ---
     {
         auto [faces, edges, vertices] = partition(state.hoveredEntries);
-        if(!faces.empty() || !edges.empty() || !vertices.empty()) {
-            std::fprintf(stderr, "[Highlight] hov: faces=%zu edges=%zu verts=%zu\n",
-                         faces.size(), edges.size(), vertices.size());
-        }
 
         if(!faces.empty()) {
             glEnable(GL_POLYGON_OFFSET_FILL);
@@ -267,21 +232,26 @@ void HighlightPass::render(const FrameState& state, const GpuBufferManager& buff
             glUniformMatrix3fv(loc, 1, GL_FALSE, glm::value_ptr(transforms.normalMatrix));
             m_faceShader.setVec4("u_highlightColor", toVec4(cfg.hoverFace.color));
             m_faceShader.setFloat("u_alpha", alpha);
-            const auto batch = BatchUtils::buildIndexedBatch(
-                faces, [](const Scene::DrawRange&) { return true; });
+            const auto batch =
+                BatchUtils::buildIndexedBatch(faces, [](const Scene::DrawRange&) { return true; });
             BatchUtils::multiDrawElements(GL_TRIANGLES, batch);
             glDisable(GL_POLYGON_OFFSET_FILL);
         }
 
-        if(!edges.empty()) {
-            glLineWidth(cfg.hoverEdgeVertex.lineWidth);
-            m_edgeShader.use();
-            m_edgeShader.setMat4("u_mvp", mvp);
-            m_edgeShader.setVec4("u_highlightColor", toVec4(cfg.hoverEdgeVertex.color));
-            m_edgeShader.setFloat("u_alpha", alpha);
-            const auto batch = BatchUtils::buildIndexedBatch(
-                edges, [](const Scene::DrawRange&) { return true; });
-            BatchUtils::multiDrawElements(GL_LINES, batch);
+        if(!edges.empty() && m_thickLine != nullptr) {
+            buffers.unbind();
+            m_thickLine->drawLines(
+                {.positionVbo = buffers.mainVbo(),
+                 .indexBuffer = buffers.ibo(),
+                 .mvp = mvp,
+                 .viewport = viewport,
+                 .lineWidth = cfg.hoverEdgeVertex.lineWidth * state.devicePixelRatio,
+                 .color = toVec4(cfg.hoverEdgeVertex.color),
+                 .useVertexColor = false,
+                 .colorMix = 0.0F,
+                 .depthBias = 0.002F},
+                edges);
+            buffers.bindMainVao();
         }
 
         if(!vertices.empty()) {
@@ -292,14 +262,13 @@ void HighlightPass::render(const FrameState& state, const GpuBufferManager& buff
             m_pointShader.setFloat("u_pointSize", pt_size);
             m_pointShader.setVec4("u_highlightColor", toVec4(cfg.hoverEdgeVertex.color));
             m_pointShader.setFloat("u_alpha", alpha);
-            const auto batch = BatchUtils::buildArrayBatch(
-                vertices, [](const Scene::DrawRange&) { return true; });
+            const auto batch =
+                BatchUtils::buildArrayBatch(vertices, [](const Scene::DrawRange&) { return true; });
             BatchUtils::multiDrawArrays(GL_POINTS, batch);
             glDisable(GL_PROGRAM_POINT_SIZE);
         }
     }
 
-    glLineWidth(DEFAULT_LINE_WIDTH);
     glDepthFunc(GL_LESS);
     buffers.unbind();
 }

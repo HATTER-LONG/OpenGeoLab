@@ -15,6 +15,7 @@ set(render_sources
     src/pick_resolver.cpp
     src/core/shader_program.cpp
     src/core/gpu_buffer_manager.cpp
+    src/core/thick_line_renderer.cpp
     src/core/pick_fbo.cpp
     src/pass/opaque_pass.cpp
     src/pass/wireframe_pass.cpp

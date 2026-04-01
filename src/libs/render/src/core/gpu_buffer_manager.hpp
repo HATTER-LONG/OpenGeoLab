@@ -57,11 +57,15 @@ public:
      * @brief Look up all DrawRanges for an entity.
      * @return Span of DrawRanges, empty if entity not found.
      */
-    [[nodiscard]] std::span<const Scene::DrawRange> lookupEntity(uint32_t shape_id,
-                                                                  Core::EntityType entity_type,
-                                                                  uint32_t local_id) const;
+    [[nodiscard]] std::span<const Scene::DrawRange>
+    lookupEntity(uint32_t shape_id, Core::EntityType entity_type, uint32_t local_id) const;
 
     [[nodiscard]] bool hasData() const noexcept;
+    /** @brief Raw handle to the main interleaved VBO (pos+normal+color). */
+    [[nodiscard]] GLuint mainVbo() const noexcept { return m_mainVbo; }
+
+    /** @brief Raw handle to the shared index buffer (uint32_t). */
+    [[nodiscard]] GLuint ibo() const noexcept { return m_ibo; }
 
 private:
     void rebuildBuffers(const Scene::SceneGraph& scene);
@@ -79,8 +83,8 @@ private:
     struct EntityRefKeyHash {
         std::size_t operator()(const EntityRefKey& k) const noexcept {
             auto h = std::hash<uint32_t>{}(k.shapeId);
-            h ^= std::hash<uint8_t>{}(static_cast<uint8_t>(k.entityType)) + 0x9e3779b9 + (h << 6)
-                 + (h >> 2);
+            h ^= std::hash<uint8_t>{}(static_cast<uint8_t>(k.entityType)) + 0x9e3779b9 + (h << 6) +
+                 (h >> 2);
             h ^= std::hash<uint32_t>{}(k.localId) + 0x9e3779b9 + (h << 6) + (h >> 2);
             return h;
         }

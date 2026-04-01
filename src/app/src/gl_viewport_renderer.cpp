@@ -13,7 +13,6 @@
 
 #include <glad/gl.h>
 
-#include <QDebug>
 #include <QMetaObject>
 #include <QOpenGLContext>
 #include <QOpenGLFramebufferObject>
@@ -120,14 +119,10 @@ void GLViewportRenderer::synchronize(QQuickFramebufferObject* item) {
         if(sel_ver != m_cachedSelectionVersion) {
             m_resolvedSelectedEntries.clear();
             for(const auto& entity : sel.selections()) {
-                qDebug("[Sync] sel entity: shape=%u type=%u local=%u",
-                       entity.shapeId, static_cast<unsigned>(entity.entityType), entity.localId);
                 // Solid / Wire: expand to all shape DrawRanges (face, edge, vertex).
                 if(entity.entityType == Core::EntityType::GeoSolid ||
                    entity.entityType == Core::EntityType::GeoWire) {
                     auto shape_ranges = m_pipeline.resolveShapeDrawRanges(entity.shapeId);
-                    qDebug("[Sync] Solid/Wire expand: shapeId=%u, ranges=%zu",
-                           entity.shapeId, shape_ranges.size());
                     for(const auto& r : shape_ranges) {
                         m_resolvedSelectedEntries.push_back({r, r.entityType});
                     }

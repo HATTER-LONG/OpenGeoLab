@@ -20,7 +20,7 @@ TEST_SUITE("ColorMap") {
         CHECK(style.color.r == doctest::Approx(1.0f));
         CHECK(style.color.g == doctest::Approx(0.498f).epsilon(0.01));
         CHECK(style.color.b == doctest::Approx(0.0f));
-        CHECK(style.lineWidth == doctest::Approx(8.0f));
+        CHECK(style.lineWidth == doctest::Approx(2.5f));
         CHECK(style.pointScale == doctest::Approx(1.5f));
     }
 
@@ -28,7 +28,7 @@ TEST_SUITE("ColorMap") {
         const auto& style = ColorMap::kDefault.selectionEdgeVertex;
         CHECK(style.color.r == doctest::Approx(1.0f));
         CHECK(style.color.g == doctest::Approx(0.086f).epsilon(0.01));
-        CHECK(style.lineWidth == doctest::Approx(8.0f));
+        CHECK(style.lineWidth == doctest::Approx(2.0f));
         CHECK(style.pointScale == doctest::Approx(1.2f));
     }
 

@@ -6,6 +6,7 @@
 #include <opengeolab/render/render_pipeline.hpp>
 
 #include "core/gpu_buffer_manager.hpp"
+#include "core/thick_line_renderer.hpp"
 #include "pass/highlight_pass.hpp"
 #include "pass/opaque_pass.hpp"
 #include "pass/selection_pass.hpp"
@@ -20,7 +21,6 @@
 #include <glad/gl.h>
 
 #include <algorithm>
-#include <cstdio>
 #include <memory>
 #include <vector>
 
@@ -48,8 +48,10 @@ struct RenderPipeline::Impl {
     WireframePass wireframePass;
     HighlightPass highlightPass;
     SelectionPass selectionPass;
+    ThickLineRenderer thickLineRenderer;
     std::unique_ptr<Scene::TopologyIndex> topologyIndex;
     std::unique_ptr<PickResolver> pickResolver;
+    uint64_t resolverVersion{0}; ///< Scene version when resolver was last built.
     bool initialized{false};
 };
 
@@ -62,30 +64,27 @@ void RenderPipeline::initialize(GlLoaderFunc gl_loader) {
         gladLoadGL(reinterpret_cast<GLADloadfunc>(gl_loader));
     }
 
-    // Log GL line width capability for diagnostics.
-    {
-        GLfloat range[2] = {0.F, 0.F};
-        glGetFloatv(GL_LINE_WIDTH_RANGE, range);
-        std::fprintf(stderr, "[RenderPipeline] GL_LINE_WIDTH_RANGE: [%.1f, %.1f]\n",
-                     static_cast<double>(range[0]), static_cast<double>(range[1]));
-    }
-
     m_impl->bufferManager.initialize();
     m_impl->opaquePass.initialize();
     m_impl->wireframePass.initialize();
     m_impl->highlightPass.initialize();
     m_impl->selectionPass.initialize();
+    m_impl->thickLineRenderer.initialize();
+    m_impl->wireframePass.setThickLineRenderer(&m_impl->thickLineRenderer);
+    m_impl->highlightPass.setThickLineRenderer(&m_impl->thickLineRenderer);
     m_impl->initialized = true;
 }
 
 void RenderPipeline::synchronize(const Scene::SceneGraph& scene) {
     m_impl->bufferManager.synchronize(scene);
 
-    // SceneGraph does not currently expose the GeometrySceneBridge TopologyIndex.
-    // Keep a resolver available for VEF and Part picking while remaining ready
-    // to switch to scene-provided topology once that accessor exists.
-    m_impl->topologyIndex = std::make_unique<Scene::TopologyIndex>();
-    m_impl->pickResolver = std::make_unique<PickResolver>(*m_impl->topologyIndex);
+    // Rebuild pick resolver only when scene data has changed.
+    const uint64_t scene_ver = scene.version();
+    if(scene_ver != m_impl->resolverVersion) {
+        m_impl->topologyIndex = std::make_unique<Scene::TopologyIndex>();
+        m_impl->pickResolver = std::make_unique<PickResolver>(*m_impl->topologyIndex);
+        m_impl->resolverVersion = scene_ver;
+    }
 }
 
 void RenderPipeline::render(const FrameState& state) {
@@ -99,8 +98,8 @@ void RenderPipeline::render(const FrameState& state) {
     glEnable(GL_DEPTH_TEST);
 
     m_impl->opaquePass.render(state, m_impl->bufferManager);
-    m_impl->wireframePass.render(state, m_impl->bufferManager);
     m_impl->highlightPass.render(state, m_impl->bufferManager);
+    m_impl->wireframePass.render(state, m_impl->bufferManager);
     m_impl->selectionPass.render(state, m_impl->bufferManager);
 }
 
@@ -151,6 +150,7 @@ RenderPipeline::pickRect(int x0, int y0, int x1, int y1, PickMask mask) const {
 }
 
 void RenderPipeline::cleanup() {
+    m_impl->thickLineRenderer.cleanup();
     m_impl->selectionPass.cleanup();
     m_impl->highlightPass.cleanup();
     m_impl->wireframePass.cleanup();

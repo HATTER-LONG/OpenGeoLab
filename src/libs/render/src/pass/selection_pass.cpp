@@ -37,6 +37,9 @@ void main() {
 }
 )glsl";
 
+/// Line width for edge picking. On macOS/Linux Core Profile drivers,
+/// this may be clamped to 1.0; the 13×13 pick neighborhood in pickAt()
+/// compensates for the reduced hit area.
 constexpr float PICK_LINE_WIDTH = 4.0F;
 constexpr float DEFAULT_LINE_WIDTH = 1.0F;
 constexpr float PICK_POINT_SIZE = 12.0F;

@@ -1,27 +1,19 @@
 #include "pass/wireframe_pass.hpp"
 
 #include "core/gpu_buffer_manager.hpp"
+#include "core/thick_line_renderer.hpp"
 
+#include <opengeolab/core/color_map.hpp>
 #include <opengeolab/render/batch_utils.hpp>
 #include <opengeolab/scene/display_mode.hpp>
+
+#include <glad/gl.h>
 
 #include <string_view>
 
 namespace OpenGeoLab::Render {
 
 namespace {
-
-constexpr std::string_view LINE_VS = R"glsl(
-#version 330 core
-layout(location = 0) in vec3 a_position;
-layout(location = 2) in vec4 a_color;
-uniform mat4 u_mvp;
-out vec4 v_color;
-void main() {
-    gl_Position = u_mvp * vec4(a_position, 1.0);
-    v_color = a_color;
-}
-)glsl";
 
 constexpr std::string_view POINT_VS = R"glsl(
 #version 330 core
@@ -31,7 +23,9 @@ uniform mat4 u_mvp;
 uniform float u_pointSize;
 out vec4 v_color;
 void main() {
-    gl_Position = u_mvp * vec4(a_position, 1.0);
+    vec4 pos = u_mvp * vec4(a_position, 1.0);
+    pos.z -= 0.0006 * pos.w;
+    gl_Position = pos;
     gl_PointSize = u_pointSize;
     v_color = a_color;
 }
@@ -48,29 +42,13 @@ void main() {
 }
 )glsl";
 
-constexpr float LINE_WIDTH = 1.5F;
-constexpr float DEFAULT_LINE_WIDTH = 1.0F;
 constexpr float POINT_SIZE = 6.0F;
 
 } // namespace
 
-bool WireframePass::onInitialize() {
-    if(!m_lineShader.create(LINE_VS, WIREFRAME_FS)) {
-        return false;
-    }
+bool WireframePass::onInitialize() { return m_pointShader.create(POINT_VS, WIREFRAME_FS); }
 
-    if(!m_pointShader.create(POINT_VS, WIREFRAME_FS)) {
-        m_lineShader.destroy();
-        return false;
-    }
-
-    return true;
-}
-
-void WireframePass::onCleanup() {
-    m_pointShader.destroy();
-    m_lineShader.destroy();
-}
+void WireframePass::onCleanup() { m_pointShader.destroy(); }
 
 void WireframePass::render(const FrameState& state, const GpuBufferManager& buffers) {
     if(!buffers.hasData()) {
@@ -82,22 +60,31 @@ void WireframePass::render(const FrameState& state, const GpuBufferManager& buff
         return;
     }
 
+    const auto& cfg = Core::ColorMap::active();
     const glm::mat4 mvp = state.projMatrix * state.viewMatrix;
-    constexpr float alpha = 1.0f;
+    constexpr float alpha = 1.0F;
 
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
-    glLineWidth(LINE_WIDTH);
 
+    // --- Edges via ThickLineRenderer ---
+    if(m_thickLine != nullptr) {
+        const glm::vec2 viewport{static_cast<float>(state.viewportWidth) * state.devicePixelRatio,
+                                 static_cast<float>(state.viewportHeight) * state.devicePixelRatio};
+        m_thickLine->drawLines({.positionVbo = buffers.mainVbo(),
+                                .indexBuffer = buffers.ibo(),
+                                .mvp = mvp,
+                                .viewport = viewport,
+                                .lineWidth = cfg.defaultEdgeWidth * state.devicePixelRatio,
+                                .color = {},
+                                .useVertexColor = true,
+                                .colorMix = 0.0F,
+                                .depthBias = 0.0003F},
+                               buffers.lineRanges());
+    }
+
+    // --- Points via standard shader ---
     buffers.bindMainVao();
-
-    m_lineShader.use();
-    m_lineShader.setMat4("u_mvp", mvp);
-    m_lineShader.setFloat("u_alpha", alpha);
-    const auto line_batch = BatchUtils::buildIndexedBatch(
-        buffers.lineRanges(), [](const Scene::DrawRange&) { return true; });
-    BatchUtils::multiDrawElements(GL_LINES, line_batch);
-
     glEnable(GL_PROGRAM_POINT_SIZE);
 
     m_pointShader.use();
@@ -109,9 +96,7 @@ void WireframePass::render(const FrameState& state, const GpuBufferManager& buff
     BatchUtils::multiDrawArrays(GL_POINTS, point_batch);
 
     buffers.unbind();
-
     glDisable(GL_PROGRAM_POINT_SIZE);
-    glLineWidth(DEFAULT_LINE_WIDTH);
     glDepthFunc(GL_LESS);
 }
 
