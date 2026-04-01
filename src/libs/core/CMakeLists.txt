@@ -1,9 +1,11 @@
 set(core_public_headers
     include/opengeolab/core/action.hpp
+    include/opengeolab/core/entity_ref.hpp
     include/opengeolab/core/entity_tag.hpp
     include/opengeolab/core/logger.hpp
     include/opengeolab/core/module.hpp
     include/opengeolab/core/module_data_event.hpp
+    include/opengeolab/core/pick_action.hpp
     include/opengeolab/core/progress_callback.hpp
     include/opengeolab/core/point_vector3d.hpp
     include/opengeolab/core/visual_data.hpp)
@@ -26,5 +28,8 @@ opengeolab_add_module(
 if (OPENGEOLAB_BUILD_TESTS)
     opengeolab_add_doctest_test(
         opengeolab_core_test SOURCES test/point_vector3d_test.cpp LINKS
+        OpenGeoLab::Core)
+    opengeolab_add_doctest_test(
+        opengeolab_entity_ref_test SOURCES test/entity_ref_test.cpp LINKS
         OpenGeoLab::Core)
 endif ()
