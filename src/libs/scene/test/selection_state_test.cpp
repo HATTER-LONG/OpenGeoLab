@@ -107,6 +107,16 @@ TEST_SUITE("SelectionState") {
         CHECK(state.hoverVersion() == 1);
     }
 
+    TEST_CASE("invalid hovered entity clears hover") {
+        SelectionState state;
+        state.setHovered(FACE_1);
+
+        state.setHovered(EntityRef{});
+
+        CHECK_FALSE(state.hovered().has_value());
+        CHECK(state.hoverVersion() == 2);
+    }
+
     TEST_CASE("pick configuration") {
         SelectionState state;
         CHECK_FALSE(state.pickEnabled());
@@ -148,6 +158,31 @@ TEST_SUITE("SelectionState") {
 
         state.clearSelection();
         CHECK(clear_count == 1);
+    }
+
+    TEST_CASE("signal emitted on hover set") {
+        SelectionState state;
+        std::optional<EntityRef> captured;
+        auto conn =
+            state.hoverChanged.connect([&](std::optional<EntityRef> ref) { captured = ref; });
+
+        state.setHovered(FACE_1);
+
+        REQUIRE(captured.has_value());
+        CHECK(*captured == FACE_1);
+    }
+
+    TEST_CASE("signal emitted on hover clear") {
+        SelectionState state;
+        state.setHovered(FACE_1);
+
+        std::optional<EntityRef> captured = FACE_1;
+        auto conn =
+            state.hoverChanged.connect([&](std::optional<EntityRef> ref) { captured = ref; });
+
+        state.clearHover();
+
+        CHECK_FALSE(captured.has_value());
     }
 
     TEST_CASE("selections are sorted") {

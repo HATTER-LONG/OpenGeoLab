@@ -96,6 +96,10 @@ bool SelectionState::isSelected(const Core::EntityRef& entity) const {
 }
 
 void SelectionState::setHovered(const Core::EntityRef& entity) {
+    if(!entity.isValid()) {
+        clearHover();
+        return;
+    }
     {
         std::unique_lock lock(m_mutex);
         if(m_hovered.has_value() && *m_hovered == entity) {
@@ -116,7 +120,7 @@ void SelectionState::clearHover() {
         m_hovered.reset();
         ++m_hoverVersion;
     }
-    hoverChanged.emit(Core::EntityRef{});
+    hoverChanged.emit(std::nullopt);
 }
 
 std::optional<Core::EntityRef> SelectionState::hovered() const {

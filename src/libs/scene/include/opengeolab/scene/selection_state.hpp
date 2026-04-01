@@ -57,7 +57,7 @@ public:
     Kangaroo::Util::Signal<Core::EntityRef> entitySelected;
     Kangaroo::Util::Signal<Core::EntityRef> entityDeselected;
     Kangaroo::Util::Signal<> selectionCleared;
-    Kangaroo::Util::Signal<Core::EntityRef> hoverChanged;
+    Kangaroo::Util::Signal<std::optional<Core::EntityRef>> hoverChanged;
     Kangaroo::Util::Signal<> pickConfigChanged;
 
 private:
