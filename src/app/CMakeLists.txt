@@ -90,6 +90,8 @@ qt_add_qml_module(
     resource/qml/components/DimensionInput.qml
     resource/qml/components/ParamField.qml
     resource/qml/components/CoordinateField.qml
+    resource/qml/components/EntityTypeSelector.qml
+    resource/qml/components/EntityChip.qml
     resource/qml/components/ViewportToolbar.qml
     resource/qml/components/ViewportToolButton.qml
     resource/qml/components/pages/CreateBoxPage.qml
@@ -97,6 +99,7 @@ qt_add_qml_module(
     resource/qml/components/pages/CreateSpherePage.qml
     resource/qml/components/pages/CreateTorusPage.qml
     resource/qml/components/pages/ImportModelPage.qml
+    resource/qml/components/pages/GeoQueryPage.qml
     RESOURCES
     resource/icons/menu.svg
     resource/icons/box.svg
