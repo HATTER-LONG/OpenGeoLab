@@ -6,7 +6,9 @@
 #include <opengeolab/app/gl_viewport_renderer.hpp>
 
 #include <opengeolab/app/gl_viewport.hpp>
+#include <opengeolab/core/entity_ref.hpp>
 #include <opengeolab/scene/scene_graph.hpp>
+#include <opengeolab/scene/selection_state.hpp>
 
 #include <glad/gl.h>
 
@@ -98,15 +100,49 @@ void GLViewportRenderer::synchronize(QQuickFramebufferObject* item) {
     m_frameState.viewportHeight = static_cast<int>(height_px);
     m_frameState.devicePixelRatio = device_pixel_ratio;
     m_frameState.xRayMode = viewport->xRayMode();
-    m_frameState.selectedDrawRanges.clear();
-    m_frameState.hoveredDrawRanges.clear();
 
     m_pickingEnabled = viewport->pickingEnabled();
     m_pickMode = static_cast<Render::PickMode>(viewport->pickMode());
     m_pendingPick = viewport->consumePendingPick();
+    m_pendingBoxSelect = viewport->consumePendingBoxSelect();
     m_hoverPick = {m_pickingEnabled && viewport->m_hoverActive,
                    static_cast<float>(viewport->m_hoverPos.x()),
                    static_cast<float>(viewport->m_hoverPos.y())};
+
+    // Resolve SelectionState → DrawRanges (only when version changes)
+    if(const auto* scene = viewport->sceneGraph(); scene != nullptr) {
+        const auto& sel = scene->selectionState();
+        const uint64_t sel_ver = sel.selectionVersion();
+        const uint64_t hov_ver = sel.hoverVersion();
+
+        if(sel_ver != m_cachedSelectionVersion) {
+            m_resolvedSelectedRanges.clear();
+            for(const auto& entity : sel.selections()) {
+                auto ranges = m_pipeline.resolveEntityDrawRanges(entity.shapeId, entity.entityType,
+                                                                entity.localId);
+                m_resolvedSelectedRanges.insert(m_resolvedSelectedRanges.end(), ranges.begin(),
+                                                ranges.end());
+            }
+            m_cachedSelectionVersion = sel_ver;
+        }
+
+        if(hov_ver != m_cachedHoverVersion) {
+            m_resolvedHoveredRanges.clear();
+            if(const auto hovered = sel.hovered(); hovered.has_value()) {
+                auto ranges = m_pipeline.resolveEntityDrawRanges(
+                    hovered->shapeId, hovered->entityType, hovered->localId);
+                m_resolvedHoveredRanges.insert(m_resolvedHoveredRanges.end(), ranges.begin(),
+                                               ranges.end());
+            }
+            m_cachedHoverVersion = hov_ver;
+        }
+
+        // Sync selection-active flag for mouse mode mapping
+        viewport->setSelectionActive(sel.pickEnabled());
+    }
+
+    m_frameState.selectedDrawRanges = m_resolvedSelectedRanges;
+    m_frameState.hoveredDrawRanges = m_resolvedHoveredRanges;
 }
 
 void GLViewportRenderer::render() {
@@ -122,8 +158,14 @@ void GLViewportRenderer::render() {
         }
 
         if(m_pendingPick.active) {
-            dispatchPickResult(pickAtItemPosition(m_pendingPick.x, m_pendingPick.y));
+            dispatchPickResult(pickAtItemPosition(m_pendingPick.x, m_pendingPick.y),
+                               m_pendingPick.action);
             m_pendingPick = {};
+        }
+
+        if(m_pendingBoxSelect.active) {
+            dispatchBoxSelectResults(m_pendingBoxSelect);
+            m_pendingBoxSelect = {};
         }
     }
 
@@ -165,7 +207,8 @@ Render::PickResult GLViewportRenderer::pickAtItemPosition(float x, float y) cons
     return m_pipeline.pickAt(pixel_x, pixel_y, pickMask());
 }
 
-void GLViewportRenderer::dispatchPickResult(const Render::PickResult& result) const {
+void GLViewportRenderer::dispatchPickResult(const Render::PickResult& result,
+                                            Core::PickAction action) const {
     if(m_viewport.isNull()) {
         return;
     }
@@ -173,9 +216,25 @@ void GLViewportRenderer::dispatchPickResult(const Render::PickResult& result) co
     const QPointer<GLViewport> viewport = m_viewport;
     QMetaObject::invokeMethod(
         viewport.data(),
-        [viewport, result]() {
-            if(!viewport.isNull()) {
-                viewport->notifyPickResult(result);
+        [viewport, result, action]() {
+            if(viewport.isNull()) {
+                return;
+            }
+            // Preserve existing signal behavior (always emitted)
+            viewport->notifyPickResult(result);
+            // Selection behavior (only when selection mode is active)
+            if(viewport->sceneGraph() == nullptr) {
+                return;
+            }
+            auto& sel = viewport->sceneGraph()->selectionState();
+            if(!sel.pickEnabled() || !result.valid) {
+                return;
+            }
+            const Core::EntityRef entity{result.shapeId, result.entityType, result.localId};
+            if(action == Core::PickAction::Add) {
+                sel.addSelection(entity);
+            } else {
+                sel.removeSelection(entity);
             }
         },
         Qt::QueuedConnection);
@@ -187,11 +246,80 @@ void GLViewportRenderer::dispatchHoverResult(const Render::PickResult& result) c
     }
 
     const QPointer<GLViewport> viewport = m_viewport;
+
+    if(!result.valid) {
+        QMetaObject::invokeMethod(
+            viewport.data(),
+            [viewport]() {
+                if(viewport.isNull()) {
+                    return;
+                }
+                viewport->notifyHoverResult(Render::PickResult{});
+                if(viewport->sceneGraph() != nullptr &&
+                   viewport->sceneGraph()->selectionState().pickEnabled()) {
+                    viewport->sceneGraph()->selectionState().clearHover();
+                }
+            },
+            Qt::QueuedConnection);
+        return;
+    }
+
     QMetaObject::invokeMethod(
         viewport.data(),
         [viewport, result]() {
-            if(!viewport.isNull()) {
-                viewport->notifyHoverResult(result);
+            if(viewport.isNull()) {
+                return;
+            }
+            viewport->notifyHoverResult(result);
+            if(viewport->sceneGraph() != nullptr &&
+               viewport->sceneGraph()->selectionState().pickEnabled()) {
+                const Core::EntityRef entity{result.shapeId, result.entityType, result.localId};
+                viewport->sceneGraph()->selectionState().setHovered(entity);
+            }
+        },
+        Qt::QueuedConnection);
+}
+
+void GLViewportRenderer::dispatchBoxSelectResults(
+    const GLViewport::PendingBoxSelect& box) const {
+    if(m_viewport.isNull()) {
+        return;
+    }
+
+    const float dpr = m_frameState.devicePixelRatio;
+    const int px0 = static_cast<int>(box.x1 * dpr);
+    const int py0 = static_cast<int>(box.y1 * dpr);
+    const int px1 = static_cast<int>(box.x2 * dpr);
+    const int py1 = static_cast<int>(box.y2 * dpr);
+
+    auto results = m_pipeline.pickRect(px0, py0, px1, py1, pickMask());
+    if(results.empty()) {
+        return;
+    }
+
+    std::vector<Core::EntityRef> entities;
+    entities.reserve(results.size());
+    for(const auto& r : results) {
+        if(r.valid) {
+            entities.push_back({r.shapeId, r.entityType, r.localId});
+        }
+    }
+
+    const QPointer<GLViewport> viewport = m_viewport;
+    const Core::PickAction action = box.action;
+    QMetaObject::invokeMethod(
+        viewport.data(),
+        [viewport, entities = std::move(entities), action]() {
+            if(viewport.isNull() || viewport->sceneGraph() == nullptr) {
+                return;
+            }
+            auto& sel = viewport->sceneGraph()->selectionState();
+            for(const auto& entity : entities) {
+                if(action == Core::PickAction::Add) {
+                    sel.addSelection(entity);
+                } else {
+                    sel.removeSelection(entity);
+                }
             }
         },
         Qt::QueuedConnection);

@@ -16,7 +16,8 @@ qt_add_executable(
     src/camera_state.cpp
     src/trackball_controller.cpp
     src/gl_viewport.cpp
-    src/gl_viewport_renderer.cpp)
+    src/gl_viewport_renderer.cpp
+    src/selection_service.cpp)
 
 target_compile_features(opengeolab_app PRIVATE cxx_std_20)
 target_compile_definitions(opengeolab_app PRIVATE QT_NO_KEYWORDS)
@@ -59,6 +60,7 @@ qt_add_qml_module(
     include/opengeolab/app/log_filter_proxy_model.hpp
     include/opengeolab/app/module_data_notifier.hpp
     include/opengeolab/app/gl_viewport.hpp
+    include/opengeolab/app/selection_service.hpp
     QML_FILES
     resource/qml/Main.qml
     resource/qml/RibbonConfig.qml

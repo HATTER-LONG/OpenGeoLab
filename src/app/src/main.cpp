@@ -9,6 +9,7 @@
 #include "opengeolab/app/log_filter_proxy_model.hpp"
 #include "opengeolab/app/module_data_notifier.hpp"
 #include "opengeolab/app/request_service.hpp"
+#include "opengeolab/app/selection_service.hpp"
 
 #include <opengeolab/app/gl_viewport.hpp>
 #include <opengeolab/command/command_dispatcher.hpp>
@@ -102,6 +103,13 @@ int main(int argc, char* argv[]) {
     qmlRegisterSingletonInstance("OpenGeoLab.Services", 1, 0, "LogEventModel", &log_event_model);
     qmlRegisterType<OpenGeoLab::App::LogFilterProxyModel>("OpenGeoLab.Services", 1, 0,
                                                           "LogFilterProxyModel");
+
+    OpenGeoLab::App::SelectionService selection_service;
+    if(scene_module != nullptr) {
+        selection_service.setSelectionState(&scene_module->sceneGraph().selectionState());
+    }
+    qmlRegisterSingletonInstance("OpenGeoLab.Services", 1, 0, "SelectionService",
+                                 &selection_service);
 
     QQmlApplicationEngine engine;
     engine.loadFromModule("OpenGeoLab.App", "Main");
