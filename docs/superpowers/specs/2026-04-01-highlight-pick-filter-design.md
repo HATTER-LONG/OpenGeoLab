@@ -114,7 +114,7 @@ void setOverride(const ColorMapConfig& config);
 
 ### Module 2 — SelectionPass GPU Mask Filtering (render library)
 
-**Location**: Modify existing `src/libs/render/src/passes/selection_pass.hpp/.cpp`
+**Location**: Modify existing `src/libs/render/src/pass/selection_pass.hpp/.cpp`
 
 **Current behavior**: Renders all geometry (triangles, lines, points) to the pick FBO unconditionally.
 
@@ -168,7 +168,7 @@ PickResult RenderPipeline::pickAt(int x, int y, PickMask mask) const {
 
 ### Module 4 — HighlightPass Entity-Type-Aware Rendering (render library)
 
-**Location**: Modify existing `src/libs/render/src/passes/highlight_pass.hpp/.cpp`
+**Location**: Modify existing `src/libs/render/src/pass/highlight_pass.hpp/.cpp`
 
 **Current behavior**: Renders all selected/hovered draw ranges with hardcoded blue/cyan color. No entity-type differentiation. No line width or point size changes.
 
@@ -284,10 +284,10 @@ User clicks mouse
 | `src/libs/core/src/color_map.cpp` | **NEW** — active(), setOverride() implementation |
 | `src/libs/core/CMakeLists.txt` | Add color_map.hpp, color_map.cpp |
 | `src/libs/core/test/color_map_test.cpp` | **NEW** — Tests for defaults, override, reset |
-| `src/libs/render/src/passes/selection_pass.hpp` | Add pickMask parameter to render() |
-| `src/libs/render/src/passes/selection_pass.cpp` | Filter draw calls by pickMask |
+| `src/libs/render/src/pass/selection_pass.hpp` | Add pickMask parameter to render() |
+| `src/libs/render/src/pass/selection_pass.cpp` | Filter draw calls by pickMask |
 | `src/libs/render/src/render_pipeline.cpp` | pickAt(): readPickId → readPickRegion(x,y,6) |
 | `src/libs/render/include/opengeolab/render/frame_state.hpp` | Add HighlightEntry, replace DrawRange vectors, add pickMask |
-| `src/libs/render/src/passes/highlight_pass.hpp` | Read ColorMap, render per entity type |
-| `src/libs/render/src/passes/highlight_pass.cpp` | Implement entity-type-aware highlight rendering |
+| `src/libs/render/src/pass/highlight_pass.hpp` | Read ColorMap, render per entity type |
+| `src/libs/render/src/pass/highlight_pass.cpp` | Implement entity-type-aware highlight rendering |
 | `src/app/src/gl_viewport_renderer.cpp` | synchronize(): build HighlightEntry lists with entityType |
