@@ -69,7 +69,7 @@ set(OPENGEOLAB_SPDLOG_VERSION 1.17.0)
 set(OPENGEOLAB_KANGAROO_VERSION 2.3.1)
 set(OPENGEOLAB_NLOHMANN_JSON_VERSION 3.12.0)
 set(OPENGEOLAB_DOCTEST_VERSION 2.5.0)
-set(OPENGEOLAB_GLM_VERSION 1.0.1)
+set(OPENGEOLAB_GLM_VERSION 1.0.3)
 set(OPENGEOLAB_GLAD_VERSION 2.0.8)
 
 # ---------------------------------------------------------------------------
@@ -200,13 +200,13 @@ elseif (NOT OPENGEOLAB_FETCH_DEPENDENCIES)
     )
 else ()
     message(STATUS "Fetching glad from GitHub")
-    CPMAddPackage(
-        NAME glad
-        GITHUB_REPOSITORY Dav1dde/glad
-        GIT_TAG v${OPENGEOLAB_GLAD_VERSION})
+    cpmaddpackage(NAME glad GITHUB_REPOSITORY Dav1dde/glad GIT_TAG
+                  v${OPENGEOLAB_GLAD_VERSION})
 
     if (NOT EXISTS "${glad_SOURCE_DIR}/cmake/GladConfig.cmake")
-        message(FATAL_ERROR "Fetched glad package does not provide cmake/GladConfig.cmake")
+        message(
+            FATAL_ERROR
+                "Fetched glad package does not provide cmake/GladConfig.cmake")
     endif ()
 
     set(GLAD_SOURCES_DIR "${glad_SOURCE_DIR}")
