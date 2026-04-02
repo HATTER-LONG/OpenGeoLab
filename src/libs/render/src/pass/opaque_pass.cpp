@@ -20,16 +20,13 @@ layout(location = 0) in vec3 a_position;
 layout(location = 1) in vec3 a_normal;
 layout(location = 2) in vec4 a_color;
 uniform mat4 u_mvp;
-uniform mat4 u_modelView;
 uniform mat3 u_normalMatrix;
 out vec3 v_normal;
 out vec4 v_color;
-out vec3 v_viewPos;
 void main() {
     gl_Position = u_mvp * vec4(a_position, 1.0);
     v_normal = normalize(u_normalMatrix * a_normal);
     v_color = a_color;
-    v_viewPos = (u_modelView * vec4(a_position, 1.0)).xyz;
 }
 )glsl";
 
@@ -37,12 +34,12 @@ constexpr std::string_view OPAQUE_FS = R"glsl(
 #version 330 core
 in vec3 v_normal;
 in vec4 v_color;
-in vec3 v_viewPos;
 uniform float u_alpha;
 out vec4 fragColor;
 void main() {
     vec3 N = normalize(v_normal);
-    vec3 V = normalize(-v_viewPos);
+    // Orthographic headlamp: constant view direction along +Z in view space.
+    vec3 V = vec3(0.0, 0.0, 1.0);
     float ambient      = 0.35;
     float headlamp     = abs(dot(N, V));
     float skyLight     = max(dot(N, vec3(0.0, 1.0, 0.0)), 0.0) * 0.15;
@@ -75,7 +72,6 @@ void OpaquePass::render(const FrameState& state, const GpuBufferManager& buffers
 
     m_shader.use();
     m_shader.setMat4("u_mvp", mvp);
-    m_shader.setMat4("u_modelView", state.viewMatrix);
 
     const GLint normal_matrix_location = glGetUniformLocation(m_shader.id(), "u_normalMatrix");
     glUniformMatrix3fv(normal_matrix_location, 1, GL_FALSE, glm::value_ptr(normal_mat));
