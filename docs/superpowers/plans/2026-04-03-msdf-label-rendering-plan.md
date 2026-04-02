@@ -113,7 +113,7 @@ opengeolab_add_module(
 Run:
 ```bash
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo
-cmake --build build --config RelWithDebInfo --target opengeolab_render --parallel 4
+cmake --build build --config RelWithDebInfo --target opengeolab_render --parallel 8
 ```
 Expected: Build succeeds with stb_image INTERFACE target resolved.
 
@@ -221,7 +221,7 @@ inline constexpr float K_LABEL_OCCLUDED_ALPHA = 0.3F;
 
 Run:
 ```bash
-cmake --build build --config RelWithDebInfo --target opengeolab_core --parallel 4
+cmake --build build --config RelWithDebInfo --target opengeolab_core --parallel 8
 ```
 Expected: Build succeeds (header-only, no source changes needed in core CMake).
 
@@ -323,7 +323,7 @@ endif ()
 Run:
 ```bash
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo
-cmake --build build --config RelWithDebInfo --target opengeolab_render --parallel 4
+cmake --build build --config RelWithDebInfo --target opengeolab_render --parallel 8
 ```
 Expected: Configure copies atlas files to `build/bin/resources/fonts/` (or equivalent output dir), build succeeds.
 
@@ -377,7 +377,7 @@ Add these fields to the `FrameState` struct after `activePickMask`:
 
 Run:
 ```bash
-cmake --build build --config RelWithDebInfo --parallel 4
+cmake --build build --config RelWithDebInfo --parallel 8
 ```
 Expected: Full build succeeds (FrameState is used across all layers).
 
@@ -721,7 +721,7 @@ Add to the `opengeolab_add_module` block, after `PUBLIC_LINKS`:
 Run:
 ```bash
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo
-cmake --build build --config RelWithDebInfo --target opengeolab_render_test --parallel 4
+cmake --build build --config RelWithDebInfo --target opengeolab_render_test --parallel 8
 ctest --test-dir build -C RelWithDebInfo -R render_test --output-on-failure
 ```
 Expected: All font_atlas tests PASS.
@@ -849,7 +849,7 @@ TEST_CASE("computeStackIndices: separate groups get independent stacking") {
 
 Run:
 ```bash
-cmake --build build --config RelWithDebInfo --target opengeolab_render_test --parallel 4
+cmake --build build --config RelWithDebInfo --target opengeolab_render_test --parallel 8
 ```
 Expected: FAIL — `label_anchor.hpp` not found.
 
@@ -954,7 +954,7 @@ Add to test `SOURCES`:
 
 Run:
 ```bash
-cmake --build build --config RelWithDebInfo --target opengeolab_render_test --parallel 4
+cmake --build build --config RelWithDebInfo --target opengeolab_render_test --parallel 8
 ctest --test-dir build -C RelWithDebInfo -R render_test --output-on-failure
 ```
 Expected: All label_anchor tests PASS.
@@ -1368,7 +1368,7 @@ In `src/libs/render/CMakeLists.txt`, add to `render_sources`:
 
 Run:
 ```bash
-cmake --build build --config RelWithDebInfo --target opengeolab_render --parallel 4
+cmake --build build --config RelWithDebInfo --target opengeolab_render --parallel 8
 ```
 Expected: Build succeeds.
 
@@ -1506,7 +1506,7 @@ In `cleanup()`, before `m_impl->opaquePass.cleanup()` (line 155), add:
 
 Run:
 ```bash
-cmake --build build --config RelWithDebInfo --target opengeolab_render --parallel 4
+cmake --build build --config RelWithDebInfo --target opengeolab_render --parallel 8
 ```
 Expected: Build succeeds.
 
@@ -1822,7 +1822,7 @@ After the last `registerAction<>` call (line 43), add:
 
 Run:
 ```bash
-cmake --build build --config RelWithDebInfo --parallel 4
+cmake --build build --config RelWithDebInfo --parallel 8
 ctest --test-dir build -C RelWithDebInfo -R scene_test --output-on-failure
 ```
 Expected: All tests pass including new describe_labels tests.
@@ -1958,7 +1958,7 @@ self-occlusion from co-planar geometry.
 
 Run:
 ```bash
-cmake --build build --config RelWithDebInfo --parallel 4
+cmake --build build --config RelWithDebInfo --parallel 8
 ```
 Expected: Full build succeeds.
 
@@ -2125,7 +2125,7 @@ selectionService.setLabelManager(&scene_module->sceneGraph().labelManager());
 
 Run:
 ```bash
-cmake --build build --config RelWithDebInfo --parallel 4
+cmake --build build --config RelWithDebInfo --parallel 8
 ```
 Expected: Full build succeeds.
 
@@ -2196,7 +2196,7 @@ Note: The conditional check ensures backward compatibility if the method isn't a
 
 Run:
 ```bash
-cmake --build build --config RelWithDebInfo --parallel 4
+cmake --build build --config RelWithDebInfo --parallel 8
 ```
 Expected: Build succeeds. Manual test: launch app, open GeoQueryPage, verify toggle appears.
 
@@ -2220,7 +2220,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 Run:
 ```bash
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo
-cmake --build build --config RelWithDebInfo --parallel 4
+cmake --build build --config RelWithDebInfo --parallel 8
 ```
 Expected: Full build succeeds with zero errors.
 

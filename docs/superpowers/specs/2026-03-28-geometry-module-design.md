@@ -891,7 +891,7 @@ scene   → core, geometry (新增 geometry 依赖，用于订阅信号)
 
 ```bash
 # 构建
-cmake --build build --target opengeolab_geometry --config Debug --parallel 4
+cmake --build build --target opengeolab_geometry --config Debug --parallel 8
 
 # 运行测试
 ctest --test-dir build -C Debug -R geometry --output-on-failure

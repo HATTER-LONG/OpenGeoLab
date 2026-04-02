@@ -88,5 +88,5 @@
 - 手动验证：连续快速双击 Execute 按钮，确认只发送一次请求
 - 手动验证：请求执行中打开其他页面，确认 Banner 显示且 Execute 禁用
 - 手动验证：请求完成后，Execute 按钮恢复可用，Banner 消失
-- 构建验证：`cmake --build build --config RelWithDebInfo --parallel 4`
+- 构建验证：`cmake --build build --config RelWithDebInfo --parallel 8`
 - 测试验证：`ctest --test-dir build -C RelWithDebInfo --output-on-failure`

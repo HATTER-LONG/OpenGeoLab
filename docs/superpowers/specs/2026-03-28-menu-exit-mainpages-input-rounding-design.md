@@ -272,7 +272,7 @@ Rectangle {
 
 ## 验证计划
 
-1. **构建验证：** `cmake --build build --config RelWithDebInfo --parallel 4`
+1. **构建验证：** `cmake --build build --config RelWithDebInfo --parallel 8`
 2. **测试验证：** `ctest --test-dir build -C RelWithDebInfo --output-on-failure`
 3. **运行时验证：**
    - Menu 面板：Script Recorder 消失，Exit 按钮可见且点击退出

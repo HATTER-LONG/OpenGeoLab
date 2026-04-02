@@ -50,7 +50,7 @@ In `gpu_buffer_manager.hpp`, add two public getters after the existing `hasData(
 
 - [ ] **Step 2: Build to verify**
 
-Run: `cmake --build build --config RelWithDebInfo --target opengeolab_render --parallel 4`
+Run: `cmake --build build --config RelWithDebInfo --target opengeolab_render --parallel 8`
 Expected: BUILD SUCCESS
 
 - [ ] **Step 3: Commit**
@@ -381,7 +381,7 @@ set(render_sources
 
 - [ ] **Step 4: Build to verify**
 
-Run: `cmake --build build --config RelWithDebInfo --target opengeolab_render --parallel 4`
+Run: `cmake --build build --config RelWithDebInfo --target opengeolab_render --parallel 8`
 Expected: BUILD SUCCESS (ThickLineRenderer compiles and links into render DLL)
 
 - [ ] **Step 5: Commit**
@@ -460,7 +460,7 @@ In `RenderPipeline::initialize()`, after all passes are initialized, add:
 
 - [ ] **Step 4: Build to verify**
 
-Run: `cmake --build build --config RelWithDebInfo --target opengeolab_render --parallel 4`
+Run: `cmake --build build --config RelWithDebInfo --target opengeolab_render --parallel 8`
 Expected: BUILD FAILURE (setThickLineRenderer not yet declared — expected, will be resolved in Tasks 4-5)
 
 Note: This task's commit is deferred to after Task 5 when all pieces compile together.
@@ -804,7 +804,7 @@ void HighlightPass::render(const FrameState& state, const GpuBufferManager& buff
 
 - [ ] **Step 3: Build to verify**
 
-Run: `cmake --build build --config RelWithDebInfo --target opengeolab_render --parallel 4`
+Run: `cmake --build build --config RelWithDebInfo --target opengeolab_render --parallel 8`
 Expected: May still fail until Task 5 adds the WireframePass setter. Continue to Task 5.
 
 ---
@@ -969,7 +969,7 @@ void WireframePass::render(const FrameState& state, const GpuBufferManager& buff
 
 - [ ] **Step 3: Build to verify**
 
-Run: `cmake --build build --config RelWithDebInfo --parallel 4`
+Run: `cmake --build build --config RelWithDebInfo --parallel 8`
 Expected: FULL BUILD SUCCESS (all passes + pipeline compile together)
 
 - [ ] **Step 4: Run tests**
@@ -1062,7 +1062,7 @@ Search for and remove:
 
 - [ ] **Step 5: Build and test**
 
-Run: `cmake --build build --config RelWithDebInfo --parallel 4 && ctest --test-dir build -C RelWithDebInfo --output-on-failure`
+Run: `cmake --build build --config RelWithDebInfo --parallel 8 && ctest --test-dir build -C RelWithDebInfo --output-on-failure`
 Expected: BUILD SUCCESS, all 28 tests pass
 
 - [ ] **Step 6: Commit**
@@ -1086,7 +1086,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 
 - [ ] **Step 1: Full rebuild**
 
-Run: `cmake --build build --config RelWithDebInfo --parallel 4`
+Run: `cmake --build build --config RelWithDebInfo --parallel 8`
 Expected: BUILD SUCCESS, clean output
 
 - [ ] **Step 2: Run all tests**

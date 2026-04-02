@@ -10,7 +10,7 @@
 
 **Build/Test commands:**
 ```
-cmake --build build --config RelWithDebInfo --parallel 4
+cmake --build build --config RelWithDebInfo --parallel 8
 ctest --test-dir build -C RelWithDebInfo --output-on-failure
 ```
 
@@ -245,7 +245,7 @@ Add a new test block:
 
 - [ ] **Step 5: Build and run tests**
 
-Run: `cmake --build build --config RelWithDebInfo --parallel 4`
+Run: `cmake --build build --config RelWithDebInfo --parallel 8`
 Run: `ctest --test-dir build -C RelWithDebInfo -R color_map --output-on-failure`
 Expected: All new tests PASS.
 
@@ -397,7 +397,7 @@ In `src/app/include/opengeolab/app/gl_viewport_renderer.hpp`, no changes needed 
 
 - [ ] **Step 5: Build and run all tests**
 
-Run: `cmake --build build --config RelWithDebInfo --parallel 4`
+Run: `cmake --build build --config RelWithDebInfo --parallel 8`
 Run: `ctest --test-dir build -C RelWithDebInfo --output-on-failure`
 Expected: All 27+ tests PASS (compilation fix ensures nothing regresses).
 
@@ -488,7 +488,7 @@ In `src/libs/render/src/render_pipeline.cpp`, the `render()` method already pass
 
 - [ ] **Step 4: Build and run tests**
 
-Run: `cmake --build build --config RelWithDebInfo --parallel 4`
+Run: `cmake --build build --config RelWithDebInfo --parallel 8`
 Run: `ctest --test-dir build -C RelWithDebInfo --output-on-failure`
 Expected: All tests PASS.
 
@@ -534,7 +534,7 @@ PickResult RenderPipeline::pickAt(int x, int y, PickMask mask) const {
 
 - [ ] **Step 2: Build and run tests**
 
-Run: `cmake --build build --config RelWithDebInfo --parallel 4`
+Run: `cmake --build build --config RelWithDebInfo --parallel 8`
 Run: `ctest --test-dir build -C RelWithDebInfo --output-on-failure`
 Expected: All tests PASS. `pickAt()` now reads 169 pixels and uses V>E>F priority via PickResolver.
 
@@ -879,7 +879,7 @@ void HighlightPass::render(const FrameState& state, const GpuBufferManager& buff
 
 - [ ] **Step 3: Build and run tests**
 
-Run: `cmake --build build --config RelWithDebInfo --parallel 4`
+Run: `cmake --build build --config RelWithDebInfo --parallel 8`
 Run: `ctest --test-dir build -C RelWithDebInfo --output-on-failure`
 Expected: All tests PASS.
 
@@ -965,7 +965,7 @@ Replace the FrameState assignment (the temporary code from Task 2):
 
 - [ ] **Step 3: Build and run all tests**
 
-Run: `cmake --build build --config RelWithDebInfo --parallel 4`
+Run: `cmake --build build --config RelWithDebInfo --parallel 8`
 Run: `ctest --test-dir build -C RelWithDebInfo --output-on-failure`
 Expected: All tests PASS.
 
@@ -1014,7 +1014,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 
 - [ ] **Step 2: Full build and test**
 
-Run: `cmake --build build --config RelWithDebInfo --parallel 4`
+Run: `cmake --build build --config RelWithDebInfo --parallel 8`
 Run: `ctest --test-dir build -C RelWithDebInfo --output-on-failure`
 Expected: All tests PASS.
 

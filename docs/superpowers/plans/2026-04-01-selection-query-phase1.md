@@ -12,7 +12,7 @@
 
 **Build/Test commands:**
 ```
-cmake --build build --config RelWithDebInfo --parallel 4
+cmake --build build --config RelWithDebInfo --parallel 8
 ctest --test-dir build -C RelWithDebInfo --output-on-failure
 ```
 
@@ -277,7 +277,7 @@ opengeolab_add_doctest_test(
 - [ ] **Step 5: Build and run tests**
 
 ```
-cmake --build build --config RelWithDebInfo --target opengeolab_entity_ref_test --parallel 4
+cmake --build build --config RelWithDebInfo --target opengeolab_entity_ref_test --parallel 8
 ctest --test-dir build -C RelWithDebInfo -R entity_ref --output-on-failure
 ```
 Expected: All tests pass.
@@ -377,7 +377,7 @@ Add `include/opengeolab/core/pick_mask.hpp` to `core_public_headers`.
 - [ ] **Step 4: Build full project**
 
 ```
-cmake --build build --config RelWithDebInfo --parallel 4
+cmake --build build --config RelWithDebInfo --parallel 8
 ```
 Expected: Full build succeeds with no errors. The render compatibility header ensures all existing code compiles unchanged.
 
@@ -856,7 +856,7 @@ opengeolab_add_doctest_test(
 - [ ] **Step 6: Build and run tests**
 
 ```
-cmake --build build --config RelWithDebInfo --parallel 4
+cmake --build build --config RelWithDebInfo --parallel 8
 ctest --test-dir build -C RelWithDebInfo -R selection_state --output-on-failure
 ```
 Expected: All tests pass.
@@ -1615,7 +1615,7 @@ opengeolab_add_doctest_test(
 - [ ] **Step 10: Build and run tests**
 
 ```
-cmake --build build --config RelWithDebInfo --parallel 4
+cmake --build build --config RelWithDebInfo --parallel 8
 ctest --test-dir build -C RelWithDebInfo -R selection_actions --output-on-failure
 ctest --test-dir build -C RelWithDebInfo -R scene_module --output-on-failure
 ```
@@ -1930,7 +1930,7 @@ opengeolab_add_doctest_test(
 
 Build and test:
 ```
-cmake --build build --config RelWithDebInfo --parallel 4
+cmake --build build --config RelWithDebInfo --parallel 8
 ctest --test-dir build -C RelWithDebInfo -R label_manager --output-on-failure
 ```
 
@@ -2024,7 +2024,7 @@ Add `m_entityIndex.clear();` to the `cleanup()` method.
 - [ ] **Step 5: Build**
 
 ```
-cmake --build build --config RelWithDebInfo --target opengeolab_render --parallel 4
+cmake --build build --config RelWithDebInfo --target opengeolab_render --parallel 8
 ```
 
 - [ ] **Step 6: Commit**
@@ -2129,7 +2129,7 @@ RenderPipeline::pickRect(int x0, int y0, int x1, int y1, PickMask mask) const {
 - [ ] **Step 3: Build**
 
 ```
-cmake --build build --config RelWithDebInfo --target opengeolab_render --parallel 4
+cmake --build build --config RelWithDebInfo --target opengeolab_render --parallel 8
 ```
 
 - [ ] **Step 4: Commit**
@@ -2314,7 +2314,7 @@ Add `#include <opengeolab/core/pick_action.hpp>` to `gl_viewport.hpp`.
 - [ ] **Step 4: Build**
 
 ```
-cmake --build build --config RelWithDebInfo --parallel 4
+cmake --build build --config RelWithDebInfo --parallel 8
 ```
 
 - [ ] **Step 5: Commit**
@@ -2527,7 +2527,7 @@ void GLViewportRenderer::dispatchBoxSelectResults(
 - [ ] **Step 3: Build**
 
 ```
-cmake --build build --config RelWithDebInfo --parallel 4
+cmake --build build --config RelWithDebInfo --parallel 8
 ```
 
 - [ ] **Step 4: Commit**
@@ -2638,7 +2638,7 @@ Add `selection_service.cpp` to app sources and `selection_service.hpp` to SOURCE
 - [ ] **Step 5: Build**
 
 ```
-cmake --build build --config RelWithDebInfo --parallel 4
+cmake --build build --config RelWithDebInfo --parallel 8
 ```
 
 - [ ] **Step 6: Commit**
@@ -2698,7 +2698,7 @@ Add new QML files to `qt_add_qml_module QML_FILES` list.
 - [ ] **Step 7: Build and test UI**
 
 ```
-cmake --build build --config RelWithDebInfo --parallel 4
+cmake --build build --config RelWithDebInfo --parallel 8
 ```
 
 Run the app and verify the Query panel opens and closes.
@@ -2749,7 +2749,7 @@ Rectangle {
 - [ ] **Step 2: Build and verify**
 
 ```
-cmake --build build --config RelWithDebInfo --parallel 4
+cmake --build build --config RelWithDebInfo --parallel 8
 ```
 
 - [ ] **Step 3: Commit**
@@ -2770,7 +2770,7 @@ and boxSelectRect properties."
 - [ ] **Step 1: Full build**
 
 ```
-cmake --build build --config RelWithDebInfo --parallel 4
+cmake --build build --config RelWithDebInfo --parallel 8
 ```
 Expected: Clean build, zero errors.
 

@@ -429,7 +429,7 @@ And empty test files:
 Run:
 ```
 cmake --preset relwithdebinfo
-cmake --build build --config RelWithDebInfo --parallel 4
+cmake --build build --config RelWithDebInfo --parallel 8
 ```
 Expected: Build succeeds with all stub files compiled and linked.
 
@@ -659,7 +659,7 @@ void ShaderProgram::setInt(std::string_view name, int value) const {
 - [ ] **Step 3: Build to verify**
 
 ```
-cmake --build build --config RelWithDebInfo --target opengeolab_render --parallel 4
+cmake --build build --config RelWithDebInfo --target opengeolab_render --parallel 8
 ```
 Expected: PASS
 
@@ -771,7 +771,7 @@ TEST_CASE("buildArrayBatch — empty after filter") {
 - [ ] **Step 2: Run tests to verify they fail**
 
 ```
-cmake --build build --config RelWithDebInfo --target opengeolab_batch_utils_test --parallel 4
+cmake --build build --config RelWithDebInfo --target opengeolab_batch_utils_test --parallel 8
 ctest --test-dir build -C RelWithDebInfo -R batch_utils --output-on-failure
 ```
 Expected: FAIL (stub implementations)
@@ -845,7 +845,7 @@ template ArrayBatch buildArrayBatch(
 - [ ] **Step 4: Run tests to verify they pass**
 
 ```
-cmake --build build --config RelWithDebInfo --target opengeolab_batch_utils_test --parallel 4
+cmake --build build --config RelWithDebInfo --target opengeolab_batch_utils_test --parallel 8
 ctest --test-dir build -C RelWithDebInfo -R batch_utils --output-on-failure
 ```
 Expected: ALL PASS
@@ -960,7 +960,7 @@ TEST_CASE("PickResolver — resolveAll returns unique results") {
 - [ ] **Step 2: Run tests to verify they fail**
 
 ```
-cmake --build build --config RelWithDebInfo --target opengeolab_pick_resolver_test --parallel 4
+cmake --build build --config RelWithDebInfo --target opengeolab_pick_resolver_test --parallel 8
 ctest --test-dir build -C RelWithDebInfo -R pick_resolver --output-on-failure
 ```
 Expected: FAIL
@@ -1127,7 +1127,7 @@ std::vector<PickResult> PickResolver::resolveAll(
 - [ ] **Step 5: Run tests to verify they pass**
 
 ```
-cmake --build build --config RelWithDebInfo --target opengeolab_pick_resolver_test --parallel 4
+cmake --build build --config RelWithDebInfo --target opengeolab_pick_resolver_test --parallel 8
 ctest --test-dir build -C RelWithDebInfo -R pick_resolver --output-on-failure
 ```
 Expected: ALL PASS
@@ -1274,7 +1274,7 @@ glVertexAttribIPointer(1, 2, GL_UNSIGNED_INT, kPickStride,
 - [ ] **Step 3: Build to verify**
 
 ```
-cmake --build build --config RelWithDebInfo --target opengeolab_render --parallel 4
+cmake --build build --config RelWithDebInfo --target opengeolab_render --parallel 8
 ```
 Expected: PASS
 
@@ -1404,7 +1404,7 @@ std::vector<uint64_t> PickFbo::readPickRegion(int cx, int cy, int radius) const 
 - [ ] **Step 3: Build to verify**
 
 ```
-cmake --build build --config RelWithDebInfo --target opengeolab_render --parallel 4
+cmake --build build --config RelWithDebInfo --target opengeolab_render --parallel 8
 ```
 Expected: PASS
 
@@ -1562,7 +1562,7 @@ void main() {
 - [ ] **Step 4: Build to verify**
 
 ```
-cmake --build build --config RelWithDebInfo --target opengeolab_render --parallel 4
+cmake --build build --config RelWithDebInfo --target opengeolab_render --parallel 8
 ```
 Expected: PASS
 
@@ -1651,7 +1651,7 @@ uniform float u_pointSize;
 - [ ] **Step 3: Build to verify**
 
 ```
-cmake --build build --config RelWithDebInfo --target opengeolab_render --parallel 4
+cmake --build build --config RelWithDebInfo --target opengeolab_render --parallel 8
 ```
 Expected: PASS
 
@@ -1714,7 +1714,7 @@ void main() {
 - [ ] **Step 2: Build to verify**
 
 ```
-cmake --build build --config RelWithDebInfo --target opengeolab_render --parallel 4
+cmake --build build --config RelWithDebInfo --target opengeolab_render --parallel 8
 ```
 Expected: PASS
 
@@ -1773,7 +1773,7 @@ void main() {
 - [ ] **Step 2: Build to verify**
 
 ```
-cmake --build build --config RelWithDebInfo --target opengeolab_render --parallel 4
+cmake --build build --config RelWithDebInfo --target opengeolab_render --parallel 8
 ```
 Expected: PASS
 
@@ -1845,7 +1845,7 @@ void RenderPipeline::render(const FrameState& state) {
 - [ ] **Step 3: Build to verify**
 
 ```
-cmake --build build --config RelWithDebInfo --target opengeolab_render --parallel 4
+cmake --build build --config RelWithDebInfo --target opengeolab_render --parallel 8
 ```
 Expected: PASS
 
@@ -1980,7 +1980,7 @@ Add `src/camera_state.cpp` and header to the app target sources.
 - [ ] **Step 4: Build to verify**
 
 ```
-cmake --build build --config RelWithDebInfo --parallel 4
+cmake --build build --config RelWithDebInfo --parallel 8
 ```
 Expected: PASS
 
@@ -2056,7 +2056,7 @@ ViewPresets: set position relative to target for Front/Back/Top/Bottom/Left/Righ
 - [ ] **Step 4: Build to verify**
 
 ```
-cmake --build build --config RelWithDebInfo --parallel 4
+cmake --build build --config RelWithDebInfo --parallel 8
 ```
 Expected: PASS
 
@@ -2154,7 +2154,7 @@ Add new source files and headers to `qt_add_executable` and `qt_add_qml_module` 
 - [ ] **Step 6: Build to verify**
 
 ```
-cmake --build build --config RelWithDebInfo --parallel 4
+cmake --build build --config RelWithDebInfo --parallel 8
 ```
 Expected: PASS
 
@@ -2214,7 +2214,7 @@ Item {
 - [ ] **Step 2: Build to verify**
 
 ```
-cmake --build build --config RelWithDebInfo --parallel 4
+cmake --build build --config RelWithDebInfo --parallel 8
 ```
 Expected: PASS
 
@@ -2245,7 +2245,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 - [ ] **Step 1: Full build**
 
 ```
-cmake --build build --config RelWithDebInfo --parallel 4
+cmake --build build --config RelWithDebInfo --parallel 8
 ```
 Expected: Build succeeds with zero errors.
 

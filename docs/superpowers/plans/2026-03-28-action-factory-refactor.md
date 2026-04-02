@@ -11,7 +11,7 @@
 **规格文档：** `docs/superpowers/specs/2026-03-28-action-factory-design.md`
 
 **验证命令：**
-- 构建：`cmake --build build --config Debug --parallel 4`
+- 构建：`cmake --build build --config Debug --parallel 8`
 - 测试：`ctest --test-dir build -C Debug --output-on-failure`
 
 ---
@@ -20,7 +20,7 @@
 
 **目的：** 确认当前代码可以正常构建和通过所有测试
 
-- [ ] 步骤 1：执行构建 `cmake --build build --config Debug --parallel 4`
+- [ ] 步骤 1：执行构建 `cmake --build build --config Debug --parallel 8`
 - [ ] 步骤 2：执行测试 `ctest --test-dir build -C Debug --output-on-failure`
 - [ ] 步骤 3：确认全部通过，记录测试数量作为基线
 
@@ -173,7 +173,7 @@ template <> struct Kangaroo::Util::PluginComponentInterfaceId<OpenGeoLab::Core::
   - 该文件已经通过 `registerBuiltinModules(factory)` 使用，理论上不需要修改
   - 确认编译通过
 
-- [ ] 步骤 4：执行全量构建 `cmake --build build --config Debug --parallel 4`
+- [ ] 步骤 4：执行全量构建 `cmake --build build --config Debug --parallel 8`
 - [ ] 步骤 5：执行全量测试 `ctest --test-dir build -C Debug --output-on-failure`
 - [ ] 步骤 6：确认所有测试通过，数量与基线一致
 

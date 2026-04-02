@@ -76,7 +76,7 @@ void SceneNode::setSource(std::string type, uint32_t id) {
 
 - [ ] **Step 3: 构建验证**
 
-Run: `cmake --build build --config RelWithDebInfo --target opengeolab_scene --parallel 4`
+Run: `cmake --build build --config RelWithDebInfo --target opengeolab_scene --parallel 8`
 Expected: 编译成功
 
 ---
@@ -128,7 +128,7 @@ SceneNode* SceneGraph::findNodeBySource(std::string_view type, uint32_t srcId) c
 
 - [ ] **Step 3: 构建验证**
 
-Run: `cmake --build build --config RelWithDebInfo --target opengeolab_scene --parallel 4`
+Run: `cmake --build build --config RelWithDebInfo --target opengeolab_scene --parallel 8`
 Expected: 编译成功
 
 ---
@@ -163,7 +163,7 @@ new_node->setSource("geometry", shapeId);
 
 - [ ] **Step 3: 构建验证**
 
-Run: `cmake --build build --config RelWithDebInfo --target opengeolab_scene --parallel 4`
+Run: `cmake --build build --config RelWithDebInfo --target opengeolab_scene --parallel 8`
 Expected: 编译成功
 
 ---
@@ -255,7 +255,7 @@ nlohmann::json SetVisibilityAction::execute(const nlohmann::json& param,
 
 - [ ] **Step 3: 构建验证**
 
-Run: `cmake --build build --config RelWithDebInfo --target opengeolab_scene --parallel 4`
+Run: `cmake --build build --config RelWithDebInfo --target opengeolab_scene --parallel 8`
 Expected: 编译成功
 
 ---
@@ -312,7 +312,7 @@ nlohmann::json ListNodesAction::execute(const nlohmann::json& /*param*/,
 
 - [ ] **Step 3: 构建验证**
 
-Run: `cmake --build build --config RelWithDebInfo --target opengeolab_scene --parallel 4`
+Run: `cmake --build build --config RelWithDebInfo --target opengeolab_scene --parallel 8`
 Expected: 编译成功
 
 ---
@@ -613,7 +613,7 @@ TEST_SUITE("SceneModule") {
 
 - [ ] **Step 4: 构建并运行测试**
 
-Run: `cmake --build build --config RelWithDebInfo --parallel 4`
+Run: `cmake --build build --config RelWithDebInfo --parallel 8`
 Run: `ctest --test-dir build -C RelWithDebInfo -R scene_module --output-on-failure`
 Expected: 全部通过
 
@@ -673,7 +673,7 @@ if (resp.action === "list_nodes" && resp.ok) {
 
 - [ ] **Step 3: 构建验证**
 
-Run: `cmake --build build --config RelWithDebInfo --parallel 4`
+Run: `cmake --build build --config RelWithDebInfo --parallel 8`
 Expected: 编译成功
 
 ---
@@ -696,7 +696,7 @@ clang-format -i \
 
 - [ ] **Step 2: 全量构建和测试**
 
-Run: `cmake --build build --config RelWithDebInfo --parallel 4`
+Run: `cmake --build build --config RelWithDebInfo --parallel 8`
 Run: `ctest --test-dir build -C RelWithDebInfo --output-on-failure`
 Expected: 全部通过（23+ tests）
 

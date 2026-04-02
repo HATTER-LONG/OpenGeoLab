@@ -21,12 +21,12 @@ cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo
 
 Build full project:
 ```
-cmake --build build --config RelWithDebInfo --parallel 4
+cmake --build build --config RelWithDebInfo --parallel 8
 ```
 
 Build scene library only:
 ```
-cmake --build build --config RelWithDebInfo --target opengeolab_scene --parallel 4
+cmake --build build --config RelWithDebInfo --target opengeolab_scene --parallel 8
 ```
 
 Run all tests:
@@ -327,7 +327,7 @@ Add test block (after the `opengeolab_selection_actions_test` block, before `end
 
 - [ ] **Step 5: Build scene library and run test**
 
-Run: `cmake --build build --config RelWithDebInfo --target opengeolab_scene --parallel 4`
+Run: `cmake --build build --config RelWithDebInfo --target opengeolab_scene --parallel 8`
 Expected: Build succeeds.
 
 Run: `ctest --test-dir build -C RelWithDebInfo -R scene_camera_state --output-on-failure`
@@ -721,7 +721,7 @@ Add test block (after `opengeolab_scene_camera_state_test`):
 
 - [ ] **Step 5: Build and run test (RED → GREEN)**
 
-Run: `cmake --build build --config RelWithDebInfo --target opengeolab_scene --parallel 4`
+Run: `cmake --build build --config RelWithDebInfo --target opengeolab_scene --parallel 8`
 Run: `ctest --test-dir build -C RelWithDebInfo -R viewport_state --output-on-failure`
 Expected: All tests PASS.
 
@@ -765,7 +765,7 @@ Add private member after `LabelManager m_labelManager;` (after line 200):
 
 - [ ] **Step 2: Build scene library**
 
-Run: `cmake --build build --config RelWithDebInfo --target opengeolab_scene --parallel 4`
+Run: `cmake --build build --config RelWithDebInfo --target opengeolab_scene --parallel 8`
 Expected: Build succeeds.
 
 - [ ] **Step 3: Commit**
@@ -1388,7 +1388,7 @@ Add test block (after `opengeolab_viewport_state_test`):
 
 - [ ] **Step 11: Build and run tests**
 
-Run: `cmake --build build --config RelWithDebInfo --target opengeolab_scene --parallel 4`
+Run: `cmake --build build --config RelWithDebInfo --target opengeolab_scene --parallel 8`
 Expected: Build succeeds.
 
 Run: `ctest --test-dir build -C RelWithDebInfo -R viewport_actions --output-on-failure`
@@ -1446,7 +1446,7 @@ Add ViewportState signal connections (after the existing SelectionState connecti
 
 - [ ] **Step 2: Build and run scene module test**
 
-Run: `cmake --build build --config RelWithDebInfo --target opengeolab_scene --parallel 4`
+Run: `cmake --build build --config RelWithDebInfo --target opengeolab_scene --parallel 8`
 Run: `ctest --test-dir build -C RelWithDebInfo -R scene_module --output-on-failure`
 Expected: PASS.
 
@@ -1971,7 +1971,7 @@ Also add `#include <opengeolab/scene/bounding_box3d.hpp>` if still needed by rem
 
 - [ ] **Step 10: Build full project**
 
-Run: `cmake --build build --config RelWithDebInfo --parallel 4`
+Run: `cmake --build build --config RelWithDebInfo --parallel 8`
 Expected: Clean build.
 
 - [ ] **Step 11: Run all tests**
@@ -2033,7 +2033,7 @@ git commit -m "feat(python): update selection demo with camera and pick area con
 
 - [ ] **Step 1: Full clean build**
 
-Run: `cmake --build build --config RelWithDebInfo --parallel 4`
+Run: `cmake --build build --config RelWithDebInfo --parallel 8`
 Expected: Clean build, zero warnings related to our changes.
 
 - [ ] **Step 2: Run all tests**

@@ -333,7 +333,7 @@ Expected impact: < 0.5ms per frame for 50K segments on modern GPU. Acceptable.
 ## Testing
 
 No new unit tests (GL rendering code). Verification:
-1. Build passes (`cmake --build build --parallel 4`)
+1. Build passes (`cmake --build build --parallel 8`)
 2. All 28 existing tests pass
 3. Visual: hover edge shows thick + AA
 4. Visual: selection edge shows thick + AA

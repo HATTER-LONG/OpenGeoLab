@@ -46,7 +46,7 @@
 
 **文件：** 无修改
 
-- [ ] 步骤 1：构建全量 `cmake --build build --config RelWithDebInfo --parallel 4`
+- [ ] 步骤 1：构建全量 `cmake --build build --config RelWithDebInfo --parallel 8`
 - [ ] 步骤 2：测试 `ctest --test-dir build -C RelWithDebInfo --output-on-failure`
 - [ ] 步骤 3：确认 8/8 测试通过
 - [ ] 步骤 4：`git --no-pager status` 确认工作树干净
@@ -116,11 +116,11 @@ enum class ModuleDataEvent : uint8_t {
 
 （在 `module.hpp` 之后添加）
 
-- [ ] 步骤 4：构建 `cmake --build build --config RelWithDebInfo --parallel 4`
+- [ ] 步骤 4：构建 `cmake --build build --config RelWithDebInfo --parallel 8`
 - [ ] 步骤 5：测试 `ctest --test-dir build -C RelWithDebInfo --output-on-failure`（预期 8/8 pass，新增类型无行为变更）
 - [ ] 步骤 6：`clang-format -i src/libs/core/include/opengeolab/core/module_data_event.hpp src/libs/core/include/opengeolab/core/module.hpp`
 
-**验证命令：** `cmake --build build --config RelWithDebInfo --parallel 4 && ctest --test-dir build -C RelWithDebInfo --output-on-failure`
+**验证命令：** `cmake --build build --config RelWithDebInfo --parallel 8 && ctest --test-dir build -C RelWithDebInfo --output-on-failure`
 **预期结果：** 构建成功，8/8 tests pass
 
 ---
@@ -154,11 +154,11 @@ enum class ModuleDataEvent : uint8_t {
 #include <opengeolab/core/module_data_event.hpp>
 ```
 
-- [ ] 步骤 2：构建 geometry 目标 `cmake --build build --target opengeolab_geometry --config RelWithDebInfo --parallel 4`
+- [ ] 步骤 2：构建 geometry 目标 `cmake --build build --target opengeolab_geometry --config RelWithDebInfo --parallel 8`
 - [ ] 步骤 3：运行 geometry 测试 `ctest --test-dir build -C RelWithDebInfo -R geometry --output-on-failure`
 - [ ] 步骤 4：`clang-format -i src/libs/geometry/src/geometry_module.cpp`
 
-**验证命令：** `cmake --build build --target opengeolab_geometry --config RelWithDebInfo --parallel 4 && ctest --test-dir build -C RelWithDebInfo -R geometry --output-on-failure`
+**验证命令：** `cmake --build build --target opengeolab_geometry --config RelWithDebInfo --parallel 8 && ctest --test-dir build -C RelWithDebInfo -R geometry --output-on-failure`
 **预期结果：** 构建成功，geometry 测试全部通过
 
 ---
@@ -218,7 +218,7 @@ TEST_CASE("onModuleDataChanged returns disconnected handle for unknown module") 
 - [ ] 步骤 2：运行测试确认失败（`onModuleDataChanged` 尚未实现）
 
 ```
-cmake --build build --target opengeolab_command_test --config RelWithDebInfo --parallel 4
+cmake --build build --target opengeolab_command_test --config RelWithDebInfo --parallel 8
 ```
 
 （预期：编译失败，因为 `onModuleDataChanged` 不存在）
@@ -266,13 +266,13 @@ CommandDispatcher::onModuleDataChanged(
 - [ ] 步骤 5：构建并运行测试
 
 ```
-cmake --build build --target opengeolab_command_test --config RelWithDebInfo --parallel 4
+cmake --build build --target opengeolab_command_test --config RelWithDebInfo --parallel 8
 ctest --test-dir build -C RelWithDebInfo -R command --output-on-failure
 ```
 
 - [ ] 步骤 6：`clang-format -i src/libs/command/include/opengeolab/command/command_dispatcher.hpp src/libs/command/src/command_dispatcher.cpp src/libs/command/test/command_dispatcher_test.cpp`
 
-**验证命令：** `cmake --build build --config RelWithDebInfo --parallel 4 && ctest --test-dir build -C RelWithDebInfo --output-on-failure`
+**验证命令：** `cmake --build build --config RelWithDebInfo --parallel 8 && ctest --test-dir build -C RelWithDebInfo --output-on-failure`
 **预期结果：** 所有测试通过（含 2 个新 command 测试）
 
 ---
@@ -337,7 +337,7 @@ TEST_CASE("list_shapes returns enhanced fields: shapeType, boundingBox, wires") 
 - [ ] 步骤 2：构建测试确认失败
 
 ```
-cmake --build build --target opengeolab_geometry_module_test --config RelWithDebInfo --parallel 4
+cmake --build build --target opengeolab_geometry_module_test --config RelWithDebInfo --parallel 8
 ctest --test-dir build -C RelWithDebInfo -R geometry_module --output-on-failure
 ```
 
@@ -405,13 +405,13 @@ const char* shapeTypeToString(TopAbs_ShapeEnum type) {
 - [ ] 步骤 4：构建并运行测试确认通过
 
 ```
-cmake --build build --target opengeolab_geometry_module_test --config RelWithDebInfo --parallel 4
+cmake --build build --target opengeolab_geometry_module_test --config RelWithDebInfo --parallel 8
 ctest --test-dir build -C RelWithDebInfo -R geometry_module --output-on-failure
 ```
 
 - [ ] 步骤 5：`clang-format -i src/libs/geometry/src/list_shapes_action.cpp src/libs/geometry/test/geometry_module_test.cpp`
 
-**验证命令：** `cmake --build build --config RelWithDebInfo --parallel 4 && ctest --test-dir build -C RelWithDebInfo --output-on-failure`
+**验证命令：** `cmake --build build --config RelWithDebInfo --parallel 8 && ctest --test-dir build -C RelWithDebInfo --output-on-failure`
 **预期结果：** 所有测试通过
 
 ---
@@ -547,13 +547,13 @@ qt_add_executable(
 - [ ] 步骤 5：构建全量
 
 ```
-cmake --build build --config RelWithDebInfo --parallel 4
+cmake --build build --config RelWithDebInfo --parallel 8
 ```
 
 - [ ] 步骤 6：运行测试 `ctest --test-dir build -C RelWithDebInfo --output-on-failure`
 - [ ] 步骤 7：`clang-format -i src/app/include/opengeolab/app/module_data_notifier.h src/app/src/module_data_notifier.cpp src/app/src/main.cpp`
 
-**验证命令：** `cmake --build build --config RelWithDebInfo --parallel 4 && ctest --test-dir build -C RelWithDebInfo --output-on-failure`
+**验证命令：** `cmake --build build --config RelWithDebInfo --parallel 8 && ctest --test-dir build -C RelWithDebInfo --output-on-failure`
 **预期结果：** 构建成功，所有测试通过
 
 ---
@@ -927,10 +927,10 @@ Item {
     resource/qml/components/ShapeListItem.qml
 ```
 
-- [ ] 步骤 5：构建 `cmake --build build --config RelWithDebInfo --parallel 4`
+- [ ] 步骤 5：构建 `cmake --build build --config RelWithDebInfo --parallel 8`
 - [ ] 步骤 6：运行测试 `ctest --test-dir build -C RelWithDebInfo --output-on-failure`
 
-**验证命令：** `cmake --build build --config RelWithDebInfo --parallel 4 && ctest --test-dir build -C RelWithDebInfo --output-on-failure`
+**验证命令：** `cmake --build build --config RelWithDebInfo --parallel 8 && ctest --test-dir build -C RelWithDebInfo --output-on-failure`
 **预期结果：** 构建成功，所有测试通过
 
 ---
@@ -1007,10 +1007,10 @@ Item {
 - [ ] 步骤 2：构建验证翻译编译通过
 
 ```
-cmake --build build --config RelWithDebInfo --parallel 4
+cmake --build build --config RelWithDebInfo --parallel 8
 ```
 
-**验证命令：** `cmake --build build --config RelWithDebInfo --parallel 4`
+**验证命令：** `cmake --build build --config RelWithDebInfo --parallel 8`
 **预期结果：** 构建成功（翻译文件编译无错误）
 
 ---
@@ -1019,7 +1019,7 @@ cmake --build build --config RelWithDebInfo --parallel 4
 
 **文件：** 无新修改
 
-- [ ] 步骤 1：全量构建 `cmake --build build --config RelWithDebInfo --parallel 4`
+- [ ] 步骤 1：全量构建 `cmake --build build --config RelWithDebInfo --parallel 8`
 - [ ] 步骤 2：全量测试 `ctest --test-dir build -C RelWithDebInfo --output-on-failure`
 - [ ] 步骤 3：clang-format 所有修改过的 C++ 文件
 - [ ] 步骤 4：`git --no-pager diff --stat` 确认变更范围
