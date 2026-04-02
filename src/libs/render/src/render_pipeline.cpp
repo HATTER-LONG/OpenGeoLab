@@ -19,7 +19,6 @@
 
 #include <glad/gl.h>
 
-#include <algorithm>
 #include <memory>
 #include <vector>
 
@@ -109,9 +108,9 @@ PickResult RenderPipeline::pickAt(int x, int y, PickMask mask) const {
 
     // Read 13×13 neighborhood sorted by distance from center.
     // PickResolver applies Vertex > Edge > Face priority in VEF mode.
-    constexpr int PICK_NEIGHBORHOOD_RADIUS = 6;
+    constexpr int pick_neighborhood_radius = 6;
     auto raw_pick_ids =
-        m_impl->selectionPass.pickFbo().readPickRegion(x, y, PICK_NEIGHBORHOOD_RADIUS);
+        m_impl->selectionPass.pickFbo().readPickRegion(x, y, pick_neighborhood_radius);
 
     const auto mode = Detail::pickModeFromMask(mask);
     if(mode == PickMode::VEF) {
