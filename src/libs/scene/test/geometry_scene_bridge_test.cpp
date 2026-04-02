@@ -28,8 +28,7 @@ SceneNode* firstChild(SceneGraph& scene) {
 struct BridgeFixture {
     Geometry::ShapeStore store;
     SceneGraph scene;
-    TopologyIndex topoIndex;
-    GeometrySceneBridge bridge{scene, store, topoIndex};
+    GeometrySceneBridge bridge{scene, store};
 };
 
 } // namespace
@@ -53,7 +52,7 @@ TEST_CASE("GeometrySceneBridge creates renderable node after tessellation") {
     CHECK_FALSE(meshData.triangleRanges.empty());
     CHECK_FALSE(meshData.lineRanges.empty());
     CHECK(meshData.bounds.isValid());
-    CHECK(fixture.topoIndex.edgeToWire(shapeId, 1).has_value());
+    CHECK(fixture.scene.topologyIndex().edgeToWire(shapeId, 1).has_value());
     CHECK(node->sourceType() == "geometry");
     CHECK(node->sourceId() == shapeId);
 }
@@ -65,12 +64,12 @@ TEST_CASE("GeometrySceneBridge removes scene node and topology data") {
     const uint32_t shapeId = fixture.store.add("TestBox", boxMaker.Shape());
     fixture.store.tessellate(shapeId);
     REQUIRE(firstChild(fixture.scene) != nullptr);
-    REQUIRE(fixture.topoIndex.edgeToWire(shapeId, 1).has_value());
+    REQUIRE(fixture.scene.topologyIndex().edgeToWire(shapeId, 1).has_value());
 
     fixture.store.remove(shapeId);
 
     CHECK(firstChild(fixture.scene) == nullptr);
-    CHECK_FALSE(fixture.topoIndex.edgeToWire(shapeId, 1).has_value());
+    CHECK_FALSE(fixture.scene.topologyIndex().edgeToWire(shapeId, 1).has_value());
 }
 
 TEST_CASE("GeometrySceneBridge refreshes mesh data on retessellation") {
@@ -100,8 +99,7 @@ TEST_CASE("GeometrySceneBridge refreshes mesh data on retessellation") {
 TEST_CASE("GeometrySceneBridge buildRenderData keeps pickIds aligned with vertices") {
     Geometry::ShapeStore store;
     SceneGraph scene;
-    TopologyIndex topoIndex;
-    GeometrySceneBridge bridge(scene, store, topoIndex);
+    GeometrySceneBridge bridge(scene, store);
     BRepPrimAPI_MakeBox boxMaker(10.0, 20.0, 30.0);
 
     const uint32_t shapeId = store.add("TestBox", boxMaker.Shape());
@@ -118,10 +116,9 @@ TEST_CASE("GeometrySceneBridge buildRenderData keeps pickIds aligned with vertic
 TEST_CASE("GeometrySceneBridge destructor disconnects from ShapeStore") {
     Geometry::ShapeStore store;
     SceneGraph scene;
-    TopologyIndex topoIndex;
 
     {
-        GeometrySceneBridge bridge(scene, store, topoIndex);
+        GeometrySceneBridge bridge(scene, store);
     }
 
     BRepPrimAPI_MakeBox boxMaker(10.0, 20.0, 30.0);
@@ -129,7 +126,7 @@ TEST_CASE("GeometrySceneBridge destructor disconnects from ShapeStore") {
     store.tessellate(shapeId);
 
     CHECK(firstChild(scene) == nullptr);
-    CHECK_FALSE(topoIndex.edgeToWire(shapeId, 1).has_value());
+    CHECK_FALSE(scene.topologyIndex().edgeToWire(shapeId, 1).has_value());
 }
 
 } // namespace OpenGeoLab::Scene::Tests

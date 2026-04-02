@@ -10,11 +10,13 @@
 #include <opengeolab/render/pick_mask.hpp>
 #include <opengeolab/render/render_pipeline.hpp>
 #include <opengeolab/scene/render_mesh_data.hpp>
+#include <opengeolab/scene/viewport_state.hpp>
 
 #include <QPointer>
 #include <QQuickFramebufferObject>
 
 #include <cstdint>
+#include <optional>
 #include <vector>
 
 namespace OpenGeoLab::App {
@@ -42,6 +44,7 @@ private:
     void dispatchPickResult(const Render::PickResult& result, Core::PickAction action) const;
     void dispatchHoverResult(const Render::PickResult& result) const;
     void dispatchBoxSelectResults(const GLViewport::PendingBoxSelect& box) const;
+    void dispatchPickAreaResults(const Scene::PendingPickArea& area) const;
 
     QPointer<GLViewport> m_viewport;
     Render::RenderPipeline m_pipeline;
@@ -49,6 +52,7 @@ private:
     GLViewport::PendingPick m_pendingPick;
     GLViewport::PendingPick m_hoverPick;
     GLViewport::PendingBoxSelect m_pendingBoxSelect;
+    std::optional<Scene::PendingPickArea> m_pendingPickArea;
     bool m_pickingEnabled{true};
     Render::PickMode m_pickMode{Render::PickMode::VEF};
     bool m_gladInitialized{false};

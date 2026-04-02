@@ -1,5 +1,6 @@
 set(scene_public_headers
     include/opengeolab/scene/bounding_box3d.hpp
+    include/opengeolab/scene/camera_state.hpp
     include/opengeolab/scene/clear_selection_action.hpp
     include/opengeolab/scene/deselect_action.hpp
     include/opengeolab/scene/display_mode.hpp
@@ -18,11 +19,19 @@ set(scene_public_headers
     include/opengeolab/scene/scene_module.hpp
     include/opengeolab/scene/scene_node.hpp
     include/opengeolab/scene/list_nodes_action.hpp
+    include/opengeolab/scene/new_model_action.hpp
     include/opengeolab/scene/set_visibility_action.hpp
+    include/opengeolab/scene/view_preset.hpp
+    include/opengeolab/scene/viewport_state.hpp
+    include/opengeolab/scene/fit_to_scene_action.hpp
+    include/opengeolab/scene/pick_area_action.hpp
+    include/opengeolab/scene/set_camera_action.hpp
+    include/opengeolab/scene/set_view_preset_action.hpp
     include/opengeolab/scene/topology_index.hpp)
 
 set(scene_sources
     src/bounding_box3d.cpp
+    src/camera_state.cpp
     src/clear_selection_action.cpp
     src/deselect_action.cpp
     src/geometry_scene_bridge.cpp
@@ -36,8 +45,14 @@ set(scene_sources
     src/scene_module.cpp
     src/scene_node.cpp
     src/list_nodes_action.cpp
+    src/new_model_action.cpp
     src/set_visibility_action.cpp
-    src/topology_index.cpp)
+    src/topology_index.cpp
+    src/viewport_state.cpp
+    src/fit_to_scene_action.cpp
+    src/pick_area_action.cpp
+    src/set_camera_action.cpp
+    src/set_view_preset_action.cpp)
 
 opengeolab_add_module(
     opengeolab_scene
@@ -54,52 +69,21 @@ opengeolab_add_module(
 
 if (OPENGEOLAB_BUILD_TESTS)
     opengeolab_add_doctest_test(
-        opengeolab_bounding_box3d_test
-        SOURCES test/bounding_box3d_test.cpp
-        LINKS OpenGeoLab::Scene)
-
-    opengeolab_add_doctest_test(
-        opengeolab_pick_id_test
-        SOURCES test/pick_id_test.cpp
-        LINKS OpenGeoLab::Scene)
-
-    opengeolab_add_doctest_test(
-        opengeolab_scene_node_test
-        SOURCES test/scene_node_test.cpp
-        LINKS OpenGeoLab::Scene)
-
-    opengeolab_add_doctest_test(
-        opengeolab_scene_graph_test
-        SOURCES test/scene_graph_test.cpp
-        LINKS OpenGeoLab::Scene)
-
-    opengeolab_add_doctest_test(
-        opengeolab_selection_state_test
-        SOURCES test/selection_state_test.cpp
-        LINKS OpenGeoLab::Scene)
-
-    opengeolab_add_doctest_test(
-        opengeolab_label_manager_test
-        SOURCES test/label_manager_test.cpp
-        LINKS OpenGeoLab::Scene)
-
-    opengeolab_add_doctest_test(
-        opengeolab_topology_index_test
-        SOURCES test/topology_index_test.cpp
-        LINKS OpenGeoLab::Scene)
-
-    opengeolab_add_doctest_test(
-        opengeolab_geometry_scene_bridge_test
-        SOURCES test/geometry_scene_bridge_test.cpp
-        LINKS OpenGeoLab::Scene)
-
-    opengeolab_add_doctest_test(
-        opengeolab_scene_module_test
-        SOURCES test/scene_module_test.cpp
-        LINKS OpenGeoLab::Scene)
-
-    opengeolab_add_doctest_test(
-        opengeolab_selection_actions_test
-        SOURCES test/selection_actions_test.cpp
-        LINKS OpenGeoLab::Scene)
+        opengeolab_scene_test
+        SOURCES
+        test/bounding_box3d_test.cpp
+        test/pick_id_test.cpp
+        test/scene_node_test.cpp
+        test/scene_graph_test.cpp
+        test/selection_state_test.cpp
+        test/label_manager_test.cpp
+        test/topology_index_test.cpp
+        test/geometry_scene_bridge_test.cpp
+        test/scene_module_test.cpp
+        test/selection_actions_test.cpp
+        test/camera_state_test.cpp
+        test/viewport_state_test.cpp
+        test/viewport_actions_test.cpp
+        LINKS
+        OpenGeoLab::Scene)
 endif ()

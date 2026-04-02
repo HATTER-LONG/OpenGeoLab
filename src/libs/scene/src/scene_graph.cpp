@@ -109,6 +109,21 @@ bool SceneGraph::removeNode(NodeId id) {
     return true;
 }
 
+void SceneGraph::clear() {
+    {
+        std::unique_lock const lock(m_mutex);
+        m_root = std::make_unique<SceneNode>(0, "root");
+        m_hoveredNode.reset();
+        m_nextNodeId = 1;
+        ++m_version;
+    }
+    m_selectionState.clearSelection();
+    m_selectionState.clearHover();
+    m_labelManager.clearLabels();
+    m_topologyIndex.clear();
+    sceneCleared.emit();
+}
+
 SceneNode* SceneGraph::findNode(NodeId id) const {
     std::shared_lock const lock(m_mutex);
     return findInSubtree(m_root.get(), id);

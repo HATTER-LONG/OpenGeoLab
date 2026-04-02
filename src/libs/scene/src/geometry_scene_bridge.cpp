@@ -282,9 +282,8 @@ void processPointSet(BuildState& state,
     for(uint32_t vi = 0; vi < vertex_count; ++vi) {
         const std::size_t tag_idx = range_tag_index + vi;
         const std::optional<Core::EntityTag> tag =
-            tag_idx < vertex_tags.size()
-                ? std::optional<Core::EntityTag>{vertex_tags[tag_idx]}
-                : std::nullopt;
+            tag_idx < vertex_tags.size() ? std::optional<Core::EntityTag>{vertex_tags[tag_idx]}
+                                         : std::nullopt;
         const RangeSpan span{state.globalVertexOffset + vi, 1U, 0U, 0U};
         state.result.pointRanges.push_back(
             taggedRange(state.shapeId, PrimitiveTopology::Points, span, tag));
@@ -295,10 +294,8 @@ void processPointSet(BuildState& state,
 
 } // namespace
 
-GeometrySceneBridge::GeometrySceneBridge(SceneGraph& scene,
-                                         Geometry::ShapeStore& store,
-                                         TopologyIndex& topo_index)
-    : m_scene(scene), m_store(store), m_topoIndex(topo_index) {
+GeometrySceneBridge::GeometrySceneBridge(SceneGraph& scene, Geometry::ShapeStore& store)
+    : m_scene(scene), m_store(store) {
     m_connections.push_back(
         store.shapeAdded.connect([this](uint32_t shape_id, const Geometry::ShapeEntry& entry) {
             onShapeAdded(shape_id, entry);
@@ -309,6 +306,7 @@ GeometrySceneBridge::GeometrySceneBridge(SceneGraph& scene,
         store.shapeUpdated.connect([this](uint32_t shape_id, const Geometry::ShapeEntry& entry) {
             onShapeUpdated(shape_id, entry);
         }));
+    m_connections.push_back(store.storeCleared.connect([this]() { onStoreCleared(); }));
 }
 
 GeometrySceneBridge::~GeometrySceneBridge() = default;
@@ -343,7 +341,7 @@ RenderMeshData GeometrySceneBridge::buildRenderData(uint32_t shape_id,
 }
 
 void GeometrySceneBridge::onShapeAdded(uint32_t shape_id, const Geometry::ShapeEntry& entry) {
-    m_topoIndex.buildForShape(shape_id, entry);
+    m_scene.topologyIndex().buildForShape(shape_id, entry);
     if(entry.visualData == nullptr || m_shapeToNode.contains(shape_id)) {
         return;
     }
@@ -364,11 +362,13 @@ void GeometrySceneBridge::onShapeRemoved(uint32_t shape_id) {
         m_shapeToNode.erase(iterator);
     }
 
-    m_topoIndex.removeShape(shape_id);
+    m_scene.topologyIndex().removeShape(shape_id);
 }
 
+void GeometrySceneBridge::onStoreCleared() { m_shapeToNode.clear(); }
+
 void GeometrySceneBridge::onShapeUpdated(uint32_t shape_id, const Geometry::ShapeEntry& entry) {
-    m_topoIndex.buildForShape(shape_id, entry);
+    m_scene.topologyIndex().buildForShape(shape_id, entry);
 
     NodeId node_id = 0;
     if(const auto iterator = m_shapeToNode.find(shape_id); iterator != m_shapeToNode.end()) {

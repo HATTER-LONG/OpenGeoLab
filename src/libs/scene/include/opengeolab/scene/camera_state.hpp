@@ -6,10 +6,11 @@
 #pragma once
 
 #include <opengeolab/scene/bounding_box3d.hpp>
+#include <opengeolab/scene/scene_export.hpp>
 
 #include <glm/glm.hpp>
 
-namespace OpenGeoLab::App {
+namespace OpenGeoLab::Scene {
 
 /**
  * @brief Cartesian camera model for orthographic rendering
@@ -17,7 +18,7 @@ namespace OpenGeoLab::App {
  * Stores position/target/up vectors and symmetric near/far clipping.
  * Provides view and orthographic projection matrices.
  */
-struct CameraState {
+struct OPENGEOLAB_SCENE_EXPORT CameraState {
     glm::vec3 position{0.0F, 0.0F, 50.0F}; /**< Eye position */
     glm::vec3 target{0.0F, 0.0F, 0.0F};    /**< Look-at target */
     glm::vec3 up{0.0F, 1.0F, 0.0F};        /**< Up direction */
@@ -49,7 +50,7 @@ struct CameraState {
      * @brief Position camera to view the entire bounding box.
      * @param bounds Scene bounds to frame.
      */
-    void fitToBoundingBox(const Scene::BoundingBox3D& bounds);
+    void fitToBoundingBox(const BoundingBox3D& bounds);
 };
 
-} // namespace OpenGeoLab::App
+} // namespace OpenGeoLab::Scene

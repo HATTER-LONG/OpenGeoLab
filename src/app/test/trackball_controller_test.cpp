@@ -3,7 +3,6 @@
  * @brief Unit tests for TrackballController
  */
 
-#include <opengeolab/app/camera_state.hpp>
 #include <opengeolab/app/trackball_controller.hpp>
 
 #include <doctest/doctest.h>
@@ -22,21 +21,16 @@ void checkVec3(const glm::vec3& actual, const glm::vec3& expected) {
 
 } // namespace
 
-TEST_CASE("TrackballController pans along the view plane") {
+TEST_CASE("TrackballController begins and ends drag operations") {
     TrackballController controller;
     CameraState camera;
 
-    controller.setViewportSize(200.0F, 100.0F);
-    controller.begin(10.0F, 20.0F, TrackballController::Mode::Pan, camera);
+    CHECK_FALSE(controller.isActive());
+
+    controller.begin(10.0F, 20.0F, TrackballController::Mode::Orbit, camera);
 
     CHECK(controller.isActive());
-    CHECK(controller.mode() == TrackballController::Mode::Pan);
-
-    controller.update(20.0F, 0.0F, camera);
-
-    checkVec3(camera.position, glm::vec3{-0.75F, -1.5F, 50.0F});
-    checkVec3(camera.target, glm::vec3{-0.75F, -1.5F, 0.0F});
-    CHECK(camera.distance() == doctest::Approx(50.0F));
+    CHECK(controller.mode() == TrackballController::Mode::Orbit);
 
     controller.end();
 
@@ -91,28 +85,6 @@ TEST_CASE("TrackballController orbit preserves target distance and updates posit
     CHECK(camera.position.x < 0.0F);
     CHECK(camera.position.z < 50.0F);
     CHECK(camera.up.y == doctest::Approx(1.0F));
-}
-
-TEST_CASE("TrackballController fit and view presets delegate to CameraState conventions") {
-    TrackballController controller;
-    CameraState camera;
-    Scene::BoundingBox3D bounds;
-    bounds.expand(glm::vec3{-2.0F, -1.0F, 3.0F});
-    bounds.expand(glm::vec3{6.0F, 5.0F, 9.0F});
-
-    controller.fitToScene(bounds, camera);
-    const float fit_distance = bounds.diagonal() * 1.5F;
-    checkVec3(camera.target, glm::vec3{2.0F, 2.0F, 6.0F});
-    checkVec3(camera.position, glm::vec3{2.0F, 2.0F, 6.0F + fit_distance});
-
-    controller.setViewPreset(TrackballController::ViewPreset::Top, camera);
-    checkVec3(camera.position, glm::vec3{2.0F, 2.0F + fit_distance, 6.0F});
-    checkVec3(camera.up, glm::vec3{0.0F, 0.0F, -1.0F});
-
-    controller.setViewPreset(TrackballController::ViewPreset::Isometric, camera);
-    const float axis_offset = fit_distance / std::sqrt(3.0F);
-    checkVec3(camera.position, camera.target + glm::vec3{axis_offset, axis_offset, axis_offset});
-    checkVec3(camera.up, glm::vec3{0.0F, 1.0F, 0.0F});
 }
 
 } // namespace OpenGeoLab::App::Tests

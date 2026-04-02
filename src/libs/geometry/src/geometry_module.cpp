@@ -52,4 +52,6 @@ GeometryModule::~GeometryModule() = default;
 ShapeStore& GeometryModule::shapeStore() { return m_shapeStore; }
 const ShapeStore& GeometryModule::shapeStore() const { return m_shapeStore; }
 
+void GeometryModule::clearAll() { m_shapeStore.clear(); }
+
 } // namespace OpenGeoLab::Geometry

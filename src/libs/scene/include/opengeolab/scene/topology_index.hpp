@@ -46,6 +46,9 @@ public:
      */
     void removeShape(uint32_t shape_id);
 
+    /** @brief Remove all topology relations. */
+    void clear();
+
     // ── Forward lookups (child → parent) ──
 
     /** @brief Find the wire containing an edge. */

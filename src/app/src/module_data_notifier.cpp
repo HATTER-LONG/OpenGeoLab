@@ -22,8 +22,14 @@ ModuleDataNotifier::ModuleDataNotifier(Command::CommandDispatcher& dispatcher, Q
     }
 
     auto scene_handle =
-        dispatcher.onModuleDataChanged("scene", [this](Core::ModuleDataEvent /*event*/) {
-            QMetaObject::invokeMethod(this, &ModuleDataNotifier::sceneDataChanged,
+        dispatcher.onModuleDataChanged("scene", [this](Core::ModuleDataEvent event) {
+            // Viewport-only changes (camera, pick area) skip scene data refresh.
+            if(event != Core::ModuleDataEvent::ViewportChanged) {
+                QMetaObject::invokeMethod(this, &ModuleDataNotifier::sceneDataChanged,
+                                          Qt::QueuedConnection);
+            }
+            // All events (including viewport-only) trigger viewport repaint.
+            QMetaObject::invokeMethod(this, &ModuleDataNotifier::viewportRefreshNeeded,
                                       Qt::QueuedConnection);
         });
     if(scene_handle.isConnected()) {

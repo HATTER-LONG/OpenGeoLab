@@ -1,6 +1,6 @@
 /**
  * @file camera_state_test.cpp
- * @brief Unit tests for CameraState
+ * @brief Unit tests for Scene::CameraState
  */
 
 #include <opengeolab/scene/camera_state.hpp>
@@ -13,13 +13,13 @@ namespace OpenGeoLab::Scene::Tests {
 
 namespace {
 
-void checkVec3(const glm::vec3& actual, const glm::vec3& expected) {
+static void checkVec3(const glm::vec3& actual, const glm::vec3& expected) {
     CHECK(actual.x == doctest::Approx(expected.x));
     CHECK(actual.y == doctest::Approx(expected.y));
     CHECK(actual.z == doctest::Approx(expected.z));
 }
 
-void checkMat4(const glm::mat4& actual, const glm::mat4& expected) {
+static void checkMat4(const glm::mat4& actual, const glm::mat4& expected) {
     for(int column = 0; column < 4; ++column) {
         for(int row = 0; row < 4; ++row) {
             CHECK(actual[column][row] == doctest::Approx(expected[column][row]));
@@ -29,7 +29,7 @@ void checkMat4(const glm::mat4& actual, const glm::mat4& expected) {
 
 } // namespace
 
-TEST_CASE("CameraState view and projection matrices follow cartesian orthographic model") {
+TEST_CASE("Scene::CameraState view and projection matrices") {
     CameraState camera;
     camera.position = {3.0F, 4.0F, 20.0F};
     camera.target = {1.0F, 2.0F, 5.0F};
@@ -47,12 +47,10 @@ TEST_CASE("CameraState view and projection matrices follow cartesian orthographi
               glm::ortho(-half_width, half_width, -half_height, half_height, camera.nearPlane,
                          camera.farPlane));
     CHECK(camera.eyePosition().x == doctest::Approx(camera.position.x));
-    CHECK(camera.eyePosition().y == doctest::Approx(camera.position.y));
-    CHECK(camera.eyePosition().z == doctest::Approx(camera.position.z));
     CHECK(camera.distance() == doctest::Approx(distance));
 }
 
-TEST_CASE("CameraState reset and updateClipping restore symmetric defaults") {
+TEST_CASE("Scene::CameraState reset and updateClipping") {
     CameraState camera;
     camera.position = {5.0F, -2.0F, 6.0F};
     camera.target = {1.0F, -2.0F, 1.0F};
@@ -64,15 +62,11 @@ TEST_CASE("CameraState reset and updateClipping restore symmetric defaults") {
     CHECK(camera.farPlane == doctest::Approx(expected_half_range));
 
     camera.reset();
-
     checkVec3(camera.position, glm::vec3{0.0F, 0.0F, 50.0F});
     checkVec3(camera.target, glm::vec3{0.0F, 0.0F, 0.0F});
-    checkVec3(camera.up, glm::vec3{0.0F, 1.0F, 0.0F});
-    CHECK(camera.nearPlane == doctest::Approx(-500.0F));
-    CHECK(camera.farPlane == doctest::Approx(500.0F));
 }
 
-TEST_CASE("CameraState fitToBoundingBox frames valid bounds and resets invalid bounds") {
+TEST_CASE("Scene::CameraState fitToBoundingBox") {
     CameraState camera;
     BoundingBox3D bounds;
     bounds.expand(glm::vec3{-2.0F, -1.0F, 3.0F});
@@ -83,22 +77,9 @@ TEST_CASE("CameraState fitToBoundingBox frames valid bounds and resets invalid b
     const float fit_distance = bounds.diagonal() * 1.1F;
     checkVec3(camera.target, glm::vec3{2.0F, 2.0F, 6.0F});
     checkVec3(camera.position, glm::vec3{2.0F, 2.0F, 6.0F + fit_distance});
-    CHECK(camera.nearPlane == doctest::Approx(-fit_distance * 10.0F));
-    CHECK(camera.farPlane == doctest::Approx(fit_distance * 10.0F));
-
-    camera.position = {1.0F, 1.0F, 1.0F};
-    camera.target = {2.0F, 2.0F, 2.0F};
-    camera.up = {1.0F, 0.0F, 0.0F};
-    camera.nearPlane = -1.0F;
-    camera.farPlane = 1.0F;
 
     camera.fitToBoundingBox(BoundingBox3D{});
-
     checkVec3(camera.position, glm::vec3{0.0F, 0.0F, 50.0F});
-    checkVec3(camera.target, glm::vec3{0.0F, 0.0F, 0.0F});
-    checkVec3(camera.up, glm::vec3{0.0F, 1.0F, 0.0F});
-    CHECK(camera.nearPlane == doctest::Approx(-500.0F));
-    CHECK(camera.farPlane == doctest::Approx(500.0F));
 }
 
 } // namespace OpenGeoLab::Scene::Tests

@@ -41,30 +41,15 @@ target_include_directories(opengeolab_render
 
 if (OPENGEOLAB_BUILD_TESTS)
     opengeolab_add_doctest_test(
-        opengeolab_pick_resolver_test SOURCES test/pick_resolver_test.cpp LINKS
+        opengeolab_render_test
+        SOURCES
+        test/pick_resolver_test.cpp
+        test/batch_utils_test.cpp
+        test/render_pass_base_test.cpp
+        test/selection_pass_test.cpp
+        test/render_pipeline_test.cpp
+        LINKS
         OpenGeoLab::Render)
-    target_include_directories(opengeolab_pick_resolver_test
-                               PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
-
-    opengeolab_add_doctest_test(
-        opengeolab_batch_utils_test SOURCES test/batch_utils_test.cpp LINKS
-        OpenGeoLab::Render)
-
-    opengeolab_add_doctest_test(
-        opengeolab_render_pass_base_test SOURCES test/render_pass_base_test.cpp
-        LINKS OpenGeoLab::Render)
-    target_include_directories(opengeolab_render_pass_base_test
-                               PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
-
-    opengeolab_add_doctest_test(
-        opengeolab_selection_pass_test SOURCES test/selection_pass_test.cpp
-        LINKS OpenGeoLab::Render)
-    target_include_directories(opengeolab_selection_pass_test
-                               PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
-
-    opengeolab_add_doctest_test(
-        opengeolab_render_pipeline_test SOURCES test/render_pipeline_test.cpp
-        LINKS OpenGeoLab::Render)
-    target_include_directories(opengeolab_render_pipeline_test
+    target_include_directories(opengeolab_render_test
                                PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
 endif ()

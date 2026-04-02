@@ -3,14 +3,14 @@
  * @brief CameraState implementation — view/projection matrix computation and camera framing
  */
 
-#include <opengeolab/app/camera_state.hpp>
+#include <opengeolab/scene/camera_state.hpp>
 
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
 
 #include <algorithm>
 
-namespace OpenGeoLab::App {
+namespace OpenGeoLab::Scene {
 
 glm::mat4 CameraState::viewMatrix() const { return glm::lookAt(position, target, up); }
 
@@ -37,17 +37,26 @@ void CameraState::reset() {
     updateClipping();
 }
 
-void CameraState::fitToBoundingBox(const Scene::BoundingBox3D& bounds) {
+void CameraState::fitToBoundingBox(const BoundingBox3D& bounds) {
     if(!bounds.isValid()) {
         reset();
         return;
     }
 
+    // Preserve current view direction; only adjust target and distance.
+    const float current_dist = distance();
+    glm::vec3 view_dir = position - target;
+    if(current_dist > 1.0e-6F) {
+        view_dir /= current_dist;
+    } else {
+        view_dir = glm::vec3{0.0F, 0.0F, 1.0F};
+    }
+
     target = bounds.center();
     const float diagonal = bounds.diagonal();
-    const float fit_distance = diagonal * 1.5F;
-    position = target + glm::vec3{0.0F, 0.0F, fit_distance};
+    const float fit_distance = diagonal * 1.1F;
+    position = target + view_dir * fit_distance;
     updateClipping();
 }
 
-} // namespace OpenGeoLab::App
+} // namespace OpenGeoLab::Scene

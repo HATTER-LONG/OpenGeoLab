@@ -5,17 +5,24 @@
 
 #include <opengeolab/scene/scene_module.hpp>
 
+#include <opengeolab/core/logger.hpp>
 #include <opengeolab/core/module_data_event.hpp>
 #include <opengeolab/scene/clear_selection_action.hpp>
 #include <opengeolab/scene/deselect_action.hpp>
+#include <opengeolab/scene/fit_to_scene_action.hpp>
 #include <opengeolab/scene/list_nodes_action.hpp>
+#include <opengeolab/scene/new_model_action.hpp>
+#include <opengeolab/scene/pick_area_action.hpp>
 #include <opengeolab/scene/query_selection_action.hpp>
 #include <opengeolab/scene/select_action.hpp>
+#include <opengeolab/scene/set_camera_action.hpp>
 #include <opengeolab/scene/set_hover_action.hpp>
 #include <opengeolab/scene/set_pick_mode_action.hpp>
+#include <opengeolab/scene/set_view_preset_action.hpp>
 #include <opengeolab/scene/set_visibility_action.hpp>
 
 #include <functional>
+#include <optional>
 
 namespace OpenGeoLab::Scene {
 
@@ -29,6 +36,11 @@ SceneModule::SceneModule(Kangaroo::Util::PluginComponentFactory& factory)
     registerAction<QuerySelectionAction>(std::cref(m_sceneGraph.selectionState()));
     registerAction<SetPickModeAction>(std::ref(m_sceneGraph.selectionState()));
     registerAction<SetHoverAction>(std::ref(m_sceneGraph.selectionState()));
+    registerAction<FitToSceneAction>(std::ref(m_sceneGraph));
+    registerAction<NewModelAction>(std::ref(m_sceneGraph), std::ref(factory));
+    registerAction<SetViewPresetAction>(std::ref(m_sceneGraph.viewportState()));
+    registerAction<SetCameraAction>(std::ref(m_sceneGraph.viewportState()));
+    registerAction<PickAreaAction>(std::ref(m_sceneGraph.viewportState()));
 
     m_graphConnections.push_back(m_sceneGraph.nodeAdded.connect(
         [this](NodeId) { dataChanged.emit(Core::ModuleDataEvent::ItemAdded); }));
@@ -36,9 +48,39 @@ SceneModule::SceneModule(Kangaroo::Util::PluginComponentFactory& factory)
         [this](NodeId) { dataChanged.emit(Core::ModuleDataEvent::ItemRemoved); }));
     m_graphConnections.push_back(m_sceneGraph.nodeUpdated.connect(
         [this](NodeId) { dataChanged.emit(Core::ModuleDataEvent::ItemModified); }));
+    m_graphConnections.push_back(m_sceneGraph.sceneCleared.connect(
+        [this]() { dataChanged.emit(Core::ModuleDataEvent::ItemRemoved); }));
+
+    // Selection/hover changes must also wake the viewport for re-render.
+    auto& sel = m_sceneGraph.selectionState();
+    m_graphConnections.push_back(sel.entitySelected.connect(
+        [this](const Core::EntityRef&) { dataChanged.emit(Core::ModuleDataEvent::ItemModified); }));
+    m_graphConnections.push_back(sel.entityDeselected.connect(
+        [this](const Core::EntityRef&) { dataChanged.emit(Core::ModuleDataEvent::ItemModified); }));
+    m_graphConnections.push_back(sel.selectionCleared.connect(
+        [this]() { dataChanged.emit(Core::ModuleDataEvent::ItemModified); }));
+    m_graphConnections.push_back(
+        sel.hoverChanged.connect([this](const std::optional<Core::EntityRef>&) {
+            dataChanged.emit(Core::ModuleDataEvent::ItemModified);
+        }));
+
+    // ViewportState changes trigger viewport re-render only (not scene data refresh).
+    auto& vps = m_sceneGraph.viewportState();
+    m_graphConnections.push_back(vps.cameraChanged.connect(
+        [this]() { dataChanged.emit(Core::ModuleDataEvent::ViewportChanged); }));
+    m_graphConnections.push_back(vps.pickAreaRequested.connect(
+        [this]() { dataChanged.emit(Core::ModuleDataEvent::ViewportChanged); }));
 }
 
 SceneModule::~SceneModule() = default;
+
+void SceneModule::initBridge(Geometry::ShapeStore& store) {
+    if(m_bridge) {
+        return; // Already initialized.
+    }
+    m_bridge = std::make_unique<GeometrySceneBridge>(m_sceneGraph, store);
+    LOG_INFO("SceneModule: GeometrySceneBridge created successfully");
+}
 
 SceneGraph& SceneModule::sceneGraph() { return m_sceneGraph; }
 const SceneGraph& SceneModule::sceneGraph() const { return m_sceneGraph; }

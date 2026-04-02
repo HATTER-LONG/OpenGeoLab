@@ -36,8 +36,8 @@ Item {
     RowLayout {
         id: row
 
-        anchors.fill: parent
-        spacing: 4
+        anchors.horizontalCenter: parent.horizontalCenter
+        spacing: 2
 
         Repeater {
             model: [
@@ -74,7 +74,7 @@ Item {
                             : typeBtn.hovered
                                 ? root.theme.surfaceMuted
                                 : root.theme.surface
-                    border.width: 1
+                    border.width: typeBtn.selected ? 1.5 : 1
                     border.color: typeBtn.selected
                         ? root.theme.accentA
                         : typeBtn.hovered

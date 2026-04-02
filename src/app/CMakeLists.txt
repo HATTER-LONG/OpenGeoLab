@@ -13,7 +13,6 @@ qt_add_executable(
     src/log_event_model.cpp
     src/log_filter_proxy_model.cpp
     src/module_data_notifier.cpp
-    src/camera_state.cpp
     src/trackball_controller.cpp
     src/gl_viewport.cpp
     src/gl_viewport_renderer.cpp
@@ -114,6 +113,7 @@ qt_add_qml_module(
     resource/icons/aiSuggest.svg
     resource/icons/aiChat.svg
     resource/icons/import.svg
+    resource/icons/newModel.svg
     resource/icons/export.svg
     resource/icons/darkTheme.svg
     resource/icons/lightTheme.svg
@@ -183,11 +183,17 @@ if (WIN32)
         PRIVATE "OPENGEOLAB_QT_BIN_DIR=\"${_qt_prefix_fwd}/bin\"")
 endif ()
 
-# Generate qt.conf so Qt finds plugins and QML modules from the install prefix.
-file(
-    GENERATE
-    OUTPUT "$<TARGET_FILE_DIR:opengeolab_app>/qt.conf"
-    CONTENT "[Paths]\nPrefix = ${_qt_prefix_fwd}\n")
+# Generate qt.conf at configure time; deploy with copy_if_different to avoid
+# spurious rebuilds caused by file(GENERATE) refreshing timestamps every build.
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/qt.conf"
+     "[Paths]\nPrefix = ${_qt_prefix_fwd}\n")
+add_custom_command(
+    TARGET opengeolab_app
+    POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_CURRENT_BINARY_DIR}/qt.conf"
+            "$<TARGET_FILE_DIR:opengeolab_app>/qt.conf"
+    COMMENT "Deploying qt.conf")
 
 install(TARGETS opengeolab_app RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
 
@@ -223,40 +229,16 @@ qt_add_translations(
 
 if (OPENGEOLAB_BUILD_TESTS)
     opengeolab_add_doctest_test(
-        opengeolab_camera_state_test SOURCES test/camera_state_test.cpp
-        src/camera_state.cpp LINKS OpenGeoLab::Scene)
-    target_include_directories(opengeolab_camera_state_test
-                               PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
-
-    opengeolab_add_doctest_test(
-        opengeolab_trackball_controller_test
+        opengeolab_app_test
         SOURCES
+        test/camera_state_test.cpp
         test/trackball_controller_test.cpp
-        src/trackball_controller.cpp
-        src/camera_state.cpp
-        LINKS
-        OpenGeoLab::Scene)
-    target_include_directories(opengeolab_trackball_controller_test
-                               PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
-
-    opengeolab_add_doctest_test(
-        opengeolab_app_qml_pages_test
-        SOURCES
         test/qml_page_registration_test.cpp
-        LINKS
-        Qt6::Core
-        DEFINITIONS
-        OPENGEOLAB_APP_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
-
-    opengeolab_add_doctest_test(
-        opengeolab_gl_viewport_test
-        SOURCES
         test/gl_viewport_test.cpp
         include/opengeolab/app/gl_viewport.hpp
         include/opengeolab/app/gl_viewport_renderer.hpp
         src/gl_viewport.cpp
         src/gl_viewport_renderer.cpp
-        src/camera_state.cpp
         src/trackball_controller.cpp
         LINKS
         Qt6::Core
@@ -269,8 +251,7 @@ if (OPENGEOLAB_BUILD_TESTS)
         glad::glad
         DEFINITIONS
         OPENGEOLAB_APP_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
-    target_compile_definitions(opengeolab_gl_viewport_test
-                               PRIVATE QT_NO_KEYWORDS)
-    target_include_directories(opengeolab_gl_viewport_test
+    target_compile_definitions(opengeolab_app_test PRIVATE QT_NO_KEYWORDS)
+    target_include_directories(opengeolab_app_test
                                PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
 endif ()

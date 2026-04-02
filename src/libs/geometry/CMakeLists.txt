@@ -53,12 +53,11 @@ opengeolab_add_module(
 
 if (OPENGEOLAB_BUILD_TESTS)
     opengeolab_add_doctest_test(
-        opengeolab_geometry_test SOURCES test/geometry_module_test.cpp LINKS
-        OpenGeoLab::Geometry)
-    opengeolab_add_doctest_test(
-        opengeolab_shape_store_test SOURCES test/shape_store_test.cpp LINKS
-        OpenGeoLab::Geometry)
-    opengeolab_add_doctest_test(
-        opengeolab_tessellator_test SOURCES test/tessellator_test.cpp LINKS
+        opengeolab_geometry_test
+        SOURCES
+        test/geometry_module_test.cpp
+        test/shape_store_test.cpp
+        test/tessellator_test.cpp
+        LINKS
         OpenGeoLab::Geometry)
 endif ()

@@ -65,6 +65,16 @@ void ShapeStore::rename(uint32_t shape_id, const std::string& new_name) {
     shapeUpdated.emit(shape_id, *entry_ptr);
 }
 
+void ShapeStore::clear() {
+    {
+        const std::lock_guard lock(m_mutex);
+        m_slots.clear();
+        m_freeList.clear();
+        m_nextId = 0;
+    }
+    storeCleared.emit();
+}
+
 void ShapeStore::remove(uint32_t shape_id) {
     {
         const std::lock_guard lock(m_mutex);

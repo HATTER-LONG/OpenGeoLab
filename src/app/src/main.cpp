@@ -17,9 +17,7 @@
 #include <opengeolab/core/logger.hpp>
 #include <opengeolab/geometry/geometry_module.hpp>
 #include <opengeolab/python_embed/embedded_python_runtime.hpp>
-#include <opengeolab/scene/geometry_scene_bridge.hpp>
 #include <opengeolab/scene/scene_module.hpp>
-#include <opengeolab/scene/topology_index.hpp>
 
 #include <kangaroo/util/plugin_component_factory.hpp>
 
@@ -74,20 +72,17 @@ int main(int argc, char* argv[]) {
     OpenGeoLab::Command::registerBuiltinModules(g_PluginComponentFactory);
     OpenGeoLab::Command::CommandDispatcher dispatcher(g_PluginComponentFactory);
 
-    // ── Scene infrastructure ──────────────────────────────────────────
-    auto scene_module_ptr = dispatcher.findModule("scene");
-    auto* scene_module = dynamic_cast<OpenGeoLab::Scene::SceneModule*>(scene_module_ptr.get());
+    // ── Eagerly cache modules and wire cross-module connections ────────
+    // Order matters: leaf modules first, then dependents.
+    (void)dispatcher.findModule("io");
+    auto geo_ptr = dispatcher.findModule("geometry");
+    auto scene_ptr = dispatcher.findModule("scene");
 
-    OpenGeoLab::Scene::TopologyIndex topology_index;
+    auto* geo_module = dynamic_cast<OpenGeoLab::Geometry::GeometryModule*>(geo_ptr.get());
+    auto* scene_module = dynamic_cast<OpenGeoLab::Scene::SceneModule*>(scene_ptr.get());
 
-    auto geometry_module_base = dispatcher.findModule("geometry");
-    auto* geometry_module =
-        dynamic_cast<OpenGeoLab::Geometry::GeometryModule*>(geometry_module_base.get());
-
-    std::unique_ptr<OpenGeoLab::Scene::GeometrySceneBridge> scene_bridge;
-    if(geometry_module != nullptr && scene_module != nullptr) {
-        scene_bridge = std::make_unique<OpenGeoLab::Scene::GeometrySceneBridge>(
-            scene_module->sceneGraph(), geometry_module->shapeStore(), topology_index);
+    if(geo_module != nullptr && scene_module != nullptr) {
+        scene_module->initBridge(geo_module->shapeStore());
     }
 
     OpenGeoLab::PythonEmbed::EmbeddedPythonRuntime python_runtime(app_dir, runtime_dir, plugin_dir);
@@ -130,6 +125,10 @@ int main(int argc, char* argv[]) {
 
         QObject::connect(&module_notifier, &OpenGeoLab::App::ModuleDataNotifier::sceneDataChanged,
                          viewport, [viewport]() { viewport->update(); });
+
+        QObject::connect(&module_notifier,
+                         &OpenGeoLab::App::ModuleDataNotifier::viewportRefreshNeeded, viewport,
+                         [viewport]() { viewport->update(); });
     }
 
     // Release GIL before entering the event loop. EmbeddedPythonRuntime::process()

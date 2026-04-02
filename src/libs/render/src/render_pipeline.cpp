@@ -16,7 +16,6 @@
 
 #include <opengeolab/scene/pick_id.hpp>
 #include <opengeolab/scene/scene_graph.hpp>
-#include <opengeolab/scene/topology_index.hpp>
 
 #include <glad/gl.h>
 
@@ -49,7 +48,6 @@ struct RenderPipeline::Impl {
     HighlightPass highlightPass;
     SelectionPass selectionPass;
     ThickLineRenderer thickLineRenderer;
-    std::unique_ptr<Scene::TopologyIndex> topologyIndex;
     std::unique_ptr<PickResolver> pickResolver;
     uint64_t resolverVersion{0}; ///< Scene version when resolver was last built.
     bool initialized{false};
@@ -69,7 +67,9 @@ void RenderPipeline::initialize(GlLoaderFunc gl_loader) {
     m_impl->wireframePass.initialize();
     m_impl->highlightPass.initialize();
     m_impl->selectionPass.initialize();
-    m_impl->thickLineRenderer.initialize();
+    if(!m_impl->thickLineRenderer.initialize()) {
+        return;
+    }
     m_impl->wireframePass.setThickLineRenderer(&m_impl->thickLineRenderer);
     m_impl->highlightPass.setThickLineRenderer(&m_impl->thickLineRenderer);
     m_impl->initialized = true;
@@ -81,8 +81,7 @@ void RenderPipeline::synchronize(const Scene::SceneGraph& scene) {
     // Rebuild pick resolver only when scene data has changed.
     const uint64_t scene_ver = scene.version();
     if(scene_ver != m_impl->resolverVersion) {
-        m_impl->topologyIndex = std::make_unique<Scene::TopologyIndex>();
-        m_impl->pickResolver = std::make_unique<PickResolver>(*m_impl->topologyIndex);
+        m_impl->pickResolver = std::make_unique<PickResolver>(scene.topologyIndex());
         m_impl->resolverVersion = scene_ver;
     }
 }
@@ -157,7 +156,6 @@ void RenderPipeline::cleanup() {
     m_impl->opaquePass.cleanup();
     m_impl->bufferManager.cleanup();
     m_impl->pickResolver.reset();
-    m_impl->topologyIndex.reset();
     m_impl->initialized = false;
 }
 

@@ -93,7 +93,9 @@ void GLViewportRenderer::synchronize(QQuickFramebufferObject* item) {
         static_cast<float>(std::max(viewport->height(), 1.0)) * device_pixel_ratio;
     const float aspect = width_px / std::max(height_px, 1.0F);
 
-    const auto& camera = viewport->cameraState();
+    const auto camera = (viewport->sceneGraph() != nullptr)
+                            ? viewport->sceneGraph()->viewportState().camera()
+                            : Scene::CameraState{};
     m_frameState.viewMatrix = camera.viewMatrix();
     m_frameState.projMatrix = camera.projMatrix(aspect);
     m_frameState.cameraPos = camera.eyePosition();
@@ -109,6 +111,12 @@ void GLViewportRenderer::synchronize(QQuickFramebufferObject* item) {
     m_hoverPick = {m_pickingEnabled && viewport->m_hoverActive,
                    static_cast<float>(viewport->m_hoverPos.x()),
                    static_cast<float>(viewport->m_hoverPos.y())};
+
+    // Consume pending pick area from ViewportState (command/Python-driven).
+    m_pendingPickArea.reset();
+    if(viewport->sceneGraph() != nullptr) {
+        m_pendingPickArea = viewport->sceneGraph()->viewportState().consumePickArea();
+    }
 
     // Resolve SelectionState → DrawRanges (only when version changes)
     if(const auto* scene = viewport->sceneGraph(); scene != nullptr) {
@@ -165,9 +173,7 @@ void GLViewportRenderer::synchronize(QQuickFramebufferObject* item) {
 
     m_frameState.selectedEntries = m_resolvedSelectedEntries;
     m_frameState.hoveredEntries = m_resolvedHoveredEntries;
-    m_frameState.activePickMask = m_selectionActive
-        ? m_selectionPickMask
-        : Core::PickMask::All;
+    m_frameState.activePickMask = m_selectionActive ? m_selectionPickMask : Core::PickMask::All;
 }
 
 void GLViewportRenderer::render() {
@@ -191,6 +197,11 @@ void GLViewportRenderer::render() {
         if(m_pendingBoxSelect.active) {
             dispatchBoxSelectResults(m_pendingBoxSelect);
             m_pendingBoxSelect = {};
+        }
+
+        if(m_pendingPickArea.has_value()) {
+            dispatchPickAreaResults(*m_pendingPickArea);
+            m_pendingPickArea.reset();
         }
     }
 
@@ -324,8 +335,7 @@ void GLViewportRenderer::dispatchHoverResult(const Render::PickResult& result) c
         Qt::QueuedConnection);
 }
 
-void GLViewportRenderer::dispatchBoxSelectResults(
-    const GLViewport::PendingBoxSelect& box) const {
+void GLViewportRenderer::dispatchBoxSelectResults(const GLViewport::PendingBoxSelect& box) const {
     if(m_viewport.isNull()) {
         return;
     }
@@ -355,6 +365,66 @@ void GLViewportRenderer::dispatchBoxSelectResults(
 
     const QPointer<GLViewport> viewport = m_viewport;
     const Core::PickAction action = box.action;
+    QMetaObject::invokeMethod(
+        viewport.data(),
+        [viewport, entities = std::move(entities), action]() {
+            if(viewport.isNull() || viewport->sceneGraph() == nullptr) {
+                return;
+            }
+            auto& sel = viewport->sceneGraph()->selectionState();
+            for(const auto& entity : entities) {
+                if(action == Core::PickAction::Add) {
+                    sel.addSelection(entity);
+                } else {
+                    sel.removeSelection(entity);
+                }
+            }
+        },
+        Qt::QueuedConnection);
+}
+
+void GLViewportRenderer::dispatchPickAreaResults(const Scene::PendingPickArea& area) const {
+    if(m_viewport.isNull()) {
+        return;
+    }
+
+    float fx0 = area.x0;
+    float fy0 = area.y0;
+    float fx1 = area.x1;
+    float fy1 = area.y1;
+
+    if(area.coordType == Scene::PickAreaCoordType::Normalized) {
+        fx0 *= static_cast<float>(m_frameState.viewportWidth);
+        fy0 *= static_cast<float>(m_frameState.viewportHeight);
+        fx1 *= static_cast<float>(m_frameState.viewportWidth);
+        fy1 *= static_cast<float>(m_frameState.viewportHeight);
+    } else {
+        const float dpr = m_frameState.devicePixelRatio;
+        fx0 *= dpr;
+        fy0 *= dpr;
+        fx1 *= dpr;
+        fy1 *= dpr;
+    }
+
+    auto results = m_pipeline.pickRect(static_cast<int>(fx0), static_cast<int>(fy0),
+                                       static_cast<int>(fx1), static_cast<int>(fy1), pickMask());
+    if(results.empty()) {
+        return;
+    }
+
+    std::vector<Core::EntityRef> entities;
+    entities.reserve(results.size());
+    for(const auto& r : results) {
+        if(r.valid) {
+            if((Core::maskForEntityType(r.entityType) & pickMask()) == Core::PickMask::None) {
+                continue;
+            }
+            entities.push_back({r.shapeId, r.entityType, r.localId});
+        }
+    }
+
+    const QPointer<GLViewport> viewport = m_viewport;
+    const Core::PickAction action = area.action;
     QMetaObject::invokeMethod(
         viewport.data(),
         [viewport, entities = std::move(entities), action]() {

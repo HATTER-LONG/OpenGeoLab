@@ -5,11 +5,11 @@
 
 #pragma once
 
-#include <opengeolab/app/camera_state.hpp>
 #include <opengeolab/app/trackball_controller.hpp>
 #include <opengeolab/core/pick_action.hpp>
 #include <opengeolab/render/pick_mask.hpp>
 #include <opengeolab/render/pick_result.hpp>
+#include <opengeolab/scene/view_preset.hpp>
 
 #include <QPointF>
 #include <QQuickFramebufferObject>
@@ -62,12 +62,6 @@ public:
 
     /** @brief Get the scene graph associated with this viewport. */
     [[nodiscard]] Scene::SceneGraph* sceneGraph() const { return m_sceneGraph; }
-
-    /** @brief Get the camera state synchronized to the renderer. */
-    [[nodiscard]] const CameraState& cameraState() const { return m_camera; }
-
-    /** @brief Get mutable camera state for local interaction updates. */
-    [[nodiscard]] CameraState& cameraState() { return m_camera; }
 
     /** @brief Whether click and hover picking are enabled. */
     [[nodiscard]] bool pickingEnabled() const { return m_pickingEnabled; }
@@ -149,8 +143,8 @@ public:
     Q_INVOKABLE void fitToScene();
 
     /**
-     * @brief Apply one of the TrackballController view presets.
-     * @param preset Integer value of TrackballController::ViewPreset.
+     * @brief Apply one of the Scene view presets.
+     * @param preset Integer value of Scene::ViewPreset.
      */
     Q_INVOKABLE void setViewPreset(int preset);
 
@@ -181,7 +175,6 @@ private:
     friend class GLViewportRenderer;
 
     Scene::SceneGraph* m_sceneGraph{nullptr};
-    CameraState m_camera;
     TrackballController m_trackball;
 
     bool m_pickingEnabled{true};

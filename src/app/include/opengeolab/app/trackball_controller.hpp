@@ -5,13 +5,14 @@
 
 #pragma once
 
-#include <opengeolab/app/camera_state.hpp>
-#include <opengeolab/scene/bounding_box3d.hpp>
+#include <opengeolab/scene/camera_state.hpp>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 
 namespace OpenGeoLab::App {
+
+using OpenGeoLab::Scene::CameraState;
 
 /**
  * @brief Trackball controller for 3D camera manipulation
@@ -22,9 +23,6 @@ namespace OpenGeoLab::App {
 class TrackballController {
 public:
     enum class Mode { None, Orbit, Pan, Zoom };
-
-    /** @brief 7 standard view presets */
-    enum class ViewPreset { Front, Back, Top, Bottom, Left, Right, Isometric };
 
     /** @brief Set viewport size for mouse normalization */
     void setViewportSize(float width, float height);
@@ -47,12 +45,6 @@ public:
     /** @brief Wheel zoom — modifies camera state */
     void wheelZoom(float steps, CameraState& state);
 
-    /** @brief Fit camera to scene bounds */
-    void fitToScene(const Scene::BoundingBox3D& bounds, CameraState& state);
-
-    /** @brief Apply a standard view preset */
-    void setViewPreset(ViewPreset preset, CameraState& state);
-
 private:
     /** @brief Project screen point to virtual sphere */
     [[nodiscard]] glm::vec3 projectToSphere(float x, float y) const;
@@ -69,7 +61,6 @@ private:
     float m_lastY{0.0F};
     float m_startDistance{1.0F};
 
-    /** @brief OGL-aligned constants */
     static constexpr float ORBIT_SCALE = 2.2F;
     static constexpr float PAN_SCALE = 0.0015F;
     static constexpr float ZOOM_BASE = 0.90F;

@@ -38,11 +38,10 @@ class OPENGEOLAB_SCENE_EXPORT GeometrySceneBridge final {
 public:
     /**
      * @brief Construct and connect to ShapeStore signals.
-     * @param scene SceneGraph to populate
+     * @param scene SceneGraph to populate (also owns the TopologyIndex)
      * @param store ShapeStore to observe
-     * @param topoIndex TopologyIndex to maintain
      */
-    GeometrySceneBridge(SceneGraph& scene, Geometry::ShapeStore& store, TopologyIndex& topo_index);
+    GeometrySceneBridge(SceneGraph& scene, Geometry::ShapeStore& store);
 
     ~GeometrySceneBridge();
 
@@ -64,10 +63,10 @@ private:
     void onShapeAdded(uint32_t shape_id, const Geometry::ShapeEntry& entry);
     void onShapeRemoved(uint32_t shape_id);
     void onShapeUpdated(uint32_t shape_id, const Geometry::ShapeEntry& entry);
+    void onStoreCleared();
 
     SceneGraph& m_scene;
     Geometry::ShapeStore& m_store;
-    TopologyIndex& m_topoIndex;
 
     /** @brief Maps shapeId → NodeId for quick lookup on remove/update. */
     std::unordered_map<uint32_t, NodeId> m_shapeToNode;

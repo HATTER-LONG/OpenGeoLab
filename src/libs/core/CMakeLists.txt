@@ -29,12 +29,11 @@ opengeolab_add_module(
 
 if (OPENGEOLAB_BUILD_TESTS)
     opengeolab_add_doctest_test(
-        opengeolab_core_test SOURCES test/point_vector3d_test.cpp LINKS
-        OpenGeoLab::Core)
-    opengeolab_add_doctest_test(
-        opengeolab_entity_ref_test SOURCES test/entity_ref_test.cpp LINKS
-        OpenGeoLab::Core)
-    opengeolab_add_doctest_test(
-        opengeolab_color_map_test SOURCES test/color_map_test.cpp LINKS
+        opengeolab_core_test
+        SOURCES
+        test/point_vector3d_test.cpp
+        test/entity_ref_test.cpp
+        test/color_map_test.cpp
+        LINKS
         OpenGeoLab::Core)
 endif ()

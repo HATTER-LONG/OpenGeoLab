@@ -35,6 +35,9 @@ public:
     [[nodiscard]] ShapeStore& shapeStore();
     [[nodiscard]] const ShapeStore& shapeStore() const;
 
+    /** @brief Clear all shapes from the store. */
+    void clearAll();
+
     static constexpr std::string_view MODULE_NAME{"geometry"};
 
 private:

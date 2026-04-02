@@ -59,11 +59,12 @@ FunctionPageBase {
     // ── Pick mode indicator with pulsing dot ───────────────────────────
     Rectangle {
         width: parent.width
-        height: 28
+        height: 24
         radius: root.theme.radiusSmall
         color: SelectionService.pickEnabled
             ? root.theme.tint(root.theme.accentA, root.theme.darkMode ? 0.14 : 0.08)
-            : root.theme.surfaceMuted
+            : "transparent"
+        visible: SelectionService.pickEnabled
 
         Behavior on color {
             ColorAnimation { duration: root.theme.animNormal }
@@ -76,14 +77,11 @@ FunctionPageBase {
             Rectangle {
                 id: pulsingDot
 
-                width: 8
-                height: 8
-                radius: 4
+                width: 6
+                height: 6
+                radius: 3
                 anchors.verticalCenter: parent.verticalCenter
-                color: SelectionService.pickEnabled
-                    ? root.theme.accentA
-                    : root.theme.textTertiary
-                visible: SelectionService.pickEnabled
+                color: root.theme.accentA
 
                 SequentialAnimation on opacity {
                     running: SelectionService.pickEnabled
@@ -106,13 +104,9 @@ FunctionPageBase {
             }
 
             Text {
-                text: SelectionService.pickEnabled
-                    ? qsTr("Pick mode active — click to select")
-                    : qsTr("Pick mode inactive")
-                color: SelectionService.pickEnabled
-                    ? root.theme.accentA
-                    : root.theme.textSecondary
-                font.pixelSize: 11
+                text: qsTr("Click to select · Right-click to deselect")
+                color: root.theme.accentA
+                font.pixelSize: 10
                 anchors.verticalCenter: parent.verticalCenter
             }
         }

@@ -85,6 +85,18 @@ Window {
             return;
         }
 
+        if (actionKey === "newModel") {
+            root.statusNote = qsTr("Resetting workspace…");
+            root.menuOpen = false;
+            MainPages.closeAll();
+            RequestService.submitAsync(JSON.stringify({
+                module: "scene",
+                action: "new_model",
+                param: {}
+            }));
+            return;
+        }
+
         // PySide6 UI plugins — must execute on main thread.
         if (actionKey.startsWith("pluginUI_")) {
             const pluginName = actionKey.substring(9);

@@ -45,19 +45,19 @@
       "name": "debug",
       "configurePreset": "debug",
       "configuration": "Debug",
-      "jobs": 4
+      "jobs": 8
     },
     {
       "name": "relwithdebinfo",
       "configurePreset": "relwithdebinfo",
       "configuration": "RelWithDebInfo",
-      "jobs": 4
+      "jobs": 8
     },
     {
       "name": "release",
       "configurePreset": "release",
       "configuration": "Release",
-      "jobs": 4
+      "jobs": 8
     }
   ],
   "testPresets": [
