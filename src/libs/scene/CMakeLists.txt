@@ -2,6 +2,7 @@ set(scene_public_headers
     include/opengeolab/scene/bounding_box3d.hpp
     include/opengeolab/scene/camera_state.hpp
     include/opengeolab/scene/clear_selection_action.hpp
+    include/opengeolab/scene/describe_labels_action.hpp
     include/opengeolab/scene/deselect_action.hpp
     include/opengeolab/scene/display_mode.hpp
     include/opengeolab/scene/geometry_scene_bridge.hpp
@@ -33,6 +34,7 @@ set(scene_sources
     src/bounding_box3d.cpp
     src/camera_state.cpp
     src/clear_selection_action.cpp
+    src/describe_labels_action.cpp
     src/deselect_action.cpp
     src/geometry_scene_bridge.cpp
     src/label_manager.cpp
@@ -82,6 +84,7 @@ if (OPENGEOLAB_BUILD_TESTS)
         test/scene_module_test.cpp
         test/selection_actions_test.cpp
         test/camera_state_test.cpp
+        test/describe_labels_action_test.cpp
         test/viewport_state_test.cpp
         test/viewport_actions_test.cpp
         LINKS

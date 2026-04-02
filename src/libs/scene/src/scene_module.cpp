@@ -8,6 +8,7 @@
 #include <opengeolab/core/logger.hpp>
 #include <opengeolab/core/module_data_event.hpp>
 #include <opengeolab/scene/clear_selection_action.hpp>
+#include <opengeolab/scene/describe_labels_action.hpp>
 #include <opengeolab/scene/deselect_action.hpp>
 #include <opengeolab/scene/fit_to_scene_action.hpp>
 #include <opengeolab/scene/list_nodes_action.hpp>
@@ -41,6 +42,7 @@ SceneModule::SceneModule(Kangaroo::Util::PluginComponentFactory& factory)
     registerAction<SetViewPresetAction>(std::ref(m_sceneGraph.viewportState()));
     registerAction<SetCameraAction>(std::ref(m_sceneGraph.viewportState()));
     registerAction<PickAreaAction>(std::ref(m_sceneGraph.viewportState()));
+    registerAction<DescribeLabelsAction>(std::cref(m_sceneGraph.labelManager()));
 
     m_graphConnections.push_back(m_sceneGraph.nodeAdded.connect(
         [this](NodeId) { dataChanged.emit(Core::ModuleDataEvent::ItemAdded); }));
