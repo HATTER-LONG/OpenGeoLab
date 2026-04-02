@@ -18,6 +18,7 @@
 
 namespace OpenGeoLab::Scene {
 class SelectionState;
+class LabelManager;
 } // namespace OpenGeoLab::Scene
 
 namespace OpenGeoLab::App {
@@ -34,6 +35,8 @@ class SelectionService : public QObject {
     Q_PROPERTY(bool pickEnabled READ pickEnabled WRITE setPickEnabled NOTIFY pickEnabledChanged)
     Q_PROPERTY(int pickMask READ pickMask WRITE setPickMask NOTIFY pickMaskChanged)
     Q_PROPERTY(QVariantList selections READ selections NOTIFY selectionChanged)
+    Q_PROPERTY(bool labelsVisible READ labelsVisible NOTIFY labelsVisibleChanged)
+    Q_PROPERTY(bool autoLabel READ autoLabel WRITE setAutoLabel NOTIFY autoLabelChanged)
 
 public:
     explicit SelectionService(QObject* parent = nullptr);
@@ -44,6 +47,9 @@ public:
      * @param state SelectionState owned by SceneGraph. Must outlive this service.
      */
     void setSelectionState(Scene::SelectionState* state);
+
+    /// Set the LabelManager for auto-label support. Must outlive this service.
+    void setLabelManager(Scene::LabelManager* manager);
 
     [[nodiscard]] bool pickEnabled() const;
     void setPickEnabled(bool enabled);
@@ -66,6 +72,19 @@ public:
     /** @brief Remove a specific entity from selection. */
     Q_INVOKABLE void removeSelection(int shape_id, int entity_type, int local_id);
 
+    /** @brief Add a label for the given entity. */
+    Q_INVOKABLE void addLabelForSelection(int shapeId, int entityType, int localId);
+
+    /** @brief Remove a label for the given entity. */
+    Q_INVOKABLE void removeLabelForSelection(int shapeId, int entityType, int localId);
+
+    /** @brief Show or hide all labels. */
+    Q_INVOKABLE void setLabelsVisible(bool visible);
+
+    [[nodiscard]] bool labelsVisible() const;
+    [[nodiscard]] bool autoLabel() const;
+    void setAutoLabel(bool enabled);
+
 Q_SIGNALS:
     void entitySelected(int shapeId, int entityType, int localId);
     void entityDeselected(int shapeId, int entityType, int localId);
@@ -74,13 +93,18 @@ Q_SIGNALS:
     void pickEnabledChanged();
     void pickMaskChanged();
     void selectionChanged();
+    void labelsVisibleChanged();
+    void autoLabelChanged();
 
 private:
     void connectSignals();
     void disconnectSignals();
 
     Scene::SelectionState* m_state{nullptr};
+    Scene::LabelManager* m_labelManager{nullptr};
     std::vector<Kangaroo::Util::ScopedConnection> m_connections;
+    bool m_labelsVisible{true};
+    bool m_autoLabel{true};
 };
 
 } // namespace OpenGeoLab::App

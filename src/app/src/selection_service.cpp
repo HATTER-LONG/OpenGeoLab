@@ -6,7 +6,9 @@
 #include <opengeolab/app/selection_service.hpp>
 
 #include <opengeolab/core/entity_ref.hpp>
+#include <opengeolab/core/label_colors.hpp>
 #include <opengeolab/core/pick_mask.hpp>
+#include <opengeolab/scene/label_manager.hpp>
 #include <opengeolab/scene/selection_state.hpp>
 
 #include <QMetaObject>
@@ -101,6 +103,55 @@ void SelectionService::removeSelection(int shape_id, int entity_type, int local_
     m_state->removeSelection(entity);
 }
 
+void SelectionService::setLabelManager(Scene::LabelManager* manager) {
+    m_labelManager = manager;
+}
+
+void SelectionService::addLabelForSelection(int shapeId, int entityType, int localId) {
+    if(m_labelManager == nullptr) {
+        return;
+    }
+    auto type = static_cast<Core::EntityType>(entityType);
+    Scene::Label3D label;
+    label.entity = {static_cast<uint32_t>(shapeId), type, static_cast<uint32_t>(localId)};
+    label.text = std::string(Core::labelPrefix(type)) + ":" + std::to_string(localId);
+    label.textColor = Core::labelColor(type);
+    label.bgColor = Core::K_LABEL_BG_COLOR;
+    m_labelManager->addLabel(std::move(label));
+}
+
+void SelectionService::removeLabelForSelection(int shapeId, int entityType, int localId) {
+    if(m_labelManager == nullptr) {
+        return;
+    }
+    Core::EntityRef ref{static_cast<uint32_t>(shapeId),
+                        static_cast<Core::EntityType>(entityType),
+                        static_cast<uint32_t>(localId)};
+    m_labelManager->removeByEntity(ref);
+}
+
+void SelectionService::setLabelsVisible(bool visible) {
+    if(m_labelsVisible != visible) {
+        m_labelsVisible = visible;
+        Q_EMIT labelsVisibleChanged();
+    }
+}
+
+bool SelectionService::labelsVisible() const {
+    return m_labelsVisible;
+}
+
+bool SelectionService::autoLabel() const {
+    return m_autoLabel;
+}
+
+void SelectionService::setAutoLabel(bool enabled) {
+    if(m_autoLabel != enabled) {
+        m_autoLabel = enabled;
+        Q_EMIT autoLabelChanged();
+    }
+}
+
 void SelectionService::connectSignals() {
     if(m_state == nullptr) {
         return;
@@ -114,6 +165,12 @@ void SelectionService::connectSignals() {
                                       static_cast<int>(entity.entityType),
                                       static_cast<int>(entity.localId));
                 Q_EMIT selectionChanged();
+
+                if(m_autoLabel && m_labelManager != nullptr) {
+                    addLabelForSelection(static_cast<int>(entity.shapeId),
+                                         static_cast<int>(entity.entityType),
+                                         static_cast<int>(entity.localId));
+                }
             },
             Qt::QueuedConnection);
     }));
@@ -127,6 +184,12 @@ void SelectionService::connectSignals() {
                                             static_cast<int>(entity.entityType),
                                             static_cast<int>(entity.localId));
                     Q_EMIT selectionChanged();
+
+                    if(m_autoLabel && m_labelManager != nullptr) {
+                        removeLabelForSelection(static_cast<int>(entity.shapeId),
+                                                static_cast<int>(entity.entityType),
+                                                static_cast<int>(entity.localId));
+                    }
                 },
                 Qt::QueuedConnection);
         }));
@@ -137,6 +200,10 @@ void SelectionService::connectSignals() {
             [this]() {
                 Q_EMIT selectionCleared();
                 Q_EMIT selectionChanged();
+
+                if(m_labelManager != nullptr) {
+                    m_labelManager->clearLabels();
+                }
             },
             Qt::QueuedConnection);
     }));

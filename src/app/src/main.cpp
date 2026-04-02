@@ -103,6 +103,7 @@ int main(int argc, char* argv[]) {
     OpenGeoLab::App::SelectionService selection_service;
     if(scene_module != nullptr) {
         selection_service.setSelectionState(&scene_module->sceneGraph().selectionState());
+        selection_service.setLabelManager(&scene_module->sceneGraph().labelManager());
     }
     qmlRegisterSingletonInstance("OpenGeoLab.Services", 1, 0, "SelectionService",
                                  &selection_service);

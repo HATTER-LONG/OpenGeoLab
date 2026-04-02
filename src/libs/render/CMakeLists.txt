@@ -21,6 +21,7 @@ set(render_sources
     src/pass/wireframe_pass.cpp
     src/pass/highlight_pass.cpp
     src/pass/selection_pass.cpp
+    src/pass/label_pass.cpp
     src/label_anchor.cpp
     src/font/font_atlas.cpp)
 
