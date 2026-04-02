@@ -42,6 +42,19 @@ opengeolab_add_module(
 target_include_directories(opengeolab_render
                            PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
+# Copy MSDF atlas resources to build output for runtime loading.
+set(RENDER_RESOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/resource")
+set(RENDER_RESOURCE_OUT "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/resources/fonts")
+
+file(GLOB FONT_RESOURCES "${RENDER_RESOURCE_DIR}/fonts/*")
+if(FONT_RESOURCES)
+    file(MAKE_DIRECTORY "${RENDER_RESOURCE_OUT}")
+    foreach(res IN LISTS FONT_RESOURCES)
+        get_filename_component(fname "${res}" NAME)
+        configure_file("${res}" "${RENDER_RESOURCE_OUT}/${fname}" COPYONLY)
+    endforeach()
+endif()
+
 if (OPENGEOLAB_BUILD_TESTS)
     opengeolab_add_doctest_test(
         opengeolab_render_test
