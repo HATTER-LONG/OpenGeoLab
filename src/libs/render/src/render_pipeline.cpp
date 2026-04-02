@@ -7,7 +7,10 @@
 
 #include "core/gpu_buffer_manager.hpp"
 #include "core/thick_line_renderer.hpp"
+#include "font/font_atlas.hpp"
+#include <opengeolab/render/label_anchor.hpp>
 #include "pass/highlight_pass.hpp"
+#include "pass/label_pass.hpp"
 #include "pass/opaque_pass.hpp"
 #include "pass/selection_pass.hpp"
 #include "pass/wireframe_pass.hpp"
@@ -19,6 +22,7 @@
 
 #include <glad/gl.h>
 
+#include <fstream>
 #include <memory>
 #include <vector>
 
@@ -47,7 +51,10 @@ struct RenderPipeline::Impl {
     HighlightPass highlightPass;
     SelectionPass selectionPass;
     ThickLineRenderer thickLineRenderer;
+    FontAtlas fontAtlas;
+    LabelPass labelPass;
     std::unique_ptr<PickResolver> pickResolver;
+    std::string fontAtlasDir;
     uint64_t resolverVersion{0}; ///< Scene version when resolver was last built.
     bool initialized{false};
 };
@@ -71,6 +78,24 @@ void RenderPipeline::initialize(GlLoaderFunc gl_loader) {
     }
     m_impl->wireframePass.setThickLineRenderer(&m_impl->thickLineRenderer);
     m_impl->highlightPass.setThickLineRenderer(&m_impl->thickLineRenderer);
+
+    // Phase 2: MSDF label rendering
+    if(!m_impl->fontAtlasDir.empty()) {
+        auto json_path = m_impl->fontAtlasDir + "/label_atlas.json";
+        auto png_path = m_impl->fontAtlasDir + "/label_atlas.png";
+
+        std::ifstream json_file(json_path);
+        if(json_file.good()) {
+            std::string json_str((std::istreambuf_iterator<char>(json_file)),
+                                 std::istreambuf_iterator<char>());
+            if(m_impl->fontAtlas.parseMetrics(json_str)) {
+                m_impl->fontAtlas.loadTexture(png_path);
+                m_impl->labelPass.setFontAtlas(&m_impl->fontAtlas);
+                m_impl->labelPass.initialize();
+            }
+        }
+    }
+
     m_impl->initialized = true;
 }
 
@@ -98,6 +123,7 @@ void RenderPipeline::render(const FrameState& state) {
     m_impl->opaquePass.render(state, m_impl->bufferManager);
     m_impl->highlightPass.render(state, m_impl->bufferManager);
     m_impl->wireframePass.render(state, m_impl->bufferManager);
+    m_impl->labelPass.render(state, m_impl->bufferManager);
     m_impl->selectionPass.render(state, m_impl->bufferManager);
 }
 
@@ -148,6 +174,8 @@ RenderPipeline::pickRect(int x0, int y0, int x1, int y1, PickMask mask) const {
 }
 
 void RenderPipeline::cleanup() {
+    m_impl->labelPass.cleanup();
+    m_impl->fontAtlas.cleanup();
     m_impl->thickLineRenderer.cleanup();
     m_impl->selectionPass.cleanup();
     m_impl->highlightPass.cleanup();
@@ -181,6 +209,28 @@ std::vector<Scene::DrawRange> RenderPipeline::resolveShapeDrawRanges(uint32_t sh
         }
     }
     return result;
+}
+
+void RenderPipeline::setFontAtlasDir(const std::string& dir) {
+    m_impl->fontAtlasDir = dir;
+}
+
+glm::vec3 RenderPipeline::resolveEntityAnchor(uint32_t shape_id,
+                                               Core::EntityType entity_type,
+                                               uint32_t local_id) const {
+    auto ranges = m_impl->bufferManager.lookupEntity(shape_id, entity_type, local_id);
+    if(ranges.empty()) {
+        return glm::vec3{0.0F};
+    }
+
+    std::vector<glm::vec3> positions;
+    for(const auto& range : ranges) {
+        auto vertices =
+            m_impl->bufferManager.readVertexPositions(range.vertexOffset, range.vertexCount);
+        positions.insert(positions.end(), vertices.begin(), vertices.end());
+    }
+
+    return computeAnchorFromVertices(positions);
 }
 
 } // namespace OpenGeoLab::Render

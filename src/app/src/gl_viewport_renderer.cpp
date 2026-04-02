@@ -8,11 +8,14 @@
 #include <opengeolab/app/gl_viewport.hpp>
 #include <opengeolab/core/entity_ref.hpp>
 #include <opengeolab/core/entity_tag.hpp>
+#include <opengeolab/render/label_anchor.hpp>
+#include <opengeolab/scene/label_manager.hpp>
 #include <opengeolab/scene/scene_graph.hpp>
 #include <opengeolab/scene/selection_state.hpp>
 
 #include <glad/gl.h>
 
+#include <QCoreApplication>
 #include <QMetaObject>
 #include <QOpenGLContext>
 #include <QOpenGLFramebufferObject>
@@ -75,6 +78,8 @@ void GLViewportRenderer::synchronize(QQuickFramebufferObject* item) {
             }
             return nullptr;
         };
+        m_pipeline.setFontAtlasDir(
+            QCoreApplication::applicationDirPath().toStdString() + "/resources/fonts");
         m_pipeline.initialize(gl_loader);
         m_pipelineInitialized = true;
     }
@@ -169,6 +174,67 @@ void GLViewportRenderer::synchronize(QQuickFramebufferObject* item) {
         viewport->setSelectionActive(sel.pickEnabled());
         m_selectionActive = sel.pickEnabled();
         m_selectionPickMask = sel.pickMask();
+
+        // Phase 2: Resolve labels from LabelManager → FrameState
+        const auto& lbl_mgr = scene->labelManager();
+        const uint64_t lbl_ver = lbl_mgr.version();
+
+        if(lbl_ver != m_cachedLabelVersion) {
+            m_frameState.resolvedLabels.clear();
+            auto labels = lbl_mgr.labels();
+
+            const auto mvp = m_frameState.projMatrix * m_frameState.viewMatrix;
+            const auto vp_w = static_cast<float>(m_frameState.viewportWidth);
+            const auto vp_h = static_cast<float>(m_frameState.viewportHeight);
+
+            std::vector<glm::vec2> screen_positions;
+            std::vector<Render::ResolvedLabel> resolved;
+            resolved.reserve(labels.size());
+            screen_positions.reserve(labels.size());
+
+            for(const auto& lbl : labels) {
+                glm::vec3 anchor = m_pipeline.resolveEntityAnchor(
+                    lbl.entity.shapeId, lbl.entity.entityType, lbl.entity.localId);
+
+                auto clip = mvp * glm::vec4(anchor, 1.0F);
+                if(clip.w <= 0.0F) {
+                    continue;
+                }
+                auto ndc = glm::vec3(clip) / clip.w;
+
+                float sx = (ndc.x * 0.5F + 0.5F) * vp_w;
+                float sy = (ndc.y * 0.5F + 0.5F) * vp_h;
+                screen_positions.emplace_back(sx, sy);
+
+                // Depth-based occlusion via previous frame's depth buffer
+                int px = std::clamp(static_cast<int>(sx), 0,
+                                    std::max(m_frameState.viewportWidth - 1, 0));
+                int py = std::clamp(static_cast<int>(sy), 0,
+                                    std::max(m_frameState.viewportHeight - 1, 0));
+                float stored_depth = 1.0F;
+                glReadPixels(px, py, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &stored_depth);
+                float anchor_depth = ndc.z * 0.5F + 0.5F;
+                bool occluded = (anchor_depth > stored_depth + 0.001F);
+
+                Render::ResolvedLabel rl;
+                rl.anchorWorld = anchor;
+                rl.text = lbl.text;
+                rl.textColor = lbl.textColor;
+                rl.bgColor = lbl.bgColor;
+                rl.entityType = lbl.entity.entityType;
+                rl.occluded = occluded;
+                rl.stackIndex = 0;
+                resolved.push_back(std::move(rl));
+            }
+
+            auto stack_indices = Render::computeStackIndices(screen_positions, 4.0F);
+            for(std::size_t i = 0; i < resolved.size(); ++i) {
+                resolved[i].stackIndex = stack_indices[i];
+            }
+
+            m_frameState.resolvedLabels = std::move(resolved);
+            m_cachedLabelVersion = lbl_ver;
+        }
     }
 
     m_frameState.selectedEntries = m_resolvedSelectedEntries;

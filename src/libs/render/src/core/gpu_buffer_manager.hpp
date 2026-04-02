@@ -10,6 +10,7 @@
 #include <opengeolab/scene/scene_graph.hpp>
 
 #include <glad/gl.h>
+#include <glm/vec3.hpp>
 
 #include <cstdint>
 #include <span>
@@ -67,6 +68,14 @@ public:
     /** @brief Raw handle to the shared index buffer (uint32_t). */
     [[nodiscard]] GLuint ibo() const noexcept { return m_ibo; }
 
+    /**
+     * @brief Read CPU-side vertex positions for a contiguous range.
+     * @param offset Start index into the global vertex array.
+     * @param count Number of vertices to read.
+     * @return Positions extracted from the CPU-side cache. Empty if out of range.
+     */
+    [[nodiscard]] std::vector<glm::vec3> readVertexPositions(size_t offset, size_t count) const;
+
 private:
     void rebuildBuffers(const Scene::SceneGraph& scene);
     void rebuildEntityIndex();
@@ -105,6 +114,8 @@ private:
     std::unordered_map<EntityRefKey, std::vector<Scene::DrawRange>, EntityRefKeyHash> m_entityIndex;
 
     bool m_hasData{false};
+
+    std::vector<glm::vec3> m_vertexPositions; ///< CPU-side position cache for anchor computation
 };
 
 } // namespace OpenGeoLab::Render

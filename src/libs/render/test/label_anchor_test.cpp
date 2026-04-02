@@ -5,7 +5,7 @@
 
 #include <doctest/doctest.h>
 
-#include "label_anchor.hpp"
+#include <opengeolab/render/label_anchor.hpp>
 
 using OpenGeoLab::Render::computeAnchorFromVertices;
 using OpenGeoLab::Render::computeStackIndices;

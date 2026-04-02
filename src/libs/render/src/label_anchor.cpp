@@ -3,7 +3,7 @@
  * @brief Label anchor computation and stacking logic
  */
 
-#include "label_anchor.hpp"
+#include <opengeolab/render/label_anchor.hpp>
 
 #include <glm/geometric.hpp>
 

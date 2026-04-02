@@ -12,8 +12,11 @@
 
 #include <opengeolab/core/entity_ref.hpp>
 
+#include <glm/vec3.hpp>
+
 #include <memory>
 #include <span>
+#include <string>
 #include <vector>
 
 namespace OpenGeoLab::Scene {
@@ -102,6 +105,25 @@ public:
      * Used for compound-entity expansion (e.g. highlighting all VEF when a solid is selected).
      */
     [[nodiscard]] std::vector<Scene::DrawRange> resolveShapeDrawRanges(uint32_t shape_id) const;
+
+    /**
+     * @brief Set the directory containing MSDF atlas resources.
+     *
+     * Must be called before initialize(). The directory should contain
+     * `label_atlas.json` and `label_atlas.png`.
+     */
+    void setFontAtlasDir(const std::string& dir);
+
+    /**
+     * @brief Compute the world-space anchor (centroid) of an entity.
+     *
+     * Uses GpuBufferManager's CPU-side vertex cache to extract positions
+     * and compute the centroid.
+     * @return Centroid position, or origin if the entity is not found.
+     */
+    [[nodiscard]] glm::vec3 resolveEntityAnchor(uint32_t shape_id,
+                                                 Core::EntityType entity_type,
+                                                 uint32_t local_id) const;
 
     /** @brief Release all GPU resources owned by the pipeline. */
     void cleanup();

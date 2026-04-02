@@ -40,6 +40,7 @@ void GpuBufferManager::cleanup() {
     m_pointRanges.clear();
     m_entityIndex.clear();
     m_hasData = false;
+    m_vertexPositions.clear();
 }
 
 void GpuBufferManager::synchronize(const Scene::SceneGraph& scene) {
@@ -99,7 +100,15 @@ void GpuBufferManager::rebuildBuffers(const Scene::SceneGraph& scene) {
 
     m_hasData = !all_vertices.empty();
     if(!m_hasData) {
+        m_vertexPositions.clear();
         return;
+    }
+
+    // Cache CPU-side vertex positions for anchor computation.
+    m_vertexPositions.resize(all_vertices.size());
+    for(size_t i = 0; i < all_vertices.size(); ++i) {
+        m_vertexPositions[i] = {all_vertices[i].position[0], all_vertices[i].position[1],
+                                all_vertices[i].position[2]};
     }
 
     glBindBuffer(GL_ARRAY_BUFFER, m_mainVbo);
@@ -210,5 +219,14 @@ const std::vector<Scene::DrawRange>& GpuBufferManager::pointRanges() const noexc
 }
 
 bool GpuBufferManager::hasData() const noexcept { return m_hasData; }
+
+std::vector<glm::vec3> GpuBufferManager::readVertexPositions(size_t offset, size_t count) const {
+    if(offset >= m_vertexPositions.size()) {
+        return {};
+    }
+    const size_t end = std::min(offset + count, m_vertexPositions.size());
+    return {m_vertexPositions.begin() + static_cast<ptrdiff_t>(offset),
+            m_vertexPositions.begin() + static_cast<ptrdiff_t>(end)};
+}
 
 } // namespace OpenGeoLab::Render

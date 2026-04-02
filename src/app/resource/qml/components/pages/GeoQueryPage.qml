@@ -27,6 +27,7 @@ FunctionPageBase {
     function close() {
         SelectionService.deactivatePickMode();
         SelectionService.clearSelection();
+        SelectionService.setLabelsVisible(false);
         root.pageVisible = false;
         if (MainPages.currentOpenPage === root.actionId) {
             MainPages.currentOpenPage = "";
@@ -53,6 +54,26 @@ FunctionPageBase {
 
         onMaskChanged: {
             SelectionService.pickMask = typeSelector.mask;
+        }
+    }
+
+    // ── Auto-label toggle ──────────────────────────────────────────────
+    RowLayout {
+        width: parent.width
+        spacing: 8
+
+        Text {
+            text: qsTr("Show Labels")
+            color: root.theme.textSecondary
+            font.pixelSize: 12
+            Layout.fillWidth: true
+        }
+
+        Switch {
+            id: labelToggle
+
+            checked: SelectionService.autoLabel
+            onCheckedChanged: SelectionService.autoLabel = checked
         }
     }
 

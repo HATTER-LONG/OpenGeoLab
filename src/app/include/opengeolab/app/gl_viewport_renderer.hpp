@@ -64,6 +64,8 @@ private:
     std::vector<Render::HighlightEntry> m_resolvedHoveredEntries;
     bool m_selectionActive{false};
     Render::PickMask m_selectionPickMask{Render::PickMask::None};
+
+    uint64_t m_cachedLabelVersion{0};
 };
 
 } // namespace OpenGeoLab::App
