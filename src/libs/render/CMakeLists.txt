@@ -34,7 +34,10 @@ opengeolab_add_module(
     OpenGeoLab::Core
     OpenGeoLab::Scene
     glad::glad
-    glm::glm)
+    glm::glm
+    PRIVATE_LINKS
+    stb_image
+    nlohmann_json::nlohmann_json)
 
 target_include_directories(opengeolab_render
                            PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")

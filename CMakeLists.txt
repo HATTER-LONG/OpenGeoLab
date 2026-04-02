@@ -71,6 +71,7 @@ set(OPENGEOLAB_NLOHMANN_JSON_VERSION 3.12.0)
 set(OPENGEOLAB_DOCTEST_VERSION 2.5.0)
 set(OPENGEOLAB_GLM_VERSION 1.0.3)
 set(OPENGEOLAB_GLAD_VERSION 2.0.8)
+set(OPENGEOLAB_STB_VERSION master)
 
 # ---------------------------------------------------------------------------
 # Qt
@@ -213,6 +214,17 @@ else ()
     include("${glad_SOURCE_DIR}/cmake/GladConfig.cmake")
     glad_add_library(glad_gl_core_33 REPRODUCIBLE API gl:core=3.3)
     add_library(glad::glad ALIAS glad_gl_core_33)
+endif ()
+
+CPMAddPackage(
+    NAME stb
+    GITHUB_REPOSITORY nothings/stb
+    GIT_TAG ${OPENGEOLAB_STB_VERSION}
+    DOWNLOAD_ONLY YES)
+
+if (stb_ADDED)
+    add_library(stb_image INTERFACE)
+    target_include_directories(stb_image INTERFACE "${stb_SOURCE_DIR}")
 endif ()
 
 # ---------------------------------------------------------------------------
