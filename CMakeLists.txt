@@ -231,6 +231,11 @@ endif ()
 # OpenCASCADE Technology
 # ---------------------------------------------------------------------------
 find_package(OpenCASCADE REQUIRED)
+find_package(gmsh REQUIRED)
+if(TARGET gmsh::shared AND NOT TARGET gmsh)
+    add_library(gmsh INTERFACE IMPORTED)
+    target_link_libraries(gmsh INTERFACE gmsh::shared)
+endif()
 
 # ---------------------------------------------------------------------------
 # Python: embedded runtime + pybind11 bridge
@@ -305,6 +310,7 @@ add_subdirectory(src/libs/core)
 add_subdirectory(src/libs/io)
 add_subdirectory(src/libs/geometry)
 add_subdirectory(src/libs/scene)
+add_subdirectory(src/libs/mesh)
 add_subdirectory(src/libs/render)
 add_subdirectory(src/libs/command)
 add_subdirectory(src/libs/python)
