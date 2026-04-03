@@ -31,9 +31,7 @@ void SelectionService::setSelectionState(Scene::SelectionState* state) {
     }
 }
 
-bool SelectionService::pickEnabled() const {
-    return m_state != nullptr && m_state->pickEnabled();
-}
+bool SelectionService::pickEnabled() const { return m_state != nullptr && m_state->pickEnabled(); }
 
 void SelectionService::setPickEnabled(bool enabled) {
     if(m_state == nullptr) {
@@ -105,6 +103,16 @@ void SelectionService::removeSelection(int shape_id, int entity_type, int local_
 
 void SelectionService::setLabelManager(Scene::LabelManager* manager) {
     m_labelManager = manager;
+    if(m_labelManager != nullptr) {
+        m_connections.push_back(m_labelManager->visibleChanged.connect([this]() {
+            QMetaObject::invokeMethod(
+                this, [this]() { Q_EMIT labelsVisibleChanged(); }, Qt::QueuedConnection);
+        }));
+        m_connections.push_back(m_labelManager->autoLabelChanged.connect([this]() {
+            QMetaObject::invokeMethod(
+                this, [this]() { Q_EMIT autoLabelChanged(); }, Qt::QueuedConnection);
+        }));
+    }
 }
 
 void SelectionService::addLabelForSelection(int shapeId, int entityType, int localId) {
@@ -114,8 +122,8 @@ void SelectionService::addLabelForSelection(int shapeId, int entityType, int loc
     auto type = static_cast<Core::EntityType>(entityType);
     Scene::Label3D label;
     label.entity = {static_cast<uint32_t>(shapeId), type, static_cast<uint32_t>(localId)};
-    label.text = "[" + std::to_string(shapeId) + "]" + std::string(Core::labelPrefix(type)) +
-                 ":" + std::to_string(localId);
+    label.text =
+        Core::formatLabelText(static_cast<uint32_t>(shapeId), type, static_cast<uint32_t>(localId));
     label.textColor = Core::labelColor(type);
     label.bgColor = Core::K_LABEL_BG_COLOR;
     m_labelManager->addLabel(std::move(label));
@@ -125,31 +133,28 @@ void SelectionService::removeLabelForSelection(int shapeId, int entityType, int 
     if(m_labelManager == nullptr) {
         return;
     }
-    Core::EntityRef ref{static_cast<uint32_t>(shapeId),
-                        static_cast<Core::EntityType>(entityType),
+    Core::EntityRef ref{static_cast<uint32_t>(shapeId), static_cast<Core::EntityType>(entityType),
                         static_cast<uint32_t>(localId)};
     m_labelManager->removeByEntity(ref);
 }
 
 void SelectionService::setLabelsVisible(bool visible) {
-    if(m_labelsVisible != visible) {
-        m_labelsVisible = visible;
-        Q_EMIT labelsVisibleChanged();
+    if(m_labelManager != nullptr) {
+        m_labelManager->setVisible(visible);
     }
 }
 
 bool SelectionService::labelsVisible() const {
-    return m_labelsVisible;
+    return m_labelManager != nullptr && m_labelManager->isVisible();
 }
 
 bool SelectionService::autoLabel() const {
-    return m_autoLabel;
+    return m_labelManager != nullptr && m_labelManager->autoLabel();
 }
 
 void SelectionService::setAutoLabel(bool enabled) {
-    if(m_autoLabel != enabled) {
-        m_autoLabel = enabled;
-        Q_EMIT autoLabelChanged();
+    if(m_labelManager != nullptr) {
+        m_labelManager->setAutoLabel(enabled);
     }
 }
 
@@ -167,7 +172,7 @@ void SelectionService::connectSignals() {
                                       static_cast<int>(entity.localId));
                 Q_EMIT selectionChanged();
 
-                if(m_autoLabel && m_labelManager != nullptr) {
+                if(m_labelManager != nullptr && m_labelManager->autoLabel()) {
                     addLabelForSelection(static_cast<int>(entity.shapeId),
                                          static_cast<int>(entity.entityType),
                                          static_cast<int>(entity.localId));
@@ -186,7 +191,7 @@ void SelectionService::connectSignals() {
                                             static_cast<int>(entity.localId));
                     Q_EMIT selectionChanged();
 
-                    if(m_autoLabel && m_labelManager != nullptr) {
+                    if(m_labelManager != nullptr && m_labelManager->autoLabel()) {
                         removeLabelForSelection(static_cast<int>(entity.shapeId),
                                                 static_cast<int>(entity.entityType),
                                                 static_cast<int>(entity.localId));

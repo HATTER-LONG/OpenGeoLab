@@ -103,8 +103,6 @@ private:
     Scene::SelectionState* m_state{nullptr};
     Scene::LabelManager* m_labelManager{nullptr};
     std::vector<Kangaroo::Util::ScopedConnection> m_connections;
-    bool m_labelsVisible{true};
-    bool m_autoLabel{true};
 };
 
 } // namespace OpenGeoLab::App
