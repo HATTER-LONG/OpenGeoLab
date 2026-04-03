@@ -114,7 +114,8 @@ void SelectionService::addLabelForSelection(int shapeId, int entityType, int loc
     auto type = static_cast<Core::EntityType>(entityType);
     Scene::Label3D label;
     label.entity = {static_cast<uint32_t>(shapeId), type, static_cast<uint32_t>(localId)};
-    label.text = std::string(Core::labelPrefix(type)) + ":" + std::to_string(localId);
+    label.text = "[" + std::to_string(shapeId) + "]" + std::string(Core::labelPrefix(type)) +
+                 ":" + std::to_string(localId);
     label.textColor = Core::labelColor(type);
     label.bgColor = Core::K_LABEL_BG_COLOR;
     m_labelManager->addLabel(std::move(label));

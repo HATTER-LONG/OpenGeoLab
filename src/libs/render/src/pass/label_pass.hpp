@@ -23,7 +23,7 @@ class FontAtlas;
  * This pass projects anchors to screen space, generates billboard quads,
  * and renders them with MSDF fragment shading.
  *
- * Depth: reads depth buffer (for occlusion feedback), does not write.
+ * Depth: disabled (labels render on top of scene geometry).
  * Blending: standard alpha blending for background transparency.
  */
 class LabelPass final : public RenderPassBase {
@@ -44,7 +44,6 @@ private:
         float texCoord[2];       ///< Atlas UV (0,0 for background)
         float color[4];          ///< RGBA color
         float isMsdf;            ///< 1.0 for glyph, 0.0 for background/pointer
-        float occlusionAlpha;    ///< 1.0 visible, 0.3 occluded
     };
 
     void buildLabelGeometry(const FrameState& state);

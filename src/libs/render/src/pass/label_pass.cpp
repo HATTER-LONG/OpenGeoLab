@@ -7,8 +7,6 @@
 
 #include "font/font_atlas.hpp"
 
-#include <opengeolab/core/label_colors.hpp>
-
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
@@ -25,7 +23,6 @@ layout(location = 0) in vec2 a_pos;
 layout(location = 1) in vec2 a_texCoord;
 layout(location = 2) in vec4 a_color;
 layout(location = 3) in float a_isMsdf;
-layout(location = 4) in float a_occlusionAlpha;
 
 uniform vec2 u_viewportSize;
 
@@ -37,7 +34,7 @@ void main() {
     vec2 ndc = (a_pos / u_viewportSize) * 2.0 - 1.0;
     gl_Position = vec4(ndc, 0.0, 1.0);
     v_texCoord = a_texCoord;
-    v_color = vec4(a_color.rgb, a_color.a * a_occlusionAlpha);
+    v_color = a_color;
     v_isMsdf = a_isMsdf;
 }
 )glsl";
@@ -65,8 +62,8 @@ void main() {
         vec2 unitRange = u_pxRange / vec2(textureSize(u_atlas, 0));
         vec2 screenTexSize = 1.0 / fwidth(v_texCoord);
         float screenPxRange = max(0.5 * dot(unitRange, screenTexSize), 1.0);
-        float opacity = smoothstep(0.5 - 1.0 / screenPxRange,
-                                   0.5 + 1.0 / screenPxRange, sd);
+        float screenPxDistance = screenPxRange * (sd - 0.5);
+        float opacity = clamp(screenPxDistance + 0.5, 0.0, 1.0);
         fragColor = vec4(v_color.rgb, v_color.a * opacity);
     } else {
         fragColor = v_color;
@@ -75,12 +72,12 @@ void main() {
 )glsl";
 
 // Billboard sizing constants
-constexpr float K_FONT_SCALE = 24.0F;   ///< Base font size in pixels
-constexpr float K_PAD_H = 4.0F;         ///< Horizontal padding
-constexpr float K_PAD_V = 2.0F;         ///< Vertical padding
-constexpr float K_POINTER_HEIGHT = 6.0F; ///< Pointer triangle height
-constexpr float K_POINTER_HALF_W = 4.0F; ///< Pointer triangle half-width
-constexpr float K_STACK_GAP = 4.0F;     ///< Gap between stacked labels
+constexpr float K_FONT_SCALE = 15.0F;   ///< Base font size in pixels
+constexpr float K_PAD_H = 3.0F;         ///< Horizontal padding
+constexpr float K_PAD_V = 1.5F;         ///< Vertical padding
+constexpr float K_POINTER_HEIGHT = 4.0F; ///< Pointer triangle height
+constexpr float K_POINTER_HALF_W = 3.0F; ///< Pointer triangle half-width
+constexpr float K_STACK_GAP = 3.0F;     ///< Gap between stacked labels
 constexpr float K_MIN_PX = 12.0F;       ///< Minimum label pixel size
 constexpr float K_MAX_PX = 48.0F;       ///< Maximum label pixel size
 
@@ -97,7 +94,7 @@ bool LabelPass::onInitialize() {
     glBindVertexArray(m_vao);
     glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
 
-    // Layout: pos(2f) + texCoord(2f) + color(4f) + isMsdf(1f) + occlusionAlpha(1f) = 10 floats
+    // Layout: pos(2f) + texCoord(2f) + color(4f) + isMsdf(1f) = 9 floats
     constexpr GLsizei stride = static_cast<GLsizei>(sizeof(LabelVertex));
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, stride, nullptr);
@@ -110,9 +107,6 @@ bool LabelPass::onInitialize() {
     glEnableVertexAttribArray(3);
     glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, stride,
                           reinterpret_cast<const void*>(8 * sizeof(float)));
-    glEnableVertexAttribArray(4);
-    glVertexAttribPointer(4, 1, GL_FLOAT, GL_FALSE, stride,
-                          reinterpret_cast<const void*>(9 * sizeof(float)));
 
     glBindVertexArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -161,7 +155,8 @@ void LabelPass::buildLabelGeometry(const FrameState& state) {
             }
         }
 
-        float text_height = m_fontAtlas->lineHeight() * K_FONT_SCALE;
+        float text_height =
+            (m_fontAtlas->ascender() - m_fontAtlas->descender()) * K_FONT_SCALE;
         float bg_w = text_width + 2.0F * K_PAD_H;
         float bg_h = text_height + 2.0F * K_PAD_V;
 
@@ -173,8 +168,6 @@ void LabelPass::buildLabelGeometry(const FrameState& state) {
         float label_cx = screen_x;
         float label_cy = screen_y + K_POINTER_HEIGHT + bg_h * 0.5F + stack_offset;
 
-        float occlusion_alpha = label.occluded ? Core::K_LABEL_OCCLUDED_ALPHA : 1.0F;
-
         // -- Background rectangle (two triangles) --
         float bg_left = label_cx - bg_w * 0.5F;
         float bg_right = label_cx + bg_w * 0.5F;
@@ -183,8 +176,7 @@ void LabelPass::buildLabelGeometry(const FrameState& state) {
 
         auto bg = label.bgColor;
         auto push_bg = [&](float x, float y) {
-            m_vertices.push_back(
-                {{x, y}, {0.0F, 0.0F}, {bg.r, bg.g, bg.b, bg.a}, 0.0F, occlusion_alpha});
+            m_vertices.push_back({{x, y}, {0.0F, 0.0F}, {bg.r, bg.g, bg.b, bg.a}, 0.0F});
         };
         // Triangle 1
         push_bg(bg_left, bg_bottom);
@@ -204,8 +196,11 @@ void LabelPass::buildLabelGeometry(const FrameState& state) {
 
         // -- Glyph quads --
         float cursor_x = bg_left + K_PAD_H;
-        float baseline_y = label_cy - text_height * 0.5F +
-                           m_fontAtlas->ascender() * K_FONT_SCALE;
+        // Center text vertically: place baseline so ascender+descender span
+        // is centered in the background box.
+        float baseline_y = label_cy -
+                           (m_fontAtlas->ascender() + m_fontAtlas->descender()) * 0.5F *
+                               K_FONT_SCALE;
 
         auto atlas_w = static_cast<float>(m_fontAtlas->atlasSize().x);
         auto atlas_h = static_cast<float>(m_fontAtlas->atlasSize().y);
@@ -223,11 +218,11 @@ void LabelPass::buildLabelGeometry(const FrameState& state) {
                 continue;
             }
 
-            // Glyph screen-space quad
+            // Glyph screen-space quad (screen Y increases upward, same as planeBounds)
             float gx0 = cursor_x + gm->planeBounds[0] * K_FONT_SCALE;
-            float gy0 = baseline_y - gm->planeBounds[3] * K_FONT_SCALE; // top
+            float gy0 = baseline_y + gm->planeBounds[3] * K_FONT_SCALE; // top
             float gx1 = cursor_x + gm->planeBounds[2] * K_FONT_SCALE;
-            float gy1 = baseline_y - gm->planeBounds[1] * K_FONT_SCALE; // bottom
+            float gy1 = baseline_y + gm->planeBounds[1] * K_FONT_SCALE; // bottom
 
             // Atlas UVs (normalized)
             float u0 = gm->atlasBounds[0] / atlas_w;
@@ -237,7 +232,7 @@ void LabelPass::buildLabelGeometry(const FrameState& state) {
 
             auto push_glyph = [&](float x, float y, float u, float v) {
                 m_vertices.push_back(
-                    {{x, y}, {u, v}, {tc.r, tc.g, tc.b, tc.a}, 1.0F, occlusion_alpha});
+                    {{x, y}, {u, v}, {tc.r, tc.g, tc.b, tc.a}, 1.0F});
             };
             // Triangle 1
             push_glyph(gx0, gy0, u0, v1);
@@ -273,9 +268,8 @@ void LabelPass::render(const FrameState& state, const GpuBufferManager& /*buffer
                  m_vertices.data(), GL_DYNAMIC_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-    // Set GL state: depth read, no write, alpha blending
-    glEnable(GL_DEPTH_TEST);
-    glDepthMask(GL_FALSE);
+    // Set GL state: no depth test (labels always on top), alpha blending
+    glDisable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -299,7 +293,7 @@ void LabelPass::render(const FrameState& state, const GpuBufferManager& /*buffer
     glUseProgram(0);
 
     // Restore GL state
-    glDepthMask(GL_TRUE);
+    glEnable(GL_DEPTH_TEST);
     glDisable(GL_BLEND);
 }
 

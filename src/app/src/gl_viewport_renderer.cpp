@@ -206,23 +206,13 @@ void GLViewportRenderer::synchronize(QQuickFramebufferObject* item) {
                 float sy = (ndc.y * 0.5F + 0.5F) * vp_h;
                 screen_positions.emplace_back(sx, sy);
 
-                // Depth-based occlusion via previous frame's depth buffer
-                int px = std::clamp(static_cast<int>(sx), 0,
-                                    std::max(m_frameState.viewportWidth - 1, 0));
-                int py = std::clamp(static_cast<int>(sy), 0,
-                                    std::max(m_frameState.viewportHeight - 1, 0));
-                float stored_depth = 1.0F;
-                glReadPixels(px, py, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &stored_depth);
-                float anchor_depth = ndc.z * 0.5F + 0.5F;
-                bool occluded = (anchor_depth > stored_depth + 0.001F);
-
                 Render::ResolvedLabel rl;
                 rl.anchorWorld = anchor;
                 rl.text = lbl.text;
                 rl.textColor = lbl.textColor;
                 rl.bgColor = lbl.bgColor;
                 rl.entityType = lbl.entity.entityType;
-                rl.occluded = occluded;
+                rl.occluded = false;
                 rl.stackIndex = 0;
                 resolved.push_back(std::move(rl));
             }

@@ -70,6 +70,7 @@ bool FontAtlas::loadTexture(const std::string& png_path) {
     int width = 0;
     int height = 0;
     int channels = 0;
+    stbi_set_flip_vertically_on_load(1);
     auto* data = stbi_load(png_path.c_str(), &width, &height, &channels, 3);
     if(data == nullptr) {
         return false;
