@@ -9,6 +9,7 @@
 #include <opengeolab/core/module.hpp>
 #include <opengeolab/geometry/geometry_module.hpp>
 #include <opengeolab/io/io_module.hpp>
+#include <opengeolab/mesh/mesh_module.hpp>
 #include <opengeolab/scene/scene_module.hpp>
 
 #include <kangaroo/util/plugin_component_factory.hpp>
@@ -39,6 +40,11 @@ void registerBuiltinModules(Kangaroo::Util::PluginComponentFactory& factory) {
         factory.bindSingleton<Core::ModuleBase, Scene::SceneModule>(Scene::SceneModule::MODULE_NAME,
                                                                     std::ref(factory));
         LOG_INFO("Registered module '{}'", Scene::SceneModule::MODULE_NAME);
+    }
+    if(!is_registered(Mesh::MeshModule::MODULE_NAME)) {
+        factory.bindSingleton<Core::ModuleBase, Mesh::MeshModule>(Mesh::MeshModule::MODULE_NAME,
+                                                                  std::ref(factory));
+        LOG_INFO("Registered module '{}'", Mesh::MeshModule::MODULE_NAME);
     }
 }
 

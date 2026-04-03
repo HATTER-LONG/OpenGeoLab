@@ -107,11 +107,12 @@ TEST_CASE("CommandDispatcher listModules returns registered modules") {
 
     const CommandDispatcher dispatcher(factory);
     auto modules = dispatcher.listModules();
-    REQUIRE(modules.size() == 3);
+    REQUIRE(modules.size() == 4);
 
     bool found_io = false;
     bool found_geometry = false;
     bool found_scene = false;
+    bool found_mesh = false;
     for(const auto& m : modules) {
         if(m.m_moduleName == "io") {
             found_io = true;
@@ -122,10 +123,14 @@ TEST_CASE("CommandDispatcher listModules returns registered modules") {
         if(m.m_moduleName == "scene") {
             found_scene = true;
         }
+        if(m.m_moduleName == "mesh") {
+            found_mesh = true;
+        }
     }
     CHECK(found_io);
     CHECK(found_geometry);
     CHECK(found_scene);
+    CHECK(found_mesh);
 }
 
 TEST_CASE("CommandDispatcher describe returns full system description") { // NOLINT
@@ -147,7 +152,7 @@ TEST_CASE("CommandDispatcher describe returns full system description") { // NOL
     REQUIRE(desc.contains("modules"));
     auto& modules = desc["modules"];
     REQUIRE(modules.is_array());
-    REQUIRE(modules.size() == 3);
+    REQUIRE(modules.size() == 4);
     const nlohmann::json* io_mod_ptr = nullptr;
     for(const auto& mod : modules) {
         if(mod["name"] == "io") {
@@ -205,7 +210,7 @@ TEST_CASE("registerBuiltinModules is idempotent on same factory") {
     CHECK_NOTHROW(registerBuiltinModules(factory));
     // Module count unchanged
     const CommandDispatcher dispatcher(factory);
-    CHECK(dispatcher.listModules().size() == 3);
+    CHECK(dispatcher.listModules().size() == 4);
 }
 
 TEST_CASE("CommandDispatcher findModule returns shared_ptr for registered module") {
@@ -218,6 +223,9 @@ TEST_CASE("CommandDispatcher findModule returns shared_ptr for registered module
 
     auto geo_module = dispatcher.findModule("geometry");
     CHECK(geo_module != nullptr);
+
+    auto mesh_module = dispatcher.findModule("mesh");
+    CHECK(mesh_module != nullptr);
 }
 
 TEST_CASE("CommandDispatcher findModule returns nullptr for unknown module") {

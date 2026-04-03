@@ -16,6 +16,7 @@
 #include <opengeolab/command/module_registry.hpp>
 #include <opengeolab/core/logger.hpp>
 #include <opengeolab/geometry/geometry_module.hpp>
+#include <opengeolab/mesh/mesh_module.hpp>
 #include <opengeolab/python_embed/embedded_python_runtime.hpp>
 #include <opengeolab/scene/scene_module.hpp>
 
@@ -77,12 +78,17 @@ int main(int argc, char* argv[]) {
     (void)dispatcher.findModule("io");
     auto geo_ptr = dispatcher.findModule("geometry");
     auto scene_ptr = dispatcher.findModule("scene");
+    auto mesh_ptr = dispatcher.findModule("mesh");
 
     auto* geo_module = dynamic_cast<OpenGeoLab::Geometry::GeometryModule*>(geo_ptr.get());
     auto* scene_module = dynamic_cast<OpenGeoLab::Scene::SceneModule*>(scene_ptr.get());
+    auto* mesh_module = dynamic_cast<OpenGeoLab::Mesh::MeshModule*>(mesh_ptr.get());
 
     if(geo_module != nullptr && scene_module != nullptr) {
         scene_module->initBridge(geo_module->shapeStore());
+    }
+    if(mesh_module != nullptr && scene_module != nullptr && geo_module != nullptr) {
+        mesh_module->initBridge(scene_module->sceneGraph(), geo_module->shapeStore());
     }
 
     OpenGeoLab::PythonEmbed::EmbeddedPythonRuntime python_runtime(app_dir, runtime_dir, plugin_dir);
