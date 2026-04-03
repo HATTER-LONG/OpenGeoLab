@@ -41,6 +41,7 @@ public:
 
 private:
     MeshStore m_meshStore;
+    Geometry::ShapeStore* m_shapeStore{nullptr};
     std::unique_ptr<MeshSceneBridge> m_bridge;
 };
 
