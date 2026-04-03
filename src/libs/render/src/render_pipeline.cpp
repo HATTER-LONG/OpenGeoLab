@@ -230,6 +230,11 @@ glm::vec3 RenderPipeline::resolveEntityAnchor(uint32_t shape_id,
         positions.insert(positions.end(), vertices.begin(), vertices.end());
     }
 
+    // Edges/wires: use midpoint vertex so the anchor sits ON the curve
+    // (centroid of a circular edge would be at the circle's center).
+    if(entity_type == Core::EntityType::GeoEdge || entity_type == Core::EntityType::GeoWire) {
+        return computeAnchorMidpoint(positions);
+    }
     return computeAnchorFromVertices(positions);
 }
 

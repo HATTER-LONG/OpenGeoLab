@@ -21,6 +21,13 @@ glm::vec3 computeAnchorFromVertices(std::span<const glm::vec3> positions) {
     return sum / static_cast<float>(positions.size());
 }
 
+glm::vec3 computeAnchorMidpoint(std::span<const glm::vec3> positions) {
+    if(positions.empty()) {
+        return glm::vec3{0.0F};
+    }
+    return positions[positions.size() / 2];
+}
+
 std::vector<uint32_t>
 computeStackIndices(std::span<const glm::vec2> screen_positions, float tolerance) {
     const auto count = screen_positions.size();

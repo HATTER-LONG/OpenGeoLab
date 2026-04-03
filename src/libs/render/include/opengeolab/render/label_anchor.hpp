@@ -21,6 +21,13 @@ namespace OpenGeoLab::Render {
 [[nodiscard]] OPENGEOLAB_RENDER_EXPORT glm::vec3
 computeAnchorFromVertices(std::span<const glm::vec3> positions);
 
+/// Pick the midpoint vertex from a polyline (for edges/wires).
+/// For curves like circles, this returns a point ON the curve instead of the
+/// geometric centroid which may be off-surface.
+/// Returns origin if positions is empty.
+[[nodiscard]] OPENGEOLAB_RENDER_EXPORT glm::vec3
+computeAnchorMidpoint(std::span<const glm::vec3> positions);
+
 /// Assign stack indices for overlapping labels.
 /// Labels whose screen positions are within @p tolerance pixels of each other
 /// are grouped and assigned sequential stackIndex values (0, 1, 2, ...).

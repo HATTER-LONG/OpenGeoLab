@@ -8,6 +8,7 @@
 #include <opengeolab/render/label_anchor.hpp>
 
 using OpenGeoLab::Render::computeAnchorFromVertices;
+using OpenGeoLab::Render::computeAnchorMidpoint;
 using OpenGeoLab::Render::computeStackIndices;
 
 TEST_CASE("computeAnchorFromVertices: single vertex returns that vertex") {
@@ -45,6 +46,36 @@ TEST_CASE("computeAnchorFromVertices: empty input returns origin") {
     CHECK(anchor.x == doctest::Approx(0.0F));
     CHECK(anchor.y == doctest::Approx(0.0F));
     CHECK(anchor.z == doctest::Approx(0.0F));
+}
+
+TEST_CASE("computeAnchorMidpoint: returns middle vertex of polyline") {
+    std::vector<glm::vec3> positions = {
+        {0.0F, 0.0F, 0.0F},
+        {1.0F, 0.0F, 0.0F},
+        {2.0F, 0.0F, 0.0F},
+        {3.0F, 0.0F, 0.0F},
+        {4.0F, 0.0F, 0.0F},
+    };
+    auto anchor = computeAnchorMidpoint(positions);
+    CHECK(anchor.x == doctest::Approx(2.0F));
+    CHECK(anchor.y == doctest::Approx(0.0F));
+    CHECK(anchor.z == doctest::Approx(0.0F));
+}
+
+TEST_CASE("computeAnchorMidpoint: empty input returns origin") {
+    std::vector<glm::vec3> positions;
+    auto anchor = computeAnchorMidpoint(positions);
+    CHECK(anchor.x == doctest::Approx(0.0F));
+    CHECK(anchor.y == doctest::Approx(0.0F));
+    CHECK(anchor.z == doctest::Approx(0.0F));
+}
+
+TEST_CASE("computeAnchorMidpoint: single vertex returns that vertex") {
+    std::vector<glm::vec3> positions = {{5.0F, 3.0F, 1.0F}};
+    auto anchor = computeAnchorMidpoint(positions);
+    CHECK(anchor.x == doctest::Approx(5.0F));
+    CHECK(anchor.y == doctest::Approx(3.0F));
+    CHECK(anchor.z == doctest::Approx(1.0F));
 }
 
 TEST_CASE("computeStackIndices: non-overlapping labels get stackIndex 0") {
