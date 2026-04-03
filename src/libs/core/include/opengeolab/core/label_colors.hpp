@@ -12,6 +12,7 @@
 
 #include <glm/vec4.hpp>
 
+#include <string>
 #include <string_view>
 
 namespace OpenGeoLab::Core {
@@ -64,6 +65,13 @@ inline constexpr std::string_view labelPrefix(EntityType type) noexcept {
     default:
         return "?";
     }
+}
+
+/// Build display text for a label: "[shapeId]Prefix:localId".
+[[nodiscard]] inline std::string
+formatLabelText(uint32_t shape_id, EntityType type, uint32_t local_id) {
+    return "[" + std::to_string(shape_id) + "]" + std::string(labelPrefix(type)) + ":" +
+           std::to_string(local_id);
 }
 
 /// Default label background color (dark semi-transparent).

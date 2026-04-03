@@ -144,3 +144,57 @@ TEST_SUITE("SceneGraph::labelManager") {
         CHECK(graph.labelManager().labels().size() == 1);
     }
 }
+
+TEST_SUITE("LabelManager visibility") {
+    TEST_CASE("initially not visible") {
+        const LabelManager mgr;
+        CHECK_FALSE(mgr.isVisible());
+    }
+
+    TEST_CASE("setVisible toggles state") {
+        LabelManager mgr;
+        mgr.setVisible(true);
+        CHECK(mgr.isVisible());
+        mgr.setVisible(false);
+        CHECK_FALSE(mgr.isVisible());
+    }
+
+    TEST_CASE("setVisible emits signal on change") {
+        LabelManager mgr;
+        int count = 0;
+        auto conn = mgr.visibleChanged.connect([&]() { ++count; });
+        mgr.setVisible(true);
+        CHECK(count == 1);
+        mgr.setVisible(true);
+        CHECK(count == 1);
+        mgr.setVisible(false);
+        CHECK(count == 2);
+    }
+}
+
+TEST_SUITE("LabelManager autoLabel") {
+    TEST_CASE("initially autoLabel disabled") {
+        const LabelManager mgr;
+        CHECK_FALSE(mgr.autoLabel());
+    }
+
+    TEST_CASE("setAutoLabel toggles state") {
+        LabelManager mgr;
+        mgr.setAutoLabel(true);
+        CHECK(mgr.autoLabel());
+        mgr.setAutoLabel(false);
+        CHECK_FALSE(mgr.autoLabel());
+    }
+
+    TEST_CASE("setAutoLabel emits signal on change") {
+        LabelManager mgr;
+        int count = 0;
+        auto conn = mgr.autoLabelChanged.connect([&]() { ++count; });
+        mgr.setAutoLabel(true);
+        CHECK(count == 1);
+        mgr.setAutoLabel(true);
+        CHECK(count == 1);
+        mgr.setAutoLabel(false);
+        CHECK(count == 2);
+    }
+}

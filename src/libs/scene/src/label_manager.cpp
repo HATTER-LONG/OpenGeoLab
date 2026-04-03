@@ -71,4 +71,24 @@ uint64_t LabelManager::version() const noexcept {
     return m_version.load(std::memory_order_acquire);
 }
 
+void LabelManager::setVisible(bool visible) {
+    if(m_visible.load(std::memory_order_acquire) != visible) {
+        m_visible.store(visible, std::memory_order_release);
+        visibleChanged.emit();
+    }
+}
+
+bool LabelManager::isVisible() const noexcept { return m_visible.load(std::memory_order_acquire); }
+
+void LabelManager::setAutoLabel(bool enabled) {
+    if(m_autoLabel.load(std::memory_order_acquire) != enabled) {
+        m_autoLabel.store(enabled, std::memory_order_release);
+        autoLabelChanged.emit();
+    }
+}
+
+bool LabelManager::autoLabel() const noexcept {
+    return m_autoLabel.load(std::memory_order_acquire);
+}
+
 } // namespace OpenGeoLab::Scene

@@ -56,12 +56,28 @@ public:
     /// Version incremented whenever label contents change.
     [[nodiscard]] uint64_t version() const noexcept;
 
-    Kangaroo::Util::Signal<> labelsChanged; ///< Emitted after label storage changes.
+    Kangaroo::Util::Signal<> labelsChanged;    ///< Emitted after label storage changes.
+    Kangaroo::Util::Signal<> visibleChanged;   ///< Emitted when visibility changes.
+    Kangaroo::Util::Signal<> autoLabelChanged; ///< Emitted when auto-label changes.
+
+    /// Set whether labels should be rendered. Default: false.
+    void setVisible(bool visible);
+
+    /// Whether labels should be rendered.
+    [[nodiscard]] bool isVisible() const noexcept;
+
+    /// Set whether auto-label on selection is enabled. Default: false.
+    void setAutoLabel(bool enabled);
+
+    /// Whether auto-label on selection is enabled.
+    [[nodiscard]] bool autoLabel() const noexcept;
 
 private:
     mutable std::shared_mutex m_mutex;
     std::vector<Label3D> m_labels;
     std::atomic<uint64_t> m_version{0};
+    std::atomic<bool> m_visible{false};
+    std::atomic<bool> m_autoLabel{false};
 };
 
 } // namespace OpenGeoLab::Scene
