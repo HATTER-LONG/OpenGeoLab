@@ -1,6 +1,8 @@
 set(scene_public_headers
+    include/opengeolab/scene/add_label_action.hpp
     include/opengeolab/scene/bounding_box3d.hpp
     include/opengeolab/scene/camera_state.hpp
+    include/opengeolab/scene/clear_labels_action.hpp
     include/opengeolab/scene/clear_selection_action.hpp
     include/opengeolab/scene/describe_labels_action.hpp
     include/opengeolab/scene/deselect_action.hpp
@@ -22,26 +24,34 @@ set(scene_public_headers
     include/opengeolab/scene/list_nodes_action.hpp
     include/opengeolab/scene/new_model_action.hpp
     include/opengeolab/scene/set_visibility_action.hpp
+    include/opengeolab/scene/remove_label_action.hpp
+    include/opengeolab/scene/set_auto_label_action.hpp
     include/opengeolab/scene/view_preset.hpp
     include/opengeolab/scene/viewport_state.hpp
     include/opengeolab/scene/fit_to_scene_action.hpp
     include/opengeolab/scene/pick_area_action.hpp
     include/opengeolab/scene/set_camera_action.hpp
+    include/opengeolab/scene/set_labels_visible_action.hpp
     include/opengeolab/scene/set_view_preset_action.hpp
     include/opengeolab/scene/topology_index.hpp)
 
 set(scene_sources
+    src/add_label_action.cpp
     src/bounding_box3d.cpp
     src/camera_state.cpp
+    src/clear_labels_action.cpp
     src/clear_selection_action.cpp
     src/describe_labels_action.cpp
     src/deselect_action.cpp
     src/geometry_scene_bridge.cpp
     src/label_manager.cpp
     src/query_selection_action.cpp
+    src/remove_label_action.cpp
     src/select_action.cpp
     src/selection_state.cpp
+    src/set_auto_label_action.cpp
     src/set_hover_action.cpp
+    src/set_labels_visible_action.cpp
     src/set_pick_mode_action.cpp
     src/scene_graph.cpp
     src/scene_module.cpp
@@ -85,6 +95,7 @@ if (OPENGEOLAB_BUILD_TESTS)
         test/selection_actions_test.cpp
         test/camera_state_test.cpp
         test/describe_labels_action_test.cpp
+        test/label_actions_test.cpp
         test/viewport_state_test.cpp
         test/viewport_actions_test.cpp
         LINKS
