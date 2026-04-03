@@ -78,7 +78,7 @@ FunctionPageBase {
 
         width: parent.width
         theme: root.theme
-        mask: 11
+        mask: 448
         exclusiveMasks: []
         typeModel: [
             { label: qsTr("Node"), icon: "entityVertex", mask: typeSelector.maskMeshNode },

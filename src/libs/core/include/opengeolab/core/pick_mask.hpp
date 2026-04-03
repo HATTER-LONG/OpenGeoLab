@@ -26,6 +26,9 @@ enum class PickMask : uint32_t {
     Face = 1 << 3,
     Solid = 1 << 4,
     Part = 1 << 5,
+    MeshNode = 1 << 6,
+    MeshEdge = 1 << 7,
+    MeshElement = 1 << 8,
     All = 0xFFFFFFFF,
 };
 
@@ -41,18 +44,21 @@ constexpr PickMask operator&(PickMask a, PickMask b) {
 constexpr PickMask maskForEntityType(EntityType type) noexcept {
     switch(type) {
     case EntityType::GeoVertex:
-    case EntityType::MeshNode:
         return PickMask::Vertex;
     case EntityType::GeoEdge:
-    case EntityType::MeshEdge:
         return PickMask::Edge;
     case EntityType::GeoWire:
         return PickMask::Wire;
     case EntityType::GeoFace:
-    case EntityType::MeshElement:
         return PickMask::Face;
     case EntityType::GeoSolid:
         return PickMask::Solid;
+    case EntityType::MeshNode:
+        return PickMask::MeshNode;
+    case EntityType::MeshEdge:
+        return PickMask::MeshEdge;
+    case EntityType::MeshElement:
+        return PickMask::MeshElement;
     default:
         return PickMask::None;
     }

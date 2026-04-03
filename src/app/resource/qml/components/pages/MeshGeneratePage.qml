@@ -72,7 +72,7 @@ FunctionPageBase {
         root.pageVisible = true;
         root.forceActiveFocus();
         sceneCommand("set_pick_mode", {
-            pickMask: 24,
+            pickMask: geoTypeSelector.mask,
             enabled: true
         });
     }
@@ -150,6 +150,23 @@ FunctionPageBase {
         text: qsTr("Target Geometry")
         color: root.theme.textSecondary
         font.pixelSize: 12
+    }
+
+    EntityTypeSelector {
+        id: geoTypeSelector
+
+        width: parent.width
+        theme: root.theme
+        mask: geoTypeSelector.maskFace
+        exclusiveMasks: [geoTypeSelector.maskFace, geoTypeSelector.maskSolid]
+        typeModel: [
+            { label: qsTr("Face"),  icon: "entityFace",  mask: geoTypeSelector.maskFace },
+            { label: qsTr("Solid"), icon: "entitySolid", mask: geoTypeSelector.maskSolid }
+        ]
+
+        onMaskChanged: {
+            sceneCommand("set_pick_mode", { pickMask: geoTypeSelector.mask });
+        }
     }
 
     Rectangle {
@@ -406,11 +423,13 @@ FunctionPageBase {
 
         Rectangle {
             width: parent.width
-            height: algorithmSummary.implicitHeight + 16
+            height: algorithmInfoCol.implicitHeight + 16
             radius: root.theme.radiusSmall
             color: root.theme.surfaceMuted
 
             Column {
+                id: algorithmInfoCol
+
                 anchors.fill: parent
                 anchors.margins: 8
                 spacing: 4

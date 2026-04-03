@@ -1,5 +1,6 @@
 #include "mesh_render_builder.hpp"
 
+#include <opengeolab/core/color_map.hpp>
 #include <opengeolab/core/entity_tag.hpp>
 #include <opengeolab/scene/pick_id.hpp>
 
@@ -18,7 +19,10 @@ namespace OpenGeoLab::Mesh {
 
 namespace {
 
-constexpr std::array<float, 4> K_MESH_COLOR = {0.75F, 0.78F, 0.82F, 1.0F};
+constexpr float K_DARKEN_FACTOR = 0.70F;
+constexpr float K_NORMAL_OFFSET = 0.0005F;
+constexpr std::array<float, 4> K_EDGE_COLOR = {0.10F, 0.10F, 0.10F, 1.0F};
+constexpr std::array<float, 4> K_NODE_COLOR = {0.15F, 0.75F, 0.30F, 1.0F};
 
 using TriangleCorners = std::array<uint8_t, 3>;
 using EdgeCorners = std::array<uint8_t, 2>;
@@ -129,15 +133,21 @@ void appendElementEdges(MeshElementType type, std::vector<EdgeCorners>& edges) {
     }
 }
 
-[[nodiscard]] Scene::RenderVertex makeVertex(const MeshNode& node) {
+[[nodiscard]] std::array<float, 4> elementColorForShape(uint32_t shape_id) {
+    const auto& base = Core::colorForShapeId(shape_id);
+    return {base.r * K_DARKEN_FACTOR, base.g * K_DARKEN_FACTOR, base.b * K_DARKEN_FACTOR, base.a};
+}
+
+[[nodiscard]] Scene::RenderVertex makeVertex(const MeshNode& node,
+                                             const std::array<float, 4>& color) {
     Scene::RenderVertex vertex;
     vertex.position[0] = node.position[0];
     vertex.position[1] = node.position[1];
     vertex.position[2] = node.position[2];
-    vertex.color[0] = K_MESH_COLOR[0];
-    vertex.color[1] = K_MESH_COLOR[1];
-    vertex.color[2] = K_MESH_COLOR[2];
-    vertex.color[3] = K_MESH_COLOR[3];
+    vertex.color[0] = color[0];
+    vertex.color[1] = color[1];
+    vertex.color[2] = color[2];
+    vertex.color[3] = color[3];
     return vertex;
 }
 
@@ -172,10 +182,48 @@ Scene::RenderMeshData MeshRenderBuilder::build(uint32_t shape_id, const MeshEntr
         return result;
     }
 
+    const auto element_color = elementColorForShape(shape_id);
+
+    // Pre-pass: compute per-node averaged normals from adjacent elements.
+    std::vector<glm::vec3> node_normals(entry.nodes.size(), glm::vec3{0.0F});
+    {
+        std::vector<uint32_t> tmp_indices;
+        std::vector<TriangleCorners> tmp_triangles;
+        tmp_triangles.reserve(12);
+        for(const auto& element : entry.elements) {
+            if(!collectElementNodeIndices(element, entry.nodes.size(), tmp_indices)) {
+                continue;
+            }
+            tmp_triangles.clear();
+            appendElementTriangles(element.type, tmp_triangles);
+            for(const auto& triangle : tmp_triangles) {
+                const glm::vec3 normal = computeNormal(entry, tmp_indices, triangle);
+                for(const uint8_t corner : triangle) {
+                    node_normals[tmp_indices[corner]] += normal;
+                }
+            }
+        }
+        for(auto& n : node_normals) {
+            const float length = glm::length(n);
+            if(length > 0.0F) {
+                n /= length;
+            }
+        }
+    }
+
+    auto offsetPosition = [&](Scene::RenderVertex& vertex, std::size_t node_idx) {
+        const glm::vec3& n = node_normals[node_idx];
+        vertex.position[0] += n.x * K_NORMAL_OFFSET;
+        vertex.position[1] += n.y * K_NORMAL_OFFSET;
+        vertex.position[2] += n.z * K_NORMAL_OFFSET;
+    };
+
     for(std::size_t node_index = 0; node_index < entry.nodes.size(); ++node_index) {
         const auto& node = entry.nodes[node_index];
         result.bounds.expand(glm::vec3{node.position[0], node.position[1], node.position[2]});
-        result.vertices.push_back(makeVertex(node));
+        auto vertex = makeVertex(node, K_NODE_COLOR);
+        offsetPosition(vertex, node_index);
+        result.vertices.push_back(vertex);
         result.pickIds.push_back({Scene::PickId::encode(shape_id, Core::EntityType::MeshNode,
                                                         static_cast<uint32_t>(node_index) + 1U)});
         result.pointRanges.push_back({
@@ -225,7 +273,11 @@ Scene::RenderMeshData MeshRenderBuilder::build(uint32_t shape_id, const MeshEntr
         for(const auto& triangle : triangles) {
             const glm::vec3 normal = computeNormal(entry, element_node_indices, triangle);
             for(const uint8_t corner : triangle) {
-                auto vertex = makeVertex(entry.nodes[element_node_indices[corner]]);
+                auto vertex = makeVertex(entry.nodes[element_node_indices[corner]], element_color);
+                // Offset along normal to prevent Z-fighting with geometry surface.
+                vertex.position[0] += normal.x * K_NORMAL_OFFSET;
+                vertex.position[1] += normal.y * K_NORMAL_OFFSET;
+                vertex.position[2] += normal.z * K_NORMAL_OFFSET;
                 assignNormal(vertex, normal);
                 result.vertices.push_back(vertex);
                 result.pickIds.push_back({pick_id});
@@ -251,10 +303,14 @@ Scene::RenderMeshData MeshRenderBuilder::build(uint32_t shape_id, const MeshEntr
             Scene::PickId::encode(shape_id, Core::EntityType::MeshEdge, edge_local_id);
         const uint32_t vertex_offset = static_cast<uint32_t>(result.vertices.size());
         const uint32_t index_offset = static_cast<uint32_t>(result.indices.size());
-        result.vertices.push_back(makeVertex(entry.nodes[first]));
+        auto v0 = makeVertex(entry.nodes[first], K_EDGE_COLOR);
+        offsetPosition(v0, first);
+        result.vertices.push_back(v0);
         result.pickIds.push_back({pick_id});
         result.indices.push_back(static_cast<uint32_t>(result.vertices.size() - 1U));
-        result.vertices.push_back(makeVertex(entry.nodes[second]));
+        auto v1 = makeVertex(entry.nodes[second], K_EDGE_COLOR);
+        offsetPosition(v1, second);
+        result.vertices.push_back(v1);
         result.pickIds.push_back({pick_id});
         result.indices.push_back(static_cast<uint32_t>(result.vertices.size() - 1U));
         result.lineRanges.push_back({

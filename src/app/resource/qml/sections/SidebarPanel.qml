@@ -59,13 +59,25 @@ Item {
     }
 
     function toggleMeshVisibility(shapeId) {
-        // Mesh visibility is a local UI concern (no scene graph involvement yet)
+        let newVisible = !root.meshVisible(shapeId)
+
         let map = root.nodeMap
         if (!(shapeId in map)) {
-            map[shapeId] = { visible: true, meshVisible: false }
+            map[shapeId] = { visible: true, meshVisible: newVisible }
+        } else {
+            map[shapeId].meshVisible = newVisible
         }
-        map[shapeId].meshVisible = !map[shapeId].meshVisible
         root.nodeMap = map
+
+        RequestService.submitAsync(JSON.stringify({
+            module: "scene",
+            action: "set_visibility",
+            param: {
+                type: "mesh",
+                nodes: [{ id: shapeId, visible: newVisible }]
+            },
+            mute: true
+        }))
     }
 
     function geoVisible(shapeId) {
@@ -118,11 +130,18 @@ Item {
                     for (let i = 0; i < resp.nodes.length; ++i) {
                         let n = resp.nodes[i]
                         let sid = n.sourceId
-                        map[sid] = {
-                            visible: n.visible,
-                            meshVisible: (sid in oldMap)
-                                         ? oldMap[sid].meshVisible === true
-                                         : false
+                        if (!(sid in map)) {
+                            map[sid] = {
+                                visible: true,
+                                meshVisible: (sid in oldMap)
+                                             ? oldMap[sid].meshVisible === true
+                                             : false
+                            }
+                        }
+                        if (n.sourceType === "geometry") {
+                            map[sid].visible = n.visible
+                        } else if (n.sourceType === "mesh") {
+                            map[sid].meshVisible = n.visible
                         }
                     }
                     root.nodeMap = map

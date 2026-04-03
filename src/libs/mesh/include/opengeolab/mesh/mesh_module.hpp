@@ -27,6 +27,12 @@ namespace OpenGeoLab::Mesh {
 
 class MeshSceneBridge;
 
+/**
+ * @brief Mesh generation and query module.
+ *
+ * Owns a MeshStore and registers generate_mesh, clear_mesh, query_mesh_info
+ * actions.  Call initBridge() after construction to wire scene synchronisation.
+ */
 class OPENGEOLAB_MESH_EXPORT MeshModule final : public Core::ModuleBase {
 public:
     explicit MeshModule(Kangaroo::Util::PluginComponentFactory& factory);

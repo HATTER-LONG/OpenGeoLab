@@ -99,6 +99,8 @@ qt_add_qml_module(
     resource/qml/components/pages/CreateTorusPage.qml
     resource/qml/components/pages/ImportModelPage.qml
     resource/qml/components/pages/GeoQueryPage.qml
+    resource/qml/components/pages/MeshGeneratePage.qml
+    resource/qml/components/pages/MeshQueryPage.qml
     RESOURCES
     resource/icons/menu.svg
     resource/icons/box.svg

@@ -40,9 +40,9 @@ Item {
     readonly property int maskEdge: 2     // 1 << 1
     readonly property int maskFace: 8     // 1 << 3
     readonly property int maskSolid: 16   // 1 << 4
-    readonly property int maskMeshNode: 1      // MeshNode maps to PickMask::Vertex (1 << 0)
-    readonly property int maskMeshEdge: 2      // MeshEdge maps to PickMask::Edge (1 << 1)
-    readonly property int maskMeshElement: 8   // MeshElement maps to PickMask::Face (1 << 3)
+    readonly property int maskMeshNode: 64      // 1 << 6
+    readonly property int maskMeshEdge: 128     // 1 << 7
+    readonly property int maskMeshElement: 256  // 1 << 8
 
     RowLayout {
         id: row

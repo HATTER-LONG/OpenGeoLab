@@ -16,6 +16,12 @@ namespace OpenGeoLab::Mesh {
 
 class MeshStore;
 
+/**
+ * @brief Generate 2D or 3D mesh for OCC faces or solids via the gmsh C API.
+ *
+ * Param: {"shapeId": <uint32>, "entityType": "GeoFace"|"GeoSolid",
+ *         "localId": <uint32>, "meshSize": <float>, "algorithm": <int>}
+ */
 class OPENGEOLAB_MESH_EXPORT GenerateMeshAction final : public Core::IAction {
 public:
     GenerateMeshAction(MeshStore& mesh_store, Geometry::ShapeStore& shape_store);

@@ -12,6 +12,7 @@ namespace OpenGeoLab::Mesh {
 
 class MeshStore;
 
+/** @brief Remove mesh data for one or all shapes from MeshStore. */
 class OPENGEOLAB_MESH_EXPORT ClearMeshAction final : public Core::IAction {
 public:
     explicit ClearMeshAction(MeshStore& mesh_store);

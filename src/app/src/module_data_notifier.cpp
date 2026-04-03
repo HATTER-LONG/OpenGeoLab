@@ -38,6 +38,8 @@ ModuleDataNotifier::ModuleDataNotifier(Command::CommandDispatcher& dispatcher, Q
 
     auto mesh_handle =
         dispatcher.onModuleDataChanged("mesh", [this](Core::ModuleDataEvent /*event*/) {
+            QMetaObject::invokeMethod(this, &ModuleDataNotifier::sceneDataChanged,
+                                      Qt::QueuedConnection);
             QMetaObject::invokeMethod(this, &ModuleDataNotifier::viewportRefreshNeeded,
                                       Qt::QueuedConnection);
         });

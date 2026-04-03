@@ -12,6 +12,7 @@ namespace OpenGeoLab::Mesh {
 
 class MeshStore;
 
+/** @brief Query node/element counts and per-shape summaries from MeshStore. */
 class OPENGEOLAB_MESH_EXPORT QueryMeshInfoAction final : public Core::IAction {
 public:
     explicit QueryMeshInfoAction(const MeshStore& mesh_store);

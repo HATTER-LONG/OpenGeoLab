@@ -14,29 +14,8 @@
 
 namespace OpenGeoLab::Scene {
 
-namespace {
-
-std::optional<Core::EntityType> parseEntityType(const std::string& type_name) {
-    if(type_name == "GeoVertex") {
-        return Core::EntityType::GeoVertex;
-    }
-    if(type_name == "GeoEdge") {
-        return Core::EntityType::GeoEdge;
-    }
-    if(type_name == "GeoWire") {
-        return Core::EntityType::GeoWire;
-    }
-    if(type_name == "GeoFace") {
-        return Core::EntityType::GeoFace;
-    }
-    if(type_name == "GeoSolid") {
-        return Core::EntityType::GeoSolid;
-    }
-    return std::nullopt;
-}
-
-Core::EntityRef parseEntityRef(const nlohmann::json& entity_json) {
-    const auto entity_type = parseEntityType(entity_json.value("type", std::string{}));
+static Core::EntityRef parseEntityRef(const nlohmann::json& entity_json) {
+    const auto entity_type = Core::parseEntityType(entity_json.value("type", std::string{}));
     if(!entity_type.has_value()) {
         return {};
     }
@@ -46,8 +25,6 @@ Core::EntityRef parseEntityRef(const nlohmann::json& entity_json) {
         entity_json.value("localId", static_cast<uint32_t>(0)),
     };
 }
-
-} // namespace
 
 DeselectAction::DeselectAction(SelectionState& state) : m_state(state) {}
 DeselectAction::~DeselectAction() = default;

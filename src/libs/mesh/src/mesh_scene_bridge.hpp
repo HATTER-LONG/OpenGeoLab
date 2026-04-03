@@ -17,6 +17,12 @@
 
 namespace OpenGeoLab::Mesh {
 
+/**
+ * @brief Syncs MeshStore add/remove/clear events into SceneGraph render nodes.
+ *
+ * Connects to MeshStore signals; builds render data via MeshRenderBuilder and
+ * inserts/removes SceneGraph nodes accordingly.
+ */
 class OPENGEOLAB_MESH_EXPORT MeshSceneBridge {
 public:
     MeshSceneBridge(Scene::SceneGraph& scene, MeshStore& store);

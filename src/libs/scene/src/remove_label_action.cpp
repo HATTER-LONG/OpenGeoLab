@@ -14,29 +14,6 @@
 
 namespace OpenGeoLab::Scene {
 
-namespace {
-
-std::optional<Core::EntityType> parseEntityType(const std::string& type_name) {
-    if(type_name == "GeoVertex") {
-        return Core::EntityType::GeoVertex;
-    }
-    if(type_name == "GeoEdge") {
-        return Core::EntityType::GeoEdge;
-    }
-    if(type_name == "GeoWire") {
-        return Core::EntityType::GeoWire;
-    }
-    if(type_name == "GeoFace") {
-        return Core::EntityType::GeoFace;
-    }
-    if(type_name == "GeoSolid") {
-        return Core::EntityType::GeoSolid;
-    }
-    return std::nullopt;
-}
-
-} // namespace
-
 RemoveLabelAction::RemoveLabelAction(LabelManager& manager) : m_manager(manager) {}
 RemoveLabelAction::~RemoveLabelAction() = default;
 
@@ -63,7 +40,7 @@ nlohmann::json RemoveLabelAction::describe() const {
 
 nlohmann::json RemoveLabelAction::execute(const nlohmann::json& param,
                                           const Core::ProgressCallback& progress) {
-    const auto entity_type = parseEntityType(param.value("entityType", std::string{}));
+    const auto entity_type = Core::parseEntityType(param.value("entityType", std::string{}));
     if(!entity_type.has_value()) {
         return {{"ok", false},
                 {"action", ACTION_NAME},

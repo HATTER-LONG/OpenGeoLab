@@ -2,6 +2,7 @@
 
 #include "core/gpu_buffer_manager.hpp"
 
+#include <opengeolab/core/entity_tag.hpp>
 #include <opengeolab/render/batch_utils.hpp>
 #include <opengeolab/scene/display_mode.hpp>
 
@@ -91,9 +92,20 @@ void OpaquePass::render(const FrameState& state, const GpuBufferManager& buffers
 
     buffers.bindMainVao();
 
-    const auto batch = BatchUtils::buildIndexedBatch(buffers.triangleRanges(),
-                                                     [](const Scene::DrawRange&) { return true; });
-    BatchUtils::multiDrawElements(GL_TRIANGLES, batch);
+    // Draw geometry triangles with larger depth offset (pushed back).
+    const auto geo_batch =
+        BatchUtils::buildIndexedBatch(buffers.triangleRanges(), [](const Scene::DrawRange& r) {
+            return r.entityType != Core::EntityType::MeshElement;
+        });
+    BatchUtils::multiDrawElements(GL_TRIANGLES, geo_batch);
+
+    // Draw mesh triangles with smaller depth offset (in front of geometry).
+    glPolygonOffset(1.0F, 4.0F);
+    const auto mesh_batch =
+        BatchUtils::buildIndexedBatch(buffers.triangleRanges(), [](const Scene::DrawRange& r) {
+            return r.entityType == Core::EntityType::MeshElement;
+        });
+    BatchUtils::multiDrawElements(GL_TRIANGLES, mesh_batch);
 
     buffers.unbind();
 

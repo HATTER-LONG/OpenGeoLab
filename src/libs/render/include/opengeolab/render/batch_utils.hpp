@@ -68,4 +68,20 @@ OPENGEOLAB_RENDER_EXPORT void multiDrawElements(GLenum mode, const IndexedBatch&
 /** @brief Issue glMultiDrawArrays for the given array batch. */
 OPENGEOLAB_RENDER_EXPORT void multiDrawArrays(GLenum mode, const ArrayBatch& batch);
 
+/**
+ * @brief Filter draw ranges matching a predicate into a new vector.
+ * @param predicate Callable `bool(const DrawRange&)` selecting which ranges to include.
+ */
+template <typename Predicate>
+std::vector<Scene::DrawRange> filterRanges(const std::vector<Scene::DrawRange>& ranges,
+                                           Predicate&& predicate) {
+    std::vector<Scene::DrawRange> result;
+    for(const auto& r : ranges) {
+        if(predicate(r)) {
+            result.push_back(r);
+        }
+    }
+    return result;
+}
+
 } // namespace OpenGeoLab::Render::BatchUtils

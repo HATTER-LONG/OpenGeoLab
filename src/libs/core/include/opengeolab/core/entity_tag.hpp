@@ -13,6 +13,8 @@
 #include <opengeolab/core/core_export.hpp>
 
 #include <cstdint>
+#include <optional>
+#include <string_view>
 
 namespace OpenGeoLab::Core {
 
@@ -37,6 +39,64 @@ enum class EntityType : uint8_t {
 
     SceneNode = 20 ///< Scene-graph node
 };
+
+/// Parse a string name to an EntityType. Returns std::nullopt for unknown names.
+constexpr std::optional<EntityType> parseEntityType(std::string_view name) noexcept {
+    if(name == "GeoVertex") {
+        return EntityType::GeoVertex;
+    }
+    if(name == "GeoEdge") {
+        return EntityType::GeoEdge;
+    }
+    if(name == "GeoWire") {
+        return EntityType::GeoWire;
+    }
+    if(name == "GeoFace") {
+        return EntityType::GeoFace;
+    }
+    if(name == "GeoSolid") {
+        return EntityType::GeoSolid;
+    }
+    if(name == "MeshNode") {
+        return EntityType::MeshNode;
+    }
+    if(name == "MeshEdge") {
+        return EntityType::MeshEdge;
+    }
+    if(name == "MeshElement") {
+        return EntityType::MeshElement;
+    }
+    if(name == "SceneNode") {
+        return EntityType::SceneNode;
+    }
+    return std::nullopt;
+}
+
+/// Return the canonical string name for an EntityType.
+constexpr std::string_view entityTypeName(EntityType type) noexcept {
+    switch(type) {
+    case EntityType::GeoVertex:
+        return "GeoVertex";
+    case EntityType::GeoEdge:
+        return "GeoEdge";
+    case EntityType::GeoWire:
+        return "GeoWire";
+    case EntityType::GeoFace:
+        return "GeoFace";
+    case EntityType::GeoSolid:
+        return "GeoSolid";
+    case EntityType::MeshNode:
+        return "MeshNode";
+    case EntityType::MeshEdge:
+        return "MeshEdge";
+    case EntityType::MeshElement:
+        return "MeshElement";
+    case EntityType::SceneNode:
+        return "SceneNode";
+    default:
+        return "Unknown";
+    }
+}
 
 /**
  * @brief Identifies one sub-entity inside a top-level shape or scene node.
