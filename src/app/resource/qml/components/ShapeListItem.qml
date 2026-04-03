@@ -33,11 +33,11 @@ Item {
         anchors.fill: parent
         radius: root.theme.radiusSmall
         color: root.expanded
-               ? root.theme.tint(root.theme.accentPrimary, 0.08)
+               ? root.theme.tint(root.theme.accentA, 0.08)
                : rowHover.hovered
                  ? root.theme.tint(root.theme.textPrimary, 0.06)
                  : "transparent"
-        border.color: root.expanded ? root.theme.accentPrimary : "transparent"
+        border.color: root.expanded ? root.theme.accentA : "transparent"
         border.width: 1
 
         Behavior on color { ColorAnimation { duration: 120 } }
@@ -109,7 +109,7 @@ Item {
                         width: 16; height: 16
                         theme: root.theme
                         iconKind: "cubeOutline"
-                        primaryColor: root.geoVisible ? root.theme.accentPrimary
+                        primaryColor: root.geoVisible ? root.theme.accentA
                                                       : root.theme.textTertiary
                         opacity: root.geoVisible ? 1.0 : 0.4
                         scale: geoBtnHover.hovered ? 1.1 : 1.0
@@ -144,7 +144,7 @@ Item {
                         width: 16; height: 16
                         theme: root.theme
                         iconKind: "smoothMesh"
-                        primaryColor: root.meshVisible ? root.theme.accentPrimary
+                        primaryColor: root.meshVisible ? root.theme.accentA
                                                        : root.theme.textTertiary
                         opacity: root.meshVisible ? 1.0 : 0.4
                         scale: meshBtnHover.hovered ? 1.1 : 1.0

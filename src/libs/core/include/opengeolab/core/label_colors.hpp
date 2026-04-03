@@ -28,6 +28,12 @@ inline constexpr glm::vec4 labelColor(EntityType type) noexcept {
         return {0.36F, 0.72F, 0.36F, 1.0F}; // #5CB85C Green
     case EntityType::GeoSolid:
         return {0.91F, 0.65F, 0.33F, 1.0F}; // #E8A654 Orange
+    case EntityType::MeshNode:
+        return {0.95F, 0.61F, 0.07F, 1.0F}; // #F29C12 Amber
+    case EntityType::MeshEdge:
+        return {0.61F, 0.35F, 0.71F, 1.0F}; // #9C59B6 Purple
+    case EntityType::MeshElement:
+        return {0.17F, 0.64F, 0.79F, 1.0F}; // #2BA3C9 Cyan
     default:
         return {0.8F, 0.8F, 0.8F, 1.0F}; // Gray fallback
     }
@@ -44,6 +50,12 @@ inline constexpr std::string_view labelColorHex(EntityType type) noexcept {
         return "#5CB85C";
     case EntityType::GeoSolid:
         return "#E8A654";
+    case EntityType::MeshNode:
+        return "#F29C12";
+    case EntityType::MeshEdge:
+        return "#9C59B6";
+    case EntityType::MeshElement:
+        return "#2BA3C9";
     default:
         return "#CCCCCC";
     }
@@ -62,6 +74,12 @@ inline constexpr std::string_view labelPrefix(EntityType type) noexcept {
         return "F";
     case EntityType::GeoSolid:
         return "S";
+    case EntityType::MeshNode:
+        return "N";
+    case EntityType::MeshEdge:
+        return "L";
+    case EntityType::MeshElement:
+        return "Elem";
     default:
         return "?";
     }

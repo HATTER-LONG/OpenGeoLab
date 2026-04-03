@@ -90,22 +90,6 @@ struct FaceTransforms {
     glm::mat3 normalMatrix;
 };
 
-/// Convert Core::RenderColor to glm::vec4.
-glm::vec4 toVec4(const Core::RenderColor& c) { return {c.r, c.g, c.b, c.a}; }
-
-/// Check whether an entity type represents face/solid geometry.
-bool isFaceType(Core::EntityType t) {
-    return t == Core::EntityType::GeoFace || t == Core::EntityType::GeoSolid;
-}
-
-/// Check whether an entity type represents edge/wire geometry.
-bool isEdgeType(Core::EntityType t) {
-    return t == Core::EntityType::GeoEdge || t == Core::EntityType::GeoWire;
-}
-
-/// Check whether an entity type represents vertex geometry.
-bool isVertexType(Core::EntityType t) { return t == Core::EntityType::GeoVertex; }
-
 /// Partition highlight entries into face, edge, and vertex range lists.
 struct PartitionedRanges {
     std::vector<Scene::DrawRange> faces;
@@ -113,7 +97,29 @@ struct PartitionedRanges {
     std::vector<Scene::DrawRange> vertices;
 };
 
-PartitionedRanges partition(const std::vector<HighlightEntry>& entries) {
+} // namespace
+
+/// Convert Core::RenderColor to glm::vec4.
+static glm::vec4 toVec4(const Core::RenderColor& c) { return {c.r, c.g, c.b, c.a}; }
+
+/// Check whether an entity type represents face/solid geometry.
+static bool isFaceType(Core::EntityType t) {
+    return t == Core::EntityType::GeoFace || t == Core::EntityType::GeoSolid ||
+           t == Core::EntityType::MeshElement;
+}
+
+/// Check whether an entity type represents edge/wire geometry.
+static bool isEdgeType(Core::EntityType t) {
+    return t == Core::EntityType::GeoEdge || t == Core::EntityType::GeoWire ||
+           t == Core::EntityType::MeshEdge;
+}
+
+/// Check whether an entity type represents vertex geometry.
+static bool isVertexType(Core::EntityType t) {
+    return t == Core::EntityType::GeoVertex || t == Core::EntityType::MeshNode;
+}
+
+static PartitionedRanges partition(const std::vector<HighlightEntry>& entries) {
     PartitionedRanges out;
     for(const auto& e : entries) {
         if(isFaceType(e.entityType)) {
@@ -126,8 +132,6 @@ PartitionedRanges partition(const std::vector<HighlightEntry>& entries) {
     }
     return out;
 }
-
-} // namespace
 
 bool HighlightPass::onInitialize() {
     if(!m_faceShader.create(HIGHLIGHT_FACE_VS, HIGHLIGHT_FACE_FS)) {
@@ -168,8 +172,6 @@ void HighlightPass::render(const FrameState& state, const GpuBufferManager& buff
         auto [faces, edges, vertices] = partition(state.selectedEntries);
 
         if(!faces.empty()) {
-            glEnable(GL_POLYGON_OFFSET_FILL);
-            glPolygonOffset(1.0F, 5.0F);
             m_faceShader.use();
             m_faceShader.setMat4("u_mvp", transforms.mvp);
             const GLint loc = glGetUniformLocation(m_faceShader.id(), "u_normalMatrix");
@@ -179,7 +181,6 @@ void HighlightPass::render(const FrameState& state, const GpuBufferManager& buff
             const auto batch =
                 BatchUtils::buildIndexedBatch(faces, [](const Scene::DrawRange&) { return true; });
             BatchUtils::multiDrawElements(GL_TRIANGLES, batch);
-            glDisable(GL_POLYGON_OFFSET_FILL);
         }
 
         if(!edges.empty() && m_thickLine != nullptr) {
@@ -218,8 +219,6 @@ void HighlightPass::render(const FrameState& state, const GpuBufferManager& buff
         auto [faces, edges, vertices] = partition(state.hoveredEntries);
 
         if(!faces.empty()) {
-            glEnable(GL_POLYGON_OFFSET_FILL);
-            glPolygonOffset(1.0F, 5.0F);
             m_faceShader.use();
             m_faceShader.setMat4("u_mvp", transforms.mvp);
             const GLint loc = glGetUniformLocation(m_faceShader.id(), "u_normalMatrix");
@@ -229,7 +228,6 @@ void HighlightPass::render(const FrameState& state, const GpuBufferManager& buff
             const auto batch =
                 BatchUtils::buildIndexedBatch(faces, [](const Scene::DrawRange&) { return true; });
             BatchUtils::multiDrawElements(GL_TRIANGLES, batch);
-            glDisable(GL_POLYGON_OFFSET_FILL);
         }
 
         if(!edges.empty() && m_thickLine != nullptr) {

@@ -23,6 +23,14 @@ Item {
 
     /** @brief Current pick mask bitmask (matches Core::PickMask values). */
     property int mask: 11
+    property var typeModel: [
+        { label: qsTr("Vertex"), icon: "entityVertex", mask: root.maskVertex },
+        { label: qsTr("Edge"),   icon: "entityEdge",   mask: root.maskEdge },
+        { label: qsTr("Face"),   icon: "entityFace",   mask: root.maskFace },
+        { label: qsTr("Solid"),  icon: "entitySolid",  mask: root.maskSolid }
+    ]
+    /** @brief Masks that are mutually exclusive with all other types. Default: Solid. */
+    property var exclusiveMasks: [root.maskSolid]
 
     implicitWidth: row.implicitWidth
     implicitHeight: row.implicitHeight
@@ -32,6 +40,9 @@ Item {
     readonly property int maskEdge: 2     // 1 << 1
     readonly property int maskFace: 8     // 1 << 3
     readonly property int maskSolid: 16   // 1 << 4
+    readonly property int maskMeshNode: 64      // 1 << 6
+    readonly property int maskMeshEdge: 128     // 1 << 7
+    readonly property int maskMeshElement: 256  // 1 << 8
 
     RowLayout {
         id: row
@@ -40,12 +51,7 @@ Item {
         spacing: 2
 
         Repeater {
-            model: [
-                { label: qsTr("Vertex"), icon: "entityVertex", mask: root.maskVertex },
-                { label: qsTr("Edge"),   icon: "entityEdge",   mask: root.maskEdge },
-                { label: qsTr("Face"),   icon: "entityFace",   mask: root.maskFace },
-                { label: qsTr("Solid"),  icon: "entitySolid",  mask: root.maskSolid }
-            ]
+            model: root.typeModel
 
             delegate: AbstractButton {
                 id: typeBtn
@@ -54,7 +60,7 @@ Item {
                 required property int index
 
                 readonly property bool selected: (root.mask & modelData.mask) !== 0
-                readonly property bool isSolid: modelData.mask === root.maskSolid
+                readonly property bool isExclusive: root.exclusiveMasks.indexOf(modelData.mask) >= 0
 
                 Layout.preferredWidth: 56
                 Layout.preferredHeight: 44
@@ -125,10 +131,12 @@ Item {
 
                 onClicked: {
                     let newMask = root.mask;
-                    if (typeBtn.isSolid) {
-                        newMask = typeBtn.selected ? 0 : root.maskSolid;
+                    if (typeBtn.isExclusive) {
+                        newMask = typeBtn.selected ? 0 : typeBtn.modelData.mask;
                     } else {
-                        newMask = newMask & ~root.maskSolid;
+                        for (let i = 0; i < root.exclusiveMasks.length; ++i) {
+                            newMask = newMask & ~root.exclusiveMasks[i];
+                        }
                         newMask = newMask ^ typeBtn.modelData.mask;
                     }
                     if (newMask === 0) {

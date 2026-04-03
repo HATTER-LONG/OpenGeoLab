@@ -31,6 +31,9 @@ Rectangle {
         case 3: return "F";
         case 4: return "S";
         case 5: return "P";
+        case 10: return "N";
+        case 11: return "L";
+        case 12: return "Elem";
         default: return "?";
         }
     }
@@ -42,7 +45,7 @@ Rectangle {
         spacing: 4
 
         Text {
-            text: qsTr("%1:%2 [%3]")
+            text: qsTr("[%3]%1:%2")
                 .arg(root.entityTypeLabel(root.entityType))
                 .arg(root.localId)
                 .arg(root.shapeId)

@@ -40,16 +40,16 @@ void main() {
 /// Line width for edge picking. On macOS/Linux Core Profile drivers,
 /// this may be clamped to 1.0; the 13×13 pick neighborhood in pickAt()
 /// compensates for the reduced hit area.
-constexpr float PICK_LINE_WIDTH = 4.0F;
+constexpr float PICK_LINE_WIDTH = 5.0F;
 constexpr float DEFAULT_LINE_WIDTH = 1.0F;
 constexpr float PICK_POINT_SIZE = 12.0F;
 
+} // namespace
+
 /// Check whether a PickMask has any of the given bits set.
-[[nodiscard]] constexpr bool hasAny(Core::PickMask mask, Core::PickMask bits) {
+[[nodiscard]] static constexpr bool hasAny(Core::PickMask mask, Core::PickMask bits) {
     return (mask & bits) != Core::PickMask::None;
 }
-
-} // namespace
 
 bool SelectionPass::onInitialize() { return m_shader.create(PICK_VS, PICK_FS); }
 
@@ -98,29 +98,46 @@ void SelectionPass::render(const FrameState& state, const GpuBufferManager& buff
 
     const Core::PickMask mask = state.activePickMask;
 
-    // Triangles — draw only if Face or Solid bits are set
-    if(hasAny(mask, Core::PickMask::Face | Core::PickMask::Solid)) {
+    // Solid picking reuses GeoFace geometry; Wire picking reuses GeoEdge geometry.
+    // Expand the mask so per-range predicates accept those ranges.
+    const bool want_geo_face = hasAny(mask, Core::PickMask::Face | Core::PickMask::Solid);
+    const bool want_geo_edge = hasAny(mask, Core::PickMask::Edge | Core::PickMask::Wire);
+
+    // Triangles — draw if Face, Solid, or MeshElement bits are set
+    if(want_geo_face || hasAny(mask, Core::PickMask::MeshElement)) {
         const auto triangle_batch = BatchUtils::buildIndexedBatch(
-            buffers.triangleRanges(), [](const Scene::DrawRange&) { return true; });
+            buffers.triangleRanges(), [want_geo_face, mask](const Scene::DrawRange& r) {
+                if(r.entityType == Core::EntityType::GeoFace) {
+                    return want_geo_face;
+                }
+                return (Core::maskForEntityType(r.entityType) & mask) != Core::PickMask::None;
+            });
         BatchUtils::multiDrawElements(GL_TRIANGLES, triangle_batch);
     }
 
     // GL_LEQUAL so edges/vertices at equal depth can overwrite face pick IDs.
     glDepthFunc(GL_LEQUAL);
 
-    // Lines — draw only if Edge or Wire bits are set
-    if(hasAny(mask, Core::PickMask::Edge | Core::PickMask::Wire)) {
+    // Lines — draw if Edge, Wire, or MeshEdge bits are set
+    if(want_geo_edge || hasAny(mask, Core::PickMask::MeshEdge)) {
         glLineWidth(PICK_LINE_WIDTH);
         const auto line_batch = BatchUtils::buildIndexedBatch(
-            buffers.lineRanges(), [](const Scene::DrawRange&) { return true; });
+            buffers.lineRanges(), [want_geo_edge, mask](const Scene::DrawRange& r) {
+                if(r.entityType == Core::EntityType::GeoEdge) {
+                    return want_geo_edge;
+                }
+                return (Core::maskForEntityType(r.entityType) & mask) != Core::PickMask::None;
+            });
         BatchUtils::multiDrawElements(GL_LINES, line_batch);
     }
 
-    // Points — draw only if Vertex bit is set
-    if(hasAny(mask, Core::PickMask::Vertex)) {
+    // Points — draw if Vertex or MeshNode bits are set
+    if(hasAny(mask, Core::PickMask::Vertex | Core::PickMask::MeshNode)) {
         glEnable(GL_PROGRAM_POINT_SIZE);
-        const auto point_batch = BatchUtils::buildArrayBatch(
-            buffers.pointRanges(), [](const Scene::DrawRange&) { return true; });
+        const auto point_batch =
+            BatchUtils::buildArrayBatch(buffers.pointRanges(), [mask](const Scene::DrawRange& r) {
+                return (Core::maskForEntityType(r.entityType) & mask) != Core::PickMask::None;
+            });
         BatchUtils::multiDrawArrays(GL_POINTS, point_batch);
     }
 

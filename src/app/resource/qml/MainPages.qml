@@ -17,7 +17,9 @@ QtObject {
         "addSphere":   { path: "components/pages/CreateSpherePage.qml" },
         "addTorus":    { path: "components/pages/CreateTorusPage.qml" },
         "importModel": { path: "components/pages/ImportModelPage.qml" },
-        "queryGeometry": { path: "components/pages/GeoQueryPage.qml" }
+        "queryGeometry": { path: "components/pages/GeoQueryPage.qml" },
+        "generateMesh":  { path: "components/pages/MeshGeneratePage.qml" },
+        "queryMesh":     { path: "components/pages/MeshQueryPage.qml" }
     })
 
     function hasPage(actionId) {

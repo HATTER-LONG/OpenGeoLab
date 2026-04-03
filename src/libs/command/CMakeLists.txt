@@ -14,6 +14,7 @@ opengeolab_add_module(
     OpenGeoLab::Core
     OpenGeoLab::IO
     OpenGeoLab::Geometry
+    OpenGeoLab::Mesh
     OpenGeoLab::Scene)
 
 if (OPENGEOLAB_BUILD_TESTS)
