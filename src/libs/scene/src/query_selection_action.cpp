@@ -1,0 +1,78 @@
+/**
+ * @file query_selection_action.cpp
+ * @brief QuerySelectionAction implementation
+ */
+
+#include <opengeolab/scene/query_selection_action.hpp>
+
+#include <opengeolab/core/entity_ref.hpp>
+#include <opengeolab/core/entity_tag.hpp>
+#include <opengeolab/scene/selection_state.hpp>
+
+namespace OpenGeoLab::Scene {
+
+namespace {
+
+std::string_view entityTypeName(Core::EntityType entity_type) {
+    switch(entity_type) {
+    case Core::EntityType::GeoVertex:
+        return "GeoVertex";
+    case Core::EntityType::GeoEdge:
+        return "GeoEdge";
+    case Core::EntityType::GeoWire:
+        return "GeoWire";
+    case Core::EntityType::GeoFace:
+        return "GeoFace";
+    case Core::EntityType::GeoSolid:
+        return "GeoSolid";
+    case Core::EntityType::MeshNode:
+        return "MeshNode";
+    case Core::EntityType::MeshEdge:
+        return "MeshEdge";
+    case Core::EntityType::MeshElement:
+        return "MeshElement";
+    case Core::EntityType::SceneNode:
+        return "SceneNode";
+    }
+
+    return "Unknown";
+}
+
+} // namespace
+
+QuerySelectionAction::QuerySelectionAction(const SelectionState& state) : m_state(state) {}
+QuerySelectionAction::~QuerySelectionAction() = default;
+
+nlohmann::json QuerySelectionAction::describe() const {
+    return {
+        {"name", ACTION_NAME},
+        {"description", "Return the currently selected entities."},
+        {"params", nlohmann::json::object()},
+        {"returns",
+         {{"ok",
+           {{"type", "boolean"}, {"description", "true when the action completes successfully."}}},
+          {"action", {{"type", "string"}, {"description", "Echo of the action name."}}},
+          {"selections",
+           {{"type", "array"},
+            {"description", "Array of {shapeId, type, localId} selected entities."}}}}}};
+}
+
+nlohmann::json QuerySelectionAction::execute(const nlohmann::json& param,
+                                             const Core::ProgressCallback& progress) {
+    static_cast<void>(param);
+    nlohmann::json selections_json = nlohmann::json::array();
+
+    for(const auto& entity : m_state.selections()) {
+        selections_json.push_back({{"shapeId", entity.shapeId},
+                                   {"type", entityTypeName(entity.entityType)},
+                                   {"localId", entity.localId}});
+    }
+
+    if(progress) {
+        progress(1.0, "Done");
+    }
+
+    return {{"ok", true}, {"action", ACTION_NAME}, {"selections", std::move(selections_json)}};
+}
+
+} // namespace OpenGeoLab::Scene

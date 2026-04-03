@@ -45,11 +45,15 @@ GeometryModule::GeometryModule(Kangaroo::Util::PluginComponentFactory& factory)
         m_shapeStore.shapeUpdated.connect([this](uint32_t, const ShapeEntry&) {
             dataChanged.emit(Core::ModuleDataEvent::ItemModified);
         }));
+    m_storeConnections.push_back(m_shapeStore.storeCleared.connect(
+        [this]() { dataChanged.emit(Core::ModuleDataEvent::Reset); }));
 }
 
 GeometryModule::~GeometryModule() = default;
 
 ShapeStore& GeometryModule::shapeStore() { return m_shapeStore; }
 const ShapeStore& GeometryModule::shapeStore() const { return m_shapeStore; }
+
+void GeometryModule::clearAll() { m_shapeStore.clear(); }
 
 } // namespace OpenGeoLab::Geometry

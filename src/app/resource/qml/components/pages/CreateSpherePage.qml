@@ -22,7 +22,7 @@ FunctionPageBase {
             action: "create_sphere",
             param: {
                 name: root.sphereName,
-                x: root.centerX, y: root.centerY, z: root.centerZ,
+                center: [root.centerX, root.centerY, root.centerZ],
                 radius: root.radius
             },
             mute: false

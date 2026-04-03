@@ -10,8 +10,12 @@
 #pragma once
 
 #include <opengeolab/scene/bounding_box3d.hpp>
+#include <opengeolab/scene/label_manager.hpp>
 #include <opengeolab/scene/scene_export.hpp>
 #include <opengeolab/scene/scene_node.hpp>
+#include <opengeolab/scene/selection_state.hpp>
+#include <opengeolab/scene/topology_index.hpp>
+#include <opengeolab/scene/viewport_state.hpp>
 
 #include <kangaroo/util/signal.hpp>
 
@@ -60,6 +64,15 @@ public:
      * @return true if found and removed.
      */
     bool removeNode(NodeId id);
+
+    /**
+     * @brief Remove all nodes, clear selection/hover/labels, and reset state.
+     *
+     * Drops all child nodes of root, clears entity selection, labels,
+     * hover state, and resets the node ID counter.
+     * Emits sceneCleared once (not per-node nodeRemoved).
+     */
+    void clear();
 
     /**
      * @brief Find a node by id (searches entire tree).
@@ -152,6 +165,22 @@ public:
     /** @brief Set hovered node (nullopt = none). */
     void setHoveredNode(std::optional<NodeId> id);
 
+    /** @brief Topology relation index for pick-mode escalation. */
+    [[nodiscard]] TopologyIndex& topologyIndex() { return m_topologyIndex; }
+    [[nodiscard]] const TopologyIndex& topologyIndex() const { return m_topologyIndex; }
+
+    /** @brief Entity-level selection state for 3D picking. */
+    [[nodiscard]] SelectionState& selectionState() { return m_selectionState; }
+    [[nodiscard]] const SelectionState& selectionState() const { return m_selectionState; }
+
+    /** @brief 3D annotation label manager. */
+    [[nodiscard]] LabelManager& labelManager() { return m_labelManager; }
+    [[nodiscard]] const LabelManager& labelManager() const { return m_labelManager; }
+
+    /** @brief Viewport camera and pick state. */
+    [[nodiscard]] ViewportState& viewportState() { return m_viewportState; }
+    [[nodiscard]] const ViewportState& viewportState() const { return m_viewportState; }
+
     /** @brief Compute scene-wide AABB from all visible nodes. */
     [[nodiscard]] BoundingBox3D sceneBounds() const;
 
@@ -168,6 +197,7 @@ public:
     Kangaroo::Util::Signal<NodeId> nodeRemoved; /**< Emitted after removeNode. */
     Kangaroo::Util::Signal<NodeId> nodeUpdated; /**< Emitted when a node changes. */
     Kangaroo::Util::Signal<> selectionChanged;  /**< Emitted on any selection change. */
+    Kangaroo::Util::Signal<> sceneCleared;      /**< Emitted after clear(). */
 
 private:
     /** @brief Recursive helper to find a node in a subtree. */
@@ -186,6 +216,10 @@ private:
     uint32_t m_nextNodeId{1};
     uint64_t m_version{0};
     std::optional<NodeId> m_hoveredNode;
+    SelectionState m_selectionState;
+    LabelManager m_labelManager;
+    ViewportState m_viewportState;
+    TopologyIndex m_topologyIndex;
     mutable std::shared_mutex m_mutex;
 };
 

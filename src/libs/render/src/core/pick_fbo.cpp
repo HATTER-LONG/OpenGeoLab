@@ -134,4 +134,44 @@ std::vector<uint64_t> PickFbo::readPickRegion(int cx, int cy, int radius) const 
     return result;
 }
 
+std::vector<uint64_t> PickFbo::readPickRect(int x0, int y0, int x1, int y1) const {
+    if(x0 > x1) {
+        std::swap(x0, x1);
+    }
+    if(y0 > y1) {
+        std::swap(y0, y1);
+    }
+
+    x0 = std::clamp(x0, 0, m_width - 1);
+    x1 = std::clamp(x1, 0, m_width - 1);
+
+    // Flip Y: item-space top-left origin → GL bottom-left origin
+    int const gl_y0 = std::clamp(m_height - 1 - y1, 0, m_height - 1);
+    int const gl_y1 = std::clamp(m_height - 1 - y0, 0, m_height - 1);
+
+    int const w = x1 - x0 + 1;
+    int const h = gl_y1 - gl_y0 + 1;
+    if(w <= 0 || h <= 0) {
+        return {};
+    }
+
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, m_fbo);
+    std::vector<uint32_t> data(static_cast<size_t>(w * h * 2));
+    glReadPixels(x0, gl_y0, w, h, GL_RG_INTEGER, GL_UNSIGNED_INT, data.data());
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+
+    std::vector<uint64_t> result;
+    int const pixel_count = w * h;
+    for(int i = 0; i < pixel_count; ++i) {
+        uint32_t const lo = data[static_cast<size_t>(i) * 2];
+        uint32_t const hi = data[static_cast<size_t>(i) * 2 + 1];
+        uint64_t const pick_id = (static_cast<uint64_t>(hi) << 32U) | lo;
+        if(pick_id != 0) {
+            result.push_back(pick_id);
+        }
+    }
+    return result;
+}
+
 } // namespace OpenGeoLab::Render
+

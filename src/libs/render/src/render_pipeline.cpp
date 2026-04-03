@@ -6,22 +6,43 @@
 #include <opengeolab/render/render_pipeline.hpp>
 
 #include "core/gpu_buffer_manager.hpp"
+#include "core/thick_line_renderer.hpp"
+#include "font/font_atlas.hpp"
+#include <opengeolab/render/label_anchor.hpp>
 #include "pass/highlight_pass.hpp"
+#include "pass/label_pass.hpp"
 #include "pass/opaque_pass.hpp"
 #include "pass/selection_pass.hpp"
 #include "pass/wireframe_pass.hpp"
 #include "pick_resolver.hpp"
 #include "render_pipeline_detail.hpp"
 
+#include <opengeolab/scene/pick_id.hpp>
 #include <opengeolab/scene/scene_graph.hpp>
-#include <opengeolab/scene/topology_index.hpp>
 
 #include <glad/gl.h>
 
+#include <fstream>
 #include <memory>
 #include <vector>
 
 namespace OpenGeoLab::Render {
+
+namespace {
+
+/// Remove raw pick IDs whose entity type is not allowed by @p mask.
+/// Only applied in VEF mode where multiple entity types coexist.
+void filterByMask(std::vector<uint64_t>& ids, PickMask mask) {
+    std::erase_if(ids, [mask](uint64_t id) {
+        if(!Scene::PickId::isValid(id)) {
+            return false;
+        }
+        const auto type = Scene::PickId::decodeType(id);
+        return (Core::maskForEntityType(type) & mask) == PickMask::None;
+    });
+}
+
+} // namespace
 
 struct RenderPipeline::Impl {
     GpuBufferManager bufferManager;
@@ -29,8 +50,12 @@ struct RenderPipeline::Impl {
     WireframePass wireframePass;
     HighlightPass highlightPass;
     SelectionPass selectionPass;
-    std::unique_ptr<Scene::TopologyIndex> topologyIndex;
+    ThickLineRenderer thickLineRenderer;
+    FontAtlas fontAtlas;
+    LabelPass labelPass;
     std::unique_ptr<PickResolver> pickResolver;
+    std::string fontAtlasDir;
+    uint64_t resolverVersion{0}; ///< Scene version when resolver was last built.
     bool initialized{false};
 };
 
@@ -48,17 +73,41 @@ void RenderPipeline::initialize(GlLoaderFunc gl_loader) {
     m_impl->wireframePass.initialize();
     m_impl->highlightPass.initialize();
     m_impl->selectionPass.initialize();
+    if(!m_impl->thickLineRenderer.initialize()) {
+        return;
+    }
+    m_impl->wireframePass.setThickLineRenderer(&m_impl->thickLineRenderer);
+    m_impl->highlightPass.setThickLineRenderer(&m_impl->thickLineRenderer);
+
+    // Phase 2: MSDF label rendering
+    if(!m_impl->fontAtlasDir.empty()) {
+        auto json_path = m_impl->fontAtlasDir + "/label_atlas.json";
+        auto png_path = m_impl->fontAtlasDir + "/label_atlas.png";
+
+        std::ifstream json_file(json_path);
+        if(json_file.good()) {
+            std::string json_str((std::istreambuf_iterator<char>(json_file)),
+                                 std::istreambuf_iterator<char>());
+            if(m_impl->fontAtlas.parseMetrics(json_str)) {
+                m_impl->fontAtlas.loadTexture(png_path);
+                m_impl->labelPass.setFontAtlas(&m_impl->fontAtlas);
+                m_impl->labelPass.initialize();
+            }
+        }
+    }
+
     m_impl->initialized = true;
 }
 
 void RenderPipeline::synchronize(const Scene::SceneGraph& scene) {
     m_impl->bufferManager.synchronize(scene);
 
-    // SceneGraph does not currently expose the GeometrySceneBridge TopologyIndex.
-    // Keep a resolver available for VEF and Part picking while remaining ready
-    // to switch to scene-provided topology once that accessor exists.
-    m_impl->topologyIndex = std::make_unique<Scene::TopologyIndex>();
-    m_impl->pickResolver = std::make_unique<PickResolver>(*m_impl->topologyIndex);
+    // Rebuild pick resolver only when scene data has changed.
+    const uint64_t scene_ver = scene.version();
+    if(scene_ver != m_impl->resolverVersion) {
+        m_impl->pickResolver = std::make_unique<PickResolver>(scene.topologyIndex());
+        m_impl->resolverVersion = scene_ver;
+    }
 }
 
 void RenderPipeline::render(const FrameState& state) {
@@ -72,8 +121,9 @@ void RenderPipeline::render(const FrameState& state) {
     glEnable(GL_DEPTH_TEST);
 
     m_impl->opaquePass.render(state, m_impl->bufferManager);
-    m_impl->wireframePass.render(state, m_impl->bufferManager);
     m_impl->highlightPass.render(state, m_impl->bufferManager);
+    m_impl->wireframePass.render(state, m_impl->bufferManager);
+    m_impl->labelPass.render(state, m_impl->bufferManager);
     m_impl->selectionPass.render(state, m_impl->bufferManager);
 }
 
@@ -82,8 +132,18 @@ PickResult RenderPipeline::pickAt(int x, int y, PickMask mask) const {
         return {};
     }
 
-    const uint64_t raw_pick_id = m_impl->selectionPass.pickFbo().readPickId(x, y);
-    return m_impl->pickResolver->resolve({raw_pick_id}, Detail::pickModeFromMask(mask));
+    // Read 13×13 neighborhood sorted by distance from center.
+    // PickResolver applies Vertex > Edge > Face priority in VEF mode.
+    constexpr int pick_neighborhood_radius = 6;
+    auto raw_pick_ids =
+        m_impl->selectionPass.pickFbo().readPickRegion(x, y, pick_neighborhood_radius);
+
+    const auto mode = Detail::pickModeFromMask(mask);
+    if(mode == PickMode::VEF) {
+        filterByMask(raw_pick_ids, mask);
+    }
+
+    return m_impl->pickResolver->resolve(raw_pick_ids, mode);
 }
 
 std::vector<PickResult>
@@ -92,19 +152,90 @@ RenderPipeline::pickRegion(int cx, int cy, int radius, PickMask mask) const {
         return {};
     }
 
-    const auto raw_pick_ids = m_impl->selectionPass.pickFbo().readPickRegion(cx, cy, radius);
-    return m_impl->pickResolver->resolveAll(raw_pick_ids, Detail::pickModeFromMask(mask));
+    auto raw_pick_ids = m_impl->selectionPass.pickFbo().readPickRegion(cx, cy, radius);
+    const auto mode = Detail::pickModeFromMask(mask);
+    if(mode == PickMode::VEF) {
+        filterByMask(raw_pick_ids, mask);
+    }
+    return m_impl->pickResolver->resolveAll(raw_pick_ids, mode);
+}
+
+std::vector<PickResult>
+RenderPipeline::pickRect(int x0, int y0, int x1, int y1, PickMask mask) const {
+    if(!m_impl->pickResolver) {
+        return {};
+    }
+    auto raw_pick_ids = m_impl->selectionPass.pickFbo().readPickRect(x0, y0, x1, y1);
+    const auto mode = Detail::pickModeFromMask(mask);
+    if(mode == PickMode::VEF) {
+        filterByMask(raw_pick_ids, mask);
+    }
+    return m_impl->pickResolver->resolveAll(raw_pick_ids, mode);
 }
 
 void RenderPipeline::cleanup() {
+    m_impl->labelPass.cleanup();
+    m_impl->fontAtlas.cleanup();
+    m_impl->thickLineRenderer.cleanup();
     m_impl->selectionPass.cleanup();
     m_impl->highlightPass.cleanup();
     m_impl->wireframePass.cleanup();
     m_impl->opaquePass.cleanup();
     m_impl->bufferManager.cleanup();
     m_impl->pickResolver.reset();
-    m_impl->topologyIndex.reset();
     m_impl->initialized = false;
+}
+
+std::span<const Scene::DrawRange> RenderPipeline::resolveEntityDrawRanges(
+    uint32_t shape_id, Core::EntityType entity_type, uint32_t local_id) const {
+    return m_impl->bufferManager.lookupEntity(shape_id, entity_type, local_id);
+}
+
+std::vector<Scene::DrawRange> RenderPipeline::resolveShapeDrawRanges(uint32_t shape_id) const {
+    std::vector<Scene::DrawRange> result;
+    for(const auto& r : m_impl->bufferManager.triangleRanges()) {
+        if(r.shapeId == shape_id) {
+            result.push_back(r);
+        }
+    }
+    for(const auto& r : m_impl->bufferManager.lineRanges()) {
+        if(r.shapeId == shape_id) {
+            result.push_back(r);
+        }
+    }
+    for(const auto& r : m_impl->bufferManager.pointRanges()) {
+        if(r.shapeId == shape_id) {
+            result.push_back(r);
+        }
+    }
+    return result;
+}
+
+void RenderPipeline::setFontAtlasDir(const std::string& dir) {
+    m_impl->fontAtlasDir = dir;
+}
+
+glm::vec3 RenderPipeline::resolveEntityAnchor(uint32_t shape_id,
+                                               Core::EntityType entity_type,
+                                               uint32_t local_id) const {
+    auto ranges = m_impl->bufferManager.lookupEntity(shape_id, entity_type, local_id);
+    if(ranges.empty()) {
+        return glm::vec3{0.0F};
+    }
+
+    std::vector<glm::vec3> positions;
+    for(const auto& range : ranges) {
+        auto vertices =
+            m_impl->bufferManager.readVertexPositions(range.vertexOffset, range.vertexCount);
+        positions.insert(positions.end(), vertices.begin(), vertices.end());
+    }
+
+    // Edges/wires: use midpoint vertex so the anchor sits ON the curve
+    // (centroid of a circular edge would be at the circle's center).
+    if(entity_type == Core::EntityType::GeoEdge || entity_type == Core::EntityType::GeoWire) {
+        return computeAnchorMidpoint(positions);
+    }
+    return computeAnchorFromVertices(positions);
 }
 
 } // namespace OpenGeoLab::Render

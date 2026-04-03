@@ -23,7 +23,7 @@ FunctionPageBase {
             action: "create_torus",
             param: {
                 name: root.torusName,
-                x: root.centerX, y: root.centerY, z: root.centerZ,
+                origin: [root.centerX, root.centerY, root.centerZ],
                 majorRadius: root.majorRadius, minorRadius: root.minorRadius
             },
             mute: false

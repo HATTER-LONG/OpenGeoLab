@@ -61,7 +61,7 @@
 
 - [ ] 步骤 5：构建验证
   ```
-  cmake --build build --config RelWithDebInfo --parallel 4
+  cmake --build build --config RelWithDebInfo --parallel 8
   ```
 
 **预期结果：** 构建成功。Menu 面板只剩 Workspace section，包含 Import、Export、Theme、Language、Exit 五个按钮。
@@ -154,7 +154,7 @@
 
 - [ ] 步骤 4：构建验证
   ```
-  cmake --build build --config RelWithDebInfo --parallel 4
+  cmake --build build --config RelWithDebInfo --parallel 8
   ```
 
 **预期结果：** 构建成功，MainPages singleton 被编译进 QML 模块。
@@ -189,7 +189,7 @@
 
 - [ ] 步骤 3：构建验证
   ```
-  cmake --build build --config RelWithDebInfo --parallel 4
+  cmake --build build --config RelWithDebInfo --parallel 8
   ```
 
 **预期结果：** 构建成功，FunctionPageBase 被编译进 QML 模块。
@@ -230,7 +230,7 @@
 
 - [ ] 步骤 4：构建验证
   ```
-  cmake --build build --config RelWithDebInfo --parallel 4
+  cmake --build build --config RelWithDebInfo --parallel 8
   ```
 
 **预期结果：** 构建成功。现有 geometry action 仍走直提交（componentMap 为空）。
@@ -251,7 +251,7 @@
 
 - [ ] 步骤 2：构建验证
   ```
-  cmake --build build --config RelWithDebInfo --parallel 4
+  cmake --build build --config RelWithDebInfo --parallel 8
   ```
 
 **预期结果：** 构建成功。输入框底部左右两角圆角化。

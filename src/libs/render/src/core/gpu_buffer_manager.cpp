@@ -38,7 +38,9 @@ void GpuBufferManager::cleanup() {
     m_triangleRanges.clear();
     m_lineRanges.clear();
     m_pointRanges.clear();
+    m_entityIndex.clear();
     m_hasData = false;
+    m_vertexPositions.clear();
 }
 
 void GpuBufferManager::synchronize(const Scene::SceneGraph& scene) {
@@ -98,7 +100,15 @@ void GpuBufferManager::rebuildBuffers(const Scene::SceneGraph& scene) {
 
     m_hasData = !all_vertices.empty();
     if(!m_hasData) {
+        m_vertexPositions.clear();
         return;
+    }
+
+    // Cache CPU-side vertex positions for anchor computation.
+    m_vertexPositions.resize(all_vertices.size());
+    for(size_t i = 0; i < all_vertices.size(); ++i) {
+        m_vertexPositions[i] = {all_vertices[i].position[0], all_vertices[i].position[1],
+                                all_vertices[i].position[2]};
     }
 
     glBindBuffer(GL_ARRAY_BUFFER, m_mainVbo);
@@ -121,6 +131,7 @@ void GpuBufferManager::rebuildBuffers(const Scene::SceneGraph& scene) {
 
     setupMainVao();
     setupPickVao();
+    rebuildEntityIndex();
 }
 
 void GpuBufferManager::setupMainVao() {
@@ -170,6 +181,31 @@ void GpuBufferManager::bindPickVao() const { glBindVertexArray(m_pickVao); }
 
 void GpuBufferManager::unbind() const { glBindVertexArray(0); }
 
+void GpuBufferManager::rebuildEntityIndex() {
+    m_entityIndex.clear();
+
+    const auto index_ranges = [this](const std::vector<Scene::DrawRange>& ranges) {
+        for(const auto& range : ranges) {
+            const EntityRefKey key{range.shapeId, range.entityType, range.localId};
+            m_entityIndex[key].push_back(range);
+        }
+    };
+
+    index_ranges(m_triangleRanges);
+    index_ranges(m_lineRanges);
+    index_ranges(m_pointRanges);
+}
+
+std::span<const Scene::DrawRange> GpuBufferManager::lookupEntity(
+    uint32_t shape_id, Core::EntityType entity_type, uint32_t local_id) const {
+    const EntityRefKey key{shape_id, entity_type, local_id};
+    const auto it = m_entityIndex.find(key);
+    if(it == m_entityIndex.end()) {
+        return {};
+    }
+    return it->second;
+}
+
 const std::vector<Scene::DrawRange>& GpuBufferManager::triangleRanges() const noexcept {
     return m_triangleRanges;
 }
@@ -183,5 +219,14 @@ const std::vector<Scene::DrawRange>& GpuBufferManager::pointRanges() const noexc
 }
 
 bool GpuBufferManager::hasData() const noexcept { return m_hasData; }
+
+std::vector<glm::vec3> GpuBufferManager::readVertexPositions(size_t offset, size_t count) const {
+    if(offset >= m_vertexPositions.size()) {
+        return {};
+    }
+    const size_t end = std::min(offset + count, m_vertexPositions.size());
+    return {m_vertexPositions.begin() + static_cast<ptrdiff_t>(offset),
+            m_vertexPositions.begin() + static_cast<ptrdiff_t>(end)};
+}
 
 } // namespace OpenGeoLab::Render

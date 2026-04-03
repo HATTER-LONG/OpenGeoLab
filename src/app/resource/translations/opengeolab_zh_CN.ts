@@ -122,6 +122,14 @@
             <source>Executing plugin: %1</source>
             <translation>正在执行插件：%1</translation>
         </message>
+        <message>
+            <source>Resetting workspace…</source>
+            <translation>正在重置工作区…</translation>
+        </message>
+        <message>
+            <source>Action: %1 (not yet implemented)</source>
+            <translation>操作：%1（尚未实现）</translation>
+        </message>
     </context>
     <context>
         <name>PluginRibbonGroup</name>
@@ -139,6 +147,10 @@
         <message>
             <source>Workspace</source>
             <translation>工作区</translation>
+        </message>
+        <message>
+            <source>New Model</source>
+            <translation>新建模型</translation>
         </message>
         <message>
             <source>Import Model</source>

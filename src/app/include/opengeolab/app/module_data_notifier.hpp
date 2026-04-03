@@ -42,8 +42,17 @@ Q_SIGNALS:
     /** @brief Emitted on main thread when geometry module data changes. */
     void geometryDataChanged();
 
-    /** @brief Emitted on main thread when scene module data changes. */
+    /** @brief Emitted on main thread when scene structure changes (nodes, selection, visibility).
+     */
     void sceneDataChanged();
+
+    /**
+     * @brief Emitted on main thread when the viewport needs a repaint.
+     *
+     * Fires for all scene module events (structural and viewport-only).
+     * SidebarPanel should NOT connect to this — use sceneDataChanged instead.
+     */
+    void viewportRefreshNeeded();
 
 private:
     std::vector<Kangaroo::Util::ScopedConnection> m_connections;

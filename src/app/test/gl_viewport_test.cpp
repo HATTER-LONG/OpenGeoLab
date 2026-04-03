@@ -177,13 +177,15 @@ TEST_CASE("GLViewport fits the camera to the scene and creates a renderer") {
     viewport.setSceneGraph(&scene);
     viewport.fitToScene();
 
-    checkVec3(viewport.cameraState().target, glm::vec3{2.0F, 2.0F, 6.0F});
-    const float fit_distance = bounds.diagonal() * 1.5F;
-    checkVec3(viewport.cameraState().position, glm::vec3{2.0F, 2.0F, 6.0F + fit_distance});
+    const Scene::CameraState fit_camera = scene.viewportState().camera();
+    checkVec3(fit_camera.target, glm::vec3{2.0F, 2.0F, 6.0F});
+    const float fit_distance = bounds.diagonal() * 1.1F;
+    checkVec3(fit_camera.position, glm::vec3{2.0F, 2.0F, 6.0F + fit_distance});
 
-    viewport.setViewPreset(static_cast<int>(TrackballController::ViewPreset::Top));
-    checkVec3(viewport.cameraState().position, glm::vec3{2.0F, 2.0F + fit_distance, 6.0F});
-    checkVec3(viewport.cameraState().up, glm::vec3{0.0F, 0.0F, -1.0F});
+    viewport.setViewPreset(static_cast<int>(Scene::ViewPreset::Top));
+    const Scene::CameraState top_camera = scene.viewportState().camera();
+    checkVec3(top_camera.position, glm::vec3{2.0F, 2.0F + fit_distance, 6.0F});
+    checkVec3(top_camera.up, glm::vec3{0.0F, 0.0F, -1.0F});
 
     auto* renderer = viewport.createRenderer();
     CHECK(renderer != nullptr);

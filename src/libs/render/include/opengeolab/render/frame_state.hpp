@@ -5,14 +5,35 @@
 
 #pragma once
 
+#include <opengeolab/core/entity_tag.hpp>
+#include <opengeolab/core/label_colors.hpp>
+#include <opengeolab/core/pick_mask.hpp>
 #include <opengeolab/scene/display_mode.hpp>
 #include <opengeolab/scene/render_mesh_data.hpp>
 
 #include <glm/glm.hpp>
 
+#include <string>
 #include <vector>
 
 namespace OpenGeoLab::Render {
+
+/// A draw range annotated with entity type for style-differentiated highlighting.
+struct HighlightEntry {
+    Scene::DrawRange range;
+    Core::EntityType entityType{Core::EntityType::GeoFace};
+};
+
+/// A label resolved to a 3D world-space anchor, ready for LabelPass rendering.
+struct ResolvedLabel {
+    glm::vec3 anchorWorld{};     ///< 3D world-space anchor point
+    std::string text;            ///< Display text ("F:3", "V:1")
+    glm::vec4 textColor{};      ///< Entity-type color
+    glm::vec4 bgColor{};        ///< Background color (with alpha)
+    Core::EntityType entityType{Core::EntityType::GeoFace};
+    uint32_t stackIndex{0};     ///< Vertical offset for overlapping anchors
+    bool occluded{false};        ///< True if anchor is behind geometry
+};
 
 /** @brief Immutable per-frame state consumed by every render pass. */
 struct FrameState {
@@ -28,8 +49,17 @@ struct FrameState {
     Scene::DisplayModeMask displayMask{Scene::DisplayModeMask::Surface |
                                        Scene::DisplayModeMask::Wireframe};
 
-    std::vector<Scene::DrawRange> selectedDrawRanges;
-    std::vector<Scene::DrawRange> hoveredDrawRanges;
+    std::vector<HighlightEntry> selectedEntries;
+    std::vector<HighlightEntry> hoveredEntries;
+
+    /// Pick mask passed to SelectionPass for GPU-level entity filtering.
+    Core::PickMask activePickMask{Core::PickMask::All};
+
+    /// Phase 2: Resolved labels for LabelPass rendering.
+    std::vector<ResolvedLabel> resolvedLabels;
+
+    /// Whether labels should be rendered.
+    bool labelsVisible{false};
 };
 
 } // namespace OpenGeoLab::Render

@@ -1,6 +1,6 @@
 /**
  * @file trackball_controller.cpp
- * @brief TrackballController implementation — orbit, pan, zoom and view preset logic
+ * @brief TrackballController implementation — orbit, pan, and zoom logic
  */
 
 #include <opengeolab/app/trackball_controller.hpp>
@@ -125,46 +125,6 @@ void TrackballController::wheelZoom(float steps, CameraState& state) {
 
     const glm::vec3 direction = glm::normalize(state.position - state.target);
     state.position = state.target + direction * distance;
-    state.updateClipping();
-}
-
-void TrackballController::fitToScene(const Scene::BoundingBox3D& bounds, CameraState& state) {
-    state.fitToBoundingBox(bounds);
-}
-
-void TrackballController::setViewPreset(ViewPreset preset, CameraState& state) {
-    const float distance = state.distance();
-    glm::vec3 direction;
-    glm::vec3 up_direction{0.0F, 1.0F, 0.0F};
-
-    switch(preset) {
-    case ViewPreset::Front:
-        direction = {0.0F, 0.0F, 1.0F};
-        break;
-    case ViewPreset::Back:
-        direction = {0.0F, 0.0F, -1.0F};
-        break;
-    case ViewPreset::Top:
-        direction = {0.0F, 1.0F, 0.0F};
-        up_direction = {0.0F, 0.0F, -1.0F};
-        break;
-    case ViewPreset::Bottom:
-        direction = {0.0F, -1.0F, 0.0F};
-        up_direction = {0.0F, 0.0F, 1.0F};
-        break;
-    case ViewPreset::Left:
-        direction = {-1.0F, 0.0F, 0.0F};
-        break;
-    case ViewPreset::Right:
-        direction = {1.0F, 0.0F, 0.0F};
-        break;
-    case ViewPreset::Isometric:
-        direction = glm::normalize(glm::vec3{1.0F, 1.0F, 1.0F});
-        break;
-    }
-
-    state.position = state.target + direction * distance;
-    state.up = up_direction;
     state.updateClipping();
 }
 

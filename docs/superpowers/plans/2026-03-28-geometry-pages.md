@@ -227,13 +227,13 @@ resource/qml/components/pages/CreateBoxPage.qml
 - [ ] 创建 `CreateBoxPage.qml`
 - [ ] 修改 `MainPages.qml` componentMap 添加 addBox 路由
 - [ ] 修改 `CMakeLists.txt` QML_FILES 添加 4 个文件
-- [ ] 运行构建：`cmake --build build --config RelWithDebInfo --parallel 4`
+- [ ] 运行构建：`cmake --build build --config RelWithDebInfo --parallel 8`
 - [ ] 运行测试：`ctest --test-dir build -C RelWithDebInfo --output-on-failure`
 - [ ] 运行应用验证 Box 页面可正常打开、参数调整、执行
 
 **验证命令：**
 ```bash
-cmake --build build --config RelWithDebInfo --parallel 4
+cmake --build build --config RelWithDebInfo --parallel 8
 ctest --test-dir build -C RelWithDebInfo --output-on-failure
 ```
 
@@ -371,13 +371,13 @@ root.statusNote = qsTr("Action: %1 (not yet implemented)").arg(actionKey);
 **步骤：**
 - [ ] 删除 `Main.qml` 中 geometryActions 相关代码块（约第 130–150 行）
 - [ ] 更新 `opengeolab_zh_CN.ts` 翻译文件
-- [ ] 运行完整构建：`cmake --build build --config RelWithDebInfo --parallel 4`
+- [ ] 运行完整构建：`cmake --build build --config RelWithDebInfo --parallel 8`
 - [ ] 运行完整测试：`ctest --test-dir build -C RelWithDebInfo --output-on-failure`
 - [ ] 手动验证：4 个几何体菜单项均打开浮动页面，参数可编辑，Execute 提交正确 JSON
 
 **验证命令：**
 ```bash
-cmake --build build --config RelWithDebInfo --parallel 4
+cmake --build build --config RelWithDebInfo --parallel 8
 ctest --test-dir build -C RelWithDebInfo --output-on-failure
 ```
 

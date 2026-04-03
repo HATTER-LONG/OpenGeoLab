@@ -60,6 +60,27 @@ Item {
         border.color: root.theme.borderSubtle
     }
 
+    /** @brief Box-selection rubber-band overlay. */
+    Rectangle {
+        id: rubberBand
+
+        visible: viewport.boxSelectActive
+        x: viewport.boxSelectRect.x
+        y: viewport.boxSelectRect.y
+        width: viewport.boxSelectRect.width
+        height: viewport.boxSelectRect.height
+        color: "transparent"
+        border.width: 1
+        border.color: root.theme.accentA
+        opacity: 0.8
+
+        Rectangle {
+            anchors.fill: parent
+            color: root.theme.accentA
+            opacity: 0.12
+        }
+    }
+
     ViewportToolbar {
         anchors.top: parent.top
         anchors.right: parent.right

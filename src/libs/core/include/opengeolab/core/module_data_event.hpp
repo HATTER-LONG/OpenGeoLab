@@ -22,7 +22,8 @@ enum class ModuleDataEvent : uint8_t {
     DerivedDataUpdated, /**< Derived data updated (tessellation, meshing, analysis results, etc.).
                          */
     BulkChanged,        /**< Bulk change (batch import, scripted batch ops, etc.). */
-    Reset               /**< Full clear or replacement of all module data. */
+    ViewportChanged, /**< Viewport-only change (camera, pick area). No structural data changed. */
+    Reset            /**< Full clear or replacement of all module data. */
 };
 
 } // namespace OpenGeoLab::Core

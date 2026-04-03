@@ -14,6 +14,7 @@ QtObject {
             "title": qsTr("Workspace"),
             "accent": "accentA",
             "actions": [
+                { "key": "newModel",       "title": qsTr("New Model"),     "icon": "newModel"  },
                 { "key": "importModel",    "title": qsTr("Import Model"),  "icon": "import"  },
                 { "key": "exportModel",    "title": qsTr("Export Model"),  "icon": "export"  },
                 { "key": "toggleTheme",    "title": "",  "icon": "",  "dynamic": true,

@@ -3,13 +3,13 @@
  * @brief Unit tests for CameraState
  */
 
-#include <opengeolab/app/camera_state.hpp>
+#include <opengeolab/scene/camera_state.hpp>
 
 #include <doctest/doctest.h>
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
 
-namespace OpenGeoLab::App::Tests {
+namespace OpenGeoLab::Scene::Tests {
 
 namespace {
 
@@ -74,13 +74,13 @@ TEST_CASE("CameraState reset and updateClipping restore symmetric defaults") {
 
 TEST_CASE("CameraState fitToBoundingBox frames valid bounds and resets invalid bounds") {
     CameraState camera;
-    Scene::BoundingBox3D bounds;
+    BoundingBox3D bounds;
     bounds.expand(glm::vec3{-2.0F, -1.0F, 3.0F});
     bounds.expand(glm::vec3{6.0F, 5.0F, 9.0F});
 
     camera.fitToBoundingBox(bounds);
 
-    const float fit_distance = bounds.diagonal() * 1.5F;
+    const float fit_distance = bounds.diagonal() * 1.1F;
     checkVec3(camera.target, glm::vec3{2.0F, 2.0F, 6.0F});
     checkVec3(camera.position, glm::vec3{2.0F, 2.0F, 6.0F + fit_distance});
     CHECK(camera.nearPlane == doctest::Approx(-fit_distance * 10.0F));
@@ -92,7 +92,7 @@ TEST_CASE("CameraState fitToBoundingBox frames valid bounds and resets invalid b
     camera.nearPlane = -1.0F;
     camera.farPlane = 1.0F;
 
-    camera.fitToBoundingBox(Scene::BoundingBox3D{});
+    camera.fitToBoundingBox(BoundingBox3D{});
 
     checkVec3(camera.position, glm::vec3{0.0F, 0.0F, 50.0F});
     checkVec3(camera.target, glm::vec3{0.0F, 0.0F, 0.0F});
@@ -101,4 +101,4 @@ TEST_CASE("CameraState fitToBoundingBox frames valid bounds and resets invalid b
     CHECK(camera.farPlane == doctest::Approx(500.0F));
 }
 
-} // namespace OpenGeoLab::App::Tests
+} // namespace OpenGeoLab::Scene::Tests

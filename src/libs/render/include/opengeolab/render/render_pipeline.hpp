@@ -10,12 +10,19 @@
 #include <opengeolab/render/pick_result.hpp>
 #include <opengeolab/render/render_export.hpp>
 
+#include <opengeolab/core/entity_ref.hpp>
+
+#include <glm/vec3.hpp>
+
 #include <memory>
+#include <span>
+#include <string>
 #include <vector>
 
 namespace OpenGeoLab::Scene {
 class SceneGraph;
 class TopologyIndex;
+struct DrawRange;
 } // namespace OpenGeoLab::Scene
 
 namespace OpenGeoLab::Render {
@@ -75,6 +82,48 @@ public:
      */
     [[nodiscard]] std::vector<PickResult>
     pickRegion(int cx, int cy, int radius, PickMask mask) const;
+
+    /**
+     * @brief Resolve all picks within an arbitrary rectangle (box-select).
+     * @param x0,y0,x1,y1 Rectangle in item-space pixels.
+     * @param mask Bitmask controlling which entity types are considered.
+     * @return All unique resolved results in the rectangle.
+     */
+    [[nodiscard]] std::vector<PickResult>
+    pickRect(int x0, int y0, int x1, int y1, PickMask mask) const;
+
+    /**
+     * @brief Resolve an entity to its DrawRanges via the internal entity index.
+     * @return DrawRanges for the entity (may span multiple primitive types). Empty if not found.
+     */
+    [[nodiscard]] std::span<const Scene::DrawRange> resolveEntityDrawRanges(
+        uint32_t shape_id, Core::EntityType entity_type, uint32_t local_id) const;
+
+    /**
+     * @brief Collect all DrawRanges belonging to a shape (all topologies).
+     *
+     * Used for compound-entity expansion (e.g. highlighting all VEF when a solid is selected).
+     */
+    [[nodiscard]] std::vector<Scene::DrawRange> resolveShapeDrawRanges(uint32_t shape_id) const;
+
+    /**
+     * @brief Set the directory containing MSDF atlas resources.
+     *
+     * Must be called before initialize(). The directory should contain
+     * `label_atlas.json` and `label_atlas.png`.
+     */
+    void setFontAtlasDir(const std::string& dir);
+
+    /**
+     * @brief Compute the world-space anchor (centroid) of an entity.
+     *
+     * Uses GpuBufferManager's CPU-side vertex cache to extract positions
+     * and compute the centroid.
+     * @return Centroid position, or origin if the entity is not found.
+     */
+    [[nodiscard]] glm::vec3 resolveEntityAnchor(uint32_t shape_id,
+                                                 Core::EntityType entity_type,
+                                                 uint32_t local_id) const;
 
     /** @brief Release all GPU resources owned by the pipeline. */
     void cleanup();

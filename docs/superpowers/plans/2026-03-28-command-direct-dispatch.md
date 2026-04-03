@@ -36,7 +36,7 @@
 
 - [ ] 步骤 1：执行构建
   ```
-  cmake --build build --config RelWithDebInfo --parallel 4
+  cmake --build build --config RelWithDebInfo --parallel 8
   ```
 - [ ] 步骤 2：执行测试
   ```
@@ -70,7 +70,7 @@
 
 - [ ] 步骤 2：运行测试确认新测试**失败**（当前 `bindSingleton` 重复调用会抛异常）
   ```
-  cmake --build build --target opengeolab_command_test --config RelWithDebInfo --parallel 4
+  cmake --build build --target opengeolab_command_test --config RelWithDebInfo --parallel 8
   ctest --test-dir build -C RelWithDebInfo -R command --output-on-failure
   ```
 
@@ -115,7 +115,7 @@
 
 - [ ] 步骤 4：运行测试确认新测试和所有旧测试**通过**
   ```
-  cmake --build build --target opengeolab_command_test --config RelWithDebInfo --parallel 4
+  cmake --build build --target opengeolab_command_test --config RelWithDebInfo --parallel 8
   ctest --test-dir build -C RelWithDebInfo -R command --output-on-failure
   ```
 
@@ -210,7 +210,7 @@
 
 - [ ] 步骤 6：运行测试确认全部通过
   ```
-  cmake --build build --target opengeolab_command_test --config RelWithDebInfo --parallel 4
+  cmake --build build --target opengeolab_command_test --config RelWithDebInfo --parallel 8
   ctest --test-dir build -C RelWithDebInfo -R command --output-on-failure
   ```
 
@@ -251,7 +251,7 @@
 
 - [ ] 步骤 2：验证构建通过（无需代码变更，仅确认链接关系正确）
   ```
-  cmake --build build --config RelWithDebInfo --parallel 4
+  cmake --build build --config RelWithDebInfo --parallel 8
   ```
 
 ---
@@ -525,7 +525,7 @@
 
 - [ ] 步骤 4：运行构建
   ```
-  cmake --build build --config RelWithDebInfo --parallel 4
+  cmake --build build --config RelWithDebInfo --parallel 8
   ```
 
 - [ ] 步骤 5：运行全部测试确认回归通过
@@ -544,7 +544,7 @@
 
 - [ ] 步骤 1：完整构建
   ```
-  cmake --build build --config RelWithDebInfo --parallel 4
+  cmake --build build --config RelWithDebInfo --parallel 8
   ```
 
 - [ ] 步骤 2：完整测试

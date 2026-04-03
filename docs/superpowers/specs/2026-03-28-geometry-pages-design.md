@@ -268,6 +268,6 @@ Info section uses `MainPages.theme.surfaceMuted` background with `MainPages.them
 
 ## Testing
 
-- Build: `cmake --build build --config RelWithDebInfo --parallel 4`
+- Build: `cmake --build build --config RelWithDebInfo --parallel 8`
 - Test: `ctest --test-dir build -C RelWithDebInfo --output-on-failure`
 - Manual: click each geometry action in menu → floating page opens → parameter adjustment → execute sends correct JSON

@@ -5,12 +5,16 @@
 
 #pragma once
 
+#include <opengeolab/core/entity_ref.hpp>
 #include <opengeolab/scene/render_mesh_data.hpp>
 #include <opengeolab/scene/scene_graph.hpp>
 
 #include <glad/gl.h>
+#include <glm/vec3.hpp>
 
 #include <cstdint>
+#include <span>
+#include <unordered_map>
 #include <vector>
 
 namespace OpenGeoLab::Render {
@@ -50,12 +54,50 @@ public:
     [[nodiscard]] const std::vector<Scene::DrawRange>& lineRanges() const noexcept;
     [[nodiscard]] const std::vector<Scene::DrawRange>& pointRanges() const noexcept;
 
+    /**
+     * @brief Look up all DrawRanges for an entity.
+     * @return Span of DrawRanges, empty if entity not found.
+     */
+    [[nodiscard]] std::span<const Scene::DrawRange>
+    lookupEntity(uint32_t shape_id, Core::EntityType entity_type, uint32_t local_id) const;
+
     [[nodiscard]] bool hasData() const noexcept;
+    /** @brief Raw handle to the main interleaved VBO (pos+normal+color). */
+    [[nodiscard]] GLuint mainVbo() const noexcept { return m_mainVbo; }
+
+    /** @brief Raw handle to the shared index buffer (uint32_t). */
+    [[nodiscard]] GLuint ibo() const noexcept { return m_ibo; }
+
+    /**
+     * @brief Read CPU-side vertex positions for a contiguous range.
+     * @param offset Start index into the global vertex array.
+     * @param count Number of vertices to read.
+     * @return Positions extracted from the CPU-side cache. Empty if out of range.
+     */
+    [[nodiscard]] std::vector<glm::vec3> readVertexPositions(size_t offset, size_t count) const;
 
 private:
     void rebuildBuffers(const Scene::SceneGraph& scene);
+    void rebuildEntityIndex();
     void setupMainVao();
     void setupPickVao();
+
+    struct EntityRefKey {
+        uint32_t shapeId{};
+        Core::EntityType entityType{};
+        uint32_t localId{};
+        bool operator==(const EntityRefKey&) const = default;
+    };
+
+    struct EntityRefKeyHash {
+        std::size_t operator()(const EntityRefKey& k) const noexcept {
+            auto h = std::hash<uint32_t>{}(k.shapeId);
+            h ^= std::hash<uint8_t>{}(static_cast<uint8_t>(k.entityType)) + 0x9e3779b9 + (h << 6) +
+                 (h >> 2);
+            h ^= std::hash<uint32_t>{}(k.localId) + 0x9e3779b9 + (h << 6) + (h >> 2);
+            return h;
+        }
+    };
 
     GLuint m_mainVao{0};
     GLuint m_pickVao{0};
@@ -69,7 +111,11 @@ private:
     std::vector<Scene::DrawRange> m_lineRanges;
     std::vector<Scene::DrawRange> m_pointRanges;
 
+    std::unordered_map<EntityRefKey, std::vector<Scene::DrawRange>, EntityRefKeyHash> m_entityIndex;
+
     bool m_hasData{false};
+
+    std::vector<glm::vec3> m_vertexPositions; ///< CPU-side position cache for anchor computation
 };
 
 } // namespace OpenGeoLab::Render

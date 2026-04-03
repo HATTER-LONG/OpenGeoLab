@@ -69,8 +69,9 @@ set(OPENGEOLAB_SPDLOG_VERSION 1.17.0)
 set(OPENGEOLAB_KANGAROO_VERSION 2.3.1)
 set(OPENGEOLAB_NLOHMANN_JSON_VERSION 3.12.0)
 set(OPENGEOLAB_DOCTEST_VERSION 2.5.0)
-set(OPENGEOLAB_GLM_VERSION 1.0.1)
+set(OPENGEOLAB_GLM_VERSION 1.0.3)
 set(OPENGEOLAB_GLAD_VERSION 2.0.8)
+set(OPENGEOLAB_STB_VERSION master)
 
 # ---------------------------------------------------------------------------
 # Qt
@@ -200,19 +201,30 @@ elseif (NOT OPENGEOLAB_FETCH_DEPENDENCIES)
     )
 else ()
     message(STATUS "Fetching glad from GitHub")
-    CPMAddPackage(
-        NAME glad
-        GITHUB_REPOSITORY Dav1dde/glad
-        GIT_TAG v${OPENGEOLAB_GLAD_VERSION})
+    cpmaddpackage(NAME glad GITHUB_REPOSITORY Dav1dde/glad GIT_TAG
+                  v${OPENGEOLAB_GLAD_VERSION})
 
     if (NOT EXISTS "${glad_SOURCE_DIR}/cmake/GladConfig.cmake")
-        message(FATAL_ERROR "Fetched glad package does not provide cmake/GladConfig.cmake")
+        message(
+            FATAL_ERROR
+                "Fetched glad package does not provide cmake/GladConfig.cmake")
     endif ()
 
     set(GLAD_SOURCES_DIR "${glad_SOURCE_DIR}")
     include("${glad_SOURCE_DIR}/cmake/GladConfig.cmake")
     glad_add_library(glad_gl_core_33 REPRODUCIBLE API gl:core=3.3)
     add_library(glad::glad ALIAS glad_gl_core_33)
+endif ()
+
+CPMAddPackage(
+    NAME stb
+    GITHUB_REPOSITORY nothings/stb
+    GIT_TAG ${OPENGEOLAB_STB_VERSION}
+    DOWNLOAD_ONLY YES)
+
+if (stb_ADDED)
+    add_library(stb_image INTERFACE)
+    target_include_directories(stb_image INTERFACE "${stb_SOURCE_DIR}")
 endif ()
 
 # ---------------------------------------------------------------------------
@@ -263,6 +275,12 @@ if (OPENGEOLAB_BUILD_TESTS)
     include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/testing.cmake)
     enable_testing()
 
+    # Temporarily disable clang-tidy for third-party doctest.
+    set(_saved_cxx_clang_tidy "${CMAKE_CXX_CLANG_TIDY}")
+    set(_saved_c_clang_tidy "${CMAKE_C_CLANG_TIDY}")
+    set(CMAKE_CXX_CLANG_TIDY "")
+    set(CMAKE_C_CLANG_TIDY "")
+
     opengeolab_resolve_package(
         doctest
         doctest::doctest_with_main
@@ -275,6 +293,9 @@ if (OPENGEOLAB_BUILD_TESTS)
         CPM_OPTIONS
         "DOCTEST_WITH_TESTS OFF"
         "DOCTEST_NO_INSTALL ON")
+
+    set(CMAKE_CXX_CLANG_TIDY "${_saved_cxx_clang_tidy}")
+    set(CMAKE_C_CLANG_TIDY "${_saved_c_clang_tidy}")
 endif ()
 
 # ---------------------------------------------------------------------------

@@ -68,13 +68,13 @@
 
 **目的：** 确认当前代码能编译通过、测试全绿，作为后续变更的基线。
 
-- [ ] 步骤 1：运行 `cmake --build build --config Debug --parallel 4`
+- [ ] 步骤 1：运行 `cmake --build build --config Debug --parallel 8`
 - [ ] 步骤 2：运行 `ctest --test-dir build -C Debug --output-on-failure`
 - [ ] 步骤 3：确认无编译错误、所有测试通过
 
 **验证命令：**
 ```bash
-cmake --build build --config Debug --parallel 4
+cmake --build build --config Debug --parallel 8
 ctest --test-dir build -C Debug --output-on-failure
 ```
 
@@ -120,7 +120,7 @@ template <class ActionT, class... Args> void registerAction(Args&&... args);
 
 **验证命令：**
 ```bash
-cmake --build build --config Debug --parallel 4
+cmake --build build --config Debug --parallel 8
 ctest --test-dir build -C Debug --output-on-failure
 ```
 
@@ -170,7 +170,7 @@ opengeolab_add_module(
 
 **验证命令：**
 ```bash
-cmake --build build --target opengeolab_geometry --config Debug --parallel 4
+cmake --build build --target opengeolab_geometry --config Debug --parallel 8
 ```
 
 **预期结果：** 编译通过（源文件不变，仅链接关系变更）。
@@ -271,7 +271,7 @@ struct VisualData {
 
 **验证命令：**
 ```bash
-cmake --build build --target opengeolab_core --config Debug --parallel 4
+cmake --build build --target opengeolab_core --config Debug --parallel 8
 ctest --test-dir build -C Debug -R core --output-on-failure
 ```
 
@@ -332,7 +332,7 @@ struct ShapeEntry {
 
 **验证命令：**
 ```bash
-cmake --build build --target opengeolab_geometry --config Debug --parallel 4
+cmake --build build --target opengeolab_geometry --config Debug --parallel 8
 ```
 
 **预期结果：** 编译通过。
@@ -442,8 +442,8 @@ opengeolab_add_doctest_test(
 
 **验证命令：**
 ```bash
-cmake --build build --target opengeolab_geometry --config Debug --parallel 4
-cmake --build build --target opengeolab_shape_store_test --config Debug --parallel 4
+cmake --build build --target opengeolab_geometry --config Debug --parallel 8
+cmake --build build --target opengeolab_shape_store_test --config Debug --parallel 8
 ctest --test-dir build -C Debug -R shape_store --output-on-failure
 ```
 
@@ -555,8 +555,8 @@ result.visualData.points.push_back(std::move(points));
 
 **验证命令：**
 ```bash
-cmake --build build --target opengeolab_geometry --config Debug --parallel 4
-cmake --build build --target opengeolab_tessellator_test --config Debug --parallel 4
+cmake --build build --target opengeolab_geometry --config Debug --parallel 8
+cmake --build build --target opengeolab_tessellator_test --config Debug --parallel 8
 ctest --test-dir build -C Debug -R tessellator --output-on-failure
 ```
 
@@ -581,7 +581,7 @@ ctest --test-dir build -C Debug -R tessellator --output-on-failure
 
 **验证命令：**
 ```bash
-cmake --build build --target opengeolab_shape_store_test --config Debug --parallel 4
+cmake --build build --target opengeolab_shape_store_test --config Debug --parallel 8
 ctest --test-dir build -C Debug -R shape_store --output-on-failure
 ```
 
@@ -676,8 +676,8 @@ nlohmann::json CreateBoxAction::execute(const nlohmann::json& param,
 
 **验证命令：**
 ```bash
-cmake --build build --target opengeolab_geometry --config Debug --parallel 4
-cmake --build build --target opengeolab_geometry_test --config Debug --parallel 4
+cmake --build build --target opengeolab_geometry --config Debug --parallel 8
+cmake --build build --target opengeolab_geometry_test --config Debug --parallel 8
 ctest --test-dir build -C Debug -R geometry --output-on-failure
 ```
 
@@ -714,7 +714,7 @@ ctest --test-dir build -C Debug -R geometry --output-on-failure
 
 **验证命令：**
 ```bash
-cmake --build build --target opengeolab_geometry --config Debug --parallel 4
+cmake --build build --target opengeolab_geometry --config Debug --parallel 8
 ctest --test-dir build -C Debug -R create_actions --output-on-failure
 ```
 
@@ -780,7 +780,7 @@ auto shape_id = m_store.add(name, shape);
 
 **验证命令：**
 ```bash
-cmake --build build --target opengeolab_geometry --config Debug --parallel 4
+cmake --build build --target opengeolab_geometry --config Debug --parallel 8
 ctest --test-dir build -C Debug -R import_actions --output-on-failure
 ```
 
@@ -843,7 +843,7 @@ return {{"ok", true}, {"action", "delete_shape"}, {"shapeId", shape_id}};
 
 **验证命令：**
 ```bash
-cmake --build build --target opengeolab_geometry --config Debug --parallel 4
+cmake --build build --target opengeolab_geometry --config Debug --parallel 8
 ctest --test-dir build -C Debug -R geometry --output-on-failure
 ```
 
@@ -863,7 +863,7 @@ ctest --test-dir build -C Debug -R geometry --output-on-failure
 
 **验证命令：**
 ```bash
-cmake --build build --config Debug --parallel 4
+cmake --build build --config Debug --parallel 8
 ctest --test-dir build -C Debug --output-on-failure
 ```
 

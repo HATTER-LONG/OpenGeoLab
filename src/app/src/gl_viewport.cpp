@@ -7,6 +7,7 @@
 
 #include <opengeolab/app/gl_viewport_renderer.hpp>
 #include <opengeolab/scene/scene_graph.hpp>
+#include <opengeolab/scene/viewport_state.hpp>
 
 #include <QHoverEvent>
 #include <QLineF>
@@ -33,7 +34,6 @@ GLViewport::GLViewport(QQuickItem* parent) : QQuickFramebufferObject(parent) {
     setAcceptHoverEvents(true);
     setFlag(ItemAcceptsInputMethod, true);
     setMirrorVertically(true);
-    m_camera.reset();
 }
 
 QQuickFramebufferObject::Renderer* GLViewport::createRenderer() const {
@@ -93,6 +93,12 @@ GLViewport::PendingPick GLViewport::consumePendingPick() {
     return pending_pick;
 }
 
+GLViewport::PendingBoxSelect GLViewport::consumePendingBoxSelect() {
+    const PendingBoxSelect pending = m_pendingBoxSelect;
+    m_pendingBoxSelect = {};
+    return pending;
+}
+
 void GLViewport::notifyPickResult(const Render::PickResult& result) {
     if(!result.valid) {
         Q_EMIT pickCleared();
@@ -117,18 +123,19 @@ void GLViewport::fitToScene() {
     if(m_sceneGraph == nullptr) {
         return;
     }
-
-    m_trackball.fitToScene(m_sceneGraph->sceneBounds(), m_camera);
+    m_sceneGraph->viewportState().fitToBounds(m_sceneGraph->sceneBounds());
     update();
 }
 
 void GLViewport::setViewPreset(int preset) {
-    if(preset < static_cast<int>(TrackballController::ViewPreset::Front) ||
-       preset > static_cast<int>(TrackballController::ViewPreset::Isometric)) {
+    if(m_sceneGraph == nullptr) {
         return;
     }
-
-    m_trackball.setViewPreset(static_cast<TrackballController::ViewPreset>(preset), m_camera);
+    if(preset < static_cast<int>(Scene::ViewPreset::Front) ||
+       preset > static_cast<int>(Scene::ViewPreset::Isometric)) {
+        return;
+    }
+    m_sceneGraph->viewportState().setViewPreset(static_cast<Scene::ViewPreset>(preset));
     update();
 }
 
@@ -144,8 +151,12 @@ void GLViewport::mousePressEvent(QMouseEvent* event) {
 
 void GLViewport::mouseMoveEvent(QMouseEvent* event) {
     if(m_trackball.isActive()) {
-        m_trackball.update(static_cast<float>(event->position().x()),
-                           static_cast<float>(event->position().y()), m_camera);
+        if(m_sceneGraph != nullptr) {
+            auto state = m_sceneGraph->viewportState().camera();
+            m_trackball.update(static_cast<float>(event->position().x()),
+                               static_cast<float>(event->position().y()), state);
+            m_sceneGraph->viewportState().setCamera(state);
+        }
         update();
         event->accept();
         return;
@@ -159,16 +170,30 @@ void GLViewport::mouseMoveEvent(QMouseEvent* event) {
     const QLineF drag_line(m_pressPos, event->position());
     if(!m_movedSincePress && drag_line.length() >= DRAG_THRESHOLD_PIXELS) {
         m_movedSincePress = true;
-        m_trackball.setViewportSize(static_cast<float>(std::max(width(), 1.0)),
-                                    static_cast<float>(std::max(height(), 1.0)));
-        if(const auto mode = mapMouseMode(m_pressedButtons, m_pressedModifiers);
-           mode != TrackballController::Mode::None) {
-            m_trackball.begin(static_cast<float>(m_pressPos.x()),
-                              static_cast<float>(m_pressPos.y()), mode, m_camera);
-            m_trackball.update(static_cast<float>(event->position().x()),
-                               static_cast<float>(event->position().y()), m_camera);
+
+        const auto mode = mapMouseMode(m_pressedButtons, m_pressedModifiers);
+        if(mode != TrackballController::Mode::None) {
+            m_trackball.setViewportSize(static_cast<float>(std::max(width(), 1.0)),
+                                        static_cast<float>(std::max(height(), 1.0)));
+            if(m_sceneGraph != nullptr) {
+                auto state = m_sceneGraph->viewportState().camera();
+                m_trackball.begin(static_cast<float>(m_pressPos.x()),
+                                  static_cast<float>(m_pressPos.y()), mode, state);
+                m_trackball.update(static_cast<float>(event->position().x()),
+                                   static_cast<float>(event->position().y()), state);
+                m_sceneGraph->viewportState().setCamera(state);
+            }
             update();
+        } else if(m_selectionActive) {
+            m_boxSelectActive = true;
+            Q_EMIT boxSelectActiveChanged();
         }
+    }
+
+    if(m_boxSelectActive) {
+        m_boxSelectRect = QRectF(m_pressPos, event->position()).normalized();
+        Q_EMIT boxSelectRectChanged();
+        update();
     }
 
     event->accept();
@@ -178,9 +203,28 @@ void GLViewport::mouseReleaseEvent(QMouseEvent* event) {
     if(m_trackball.isActive()) {
         m_trackball.end();
         update();
-    } else if(!m_movedSincePress && m_pickingEnabled && event->button() == Qt::LeftButton) {
-        m_pendingPick = {true, static_cast<float>(event->position().x()),
-                         static_cast<float>(event->position().y())};
+    } else if(!m_movedSincePress && m_pickingEnabled) {
+        if(event->button() == Qt::LeftButton) {
+            m_pendingPick = {true, static_cast<float>(event->position().x()),
+                             static_cast<float>(event->position().y()), Core::PickAction::Add};
+            update();
+        } else if(event->button() == Qt::RightButton && m_selectionActive) {
+            m_pendingPick = {true, static_cast<float>(event->position().x()),
+                             static_cast<float>(event->position().y()), Core::PickAction::Remove};
+            update();
+        }
+    } else if(m_movedSincePress && m_pickingEnabled && m_boxSelectActive) {
+        m_pendingBoxSelect = {true,
+                              static_cast<float>(m_pressPos.x()),
+                              static_cast<float>(m_pressPos.y()),
+                              static_cast<float>(event->position().x()),
+                              static_cast<float>(event->position().y()),
+                              (m_pressedButtons & Qt::LeftButton) != 0 ? Core::PickAction::Add
+                                                                       : Core::PickAction::Remove};
+        m_boxSelectActive = false;
+        m_boxSelectRect = {};
+        Q_EMIT boxSelectActiveChanged();
+        Q_EMIT boxSelectRectChanged();
         update();
     }
 
@@ -198,7 +242,11 @@ void GLViewport::wheelEvent(QWheelEvent* event) {
         if(steps != 0.0F) {
             m_trackball.setViewportSize(static_cast<float>(std::max(width(), 1.0)),
                                         static_cast<float>(std::max(height(), 1.0)));
-            m_trackball.wheelZoom(steps * 2.0F, m_camera);
+            if(m_sceneGraph != nullptr) {
+                auto state = m_sceneGraph->viewportState().camera();
+                m_trackball.wheelZoom(steps * 2.0F, state);
+                m_sceneGraph->viewportState().setCamera(state);
+            }
             update();
         }
         event->accept();
@@ -230,7 +278,8 @@ TrackballController::Mode GLViewport::mapMouseMode(Qt::MouseButtons buttons,
         return TrackballController::Mode::Pan;
     }
 
-    if((buttons & Qt::RightButton) == Qt::RightButton) {
+    // Right-drag is zoom ONLY when selection mode is NOT active.
+    if((buttons & Qt::RightButton) == Qt::RightButton && !m_selectionActive) {
         return TrackballController::Mode::Zoom;
     }
 

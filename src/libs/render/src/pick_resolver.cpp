@@ -39,14 +39,21 @@ PickResult PickResolver::resolveOne(uint64_t pick_id, PickMode mode) const {
     switch(mode) {
     case PickMode::Part:
         result.entityType = Core::EntityType::GeoSolid;
-        result.localId = 0;
+        result.localId = 1;
         break;
     case PickMode::Wire:
         if(type == Core::EntityType::GeoEdge) {
             if(auto wire = m_topoIndex.edgeToWire(shape_id, local_id)) {
                 result.entityType = Core::EntityType::GeoWire;
                 result.localId = *wire;
+            } else {
+                // Fallback: first wire (1-based, EntityRef requires localId != 0).
+                result.entityType = Core::EntityType::GeoWire;
+                result.localId = 1;
             }
+        } else {
+            result.entityType = Core::EntityType::GeoWire;
+            result.localId = 1;
         }
         break;
     case PickMode::Solid:
@@ -54,7 +61,14 @@ PickResult PickResolver::resolveOne(uint64_t pick_id, PickMode mode) const {
             if(auto solid = m_topoIndex.faceToSolid(shape_id, local_id)) {
                 result.entityType = Core::EntityType::GeoSolid;
                 result.localId = *solid;
+            } else {
+                // Fallback: first solid (1-based, EntityRef requires localId != 0).
+                result.entityType = Core::EntityType::GeoSolid;
+                result.localId = 1;
             }
+        } else {
+            result.entityType = Core::EntityType::GeoSolid;
+            result.localId = 1;
         }
         break;
     case PickMode::VEF:

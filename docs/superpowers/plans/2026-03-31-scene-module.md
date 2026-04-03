@@ -8,7 +8,7 @@
 
 **Tech Stack:** C++20, nlohmann/json, doctest, Qt 6 (QML), CMake
 
-**Build:** `cmake --build build --config RelWithDebInfo --parallel 4`
+**Build:** `cmake --build build --config RelWithDebInfo --parallel 8`
 **Test:** `ctest --test-dir build -C RelWithDebInfo --output-on-failure`
 
 **Spec:** `docs/superpowers/specs/2025-07-21-scene-module-design.md`
@@ -304,8 +304,8 @@ Add test block:
 
 - [ ] **Step 5: Build and run the test**
 
-Run: `cmake --build build --config RelWithDebInfo --target opengeolab_scene --parallel 4`
-Then: `cmake --build build --config RelWithDebInfo --target opengeolab_scene_module_test --parallel 4`
+Run: `cmake --build build --config RelWithDebInfo --target opengeolab_scene --parallel 8`
+Then: `cmake --build build --config RelWithDebInfo --target opengeolab_scene_module_test --parallel 8`
 Then: `ctest --test-dir build -C RelWithDebInfo -R scene_module --output-on-failure`
 
 Expected: All 6 set_visibility tests pass.
@@ -529,8 +529,8 @@ Add `src/list_nodes_action.cpp` to `scene_sources`.
 
 - [ ] **Step 5: Build and run all scene module tests**
 
-Run: `cmake --build build --config RelWithDebInfo --target opengeolab_scene --parallel 4`
-Then: `cmake --build build --config RelWithDebInfo --target opengeolab_scene_module_test --parallel 4`
+Run: `cmake --build build --config RelWithDebInfo --target opengeolab_scene --parallel 8`
+Then: `cmake --build build --config RelWithDebInfo --target opengeolab_scene_module_test --parallel 8`
 Then: `ctest --test-dir build -C RelWithDebInfo -R scene_module --output-on-failure`
 
 Expected: All 10 tests pass (6 set_visibility + 4 list_nodes).
@@ -761,8 +761,8 @@ Note: the scene module already links to `OpenGeoLab::Core` (which provides `Modu
 
 - [ ] **Step 5: Build and run all scene module tests**
 
-Run: `cmake --build build --config RelWithDebInfo --target opengeolab_scene --parallel 4`
-Then: `cmake --build build --config RelWithDebInfo --target opengeolab_scene_module_test --parallel 4`
+Run: `cmake --build build --config RelWithDebInfo --target opengeolab_scene --parallel 8`
+Then: `cmake --build build --config RelWithDebInfo --target opengeolab_scene_module_test --parallel 8`
 Then: `ctest --test-dir build -C RelWithDebInfo -R scene_module --output-on-failure`
 
 Expected: All 15 tests pass (6 + 4 + 5).
@@ -830,7 +830,7 @@ Add registration block after the Geometry registration:
 
 - [ ] **Step 3: Build the full project**
 
-Run: `cmake --build build --config RelWithDebInfo --parallel 4`
+Run: `cmake --build build --config RelWithDebInfo --parallel 8`
 
 Expected: Full build succeeds. All existing tests still pass.
 
@@ -889,7 +889,7 @@ In `src/app/src/module_data_notifier.cpp`, add a second subscription inside the 
 
 - [ ] **Step 3: Build the app target**
 
-Run: `cmake --build build --config RelWithDebInfo --parallel 4`
+Run: `cmake --build build --config RelWithDebInfo --parallel 8`
 
 Expected: Build succeeds (MOC picks up the new signal).
 
@@ -953,7 +953,7 @@ In `src/app/src/main.cpp`:
 
 - [ ] **Step 2: Build the full project**
 
-Run: `cmake --build build --config RelWithDebInfo --parallel 4`
+Run: `cmake --build build --config RelWithDebInfo --parallel 8`
 
 Expected: Build succeeds.
 
@@ -1015,7 +1015,7 @@ In `src/app/src/gl_viewport.cpp`, remove the `setShapeVisible` implementation (l
 
 - [ ] **Step 3: Build the full project**
 
-Run: `cmake --build build --config RelWithDebInfo --parallel 4`
+Run: `cmake --build build --config RelWithDebInfo --parallel 8`
 
 Expected: Build succeeds (QML hasn't been updated yet, but the symbol is no longer called from C++).
 
@@ -1282,7 +1282,7 @@ Remove the `viewport: viewportPanel.glViewport` line:
 
 - [ ] **Step 3: Build the full project**
 
-Run: `cmake --build build --config RelWithDebInfo --parallel 4`
+Run: `cmake --build build --config RelWithDebInfo --parallel 8`
 
 Expected: Build succeeds.
 
@@ -1312,7 +1312,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 
 - [ ] **Step 1: Full build**
 
-Run: `cmake --build build --config RelWithDebInfo --parallel 4`
+Run: `cmake --build build --config RelWithDebInfo --parallel 8`
 
 Expected: Clean build, no warnings.
 

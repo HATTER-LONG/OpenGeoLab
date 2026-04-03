@@ -5,6 +5,8 @@
 
 #pragma once
 
+#include <opengeolab/core/core_export.hpp>
+
 #include <array>
 #include <cstdint>
 #include <string>
@@ -65,4 +67,53 @@ inline std::string colorToHex(const RenderColor& c) {
     return buf;
 }
 
+/// Visual style for a highlighted entity category.
+struct HighlightStyle {
+    RenderColor color;
+    float lineWidth{1.5F};  ///< Edge rendering width (pixels).
+    float pointScale{1.0F}; ///< Vertex point-size multiplier relative to defaultPointSize.
+};
+
+/// Complete color/style configuration for hover and selection states.
+struct ColorMapConfig {
+    HighlightStyle hoverEdgeVertex;     ///< Edge & Vertex hover.
+    HighlightStyle hoverFace;           ///< Face hover.
+    HighlightStyle selectionEdgeVertex; ///< Edge & Vertex selection.
+    HighlightStyle selectionFace;       ///< Face selection.
+    RenderColor defaultEdge;            ///< Default edge color.
+    RenderColor defaultVertex;          ///< Default vertex color.
+    float defaultEdgeWidth{1.5F};       ///< Default edge line width.
+    float defaultPointSize{6.0F};       ///< Default vertex point size.
+};
+
+/// Access and override the active color map configuration.
+namespace ColorMap {
+
+/// Compile-time default configuration matching OGL reference palette.
+inline constexpr ColorMapConfig kDefault{
+    // hoverEdgeVertex: orange #ff7f00
+    {.color = {1.F, 0.498F, 0.F, 1.F}, .lineWidth = 2.5F, .pointScale = 1.5F},
+    // hoverFace: blue #4b55e9, alpha 0.6
+    {.color = {0.294F, 0.333F, 0.914F, 0.6F}, .lineWidth = 1.5F, .pointScale = 1.F},
+    // selectionEdgeVertex: red-pink #ff165d
+    {.color = {1.F, 0.086F, 0.365F, 1.F}, .lineWidth = 2.0F, .pointScale = 1.2F},
+    // selectionFace: deep blue #4116ff, alpha 0.6
+    {.color = {0.255F, 0.086F, 1.F, 0.6F}, .lineWidth = 1.5F, .pointScale = 1.F},
+    // defaultEdge: #ffd460
+    {1.F, 0.831F, 0.376F, 1.F},
+    // defaultVertex: #3490de
+    {0.204F, 0.565F, 0.871F, 1.F},
+    // defaultEdgeWidth, defaultPointSize
+    1.5F,
+    6.0F,
+};
+
+/// Returns the currently active configuration (thread-safe read).
+OPENGEOLAB_CORE_EXPORT const ColorMapConfig& active();
+
+/// Overrides the active configuration at runtime.
+/// Pass @c kDefault to reset to defaults.
+OPENGEOLAB_CORE_EXPORT void setOverride(const ColorMapConfig& config);
+
+} // namespace ColorMap
 } // namespace OpenGeoLab::Core

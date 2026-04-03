@@ -53,6 +53,12 @@ public:
     uint32_t add(const std::string& name, const TopoDS_Shape& shape);
 
     /**
+     * @brief Remove all shapes in one operation.
+     * @post storeCleared signal is emitted once (not per-shape shapeRemoved).
+     */
+    void clear();
+
+    /**
      * @brief Remove a shape by id.
      * @post shapeRemoved signal is emitted.
      */
@@ -100,6 +106,7 @@ public:
     Kangaroo::Util::Signal<uint32_t, const ShapeEntry&> shapeAdded;   ///< (id, entry)
     Kangaroo::Util::Signal<uint32_t> shapeRemoved;                    ///< (id)
     Kangaroo::Util::Signal<uint32_t, const ShapeEntry&> shapeUpdated; ///< (id, entry)
+    Kangaroo::Util::Signal<> storeCleared;                            ///< all shapes removed
 
 private:
     void buildSubShapeIndex(ShapeEntry& entry);

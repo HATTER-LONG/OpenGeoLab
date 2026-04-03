@@ -114,6 +114,8 @@ void TopologyIndex::buildForShape(uint32_t shape_id, const Geometry::ShapeEntry&
 
 void TopologyIndex::removeShape(uint32_t shape_id) { m_relations.erase(shape_id); }
 
+void TopologyIndex::clear() { m_relations.clear(); }
+
 std::optional<uint32_t> TopologyIndex::edgeToWire(uint32_t shape_id, uint32_t edge_local_id) const {
     const auto shape_iterator = m_relations.find(shape_id);
     if(shape_iterator == m_relations.end()) {

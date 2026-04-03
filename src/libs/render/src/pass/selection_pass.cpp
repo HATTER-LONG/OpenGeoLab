@@ -2,6 +2,7 @@
 
 #include "core/gpu_buffer_manager.hpp"
 
+#include <opengeolab/core/pick_mask.hpp>
 #include <opengeolab/render/batch_utils.hpp>
 
 #include <glad/gl.h>
@@ -36,9 +37,17 @@ void main() {
 }
 )glsl";
 
+/// Line width for edge picking. On macOS/Linux Core Profile drivers,
+/// this may be clamped to 1.0; the 13×13 pick neighborhood in pickAt()
+/// compensates for the reduced hit area.
 constexpr float PICK_LINE_WIDTH = 4.0F;
 constexpr float DEFAULT_LINE_WIDTH = 1.0F;
 constexpr float PICK_POINT_SIZE = 12.0F;
+
+/// Check whether a PickMask has any of the given bits set.
+[[nodiscard]] constexpr bool hasAny(Core::PickMask mask, Core::PickMask bits) {
+    return (mask & bits) != Core::PickMask::None;
+}
 
 } // namespace
 
@@ -87,22 +96,33 @@ void SelectionPass::render(const FrameState& state, const GpuBufferManager& buff
 
     m_shader.setFloat("u_pointSize", PICK_POINT_SIZE);
 
-    const auto triangle_batch = BatchUtils::buildIndexedBatch(
-        buffers.triangleRanges(), [](const Scene::DrawRange&) { return true; });
-    BatchUtils::multiDrawElements(GL_TRIANGLES, triangle_batch);
+    const Core::PickMask mask = state.activePickMask;
+
+    // Triangles — draw only if Face or Solid bits are set
+    if(hasAny(mask, Core::PickMask::Face | Core::PickMask::Solid)) {
+        const auto triangle_batch = BatchUtils::buildIndexedBatch(
+            buffers.triangleRanges(), [](const Scene::DrawRange&) { return true; });
+        BatchUtils::multiDrawElements(GL_TRIANGLES, triangle_batch);
+    }
 
     // GL_LEQUAL so edges/vertices at equal depth can overwrite face pick IDs.
     glDepthFunc(GL_LEQUAL);
 
-    glLineWidth(PICK_LINE_WIDTH);
-    const auto line_batch = BatchUtils::buildIndexedBatch(
-        buffers.lineRanges(), [](const Scene::DrawRange&) { return true; });
-    BatchUtils::multiDrawElements(GL_LINES, line_batch);
+    // Lines — draw only if Edge or Wire bits are set
+    if(hasAny(mask, Core::PickMask::Edge | Core::PickMask::Wire)) {
+        glLineWidth(PICK_LINE_WIDTH);
+        const auto line_batch = BatchUtils::buildIndexedBatch(
+            buffers.lineRanges(), [](const Scene::DrawRange&) { return true; });
+        BatchUtils::multiDrawElements(GL_LINES, line_batch);
+    }
 
-    glEnable(GL_PROGRAM_POINT_SIZE);
-    const auto point_batch = BatchUtils::buildArrayBatch(
-        buffers.pointRanges(), [](const Scene::DrawRange&) { return true; });
-    BatchUtils::multiDrawArrays(GL_POINTS, point_batch);
+    // Points — draw only if Vertex bit is set
+    if(hasAny(mask, Core::PickMask::Vertex)) {
+        glEnable(GL_PROGRAM_POINT_SIZE);
+        const auto point_batch = BatchUtils::buildArrayBatch(
+            buffers.pointRanges(), [](const Scene::DrawRange&) { return true; });
+        BatchUtils::multiDrawArrays(GL_POINTS, point_batch);
+    }
 
     buffers.unbind();
     m_pickFbo.unbind();

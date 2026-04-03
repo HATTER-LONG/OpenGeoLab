@@ -32,6 +32,14 @@ public:
      */
     [[nodiscard]] std::vector<uint64_t> readPickRegion(int cx, int cy, int radius = 6) const;
 
+    /**
+     * @brief Read all pickIds in an arbitrary rectangle.
+     * @param x0,y0 Top-left corner (item space, top-left origin).
+     * @param x1,y1 Bottom-right corner.
+     * @return Non-zero unique pickIds found in the rectangle.
+     */
+    [[nodiscard]] std::vector<uint64_t> readPickRect(int x0, int y0, int x1, int y1) const;
+
 private:
     void createAttachments();
 
