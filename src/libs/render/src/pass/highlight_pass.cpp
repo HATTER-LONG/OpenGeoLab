@@ -160,8 +160,8 @@ void HighlightPass::render(const FrameState& state, const GpuBufferManager& buff
     const FaceTransforms transforms{mvp, normal_matrix};
     constexpr float alpha = 1.0F;
 
-    const glm::vec2 viewport{static_cast<float>(state.viewportWidth) * state.devicePixelRatio,
-                             static_cast<float>(state.viewportHeight) * state.devicePixelRatio};
+    const glm::vec2 viewport{static_cast<float>(state.viewportWidth),
+                             static_cast<float>(state.viewportHeight)};
 
     buffers.bindMainVao();
     glEnable(GL_DEPTH_TEST);
@@ -200,7 +200,8 @@ void HighlightPass::render(const FrameState& state, const GpuBufferManager& buff
         }
 
         if(!vertices.empty()) {
-            const float pt_size = cfg.defaultPointSize * cfg.selectionEdgeVertex.pointScale;
+            const float pt_size =
+                cfg.defaultPointSize * cfg.selectionEdgeVertex.pointScale * state.devicePixelRatio;
             glEnable(GL_PROGRAM_POINT_SIZE);
             m_pointShader.use();
             m_pointShader.setMat4("u_mvp", mvp);
@@ -247,7 +248,8 @@ void HighlightPass::render(const FrameState& state, const GpuBufferManager& buff
         }
 
         if(!vertices.empty()) {
-            const float pt_size = cfg.defaultPointSize * cfg.hoverEdgeVertex.pointScale;
+            const float pt_size =
+                cfg.defaultPointSize * cfg.hoverEdgeVertex.pointScale * state.devicePixelRatio;
             glEnable(GL_PROGRAM_POINT_SIZE);
             m_pointShader.use();
             m_pointShader.setMat4("u_mvp", mvp);

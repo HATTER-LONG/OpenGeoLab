@@ -136,6 +136,15 @@ void LabelPass::buildLabelGeometry(const FrameState& state) {
     const auto vp_h = static_cast<float>(state.viewportHeight);
     const auto mvp = state.projMatrix * state.viewMatrix;
 
+    // Scale label sizing constants by device pixel ratio for HiDPI
+    const float dpr = state.devicePixelRatio;
+    const float font_scale = K_FONT_SCALE * dpr;
+    const float pad_h = K_PAD_H * dpr;
+    const float pad_v = K_PAD_V * dpr;
+    const float pointer_height = K_POINTER_HEIGHT * dpr;
+    const float pointer_half_w = K_POINTER_HALF_W * dpr;
+    const float stack_gap = K_STACK_GAP * dpr;
+
     for(const auto& label : state.resolvedLabels) {
         // Project anchor to screen space
         auto clip = mvp * glm::vec4(label.anchorWorld, 1.0F);
@@ -151,22 +160,22 @@ void LabelPass::buildLabelGeometry(const FrameState& state) {
         for(char ch : label.text) {
             const auto* gm = m_fontAtlas->glyph(static_cast<uint32_t>(ch));
             if(gm != nullptr) {
-                text_width += gm->advance * K_FONT_SCALE;
+                text_width += gm->advance * font_scale;
             }
         }
 
         float text_height =
-            (m_fontAtlas->ascender() - m_fontAtlas->descender()) * K_FONT_SCALE;
-        float bg_w = text_width + 2.0F * K_PAD_H;
-        float bg_h = text_height + 2.0F * K_PAD_V;
+            (m_fontAtlas->ascender() - m_fontAtlas->descender()) * font_scale;
+        float bg_w = text_width + 2.0F * pad_h;
+        float bg_h = text_height + 2.0F * pad_v;
 
         // Stack offset (upward)
         float stack_offset = static_cast<float>(label.stackIndex) *
-                             (bg_h + K_POINTER_HEIGHT + K_STACK_GAP);
+                             (bg_h + pointer_height + stack_gap);
 
         // Label center (above anchor)
         float label_cx = screen_x;
-        float label_cy = screen_y + K_POINTER_HEIGHT + bg_h * 0.5F + stack_offset;
+        float label_cy = screen_y + pointer_height + bg_h * 0.5F + stack_offset;
 
         // -- Background rectangle (two triangles) --
         float bg_left = label_cx - bg_w * 0.5F;
@@ -190,17 +199,17 @@ void LabelPass::buildLabelGeometry(const FrameState& state) {
         // -- Pointer triangle --
         float ptr_top = bg_bottom;
         float ptr_bottom = screen_y + stack_offset;
-        push_bg(label_cx - K_POINTER_HALF_W, ptr_top);
-        push_bg(label_cx + K_POINTER_HALF_W, ptr_top);
+        push_bg(label_cx - pointer_half_w, ptr_top);
+        push_bg(label_cx + pointer_half_w, ptr_top);
         push_bg(label_cx, ptr_bottom);
 
         // -- Glyph quads --
-        float cursor_x = bg_left + K_PAD_H;
+        float cursor_x = bg_left + pad_h;
         // Center text vertically: place baseline so ascender+descender span
         // is centered in the background box.
         float baseline_y = label_cy -
                            (m_fontAtlas->ascender() + m_fontAtlas->descender()) * 0.5F *
-                               K_FONT_SCALE;
+                               font_scale;
 
         auto atlas_w = static_cast<float>(m_fontAtlas->atlasSize().x);
         auto atlas_h = static_cast<float>(m_fontAtlas->atlasSize().y);
@@ -214,15 +223,15 @@ void LabelPass::buildLabelGeometry(const FrameState& state) {
 
             // Skip whitespace glyphs (no atlas bounds)
             if(gm->atlasBounds[0] == 0.0F && gm->atlasBounds[2] == 0.0F) {
-                cursor_x += gm->advance * K_FONT_SCALE;
+                cursor_x += gm->advance * font_scale;
                 continue;
             }
 
             // Glyph screen-space quad (screen Y increases upward, same as planeBounds)
-            float gx0 = cursor_x + gm->planeBounds[0] * K_FONT_SCALE;
-            float gy0 = baseline_y + gm->planeBounds[3] * K_FONT_SCALE; // top
-            float gx1 = cursor_x + gm->planeBounds[2] * K_FONT_SCALE;
-            float gy1 = baseline_y + gm->planeBounds[1] * K_FONT_SCALE; // bottom
+            float gx0 = cursor_x + gm->planeBounds[0] * font_scale;
+            float gy0 = baseline_y + gm->planeBounds[3] * font_scale; // top
+            float gx1 = cursor_x + gm->planeBounds[2] * font_scale;
+            float gy1 = baseline_y + gm->planeBounds[1] * font_scale; // bottom
 
             // Atlas UVs (normalized)
             float u0 = gm->atlasBounds[0] / atlas_w;
@@ -243,7 +252,7 @@ void LabelPass::buildLabelGeometry(const FrameState& state) {
             push_glyph(gx1, gy1, u1, v0);
             push_glyph(gx0, gy1, u0, v0);
 
-            cursor_x += gm->advance * K_FONT_SCALE;
+            cursor_x += gm->advance * font_scale;
         }
     }
 }

@@ -40,7 +40,7 @@ void main() {
 /// Line width for edge picking. On macOS/Linux Core Profile drivers,
 /// this may be clamped to 1.0; the 13×13 pick neighborhood in pickAt()
 /// compensates for the reduced hit area.
-constexpr float PICK_LINE_WIDTH = 5.0F;
+constexpr float PICK_LINE_WIDTH = 8.0F;
 constexpr float DEFAULT_LINE_WIDTH = 1.0F;
 constexpr float PICK_POINT_SIZE = 12.0F;
 
@@ -94,7 +94,7 @@ void SelectionPass::render(const FrameState& state, const GpuBufferManager& buff
 
     buffers.bindPickVao();
 
-    m_shader.setFloat("u_pointSize", PICK_POINT_SIZE);
+    m_shader.setFloat("u_pointSize", PICK_POINT_SIZE * state.devicePixelRatio);
 
     const Core::PickMask mask = state.activePickMask;
 
@@ -120,7 +120,7 @@ void SelectionPass::render(const FrameState& state, const GpuBufferManager& buff
 
     // Lines — draw if Edge, Wire, or MeshEdge bits are set
     if(want_geo_edge || hasAny(mask, Core::PickMask::MeshEdge)) {
-        glLineWidth(PICK_LINE_WIDTH);
+        glLineWidth(PICK_LINE_WIDTH * state.devicePixelRatio);
         const auto line_batch = BatchUtils::buildIndexedBatch(
             buffers.lineRanges(), [want_geo_edge, mask](const Scene::DrawRange& r) {
                 if(r.entityType == Core::EntityType::GeoEdge) {

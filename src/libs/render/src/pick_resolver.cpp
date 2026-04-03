@@ -12,13 +12,19 @@ int PickResolver::typePriority(Core::EntityType type) {
     switch(type) {
     case Core::EntityType::GeoVertex:
         return 3;
+    case Core::EntityType::MeshNode:
+        return 3;
     case Core::EntityType::GeoEdge:
         return 2;
     case Core::EntityType::GeoWire:
         return 2;
+    case Core::EntityType::MeshEdge:
+        return 2;
     case Core::EntityType::GeoFace:
         return 1;
     case Core::EntityType::GeoSolid:
+        return 1;
+    case Core::EntityType::MeshElement:
         return 1;
     default:
         return 0;

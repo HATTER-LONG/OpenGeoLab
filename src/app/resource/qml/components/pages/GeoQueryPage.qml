@@ -88,24 +88,84 @@ FunctionPageBase {
     }
 
     // ── Auto-label toggle ──────────────────────────────────────────────
-    RowLayout {
-        width: parent.width
-        spacing: 8
+    Rectangle {
+        id: labelToggleRow
 
-        Text {
-            text: qsTr("Show Labels")
-            color: root.theme.textSecondary
-            font.pixelSize: 12
-            Layout.fillWidth: true
+        width: parent.width
+        height: 32
+        radius: root.theme.radiusSmall
+        color: labelToggle.checked
+            ? root.theme.tint(root.theme.accentA, root.theme.darkMode ? 0.18 : 0.10)
+            : labelMouse.containsMouse
+                ? root.theme.surfaceMuted
+                : "transparent"
+        border.width: labelToggle.checked ? 1 : 0
+        border.color: root.theme.tint(root.theme.accentA, root.theme.darkMode ? 0.46 : 0.28)
+
+        Behavior on color {
+            ColorAnimation { duration: root.theme.animFast }
         }
 
-        Switch {
-            id: labelToggle
+        MouseArea {
+            id: labelMouse
 
-            checked: SelectionService.autoLabel
-            onToggled: {
-                sceneCommand("set_labels_visible", { visible: checked });
-                sceneCommand("set_auto_label", { enabled: checked });
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: labelToggle.toggle()
+        }
+
+        RowLayout {
+            anchors.fill: parent
+            anchors.leftMargin: 10
+            anchors.rightMargin: 8
+            spacing: 6
+
+            Text {
+                text: qsTr("Show Labels")
+                color: labelToggle.checked
+                    ? root.theme.accentA
+                    : root.theme.textSecondary
+                font.pixelSize: 12
+                font.bold: labelToggle.checked
+                Layout.fillWidth: true
+            }
+
+            // Styled pill toggle
+            Rectangle {
+                id: labelToggle
+
+                property bool checked: SelectionService.autoLabel
+
+                function toggle() {
+                    checked = !checked;
+                    sceneCommand("set_labels_visible", { visible: checked });
+                    sceneCommand("set_auto_label", { enabled: checked });
+                }
+
+                Layout.preferredWidth: 36
+                Layout.preferredHeight: 20
+                radius: 10
+                color: checked
+                    ? root.theme.accentA
+                    : root.theme.tint(root.theme.textTertiary, root.theme.darkMode ? 0.3 : 0.22)
+
+                Behavior on color {
+                    ColorAnimation { duration: root.theme.animNormal }
+                }
+
+                Rectangle {
+                    x: labelToggle.checked ? parent.width - width - 2 : 2
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 16
+                    height: 16
+                    radius: 8
+                    color: "#ffffff"
+
+                    Behavior on x {
+                        NumberAnimation { duration: root.theme.animNormal; easing.type: Easing.InOutQuad }
+                    }
+                }
             }
         }
     }

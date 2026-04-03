@@ -56,6 +56,7 @@ struct RenderPipeline::Impl {
     std::unique_ptr<PickResolver> pickResolver;
     std::string fontAtlasDir;
     uint64_t resolverVersion{0}; ///< Scene version when resolver was last built.
+    float lastDevicePixelRatio{1.0F}; ///< Cached DPR for pick radius scaling.
     bool initialized{false};
 };
 
@@ -115,6 +116,8 @@ void RenderPipeline::render(const FrameState& state) {
         return;
     }
 
+    m_impl->lastDevicePixelRatio = state.devicePixelRatio;
+
     glViewport(0, 0, state.viewportWidth, state.viewportHeight);
     glClearColor(0.149F, 0.149F, 0.169F, 1.0F);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -132,9 +135,10 @@ PickResult RenderPipeline::pickAt(int x, int y, PickMask mask) const {
         return {};
     }
 
-    // Read 13×13 neighborhood sorted by distance from center.
-    // PickResolver applies Vertex > Edge > Face priority in VEF mode.
-    constexpr int pick_neighborhood_radius = 6;
+    // Scale pick radius by DPR to maintain consistent logical-pixel hit area.
+    constexpr float base_pick_radius = 8.0F;
+    const int pick_neighborhood_radius =
+        std::max(8, static_cast<int>(base_pick_radius * m_impl->lastDevicePixelRatio));
     auto raw_pick_ids =
         m_impl->selectionPass.pickFbo().readPickRegion(x, y, pick_neighborhood_radius);
 

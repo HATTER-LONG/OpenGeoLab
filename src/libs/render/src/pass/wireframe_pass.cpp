@@ -44,8 +44,8 @@ void main() {
 )glsl";
 
 constexpr float POINT_SIZE = 6.0F;
-constexpr float MESH_POINT_SIZE = 3.0F;
-constexpr float MESH_EDGE_WIDTH_FACTOR = 0.6F;
+constexpr float MESH_POINT_SIZE = 4.5F;
+constexpr float MESH_EDGE_WIDTH_FACTOR = 0.75F;
 
 } // namespace
 
@@ -72,8 +72,8 @@ void WireframePass::render(const FrameState& state, const GpuBufferManager& buff
 
     // --- Geometry edges via ThickLineRenderer ---
     if(m_thickLine != nullptr) {
-        const glm::vec2 viewport{static_cast<float>(state.viewportWidth) * state.devicePixelRatio,
-                                 static_cast<float>(state.viewportHeight) * state.devicePixelRatio};
+        const glm::vec2 viewport{static_cast<float>(state.viewportWidth),
+                                 static_cast<float>(state.viewportHeight)};
 
         const auto geo_lines =
             BatchUtils::filterRanges(buffers.lineRanges(), [](const Scene::DrawRange& r) {
@@ -119,7 +119,7 @@ void WireframePass::render(const FrameState& state, const GpuBufferManager& buff
     m_pointShader.setMat4("u_mvp", mvp);
     m_pointShader.setFloat("u_alpha", alpha);
 
-    m_pointShader.setFloat("u_pointSize", POINT_SIZE);
+    m_pointShader.setFloat("u_pointSize", POINT_SIZE * state.devicePixelRatio);
     const auto geo_points =
         BatchUtils::buildArrayBatch(buffers.pointRanges(), [](const Scene::DrawRange& r) {
             return r.entityType != Core::EntityType::MeshNode;
@@ -127,7 +127,7 @@ void WireframePass::render(const FrameState& state, const GpuBufferManager& buff
     BatchUtils::multiDrawArrays(GL_POINTS, geo_points);
 
     // --- Mesh nodes (smaller green points) ---
-    m_pointShader.setFloat("u_pointSize", MESH_POINT_SIZE);
+    m_pointShader.setFloat("u_pointSize", MESH_POINT_SIZE * state.devicePixelRatio);
     const auto mesh_points =
         BatchUtils::buildArrayBatch(buffers.pointRanges(), [](const Scene::DrawRange& r) {
             return r.entityType == Core::EntityType::MeshNode;
