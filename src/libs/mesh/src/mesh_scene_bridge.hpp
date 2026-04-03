@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include <opengeolab/mesh/mesh_export.hpp>
 #include <opengeolab/mesh/mesh_store.hpp>
 #include <opengeolab/scene/scene_graph.hpp>
 
@@ -16,7 +17,7 @@
 
 namespace OpenGeoLab::Mesh {
 
-class MeshSceneBridge {
+class OPENGEOLAB_MESH_EXPORT MeshSceneBridge {
 public:
     MeshSceneBridge(Scene::SceneGraph& scene, MeshStore& store);
     ~MeshSceneBridge();

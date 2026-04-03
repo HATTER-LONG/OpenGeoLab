@@ -8,8 +8,8 @@
 
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <cstdint>
-#include <limits>
 #include <set>
 #include <utility>
 #include <vector>
@@ -129,16 +129,28 @@ void appendElementEdges(MeshElementType type, std::vector<EdgeCorners>& edges) {
     }
 }
 
-[[nodiscard]] glm::vec3 vertexPosition(const Scene::RenderVertex& vertex) {
-    return {vertex.position[0], vertex.position[1], vertex.position[2]};
+[[nodiscard]] Scene::RenderVertex makeVertex(const MeshNode& node) {
+    Scene::RenderVertex vertex;
+    vertex.position[0] = node.position[0];
+    vertex.position[1] = node.position[1];
+    vertex.position[2] = node.position[2];
+    vertex.color[0] = K_MESH_COLOR[0];
+    vertex.color[1] = K_MESH_COLOR[1];
+    vertex.color[2] = K_MESH_COLOR[2];
+    vertex.color[3] = K_MESH_COLOR[3];
+    return vertex;
 }
 
-[[nodiscard]] glm::vec3 computeNormal(const Scene::RenderMeshData& data,
+[[nodiscard]] glm::vec3 vertexPosition(const MeshNode& node) {
+    return {node.position[0], node.position[1], node.position[2]};
+}
+
+[[nodiscard]] glm::vec3 computeNormal(const MeshEntry& entry,
                                       const std::vector<uint32_t>& node_indices,
                                       const TriangleCorners& triangle) {
-    const glm::vec3 p0 = vertexPosition(data.vertices[node_indices[triangle[0]]]);
-    const glm::vec3 p1 = vertexPosition(data.vertices[node_indices[triangle[1]]]);
-    const glm::vec3 p2 = vertexPosition(data.vertices[node_indices[triangle[2]]]);
+    const glm::vec3 p0 = vertexPosition(entry.nodes[node_indices[triangle[0]]]);
+    const glm::vec3 p1 = vertexPosition(entry.nodes[node_indices[triangle[1]]]);
+    const glm::vec3 p2 = vertexPosition(entry.nodes[node_indices[triangle[2]]]);
     const glm::vec3 normal = glm::cross(p1 - p0, p2 - p0);
     const float length = glm::length(normal);
     return length > 0.0F ? normal / length : glm::vec3{0.0F};
@@ -148,14 +160,6 @@ void assignNormal(Scene::RenderVertex& vertex, const glm::vec3& normal) {
     vertex.normal[0] = normal.x;
     vertex.normal[1] = normal.y;
     vertex.normal[2] = normal.z;
-}
-
-[[nodiscard]] uint32_t minNodeIndex(const std::vector<uint32_t>& node_indices) {
-    return *std::min_element(node_indices.begin(), node_indices.end());
-}
-
-[[nodiscard]] uint32_t maxNodeIndex(const std::vector<uint32_t>& node_indices) {
-    return *std::max_element(node_indices.begin(), node_indices.end());
 }
 
 } // namespace
@@ -168,105 +172,12 @@ Scene::RenderMeshData MeshRenderBuilder::build(uint32_t shape_id, const MeshEntr
         return result;
     }
 
-    result.vertices.reserve(entry.nodes.size());
-    result.pickIds.resize(entry.nodes.size());
-
-    for(const auto& node : entry.nodes) {
-        Scene::RenderVertex vertex;
-        vertex.position[0] = node.position[0];
-        vertex.position[1] = node.position[1];
-        vertex.position[2] = node.position[2];
-        vertex.color[0] = K_MESH_COLOR[0];
-        vertex.color[1] = K_MESH_COLOR[1];
-        vertex.color[2] = K_MESH_COLOR[2];
-        vertex.color[3] = K_MESH_COLOR[3];
-        result.bounds.expand(glm::vec3{node.position[0], node.position[1], node.position[2]});
-        result.vertices.push_back(vertex);
-    }
-
-    std::vector<uint32_t> element_node_indices;
-    std::vector<TriangleCorners> triangles;
-    triangles.reserve(12);
-
-    for(std::size_t element_index = 0; element_index < entry.elements.size(); ++element_index) {
-        const auto& element = entry.elements[element_index];
-        if(!collectElementNodeIndices(element, entry.nodes.size(), element_node_indices)) {
-            continue;
-        }
-
-        triangles.clear();
-        appendElementTriangles(element.type, triangles);
-        if(triangles.empty()) {
-            continue;
-        }
-
-        const uint32_t local_id = static_cast<uint32_t>(element_index) + 1U;
-        const uint64_t pick_id =
-            Scene::PickId::encode(shape_id, Core::EntityType::MeshElement, local_id);
-        const glm::vec3 normal = computeNormal(result, element_node_indices, triangles.front());
-
-        for(const uint32_t node_index : element_node_indices) {
-            assignNormal(result.vertices[node_index], normal);
-            result.pickIds[node_index].pickId = pick_id;
-        }
-
-        const uint32_t index_offset = static_cast<uint32_t>(result.indices.size());
-        for(const auto& triangle : triangles) {
-            result.indices.push_back(element_node_indices[triangle[0]]);
-            result.indices.push_back(element_node_indices[triangle[1]]);
-            result.indices.push_back(element_node_indices[triangle[2]]);
-        }
-
-        const uint32_t min_index = minNodeIndex(element_node_indices);
-        const uint32_t max_index = maxNodeIndex(element_node_indices);
-        result.triangleRanges.push_back({
-            .shapeId = shape_id,
-            .entityType = Core::EntityType::MeshElement,
-            .localId = local_id,
-            .vertexOffset = min_index,
-            .vertexCount = max_index - min_index + 1U,
-            .indexOffset = index_offset,
-            .indexCount = static_cast<uint32_t>(triangles.size() * 3U),
-            .topology = Scene::PrimitiveTopology::Triangles,
-        });
-    }
-
-    std::set<std::pair<uint32_t, uint32_t>> unique_edges;
-    std::vector<EdgeCorners> element_edges;
-    element_edges.reserve(12);
-
-    for(const auto& element : entry.elements) {
-        if(!collectElementNodeIndices(element, entry.nodes.size(), element_node_indices)) {
-            continue;
-        }
-
-        element_edges.clear();
-        appendElementEdges(element.type, element_edges);
-        for(const auto& edge : element_edges) {
-            const uint32_t first = element_node_indices[edge[0]];
-            const uint32_t second = element_node_indices[edge[1]];
-            unique_edges.emplace(std::min(first, second), std::max(first, second));
-        }
-    }
-
-    uint32_t edge_local_id = 1;
-    for(const auto& [first, second] : unique_edges) {
-        const uint32_t index_offset = static_cast<uint32_t>(result.indices.size());
-        result.indices.push_back(first);
-        result.indices.push_back(second);
-        result.lineRanges.push_back({
-            .shapeId = shape_id,
-            .entityType = Core::EntityType::MeshEdge,
-            .localId = edge_local_id++,
-            .vertexOffset = first,
-            .vertexCount = second - first + 1U,
-            .indexOffset = index_offset,
-            .indexCount = 2U,
-            .topology = Scene::PrimitiveTopology::Lines,
-        });
-    }
-
     for(std::size_t node_index = 0; node_index < entry.nodes.size(); ++node_index) {
+        const auto& node = entry.nodes[node_index];
+        result.bounds.expand(glm::vec3{node.position[0], node.position[1], node.position[2]});
+        result.vertices.push_back(makeVertex(node));
+        result.pickIds.push_back({Scene::PickId::encode(shape_id, Core::EntityType::MeshNode,
+                                                        static_cast<uint32_t>(node_index) + 1U)});
         result.pointRanges.push_back({
             .shapeId = shape_id,
             .entityType = Core::EntityType::MeshNode,
@@ -279,6 +190,86 @@ Scene::RenderMeshData MeshRenderBuilder::build(uint32_t shape_id, const MeshEntr
         });
     }
 
+    std::vector<uint32_t> element_node_indices;
+    std::vector<TriangleCorners> triangles;
+    std::vector<EdgeCorners> element_edges;
+    std::set<std::pair<uint32_t, uint32_t>> unique_edges;
+    triangles.reserve(12);
+    element_edges.reserve(12);
+
+    for(std::size_t element_index = 0; element_index < entry.elements.size(); ++element_index) {
+        const auto& element = entry.elements[element_index];
+        if(!collectElementNodeIndices(element, entry.nodes.size(), element_node_indices)) {
+            continue;
+        }
+
+        element_edges.clear();
+        appendElementEdges(element.type, element_edges);
+        for(const auto& edge : element_edges) {
+            const uint32_t first = element_node_indices[edge[0]];
+            const uint32_t second = element_node_indices[edge[1]];
+            unique_edges.emplace(std::min(first, second), std::max(first, second));
+        }
+
+        triangles.clear();
+        appendElementTriangles(element.type, triangles);
+        if(triangles.empty()) {
+            continue;
+        }
+
+        const uint32_t local_id = static_cast<uint32_t>(element_index) + 1U;
+        const uint64_t pick_id =
+            Scene::PickId::encode(shape_id, Core::EntityType::MeshElement, local_id);
+        const uint32_t vertex_offset = static_cast<uint32_t>(result.vertices.size());
+        const uint32_t index_offset = static_cast<uint32_t>(result.indices.size());
+        for(const auto& triangle : triangles) {
+            const glm::vec3 normal = computeNormal(entry, element_node_indices, triangle);
+            for(const uint8_t corner : triangle) {
+                auto vertex = makeVertex(entry.nodes[element_node_indices[corner]]);
+                assignNormal(vertex, normal);
+                result.vertices.push_back(vertex);
+                result.pickIds.push_back({pick_id});
+                result.indices.push_back(static_cast<uint32_t>(result.vertices.size() - 1U));
+            }
+        }
+
+        result.triangleRanges.push_back({
+            .shapeId = shape_id,
+            .entityType = Core::EntityType::MeshElement,
+            .localId = local_id,
+            .vertexOffset = vertex_offset,
+            .vertexCount = static_cast<uint32_t>(triangles.size() * 3U),
+            .indexOffset = index_offset,
+            .indexCount = static_cast<uint32_t>(triangles.size() * 3U),
+            .topology = Scene::PrimitiveTopology::Triangles,
+        });
+    }
+
+    uint32_t edge_local_id = 1;
+    for(const auto& [first, second] : unique_edges) {
+        const uint64_t pick_id =
+            Scene::PickId::encode(shape_id, Core::EntityType::MeshEdge, edge_local_id);
+        const uint32_t vertex_offset = static_cast<uint32_t>(result.vertices.size());
+        const uint32_t index_offset = static_cast<uint32_t>(result.indices.size());
+        result.vertices.push_back(makeVertex(entry.nodes[first]));
+        result.pickIds.push_back({pick_id});
+        result.indices.push_back(static_cast<uint32_t>(result.vertices.size() - 1U));
+        result.vertices.push_back(makeVertex(entry.nodes[second]));
+        result.pickIds.push_back({pick_id});
+        result.indices.push_back(static_cast<uint32_t>(result.vertices.size() - 1U));
+        result.lineRanges.push_back({
+            .shapeId = shape_id,
+            .entityType = Core::EntityType::MeshEdge,
+            .localId = edge_local_id++,
+            .vertexOffset = vertex_offset,
+            .vertexCount = 2U,
+            .indexOffset = index_offset,
+            .indexCount = 2U,
+            .topology = Scene::PrimitiveTopology::Lines,
+        });
+    }
+
+    assert(result.pickIds.size() == result.vertices.size());
     return result;
 }
 
