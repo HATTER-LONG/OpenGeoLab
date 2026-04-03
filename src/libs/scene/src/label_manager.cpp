@@ -1,3 +1,7 @@
+/**
+ * @file label_manager.cpp
+ * @brief LabelManager — thread-safe 3D label storage and visibility state
+ */
 #include <opengeolab/scene/label_manager.hpp>
 
 #include <algorithm>

@@ -42,5 +42,5 @@ applyTo: '**'
 
 - 优先使用 Ninja 作为 CMake 生成器：`cmake -S . -B build -G Ninja`
 - 默认构建类型为 RelWithDebInfo
-- 构建命令：`cmake --build build --parallel 8`
+- 构建命令：`cmake --build build --parallel $(nproc)`
 - 测试命令：`ctest --test-dir build --output-on-failure`
