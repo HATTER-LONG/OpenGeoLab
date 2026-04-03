@@ -63,18 +63,27 @@ SceneModule::SceneModule(Kangaroo::Util::PluginComponentFactory& factory)
     m_graphConnections.push_back(m_sceneGraph.sceneCleared.connect(
         [this]() { dataChanged.emit(Core::ModuleDataEvent::ItemRemoved); }));
 
-    // Selection/hover changes must also wake the viewport for re-render.
+    // Selection/hover/label changes wake the viewport but do NOT trigger scene data refresh
+    // (SidebarPanel listens to sceneDataChanged; selection/label state is not node data).
     auto& sel = m_sceneGraph.selectionState();
-    m_graphConnections.push_back(sel.entitySelected.connect(
-        [this](const Core::EntityRef&) { dataChanged.emit(Core::ModuleDataEvent::ItemModified); }));
-    m_graphConnections.push_back(sel.entityDeselected.connect(
-        [this](const Core::EntityRef&) { dataChanged.emit(Core::ModuleDataEvent::ItemModified); }));
+    m_graphConnections.push_back(sel.entitySelected.connect([this](const Core::EntityRef&) {
+        dataChanged.emit(Core::ModuleDataEvent::ViewportChanged);
+    }));
+    m_graphConnections.push_back(sel.entityDeselected.connect([this](const Core::EntityRef&) {
+        dataChanged.emit(Core::ModuleDataEvent::ViewportChanged);
+    }));
     m_graphConnections.push_back(sel.selectionCleared.connect(
-        [this]() { dataChanged.emit(Core::ModuleDataEvent::ItemModified); }));
+        [this]() { dataChanged.emit(Core::ModuleDataEvent::ViewportChanged); }));
     m_graphConnections.push_back(
         sel.hoverChanged.connect([this](const std::optional<Core::EntityRef>&) {
-            dataChanged.emit(Core::ModuleDataEvent::ItemModified);
+            dataChanged.emit(Core::ModuleDataEvent::ViewportChanged);
         }));
+
+    auto& lbl = m_sceneGraph.labelManager();
+    m_graphConnections.push_back(lbl.labelsChanged.connect(
+        [this]() { dataChanged.emit(Core::ModuleDataEvent::ViewportChanged); }));
+    m_graphConnections.push_back(lbl.visibleChanged.connect(
+        [this]() { dataChanged.emit(Core::ModuleDataEvent::ViewportChanged); }));
 
     // ViewportState changes trigger viewport re-render only (not scene data refresh).
     auto& vps = m_sceneGraph.viewportState();

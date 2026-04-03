@@ -22,13 +22,20 @@ FunctionPageBase {
         root.y = 0;
         root.pageVisible = true;
         root.forceActiveFocus();
-        SelectionService.activatePickMode(typeSelector.mask);
+        sceneCommand("set_pick_mode", {
+            pickMask: typeSelector.mask,
+            enabled: true
+        });
+        sceneCommand("set_labels_visible", { visible: true });
+        sceneCommand("set_auto_label", { enabled: true });
     }
 
     function close() {
-        SelectionService.deactivatePickMode();
-        SelectionService.clearSelection();
-        SelectionService.setLabelsVisible(false);
+        sceneCommand("set_pick_mode", { enabled: false });
+        sceneCommand("clear_selection", {});
+        sceneCommand("set_labels_visible", { visible: false });
+        sceneCommand("set_auto_label", { enabled: false });
+        sceneCommand("clear_labels", {});
         root.pageVisible = false;
         if (MainPages.currentOpenPage === root.actionId) {
             MainPages.currentOpenPage = "";
@@ -37,6 +44,28 @@ FunctionPageBase {
 
     function execute() {
         // No-op: this page doesn't submit a request.
+    }
+
+    /** @brief Send a scene command via the command protocol. */
+    function sceneCommand(action, param) {
+        RequestService.submitAsync(JSON.stringify({
+            module: "scene",
+            action: action,
+            param: param ?? {},
+            mute: true
+        }));
+    }
+
+    /** @brief Map EntityType integer (C++ enum) to command protocol string. */
+    function entityTypeTag(typeInt) {
+        var map = {
+            0: "GeoVertex",
+            1: "GeoEdge",
+            2: "GeoWire",
+            3: "GeoFace",
+            4: "GeoSolid"
+        };
+        return map[typeInt] ?? "GeoFace";
     }
 
     // ── Entity type selector ───────────────────────────────────────────
@@ -54,7 +83,7 @@ FunctionPageBase {
         mask: 11
 
         onMaskChanged: {
-            SelectionService.pickMask = typeSelector.mask;
+            sceneCommand("set_pick_mode", { pickMask: typeSelector.mask });
         }
     }
 
@@ -74,7 +103,10 @@ FunctionPageBase {
             id: labelToggle
 
             checked: SelectionService.autoLabel
-            onCheckedChanged: SelectionService.autoLabel = checked
+            onToggled: {
+                sceneCommand("set_labels_visible", { visible: checked });
+                sceneCommand("set_auto_label", { enabled: checked });
+            }
         }
     }
 
@@ -172,7 +204,9 @@ FunctionPageBase {
                     localId: modelData.localId
 
                     onRemoveRequested: function(sid, etype, lid) {
-                        SelectionService.removeSelection(sid, etype, lid);
+                        sceneCommand("deselect", {
+                            entities: [{ shapeId: sid, type: root.entityTypeTag(etype), localId: lid }]
+                        });
                     }
                 }
             }
@@ -235,7 +269,7 @@ FunctionPageBase {
             anchors.fill: parent
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
-            onClicked: SelectionService.clearSelection()
+            onClicked: sceneCommand("clear_selection", {})
         }
     }
 }
