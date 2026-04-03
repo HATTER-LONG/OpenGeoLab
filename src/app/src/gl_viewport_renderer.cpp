@@ -177,6 +177,7 @@ void GLViewportRenderer::synchronize(QQuickFramebufferObject* item) {
 
         // Phase 2: Resolve labels from LabelManager → FrameState
         const auto& lbl_mgr = scene->labelManager();
+        m_frameState.labelsVisible = lbl_mgr.isVisible();
         const uint64_t lbl_ver = lbl_mgr.version();
 
         if(lbl_ver != m_cachedLabelVersion) {

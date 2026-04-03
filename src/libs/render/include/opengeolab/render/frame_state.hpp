@@ -59,7 +59,7 @@ struct FrameState {
     std::vector<ResolvedLabel> resolvedLabels;
 
     /// Whether labels should be rendered.
-    bool labelsVisible{true};
+    bool labelsVisible{false};
 };
 
 } // namespace OpenGeoLab::Render
