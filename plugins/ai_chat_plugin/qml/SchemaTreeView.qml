@@ -34,17 +34,8 @@ Item {
             delegate: TreeViewDelegate {
                 id: treeDelegate
 
-                required property int row
-                required property int column
-                required property int depth
-                required property bool isTreeNode
-                required property bool expanded
-                required property bool hasChildren
-                required property var index
-
                 implicitHeight: 32
                 implicitWidth: treeView.width
-                leftPadding: depth * 20 + (isTreeNode && hasChildren ? 0 : 20)
 
                 contentItem: RowLayout {
                     spacing: PluginTheme.gapTight
@@ -85,17 +76,14 @@ Item {
                 readonly property int actionNameRole: 0x102
 
                 onClicked: {
+                    let idx = treeView.index(row, column);
                     treeView.selectionModel.setCurrentIndex(
-                        treeDelegate.index,
+                        idx,
                         ItemSelectionModel.ClearAndSelect
                     );
 
-                    let mod = treeDelegate.model.data(
-                        treeDelegate.index, treeDelegate.moduleNameRole
-                    );
-                    let act = treeDelegate.model.data(
-                        treeDelegate.index, treeDelegate.actionNameRole
-                    );
+                    let mod = treeView.model.data(idx, moduleNameRole);
+                    let act = treeView.model.data(idx, actionNameRole);
 
                     if (act !== undefined && act !== null) {
                         root.actionSelected(mod, act);

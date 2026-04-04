@@ -33,14 +33,16 @@ def launch_ui() -> dict:
     from ai_chat_plugin.debugger_backend import DebuggerBackend
     from ai_chat_plugin._qml_setup import setup_engine
 
+    from PySide6.QtQuickControls2 import QQuickStyle
+    QQuickStyle.setStyle("Basic")
+
     backend = DebuggerBackend()
     engine = QQmlApplicationEngine()
-
-    engine.rootContext().setContextProperty("backend", backend)
 
     qml_dir = Path(__file__).resolve().parent / "qml"
     engine.addImportPath(str(qml_dir))
 
+    engine.setInitialProperties({"backend": backend})
     engine.load(QUrl.fromLocalFile(str(qml_dir / "ActionDebuggerWindow.qml")))
 
     if not engine.rootObjects():
