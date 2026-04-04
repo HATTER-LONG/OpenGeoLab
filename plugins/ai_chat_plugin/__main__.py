@@ -1,8 +1,8 @@
 """Standalone entry point: python -m ai_chat_plugin.
 
-Launches the Action Debugger window using QML.  When run from
-``build/bin/plugins/``, the native pywrapper module is discovered
-automatically so the full schema and execute features are available.
+Launches the tab-merged AI Chat window with Chat and Action Debugger tabs.
+When run from ``build/bin/plugins/``, the native pywrapper module is
+discovered automatically so full schema and execute features are available.
 """
 from __future__ import annotations
 
@@ -32,24 +32,29 @@ def _setup_standalone_paths() -> None:
 
 
 def _create_engine():
-    """Create QQmlApplicationEngine with backend and highlighters."""
+    """Create QQmlApplicationEngine with both backends."""
     from PySide6.QtCore import QUrl
     from PySide6.QtQml import QQmlApplicationEngine
     from PySide6.QtQuickControls2 import QQuickStyle
 
     from ai_chat_plugin.debugger_backend import DebuggerBackend
+    from ai_chat_plugin.chat_backend import ChatBackend
     from ai_chat_plugin._qml_setup import setup_engine
 
     QQuickStyle.setStyle("Basic")
 
     backend = DebuggerBackend()
+    chat_backend = ChatBackend()
     engine = QQmlApplicationEngine()
 
     qml_dir = Path(__file__).resolve().parent / "qml"
     engine.addImportPath(str(qml_dir))
 
-    engine.setInitialProperties({"backend": backend})
-    engine.load(QUrl.fromLocalFile(str(qml_dir / "ActionDebuggerWindow.qml")))
+    engine.setInitialProperties({
+        "backend": backend,
+        "chatBackend": chat_backend,
+    })
+    engine.load(QUrl.fromLocalFile(str(qml_dir / "PluginWindow.qml")))
 
     if not engine.rootObjects():
         print("Error: QML failed to load.", file=sys.stderr)
@@ -57,13 +62,13 @@ def _create_engine():
 
     setup_engine(engine, backend)
 
-    # Keep references alive.
     engine._backend = backend
+    engine._chat_backend = chat_backend
     return engine
 
 
 def main() -> None:
-    """Create a QApplication and show the Action Debugger window."""
+    """Create a QApplication and show the AI Chat window."""
     _setup_standalone_paths()
 
     from PySide6.QtWidgets import QApplication
