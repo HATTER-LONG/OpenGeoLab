@@ -20,6 +20,16 @@ Item {
     SplitView {
         anchors.fill: parent
         orientation: Qt.Horizontal
+        handle: Rectangle {
+            implicitWidth: 5
+            color: SplitHandle.hovered ? PluginTheme.borderSubtle
+                                       : "transparent"
+            Rectangle {
+                anchors.centerIn: parent
+                width: 1; height: parent.height * 0.6
+                color: PluginTheme.borderSubtle
+            }
+        }
 
         // ── Request panel ──────────────────────────────────────────────
         Item {

@@ -16,6 +16,16 @@ Item {
     SplitView {
         anchors.fill: parent
         orientation: Qt.Horizontal
+        handle: Rectangle {
+            implicitWidth: 5
+            color: SplitHandle.hovered ? PluginTheme.borderSubtle
+                                       : "transparent"
+            Rectangle {
+                anchors.centerIn: parent
+                width: 1; height: parent.height * 0.6
+                color: PluginTheme.borderSubtle
+            }
+        }
 
         SchemaTreeView {
             model: root.backend.schemaTreeModel
@@ -33,6 +43,16 @@ Item {
         SplitView {
             orientation: Qt.Vertical
             SplitView.fillWidth: true
+            handle: Rectangle {
+                implicitHeight: 5
+                color: SplitHandle.hovered ? PluginTheme.borderSubtle
+                                           : "transparent"
+                Rectangle {
+                    anchors.centerIn: parent
+                    width: parent.width * 0.3; height: 1
+                    color: PluginTheme.borderSubtle
+                }
+            }
 
             DetailPanel {
                 json: root.backend.detailJson

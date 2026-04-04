@@ -19,7 +19,6 @@ def describe_plugin() -> dict:
 
 def launch_ui() -> dict:
     """Show the AI Chat plugin window (Action Debugger in Segment 1)."""
-    import sys
     from pathlib import Path
 
     from PySide6.QtCore import QUrl
@@ -50,12 +49,10 @@ def launch_ui() -> dict:
 
     setup_engine(engine, backend)
 
-    # prevent GC
+    # Keep references alive — same pattern as other PySide6 plugins.
+    # No explicit teardown; PySide6 handles wrapper cleanup during
+    # Py_Finalize just like demo_ui_plugin and selection_demo_plugin.
     engine._backend = backend
     _active_engines.append(engine)
-
-    # Clean up when window closes.
-    window = engine.rootObjects()[0]
-    window.closing.connect(lambda: _active_engines.remove(engine))
 
     return {"ok": True, "message": "AI Chat (Action Debugger) launched."}

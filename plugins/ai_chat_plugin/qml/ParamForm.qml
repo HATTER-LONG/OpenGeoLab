@@ -47,6 +47,7 @@ Item {
                     spacing: PluginTheme.gapTight
 
                     Repeater {
+                        id: paramRepeater
                         model: root.model
 
                         delegate: RowLayout {
@@ -66,15 +67,37 @@ Item {
                                 onToggled: {
                                     root.model.setEnabled(index, checked);
                                 }
-                                Layout.preferredWidth: 24
-                                Layout.preferredHeight: 24
+                                Layout.preferredWidth: 18
+                                Layout.preferredHeight: 18
+                                Layout.alignment: Qt.AlignVCenter
+
+                                indicator: Rectangle {
+                                    width: 16; height: 16
+                                    radius: 3
+                                    color: parent.checked
+                                           ? PluginTheme.accentA
+                                           : PluginTheme.surface
+                                    border.color: parent.checked
+                                                  ? PluginTheme.accentA
+                                                  : PluginTheme.borderSubtle
+                                    border.width: 1
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: "✓"
+                                        color: PluginTheme.textOnAccent
+                                        font.pixelSize: 11
+                                        font.weight: Font.Bold
+                                        visible: parent.parent.checked
+                                    }
+                                }
                             }
 
                             // Spacer for required params (align with checkbox)
                             Item {
                                 visible: model.required
-                                Layout.preferredWidth: 24
-                                Layout.preferredHeight: 24
+                                Layout.preferredWidth: 18
+                                Layout.preferredHeight: 18
                             }
 
                             // Label
@@ -83,7 +106,7 @@ Item {
                                 color: PluginTheme.textPrimary
                                 font.pixelSize: 13
                                 Layout.preferredWidth: 120
-                                Layout.alignment: Qt.AlignTop
+                                Layout.alignment: Qt.AlignVCenter
                                 elide: Text.ElideRight
 
                                 ToolTip.visible: paramLabelMa.containsMouse
@@ -130,7 +153,7 @@ Item {
 
                     // Empty state
                     Label {
-                        visible: root.model ? root.model.rowCount() === 0 : true
+                        visible: paramRepeater.count === 0
                         text: qsTr("No parameters for this action.")
                         color: PluginTheme.textTertiary
                         font.pixelSize: 13
@@ -278,6 +301,37 @@ Item {
 
             checked: paramValue ?? false
             text: checked ? "true" : "false"
+
+            indicator: Rectangle {
+                y: parent.height / 2 - height / 2
+                width: 16; height: 16
+                radius: 3
+                color: parent.checked
+                       ? PluginTheme.accentA
+                       : PluginTheme.surface
+                border.color: parent.checked
+                              ? PluginTheme.accentA
+                              : PluginTheme.borderSubtle
+                border.width: 1
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "✓"
+                    color: PluginTheme.textOnAccent
+                    font.pixelSize: 11
+                    font.weight: Font.Bold
+                    visible: parent.parent.checked
+                }
+            }
+
+            contentItem: Label {
+                text: parent.text
+                color: PluginTheme.textPrimary
+                font.pixelSize: 13
+                font.family: PluginTheme.monoFont
+                leftPadding: 22
+                verticalAlignment: Text.AlignVCenter
+            }
 
             onToggled: root.model.setValue(paramIndex, checked)
         }
