@@ -14,12 +14,14 @@ Item {
     required property string toolStatus
     required property string toolResult
 
+    // Fill Loader width — the Loader is our parent when loaded via setSource
+    width: parent ? parent.width : 400
     implicitHeight: card.height
 
     Rectangle {
         id: card
         anchors.left: parent.left
-        width: Math.min(parent.width * 0.85, 500)
+        width: Math.min(root.width * 0.6, 500)
         height: cardLayout.implicitHeight + 2 * PluginTheme.gapTight
         radius: PluginTheme.radiusSmall
         color: PluginTheme.surface
@@ -27,6 +29,41 @@ Item {
         border.color: PluginTheme.borderSubtle
 
         property bool expanded: false
+
+        // Extract a one-line request summary from the JSON result
+        property string requestSummary: {
+            if (!root.toolResult) return ""
+            try {
+                var obj = JSON.parse(root.toolResult)
+                var req = obj._request
+                if (!req) return ""
+                // Format as module.action(params) for execute_action
+                if (req.module && req.action) {
+                    var p = req.params ? JSON.stringify(req.params) : "{}"
+                    return req.module + "." + req.action + "(" + p + ")"
+                }
+                // Format as module_name for describe_module
+                if (req.module_name && req.action_name)
+                    return req.module_name + "." + req.action_name
+                if (req.module_name)
+                    return req.module_name
+                return JSON.stringify(req)
+            } catch(e) {
+                return ""
+            }
+        }
+
+        // Pretty-printed JSON for expanded view (strips _request)
+        property string formattedResult: {
+            if (!root.toolResult) return ""
+            try {
+                var obj = JSON.parse(root.toolResult)
+                delete obj._request
+                return JSON.stringify(obj, null, 2)
+            } catch(e) {
+                return root.toolResult
+            }
+        }
 
         ColumnLayout {
             id: cardLayout
@@ -101,6 +138,18 @@ Item {
                 }
             }
 
+            // Query summary (collapsed view)
+            Label {
+                Layout.fillWidth: true
+                visible: card.requestSummary.length > 0
+                text: card.requestSummary
+                color: PluginTheme.textTertiary
+                font.pixelSize: 11
+                font.family: PluginTheme.monoFont
+                elide: Text.ElideRight
+                maximumLineCount: 1
+            }
+
             // Expandable result area
             ScrollView {
                 Layout.fillWidth: true
@@ -110,7 +159,7 @@ Item {
 
                 TextArea {
                     readOnly: true
-                    text: root.toolResult
+                    text: card.formattedResult
                     color: PluginTheme.textSecondary
                     font.family: PluginTheme.monoFont
                     font.pixelSize: 11

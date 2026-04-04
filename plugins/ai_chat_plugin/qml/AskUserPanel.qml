@@ -16,6 +16,8 @@ Item {
     required property bool answered
     required property var chatBackend
 
+    // Fill Loader width — the Loader is our parent when loaded via setSource
+    width: parent ? parent.width : 400
     implicitHeight: panel.height
 
     Rectangle {

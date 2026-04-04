@@ -48,9 +48,12 @@ class CopilotWorker(QThread):
     # Note: msgId is tracked by ChatBackend._active_msg_id, not passed through
     # this signal, because the SDK event doesn't carry frontend-generated IDs.
     # Only one message streams at a time (UI disables send), so this is safe.
+    reasoningDelta = Signal(str)        # streaming reasoning chunk
+    reasoningComplete = Signal(str)     # final reasoning text
     toolStarted = Signal(str, str)      # tool_name, tool_call_id
     toolCompleted = Signal(str, str, bool)  # tool_call_id, result, success
     askUserRequested = Signal(str, list)    # question, choices
+    modelsLoaded = Signal(str)              # JSON-encoded model list
     connectionReady = Signal()
     connectionFailed = Signal(str)      # error message
     sessionIdle = Signal()
@@ -61,6 +64,7 @@ class CopilotWorker(QThread):
         self._loop: asyncio.AbstractEventLoop | None = None
         self._queue: asyncio.Queue[str | None] | None = None
         self._shutdown = False
+        self._terminate = False  # permanent exit (vs session restart)
 
         # ask_user bridging state
         self._ask_user_event = threading.Event()
@@ -89,6 +93,14 @@ class CopilotWorker(QThread):
         if self._loop is not None and self._queue is not None:
             self._loop.call_soon_threadsafe(self._queue.put_nowait, None)
 
+    def requestShutdown(self) -> None:
+        """Permanently stop the worker thread (app exit)."""
+        self._terminate = True
+        self._shutdown = True
+        self._ask_user_event.set()
+        if self._loop is not None and self._queue is not None:
+            self._loop.call_soon_threadsafe(self._queue.put_nowait, None)
+
     # -- QThread entry point ---------------------------------------------------
 
     def run(self) -> None:
@@ -112,7 +124,7 @@ class CopilotWorker(QThread):
         try:
             from copilot import CopilotClient
             from copilot.client import SubprocessConfig
-            from copilot.session import PermissionHandler, SystemMessageConfig
+            from copilot.session import PermissionHandler, SystemMessageReplaceConfig
         except ImportError as exc:
             self.connectionFailed.emit(
                 f"Copilot SDK not installed: {exc}\n"
@@ -134,13 +146,17 @@ class CopilotWorker(QThread):
                     SubprocessConfig(**subprocess_kwargs),
                     auto_start=True,
                 ) as client:
+                    # Fetch available models (non-blocking, cached by SDK)
+                    await self._fetch_models(client)
+
                     tools = build_tools()
                     session_kwargs: dict = {
                         "on_permission_request": PermissionHandler.approve_all,
                         "tools": tools,
                         "streaming": True,
-                        "system_message": SystemMessageConfig(
-                            text=_load_prompt("system_prompt.md"),
+                        "system_message": SystemMessageReplaceConfig(
+                            mode="replace",
+                            content=_load_prompt("system_prompt.md"),
                         ),
                         "skill_directories": [str(_PROMPTS_DIR)],
                         "on_event": self._on_event,
@@ -179,6 +195,10 @@ class CopilotWorker(QThread):
                 )
                 break
 
+            # If permanent shutdown requested, exit the thread
+            if self._terminate:
+                break
+
             # If requestNewSession was called, reset and loop
             if self._shutdown:
                 self._shutdown = False
@@ -201,14 +221,30 @@ class CopilotWorker(QThread):
                 self.toolStarted.emit(name, call_id)
             case "tool.execution_complete":
                 call_id = getattr(event.data, "tool_call_id", "")
-                result = str(getattr(event.data, "result", ""))
-                result_type = getattr(event.data, "result_type", "error")
-                success = result_type == "success"
+                # event.data.result is a Result object with .content / .detailed_content
+                raw_result = getattr(event.data, "result", None)
+                if raw_result is not None:
+                    result = (
+                        getattr(raw_result, "detailed_content", None)
+                        or getattr(raw_result, "content", None)
+                        or ""
+                    )
+                else:
+                    result = str(getattr(event.data, "error", ""))
+                success = bool(getattr(event.data, "success", False))
                 self.toolCompleted.emit(call_id, result, success)
             case "session.idle":
                 self.sessionIdle.emit()
             case "session.error":
                 self.connectionFailed.emit(str(event.data))
+            case "assistant.reasoning_delta":
+                delta = getattr(event.data, "delta_content", None) or ""
+                if delta:
+                    self.reasoningDelta.emit(delta)
+            case "assistant.reasoning":
+                text = getattr(event.data, "reasoning_text", None) or ""
+                if text:
+                    self.reasoningComplete.emit(text)
 
     async def _on_user_input(self, request, invocation) -> dict:
         """Handle SDK ask_user requests by bridging to the main thread."""
@@ -227,3 +263,36 @@ class CopilotWorker(QThread):
         if not answered or self._ask_user_answer is None:
             return {"answer": "(no response)", "wasFreeform": True}
         return {"answer": self._ask_user_answer, "wasFreeform": True}
+
+    async def _fetch_models(self, client) -> None:
+        """Fetch available models from the SDK and emit modelsLoaded signal."""
+        import json
+
+        try:
+            raw_models = await client.list_models()
+            result: list[dict] = []
+            for m in raw_models:
+                entry: dict = {
+                    "id": getattr(m, "id", ""),
+                    "name": getattr(m, "name", ""),
+                }
+                caps = getattr(m, "capabilities", None)
+                if caps:
+                    supports = getattr(caps, "supports", None)
+                    entry["vision"] = bool(
+                        getattr(supports, "vision", False)
+                    ) if supports else False
+                billing = getattr(m, "billing", None)
+                if billing:
+                    entry["multiplier"] = getattr(billing, "multiplier", 1)
+                policy = getattr(m, "policy", None)
+                if policy:
+                    entry["state"] = getattr(policy, "state", "enabled")
+                else:
+                    entry["state"] = "enabled"
+                result.append(entry)
+            # Emit as JSON string to avoid cross-thread Python object issues
+            self.modelsLoaded.emit(json.dumps(result))
+        except Exception:
+            # Model listing is best-effort; don't block connection
+            pass

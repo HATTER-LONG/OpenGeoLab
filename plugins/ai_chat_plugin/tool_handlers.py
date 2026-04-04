@@ -21,12 +21,23 @@ _MAX_RESULT_BYTES = 50 * 1024  # 50 KB
 
 
 class _DescribeModuleParams(BaseModel):
-    module_name: str = Field(description="Name of the module to describe")
+    module_name: str = Field(
+        description="Module name: geometry, mesh, scene, or io"
+    )
+
+
+class _DescribeActionParams(BaseModel):
+    module_name: str = Field(
+        description="Module name: geometry, mesh, scene, or io"
+    )
+    action_name: str = Field(description="Action name within the module")
 
 
 class _ExecuteActionParams(BaseModel):
-    module: str = Field(description="Module name")
-    action: str = Field(description="Action name")
+    module: str = Field(
+        description="Module name: geometry, mesh, scene, or io"
+    )
+    action: str = Field(description="Action name within the module")
     params: dict = Field(default_factory=dict, description="Action parameters")
 
 
@@ -48,20 +59,40 @@ def _describe_module_handler(module_name: str) -> str:
     """Handler for the describe_module tool."""
     result = scene_tools.describe_module(module_name)
     if result is None:
-        return json.dumps({"ok": False, "error": f"Module '{module_name}' not found"})
-    return json.dumps(result, default=str)
+        return json.dumps({
+            "ok": False,
+            "_request": {"module_name": module_name},
+            "error": f"Module '{module_name}' not found",
+        })
+    return json.dumps({"_request": {"module_name": module_name}, **result}, default=str)
+
+
+def _describe_action_handler(module_name: str, action_name: str) -> str:
+    """Handler for the describe_action tool — returns full param/return schema."""
+    query = {"module_name": module_name, "action_name": action_name}
+    result = scene_tools.describe_action(module_name, action_name)
+    if result is None:
+        return json.dumps({
+            "ok": False,
+            "_request": query,
+            "error": f"Action '{action_name}' not found in module '{module_name}'",
+        })
+    return json.dumps({"_request": query, **result}, default=str)
 
 
 def _execute_action_handler(module: str, action: str, params: dict) -> str:
     """Handler for the execute_action tool."""
+    query = {"module": module, "action": action, "params": params}
     try:
         result = scene_tools.execute_action(module, action, params)
-        text = json.dumps(result, default=str)
+        merged = {"_request": query, **result}
+        text = json.dumps(merged, default=str)
         return _truncate(text)
     except Exception:
         return json.dumps(
             {
                 "ok": False,
+                "_request": query,
                 "error": traceback.format_exc(limit=3),
             }
         )
@@ -76,23 +107,32 @@ def build_tools() -> list:
         return []
 
     @define_tool(
-        description="List all available OpenGeoLab command modules",
-        skip_permission=True,
-    )
-    def list_modules() -> str:
-        return _list_modules_handler()
-
-    @define_tool(
-        description="Describe a module's actions and their parameter schemas",
+        description=(
+            "List all actions in a module. Valid modules: geometry, mesh, scene, io. "
+            "Usually not needed — the skill document already lists all actions."
+        ),
         skip_permission=True,
     )
     def describe_module(params: _DescribeModuleParams) -> str:
         return _describe_module_handler(params.module_name)
 
     @define_tool(
-        description="Execute an OpenGeoLab action with given parameters",
+        description=(
+            "Get the full parameter and return schema for a specific action. "
+            "Always call before execute_action. Modules: geometry, mesh, scene, io."
+        ),
+        skip_permission=True,
+    )
+    def describe_action(params: _DescribeActionParams) -> str:
+        return _describe_action_handler(params.module_name, params.action_name)
+
+    @define_tool(
+        description=(
+            "Execute an OpenGeoLab action. Modules: geometry, mesh, scene, io. "
+            "Always describe_action first to get the correct parameter schema."
+        ),
     )
     def execute_action(params: _ExecuteActionParams) -> str:
         return _execute_action_handler(params.module, params.action, params.params)
 
-    return [list_modules, describe_module, execute_action]
+    return [describe_module, describe_action, execute_action]

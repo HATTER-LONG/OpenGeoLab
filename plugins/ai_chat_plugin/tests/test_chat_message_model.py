@@ -166,3 +166,67 @@ class TestClear:
         assert model.rowCount() == 2
         model.clear()
         assert model.rowCount() == 0
+
+
+class TestReasoning:
+    def test_set_reasoning_on_assistant(self):
+        model = _make_model()
+        model.appendMessage("assistant", "", msgId="msg_1")
+        model.setReasoning("msg_1", "I need to think about this carefully.")
+
+        idx = model.index(0, 0)
+        role_names = model.roleNames()
+        reasoning_role = [
+            role for role, name in role_names.items() if name == b"reasoning"
+        ][0]
+        assert model.data(idx, reasoning_role) == "I need to think about this carefully."
+
+    def test_append_reasoning_accumulates(self):
+        model = _make_model()
+        model.appendMessage("assistant", "", msgId="msg_1")
+        model.appendReasoning("msg_1", "chunk1 ")
+        model.appendReasoning("msg_1", "chunk2")
+
+        idx = model.index(0, 0)
+        role_names = model.roleNames()
+        reasoning_role = [
+            role for role, name in role_names.items() if name == b"reasoning"
+        ][0]
+        assert model.data(idx, reasoning_role) == "chunk1 chunk2"
+
+    def test_set_reasoning_replaces_accumulated(self):
+        model = _make_model()
+        model.appendMessage("assistant", "", msgId="msg_1")
+        model.appendReasoning("msg_1", "partial ")
+        model.setReasoning("msg_1", "final complete text")
+
+        idx = model.index(0, 0)
+        role_names = model.roleNames()
+        reasoning_role = [
+            role for role, name in role_names.items() if name == b"reasoning"
+        ][0]
+        assert model.data(idx, reasoning_role) == "final complete text"
+
+    def test_set_reasoning_wrong_id_no_crash(self):
+        """Setting reasoning for a non-existent msgId should be a no-op."""
+        model = _make_model()
+        model.appendMessage("assistant", "", msgId="msg_1")
+        model.setReasoning("msg_wrong", "reasoning text")
+
+        idx = model.index(0, 0)
+        role_names = model.roleNames()
+        reasoning_role = [
+            role for role, name in role_names.items() if name == b"reasoning"
+        ][0]
+        assert model.data(idx, reasoning_role) == ""
+
+    def test_default_reasoning_is_empty(self):
+        model = _make_model()
+        model.appendMessage("assistant", "hi")
+
+        idx = model.index(0, 0)
+        role_names = model.roleNames()
+        reasoning_role = [
+            role for role, name in role_names.items() if name == b"reasoning"
+        ][0]
+        assert model.data(idx, reasoning_role) == ""

@@ -61,4 +61,7 @@ def launch_ui() -> dict:
     engine._chat_backend = chat_backend
     _active_engines.append(engine)
 
+    # Gracefully stop worker threads on app exit to avoid shutdown crashes
+    application.aboutToQuit.connect(chat_backend.shutdown)
+
     return {"ok": True, "message": "AI Chat launched."}

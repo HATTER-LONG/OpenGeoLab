@@ -14,7 +14,7 @@ def test_build_tools_hosted_mode():
         tools = build_tools()
     assert len(tools) == 3
     names = {t.name for t in tools}
-    assert names == {"list_modules", "describe_module", "execute_action"}
+    assert names == {"describe_module", "describe_action", "execute_action"}
 
 
 def test_build_tools_standalone_mode():
@@ -67,8 +67,37 @@ def test_describe_module_handler_not_found():
     assert "missing" in parsed["error"]
 
 
+def test_describe_action_handler():
+    """describe_action returns full action schema."""
+    with patch("ai_chat_plugin.tool_handlers.scene_tools") as mock_st:
+        mock_st.describe_action.return_value = {
+            "name": "create_box",
+            "description": "Create a box",
+            "params": {"width": {"type": "number"}},
+            "returns": {"ok": {"type": "bool"}},
+        }
+        from ai_chat_plugin.tool_handlers import _describe_action_handler
+
+        result = _describe_action_handler("geometry", "create_box")
+    parsed = json.loads(result)
+    assert parsed["name"] == "create_box"
+    assert "params" in parsed
+
+
+def test_describe_action_handler_not_found():
+    """describe_action returns error for unknown action."""
+    with patch("ai_chat_plugin.tool_handlers.scene_tools") as mock_st:
+        mock_st.describe_action.return_value = None
+        from ai_chat_plugin.tool_handlers import _describe_action_handler
+
+        result = _describe_action_handler("geometry", "nonexistent")
+    parsed = json.loads(result)
+    assert parsed["ok"] is False
+    assert "nonexistent" in parsed["error"]
+
+
 def test_execute_action_handler():
-    """execute_action tool handler returns action result."""
+    """execute_action tool handler returns action result with _request."""
     with patch("ai_chat_plugin.tool_handlers.scene_tools") as mock_st:
         mock_st.execute_action.return_value = {"ok": True, "shapeId": "s1"}
         from ai_chat_plugin.tool_handlers import _execute_action_handler
@@ -76,6 +105,9 @@ def test_execute_action_handler():
         result = _execute_action_handler("geometry", "create_box", {"size": 1})
     parsed = json.loads(result)
     assert parsed["ok"] is True
+    assert parsed["_request"]["module"] == "geometry"
+    assert parsed["_request"]["action"] == "create_box"
+    assert parsed["_request"]["params"] == {"size": 1}
 
 
 def test_execute_action_handler_catches_exception():

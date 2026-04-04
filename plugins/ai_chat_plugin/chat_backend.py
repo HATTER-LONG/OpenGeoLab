@@ -5,6 +5,7 @@ invokable methods for QML, and routes worker signals to model updates.
 """
 from __future__ import annotations
 
+import json
 import threading
 import uuid
 
@@ -31,6 +32,7 @@ class ChatBackend(QObject):
     darkModeChanged = Signal()
     connectionStatusChanged = Signal()
     testConnectionResult = Signal(bool, str)
+    availableModelsChanged = Signal()
 
     def __init__(self, config=None, parent=None) -> None:
         super().__init__(parent)
@@ -42,14 +44,18 @@ class ChatBackend(QObject):
         self._connection_error = ""
         self._dark_mode = True
         self._active_msg_id = ""
+        self._available_models: list[dict] = []
         self._test_thread: threading.Thread | None = None
 
         # Connect worker signals
         self._worker.messageDelta.connect(self._on_delta)
         self._worker.messageComplete.connect(self._on_complete)
+        self._worker.reasoningDelta.connect(self._on_reasoning_delta)
+        self._worker.reasoningComplete.connect(self._on_reasoning_complete)
         self._worker.toolStarted.connect(self._on_tool_started)
         self._worker.toolCompleted.connect(self._on_tool_completed)
         self._worker.askUserRequested.connect(self._on_ask_user)
+        self._worker.modelsLoaded.connect(self._on_models_loaded)
         self._worker.connectionReady.connect(self._on_connected)
         self._worker.connectionFailed.connect(self._on_connection_failed)
         self._worker.sessionIdle.connect(self._on_idle)
@@ -111,6 +117,13 @@ class ChatBackend(QObject):
 
     connectionStatus = Property(
         str, _get_connection_status, notify=connectionStatusChanged,
+    )
+
+    def _get_available_models(self) -> list:
+        return self._available_models
+
+    availableModels = Property(
+        "QVariantList", _get_available_models, notify=availableModelsChanged,
     )
 
     # -- Invokable methods for QML ---------------------------------------------
@@ -177,6 +190,11 @@ class ChatBackend(QObject):
             self._config.lastModel = model
         self.newSession()
 
+    def shutdown(self) -> None:
+        """Stop the worker thread gracefully (call before app exit)."""
+        self._worker.requestShutdown()
+        self._worker.wait(5000)  # wait up to 5 seconds
+
     @Slot(str)
     def testConnection(self, settings_json: str) -> None:
         """Test BYOK connectivity via HTTP health check (background thread).
@@ -231,15 +249,55 @@ class ChatBackend(QObject):
 
     # -- Worker signal handlers ------------------------------------------------
 
+    def _on_models_loaded(self, models_json: str) -> None:
+        """Store model list from SDK and notify QML."""
+        try:
+            self._available_models = json.loads(models_json)
+        except (json.JSONDecodeError, TypeError):
+            self._available_models = []
+        self.availableModelsChanged.emit()
+
+    def _ensure_active_msg(self) -> str:
+        """Ensure an assistant placeholder exists, creating one if needed."""
+        if not self._active_msg_id:
+            self._active_msg_id = str(uuid.uuid4())
+            self._message_model.appendMessage(
+                "assistant", "", msgId=self._active_msg_id
+            )
+            self._set_streaming(True)
+        return self._active_msg_id
+
     def _on_delta(self, delta: str) -> None:
+        self._ensure_active_msg()
         self._message_model.appendToLastAssistant(delta)
 
     def _on_complete(self, raw_markdown: str) -> None:
+        if not self._active_msg_id:
+            return
+        if not raw_markdown.strip():
+            # Tool-only turn produced an empty assistant.message.
+            # Keep the placeholder alive for the next turn's streaming text.
+            return
         html = markdown_to_html(raw_markdown, dark_mode=self._dark_mode)
         self._message_model.finalizeAssistant(self._active_msg_id, html)
         self._active_msg_id = ""
 
+    def _on_reasoning_delta(self, delta: str) -> None:
+        """Append streaming reasoning chunk to current assistant message."""
+        msg_id = self._ensure_active_msg()
+        self._message_model.appendReasoning(msg_id, delta)
+
+    def _on_reasoning_complete(self, text: str) -> None:
+        """Replace accumulated reasoning with final text."""
+        if self._active_msg_id:
+            self._message_model.setReasoning(self._active_msg_id, text)
+
+    # SDK-internal tools that should not appear as visible tool cards.
+    _HIDDEN_TOOLS = frozenset({"report_intent", "skill"})
+
     def _on_tool_started(self, tool_name: str, tool_call_id: str) -> None:
+        if tool_name in self._HIDDEN_TOOLS:
+            return
         self._message_model.appendMessage(
             "tool", "",
             toolName=tool_name,
@@ -250,6 +308,14 @@ class ChatBackend(QObject):
     def _on_tool_completed(
         self, tool_call_id: str, result: str, success: bool
     ) -> None:
+        # Surface action-level failure (ok: false) even if the tool executed OK.
+        if success and result:
+            try:
+                parsed = json.loads(result)
+                if isinstance(parsed, dict) and parsed.get("ok") is False:
+                    success = False
+            except (json.JSONDecodeError, TypeError):
+                pass
         status = "success" if success else "error"
         self._message_model.updateToolStatus(tool_call_id, status, result)
 

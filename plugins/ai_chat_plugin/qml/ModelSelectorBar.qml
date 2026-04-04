@@ -6,7 +6,7 @@ import theme
 /**
  * Compact bar showing the active model selector and auth connection status.
  *
- * Left side: editable ComboBox for model name.
+ * Left side: editable ComboBox populated from SDK model list.
  * Right side: clickable auth status indicator (dot + label).
  */
 Item {
@@ -21,6 +21,21 @@ Item {
         if (chatConfig.authMethod === "byok")
             return chatConfig.byokModel
         return chatConfig.lastModel
+    }
+
+    // Build model ID list from availableModels (skip disabled)
+    readonly property var modelIds: {
+        var ids = []
+        var models = root.chatBackend.availableModels
+        if (models) {
+            for (var i = 0; i < models.length; ++i) {
+                var m = models[i]
+                if (m.state && m.state === "disabled")
+                    continue
+                ids.push(m.id)
+            }
+        }
+        return ids
     }
 
     // Auth status label for the right side
@@ -38,13 +53,21 @@ Item {
         radius: PluginTheme.radiusSmall
     }
 
+    // Sync editText when currentModel changes (e.g. after switchModel)
+    Connections {
+        target: root
+        function onCurrentModelChanged() {
+            modelCombo.editText = root.currentModel
+        }
+    }
+
     RowLayout {
         id: barRow
         anchors.fill: parent
         anchors.margins: PluginTheme.gapTight
         spacing: PluginTheme.gapTight
 
-        // ── Model selector (editable combo) ─────────────────────
+        // ── Model selector (editable combo with SDK model list) ──
         ComboBox {
             id: modelCombo
             Layout.fillWidth: true
@@ -53,10 +76,19 @@ Item {
             enabled: !root.chatBackend.isStreaming
                      && !root.chatBackend.isConnecting
 
+            model: root.modelIds
             editText: root.currentModel
 
-            // When user presses Enter or focus leaves, switch model
-            onAccepted: {
+            // When user selects from dropdown or presses Enter
+            onAccepted: _applyModel()
+            onActivated: function(index) {
+                if (index >= 0 && index < root.modelIds.length) {
+                    editText = root.modelIds[index]
+                    _applyModel()
+                }
+            }
+
+            function _applyModel() {
                 var text = editText.trim()
                 if (text.length > 0 && text !== root.currentModel) {
                     root.chatBackend.switchModel(text)
@@ -88,6 +120,52 @@ Item {
                 border.color: modelCombo.activeFocus
                               ? PluginTheme.accentA
                               : PluginTheme.borderSubtle
+            }
+
+            // Custom dropdown delegate showing model id
+            delegate: ItemDelegate {
+                required property int index
+                required property var modelData
+                width: modelCombo.width
+                highlighted: modelCombo.highlightedIndex === index
+
+                contentItem: Label {
+                    text: modelData || ""
+                    font.pixelSize: 12
+                    font.family: PluginTheme.monoFont
+                    color: parent.highlighted
+                           ? PluginTheme.textOnAccent
+                           : PluginTheme.textPrimary
+                    elide: Text.ElideRight
+                    verticalAlignment: Text.AlignVCenter
+                }
+
+                background: Rectangle {
+                    color: parent.highlighted ? PluginTheme.accentA : "transparent"
+                    radius: 4
+                }
+            }
+
+            popup: Popup {
+                y: modelCombo.height + 2
+                width: modelCombo.width
+                implicitHeight: contentItem.implicitHeight + 2 * padding
+                padding: 4
+
+                contentItem: ListView {
+                    clip: true
+                    implicitHeight: Math.min(contentHeight, 300)
+                    model: modelCombo.delegateModel
+                    currentIndex: modelCombo.highlightedIndex
+                    ScrollBar.vertical: ScrollBar {}
+                }
+
+                background: Rectangle {
+                    color: PluginTheme.surface
+                    border.width: 1
+                    border.color: PluginTheme.borderSubtle
+                    radius: 8
+                }
             }
         }
 

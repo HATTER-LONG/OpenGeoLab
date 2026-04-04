@@ -26,7 +26,7 @@ class TestChatConfigLoad:
         assert cfg.byokApiKey == ""
         assert cfg.byokModel == ""
         assert cfg.byokWireApi == "completions"
-        assert cfg.lastModel == ""
+        assert cfg.lastModel == "gpt-5-mini"
 
     def test_load_valid_json(self, config_path: Path) -> None:
         config_path.parent.mkdir(parents=True, exist_ok=True)

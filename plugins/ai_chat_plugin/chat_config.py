@@ -25,7 +25,7 @@ _DEFAULTS: JsonDict = {
         "model": "",
         "wire_api": "completions",
     },
-    "last_model": "",
+    "last_model": "gpt-5-mini",
 }
 
 

@@ -124,52 +124,42 @@ Item {
                 required property string toolResult
                 required property var choices
                 required property bool answered
+                required property string reasoning
 
-                sourceComponent: {
-                    switch (delegateLoader.msgType) {
+                // Use setSource to pass properties into the loaded component,
+                // satisfying required property declarations at creation time.
+                Component.onCompleted: _loadDelegate()
+
+                function _loadDelegate() {
+                    switch (msgType) {
                         case "user":
                         case "assistant":
                         case "system":
-                            return messageDelegateComp
+                            setSource("MessageDelegate.qml", {
+                                "index": Qt.binding(function() { return delegateLoader.index }),
+                                "msgId": Qt.binding(function() { return delegateLoader.msgId }),
+                                "msgType": Qt.binding(function() { return delegateLoader.msgType }),
+                                "content": Qt.binding(function() { return delegateLoader.content }),
+                                "isHtml": Qt.binding(function() { return delegateLoader.isHtml }),
+                                "reasoning": Qt.binding(function() { return delegateLoader.reasoning }),
+                            })
+                            break
                         case "tool":
-                            return toolCardComp
+                            setSource("ToolCallCard.qml", {
+                                "toolName": Qt.binding(function() { return delegateLoader.toolName }),
+                                "toolStatus": Qt.binding(function() { return delegateLoader.toolStatus }),
+                                "toolResult": Qt.binding(function() { return delegateLoader.toolResult }),
+                            })
+                            break
                         case "askUser":
-                            return askUserComp
-                        default:
-                            return null
+                            setSource("AskUserPanel.qml", {
+                                "content": Qt.binding(function() { return delegateLoader.content }),
+                                "choices": Qt.binding(function() { return delegateLoader.choices }),
+                                "answered": Qt.binding(function() { return delegateLoader.answered }),
+                                "chatBackend": root.chatBackend,
+                            })
+                            break
                     }
-                }
-            }
-
-            // ── Delegate components ─────────────────────────────────
-
-            Component {
-                id: messageDelegateComp
-                MessageDelegate {
-                    index: delegateLoader.index
-                    msgId: delegateLoader.msgId
-                    msgType: delegateLoader.msgType
-                    content: delegateLoader.content
-                    isHtml: delegateLoader.isHtml
-                }
-            }
-
-            Component {
-                id: toolCardComp
-                ToolCallCard {
-                    toolName: delegateLoader.toolName
-                    toolStatus: delegateLoader.toolStatus
-                    toolResult: delegateLoader.toolResult
-                }
-            }
-
-            Component {
-                id: askUserComp
-                AskUserPanel {
-                    content: delegateLoader.content
-                    choices: delegateLoader.choices
-                    answered: delegateLoader.answered
-                    chatBackend: root.chatBackend
                 }
             }
 

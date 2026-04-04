@@ -25,6 +25,7 @@ class _Roles:
     CHOICES = Qt.UserRole + 8
     ANSWERED = Qt.UserRole + 9
     IS_HTML = Qt.UserRole + 10
+    REASONING = Qt.UserRole + 11
 
 
 _ROLE_NAMES = {
@@ -38,6 +39,7 @@ _ROLE_NAMES = {
     _Roles.CHOICES: b"choices",
     _Roles.ANSWERED: b"answered",
     _Roles.IS_HTML: b"isHtml",
+    _Roles.REASONING: b"reasoning",
 }
 
 
@@ -53,6 +55,7 @@ def _new_row(
     choices: list[str] | None = None,
     answered: bool = False,
     is_html: bool = False,
+    reasoning: str = "",
 ) -> dict[int, Any]:
     """Build a role-to-value dict for one row."""
     return {
@@ -66,6 +69,7 @@ def _new_row(
         _Roles.CHOICES: choices or [],
         _Roles.ANSWERED: answered,
         _Roles.IS_HTML: is_html,
+        _Roles.REASONING: reasoning,
     }
 
 
@@ -161,6 +165,26 @@ class ChatMessageModel(QAbstractListModel):
             self._rows[row_index][_Roles.ANSWERED] = True
             index = self.index(row_index, 0)
             self.dataChanged.emit(index, index, [_Roles.ANSWERED])
+
+    def setReasoning(self, msg_id: str, text: str) -> None:  # noqa: N802
+        """Replace reasoning text for the assistant row with the given msgId."""
+        for row_index in range(len(self._rows) - 1, -1, -1):
+            row = self._rows[row_index]
+            if row[_Roles.MSG_ID] == msg_id:
+                row[_Roles.REASONING] = text
+                index = self.index(row_index, 0)
+                self.dataChanged.emit(index, index, [_Roles.REASONING])
+                return
+
+    def appendReasoning(self, msg_id: str, delta: str) -> None:  # noqa: N802
+        """Append a streaming reasoning chunk to the assistant row."""
+        for row_index in range(len(self._rows) - 1, -1, -1):
+            row = self._rows[row_index]
+            if row[_Roles.MSG_ID] == msg_id:
+                row[_Roles.REASONING] += delta
+                index = self.index(row_index, 0)
+                self.dataChanged.emit(index, index, [_Roles.REASONING])
+                return
 
     @Slot()
     def clear(self) -> None:
