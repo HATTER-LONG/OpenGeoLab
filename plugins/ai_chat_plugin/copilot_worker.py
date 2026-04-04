@@ -20,6 +20,16 @@ from PySide6.QtCore import QThread, Signal, Slot
 _PROMPTS_DIR = Path(__file__).resolve().parent / "prompts"
 _ASK_USER_TIMEOUT = 300  # 5 minutes
 
+# Map user-facing BYOK provider name → SDK provider type.
+# Ollama and Custom both speak the OpenAI-compatible API.
+_SDK_TYPE_MAP: dict[str, str] = {
+    "openai": "openai",
+    "azure": "azure",
+    "anthropic": "anthropic",
+    "ollama": "openai",
+    "custom": "openai",
+}
+
 
 def _load_prompt(filename: str) -> str:
     """Read a prompt file from the prompts/ directory."""
@@ -45,8 +55,9 @@ class CopilotWorker(QThread):
     connectionFailed = Signal(str)      # error message
     sessionIdle = Signal()
 
-    def __init__(self, parent=None) -> None:
+    def __init__(self, config, parent=None) -> None:
         super().__init__(parent)
+        self._config = config
         self._loop: asyncio.AbstractEventLoop | None = None
         self._queue: asyncio.Queue[str | None] | None = None
         self._shutdown = False
@@ -114,35 +125,53 @@ class CopilotWorker(QThread):
         while not self._shutdown:
             self._queue = asyncio.Queue()
             try:
+                # Build SubprocessConfig — BYOK may not need GitHub login
+                subprocess_kwargs: dict = {"log_level": "warning"}
+                if self._config.authMethod != "byok":
+                    subprocess_kwargs["use_logged_in_user"] = True
+
                 async with CopilotClient(
-                    SubprocessConfig(
-                        log_level="warning",
-                        use_logged_in_user=True,
-                    ),
+                    SubprocessConfig(**subprocess_kwargs),
                     auto_start=True,
                 ) as client:
                     tools = build_tools()
-                    session = await client.create_session(
-                        on_permission_request=PermissionHandler.approve_all,
-                        tools=tools,
-                        streaming=True,
-                        system_message=SystemMessageConfig(
+                    session_kwargs: dict = {
+                        "on_permission_request": PermissionHandler.approve_all,
+                        "tools": tools,
+                        "streaming": True,
+                        "system_message": SystemMessageConfig(
                             text=_load_prompt("system_prompt.md"),
                         ),
-                        skill_directories=[str(_PROMPTS_DIR)],
-                        on_event=self._on_event,
-                        on_user_input_request=self._on_user_input,
-                    )
+                        "skill_directories": [str(_PROMPTS_DIR)],
+                        "on_event": self._on_event,
+                        "on_user_input_request": self._on_user_input,
+                    }
+
+                    if self._config.authMethod == "byok":
+                        provider_config: dict = {
+                            "type": _SDK_TYPE_MAP.get(
+                                self._config.byokProvider, "openai",
+                            ),
+                            "base_url": self._config.byokBaseUrl,
+                        }
+                        if self._config.byokApiKey:
+                            provider_config["api_key"] = self._config.byokApiKey
+                        if self._config.byokProvider in ("openai", "azure"):
+                            provider_config["wire_api"] = self._config.byokWireApi
+                        session_kwargs["provider"] = provider_config
+                        session_kwargs["model"] = self._config.byokModel
+                    else:
+                        if self._config.lastModel:
+                            session_kwargs["model"] = self._config.lastModel
+
+                    session = await client.create_session(**session_kwargs)
                     self.connectionReady.emit()
 
-                    # Process messages until shutdown
                     while not self._shutdown:
                         msg = await self._queue.get()
                         if msg is None:
                             break
                         await session.send(msg)
-                        # Wait for session to become idle
-                        # (events are handled via on_event callback)
 
             except Exception as exc:
                 self.connectionFailed.emit(
