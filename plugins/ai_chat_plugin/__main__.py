@@ -37,6 +37,7 @@ def _create_engine():
     from PySide6.QtQml import QQmlApplicationEngine
     from PySide6.QtQuickControls2 import QQuickStyle
 
+    from ai_chat_plugin.chat_config import ChatConfig
     from ai_chat_plugin.debugger_backend import DebuggerBackend
     from ai_chat_plugin.chat_backend import ChatBackend
     from ai_chat_plugin._qml_setup import setup_engine
@@ -44,7 +45,8 @@ def _create_engine():
     QQuickStyle.setStyle("Basic")
 
     backend = DebuggerBackend()
-    chat_backend = ChatBackend()
+    config = ChatConfig()
+    chat_backend = ChatBackend(config=config)
     engine = QQmlApplicationEngine()
 
     qml_dir = Path(__file__).resolve().parent / "qml"
@@ -63,6 +65,7 @@ def _create_engine():
     setup_engine(engine, backend)
 
     engine._backend = backend
+    engine._config = config
     engine._chat_backend = chat_backend
     return engine
 

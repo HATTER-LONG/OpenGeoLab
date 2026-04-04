@@ -29,6 +29,7 @@ def launch_ui() -> dict:
     if application is None:
         return {"ok": False, "message": "No QApplication instance."}
 
+    from ai_chat_plugin.chat_config import ChatConfig
     from ai_chat_plugin.debugger_backend import DebuggerBackend
     from ai_chat_plugin.chat_backend import ChatBackend
     from ai_chat_plugin._qml_setup import setup_engine
@@ -37,7 +38,8 @@ def launch_ui() -> dict:
     QQuickStyle.setStyle("Basic")
 
     backend = DebuggerBackend()
-    chat_backend = ChatBackend()
+    config = ChatConfig()
+    chat_backend = ChatBackend(config=config)
     engine = QQmlApplicationEngine()
 
     qml_dir = Path(__file__).resolve().parent / "qml"
@@ -55,6 +57,7 @@ def launch_ui() -> dict:
     setup_engine(engine, backend)
 
     engine._backend = backend
+    engine._config = config
     engine._chat_backend = chat_backend
     _active_engines.append(engine)
 
