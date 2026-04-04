@@ -199,21 +199,74 @@ def launch_ui():
 
 ### 环境要求
 
-- **编译器**：支持 C++20 的编译器（MSVC 2022 / GCC 12+ / Clang 15+）
-- **CMake** ≥ 3.25
-- **Qt** 6.9（Widgets, Quick, OpenGL, Concurrent）
-- **Python** 3.11+（用于嵌入式运行时和插件）
-- **Ninja**（推荐构建生成器）
+| 依赖 | 版本 | 说明 |
+|------|------|------|
+| **C++ 编译器** | C++20 | MSVC 2022 / GCC 12+ / Clang 15+ |
+| **CMake** | ≥ 3.25 | 构建系统 |
+| **Ninja** | 最新 | 推荐构建生成器 |
+| **Qt6** | ≥ 6.9 | GUI 框架（见下方组件列表） |
+| **OpenCASCADE** | ≥ 7.7 | CAD 几何内核 |
+| **Gmsh** | ≥ 4.15 | 有限元网格生成 |
+| **Python** | ≥ 3.11 | 嵌入式运行时与插件系统 |
 
-### 构建
+> **自动获取的依赖（CPM 管理，无需手动安装）：**
+> fmt · spdlog · nlohmann/json · GLM · pybind11 · doctest · stb · GLAD · Kangaroo
+
+### 安装外部依赖
+
+<details>
+<summary><b>Windows (MSVC)</b></summary>
+
+```powershell
+# 1. Qt6 — 通过 Qt Online Installer 安装，选择 MSVC 2022 64-bit 组件：
+#    Core, Gui, Widgets, Qml, Quick, QuickControls2, Concurrent, OpenGL,
+#    Core5Compat, Svg, QuickLayouts, LinguistTools
+
+# 2. OpenCASCADE — 从源码构建或下载预编译包
+#    https://dev.opencascade.org/release
+#    构建时使用 /MD 动态 CRT，安装后记录 cmake 配置目录路径
+
+# 3. Gmsh — 下载 SDK 或从源码构建
+#    https://gmsh.info/#Download
+#    安装后记录 share/gmsh 目录路径
+
+# 4. Python — 从 python.org 安装，确保勾选 "Add to PATH"
+```
+
+</details>
+
+<details>
+<summary><b>Linux (Ubuntu/Debian)</b></summary>
+
+```bash
+# 1. 基础工具
+sudo apt install cmake ninja-build g++-12 python3 python3-dev
+
+# 2. Qt6
+sudo apt install qt6-base-dev qt6-declarative-dev qt6-tools-dev \
+                 qt6-quick3d-dev qt6-svg-dev libqt6opengl6-dev \
+                 qml6-module-qtquick-controls qml6-module-qtquick-layouts
+
+# 3. OpenCASCADE — 推荐从源码构建
+#    https://dev.opencascade.org/release
+
+# 4. Gmsh — 推荐从源码构建或使用 SDK
+#    https://gmsh.info/#Download
+```
+
+</details>
+
+### 配置与构建
 
 ```bash
 # 克隆仓库
 git clone https://github.com/HATTER-LONG/OpenGeoLab.git
 cd OpenGeoLab
 
-# 配置（首次构建自动拉取 CPM 依赖）
-cmake -S . -B build -G Ninja
+# 配置（指定外部依赖路径，首次构建自动拉取 CPM 依赖）
+cmake -S . -B build -G Ninja \
+  -DOpenCASCADE_DIR=<OCCT安装路径>/cmake \
+  -Dgmsh_DIR=<Gmsh安装路径>/share/gmsh
 
 # 编译
 cmake --build build --config RelWithDebInfo --parallel
@@ -222,14 +275,26 @@ cmake --build build --config RelWithDebInfo --parallel
 ctest --test-dir build -C RelWithDebInfo --output-on-failure
 ```
 
+> **提示：** 可以创建 `CMakeUserPresets.json` 来持久化本地路径配置，
+> 避免每次手动传递 `-D` 参数。参考项目中的 `CMakePresets.json` 格式。
+
+### Qt6 所需组件
+
+```
+Core  Gui  Widgets  Concurrent  OpenGL
+Qml  Quick  QuickControls2  QuickLayouts
+Core5Compat  Svg  LinguistTools
+```
+
 ### CMake 选项
 
 | 选项 | 默认值 | 说明 |
 |------|--------|------|
-| `OPENGEOLAB_BUILD_TESTS` | `ON` | 构建单元测试 |
+| `OPENGEOLAB_BUILD_TESTS` | `ON` | 构建单元测试（doctest） |
 | `OPENGEOLAB_FETCH_DEPENDENCIES` | `ON` | 自动获取缺失依赖（CPM） |
 | `OPENGEOLAB_BUILD_SHARED_LIBS` | `ON` | 以动态库形式构建 |
 | `OPENGEOLAB_ENABLE_PYSIDE6` | `ON`* | 配置 Python 虚拟环境与 PySide6 |
+| `OPENGEOLAB_WIN32_APP` | `OFF` | Windows GUI 程序（隐藏控制台） |
 
 \* Debug 配置下默认关闭。
 
@@ -237,20 +302,21 @@ ctest --test-dir build -C RelWithDebInfo --output-on-failure
 
 ## 📦 技术栈
 
-| 类别 | 技术 |
-|------|------|
-| 语言 | C++20 |
-| 构建 | CMake 3.25+ / Ninja / CPM |
-| UI 框架 | Qt 6.9（QML + Widgets） |
-| CAD 内核 | OpenCASCADE Technology (OCCT) |
-| 网格生成 | Gmsh |
-| 图形 API | OpenGL 3.3 Core（GLAD 2.0.8） |
-| 数学库 | GLM 1.0.3 |
-| Python 桥接 | pybind11 3.0.2 + PySide6 |
-| JSON | nlohmann/json 3.12.0 |
-| 日志 | spdlog 1.17.0 + fmt 12.0.0 |
-| 测试 | doctest 2.5.0 + pytest |
-| 图像 | stb (header-only) |
+<table>
+<tr><th>类别</th><th>技术</th><th>安装方式</th></tr>
+<tr><td>语言</td><td>C++20</td><td>—</td></tr>
+<tr><td>构建</td><td>CMake 3.25+ / Ninja / CPM</td><td>—</td></tr>
+<tr><td>UI 框架</td><td>Qt 6.9（QML + Widgets）</td><td>🔧 需预装</td></tr>
+<tr><td>CAD 内核</td><td>OpenCASCADE Technology (OCCT)</td><td>🔧 需预装</td></tr>
+<tr><td>网格生成</td><td>Gmsh ≥ 4.15</td><td>🔧 需预装</td></tr>
+<tr><td>图形 API</td><td>OpenGL 3.3 Core（GLAD 2.0.8）</td><td>📦 CPM</td></tr>
+<tr><td>数学库</td><td>GLM 1.0.3</td><td>📦 CPM</td></tr>
+<tr><td>Python 桥接</td><td>pybind11 3.0.2 + PySide6</td><td>📦 CPM + venv</td></tr>
+<tr><td>JSON</td><td>nlohmann/json 3.12.0</td><td>📦 CPM</td></tr>
+<tr><td>日志</td><td>spdlog 1.17.0 + fmt 12.0.0</td><td>📦 CPM</td></tr>
+<tr><td>测试</td><td>doctest 2.5.0 + pytest</td><td>📦 CPM + venv</td></tr>
+<tr><td>图像</td><td>stb (header-only)</td><td>📦 CPM</td></tr>
+</table>
 
 ---
 

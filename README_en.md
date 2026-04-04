@@ -206,21 +206,74 @@ def launch_ui():
 
 ### Prerequisites
 
-- **Compiler**: C++20 support (MSVC 2022 / GCC 12+ / Clang 15+)
-- **CMake** ≥ 3.25
-- **Qt** 6.9 (Widgets, Quick, OpenGL, Concurrent)
-- **Python** 3.11+ (for embedded runtime and plugins)
-- **Ninja** (recommended build generator)
+| Dependency | Version | Notes |
+|-----------|---------|-------|
+| **C++ Compiler** | C++20 | MSVC 2022 / GCC 12+ / Clang 15+ |
+| **CMake** | ≥ 3.25 | Build system |
+| **Ninja** | Latest | Recommended build generator |
+| **Qt6** | ≥ 6.9 | GUI framework (see components below) |
+| **OpenCASCADE** | ≥ 7.7 | CAD geometry kernel |
+| **Gmsh** | ≥ 4.15 | Finite element mesh generator |
+| **Python** | ≥ 3.11 | Embedded runtime & plugin system |
 
-### Build
+> **Auto-fetched dependencies (managed by CPM, no manual install needed):**
+> fmt · spdlog · nlohmann/json · GLM · pybind11 · doctest · stb · GLAD · Kangaroo
+
+### Installing External Dependencies
+
+<details>
+<summary><b>Windows (MSVC)</b></summary>
+
+```powershell
+# 1. Qt6 — Install via Qt Online Installer, select MSVC 2022 64-bit components:
+#    Core, Gui, Widgets, Qml, Quick, QuickControls2, Concurrent, OpenGL,
+#    Core5Compat, Svg, QuickLayouts, LinguistTools
+
+# 2. OpenCASCADE — Build from source or download pre-built packages
+#    https://dev.opencascade.org/release
+#    Build with /MD dynamic CRT; note the cmake config directory path
+
+# 3. Gmsh — Download SDK or build from source
+#    https://gmsh.info/#Download
+#    Note the share/gmsh directory path after installation
+
+# 4. Python — Install from python.org, ensure "Add to PATH" is checked
+```
+
+</details>
+
+<details>
+<summary><b>Linux (Ubuntu/Debian)</b></summary>
+
+```bash
+# 1. Base tools
+sudo apt install cmake ninja-build g++-12 python3 python3-dev
+
+# 2. Qt6
+sudo apt install qt6-base-dev qt6-declarative-dev qt6-tools-dev \
+                 qt6-quick3d-dev qt6-svg-dev libqt6opengl6-dev \
+                 qml6-module-qtquick-controls qml6-module-qtquick-layouts
+
+# 3. OpenCASCADE — Recommended to build from source
+#    https://dev.opencascade.org/release
+
+# 4. Gmsh — Recommended to build from source or use SDK
+#    https://gmsh.info/#Download
+```
+
+</details>
+
+### Configure & Build
 
 ```bash
 # Clone the repository
 git clone https://github.com/HATTER-LONG/OpenGeoLab.git
 cd OpenGeoLab
 
-# Configure (first build auto-fetches CPM dependencies)
-cmake -S . -B build -G Ninja
+# Configure (specify external dependency paths; CPM auto-fetches the rest)
+cmake -S . -B build -G Ninja \
+  -DOpenCASCADE_DIR=<OCCT_install_path>/cmake \
+  -Dgmsh_DIR=<Gmsh_install_path>/share/gmsh
 
 # Build
 cmake --build build --config RelWithDebInfo --parallel
@@ -229,14 +282,26 @@ cmake --build build --config RelWithDebInfo --parallel
 ctest --test-dir build -C RelWithDebInfo --output-on-failure
 ```
 
+> **Tip:** Create a `CMakeUserPresets.json` to persist local path configuration
+> and avoid passing `-D` flags every time. See `CMakePresets.json` for the format.
+
+### Required Qt6 Components
+
+```
+Core  Gui  Widgets  Concurrent  OpenGL
+Qml  Quick  QuickControls2  QuickLayouts
+Core5Compat  Svg  LinguistTools
+```
+
 ### CMake Options
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `OPENGEOLAB_BUILD_TESTS` | `ON` | Build unit tests |
+| `OPENGEOLAB_BUILD_TESTS` | `ON` | Build unit tests (doctest) |
 | `OPENGEOLAB_FETCH_DEPENDENCIES` | `ON` | Auto-fetch missing dependencies via CPM |
 | `OPENGEOLAB_BUILD_SHARED_LIBS` | `ON` | Build as shared libraries |
 | `OPENGEOLAB_ENABLE_PYSIDE6` | `ON`* | Set up Python venv with PySide6 |
+| `OPENGEOLAB_WIN32_APP` | `OFF` | Windows GUI executable (no console) |
 
 \* Off by default in Debug configuration.
 
@@ -244,20 +309,21 @@ ctest --test-dir build -C RelWithDebInfo --output-on-failure
 
 ## 📦 Tech Stack
 
-| Category | Technology |
-|----------|-----------|
-| Language | C++20 |
-| Build | CMake 3.25+ / Ninja / CPM |
-| UI Framework | Qt 6.9 (QML + Widgets) |
-| CAD Kernel | OpenCASCADE Technology (OCCT) |
-| Mesh Generation | Gmsh |
-| Graphics API | OpenGL 3.3 Core (GLAD 2.0.8) |
-| Math Library | GLM 1.0.3 |
-| Python Bridge | pybind11 3.0.2 + PySide6 |
-| JSON | nlohmann/json 3.12.0 |
-| Logging | spdlog 1.17.0 + fmt 12.0.0 |
-| Testing | doctest 2.5.0 + pytest |
-| Image Loading | stb (header-only) |
+<table>
+<tr><th>Category</th><th>Technology</th><th>Install</th></tr>
+<tr><td>Language</td><td>C++20</td><td>—</td></tr>
+<tr><td>Build</td><td>CMake 3.25+ / Ninja / CPM</td><td>—</td></tr>
+<tr><td>UI Framework</td><td>Qt 6.9 (QML + Widgets)</td><td>🔧 Pre-install</td></tr>
+<tr><td>CAD Kernel</td><td>OpenCASCADE Technology (OCCT)</td><td>🔧 Pre-install</td></tr>
+<tr><td>Mesh Generation</td><td>Gmsh ≥ 4.15</td><td>🔧 Pre-install</td></tr>
+<tr><td>Graphics API</td><td>OpenGL 3.3 Core (GLAD 2.0.8)</td><td>📦 CPM</td></tr>
+<tr><td>Math Library</td><td>GLM 1.0.3</td><td>📦 CPM</td></tr>
+<tr><td>Python Bridge</td><td>pybind11 3.0.2 + PySide6</td><td>📦 CPM + venv</td></tr>
+<tr><td>JSON</td><td>nlohmann/json 3.12.0</td><td>📦 CPM</td></tr>
+<tr><td>Logging</td><td>spdlog 1.17.0 + fmt 12.0.0</td><td>📦 CPM</td></tr>
+<tr><td>Testing</td><td>doctest 2.5.0 + pytest</td><td>📦 CPM + venv</td></tr>
+<tr><td>Image Loading</td><td>stb (header-only)</td><td>📦 CPM</td></tr>
+</table>
 
 ---
 
