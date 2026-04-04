@@ -203,6 +203,14 @@ Item {
             }
         }
 
+        // ── Model selector bar ──────────────────────────────────────
+        ModelSelectorBar {
+            Layout.fillWidth: true
+            Layout.leftMargin: PluginTheme.gapTight
+            Layout.rightMargin: PluginTheme.gapTight
+            chatBackend: root.chatBackend
+        }
+
         // ── Input area ──────────────────────────────────────────────
         ChatInputArea {
             Layout.fillWidth: true
