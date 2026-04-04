@@ -12,6 +12,7 @@
 #include <opengeolab/geometry/import_brep_action.hpp>
 #include <opengeolab/geometry/import_step_action.hpp>
 #include <opengeolab/geometry/list_shapes_action.hpp>
+#include <opengeolab/geometry/list_sub_shapes_action.hpp>
 #include <opengeolab/geometry/query_shape_action.hpp>
 #include <opengeolab/geometry/tessellate_action.hpp>
 
@@ -32,6 +33,7 @@ GeometryModule::GeometryModule(Kangaroo::Util::PluginComponentFactory& factory)
     registerAction<TessellateAction>(std::ref(m_shapeStore));
     registerAction<QueryShapeAction>(std::ref(m_shapeStore));
     registerAction<ListShapesAction>(std::ref(m_shapeStore));
+    registerAction<ListSubShapesAction>(std::ref(m_shapeStore));
     registerAction<DeleteShapeAction>(std::ref(m_shapeStore));
 
     // Bridge ShapeStore signals → ModuleBase::dataChanged for event bus

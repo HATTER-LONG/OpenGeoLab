@@ -8,6 +8,7 @@ set(geometry_public_headers
     include/opengeolab/geometry/import_brep_action.hpp
     include/opengeolab/geometry/import_step_action.hpp
     include/opengeolab/geometry/list_shapes_action.hpp
+    include/opengeolab/geometry/list_sub_shapes_action.hpp
     include/opengeolab/geometry/query_shape_action.hpp
     include/opengeolab/geometry/shape_entry.hpp
     include/opengeolab/geometry/shape_store.hpp
@@ -23,6 +24,7 @@ set(geometry_sources
     src/import_brep_action.cpp
     src/import_step_action.cpp
     src/list_shapes_action.cpp
+    src/list_sub_shapes_action.cpp
     src/query_shape_action.cpp
     src/shape_store.cpp
     src/tessellate_action.cpp

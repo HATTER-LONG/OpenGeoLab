@@ -23,7 +23,7 @@ TEST_CASE("GeometryModule describe returns module info with actions") {
     CHECK(desc["name"] == "geometry");
     CHECK(desc.contains("description"));
     CHECK(desc["actions"].is_array());
-    CHECK(desc["actions"].size() == 10);
+    CHECK(desc["actions"].size() == 11);
 
     // Verify create_box is present (order depends on factory enumeration)
     bool found_create_box = false;
