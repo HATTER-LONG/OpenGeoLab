@@ -89,6 +89,25 @@ if (_need_install)
     )
 endif ()
 
+# --- Install additional Python packages for AI Chat plugin -------------------
+# pip install is idempotent: it checks locally first and returns immediately if
+# the requirement (including version constraint) is already satisfied — no
+# network access needed in that case.
+set(_extra_packages "github-copilot-sdk" "markdown>=3.6")
+
+foreach (_pkg IN LISTS _extra_packages)
+    string(REGEX REPLACE "[>=<].*" "" _pkg_name "${_pkg}")
+    execute_process(
+        COMMAND "${_pyvenv_pip}" install "${_pkg}" --quiet
+        RESULT_VARIABLE _pkg_install_result)
+    if (NOT _pkg_install_result EQUAL 0)
+        message(
+            WARNING
+                "Failed to install ${_pkg} (exit code ${_pkg_install_result}). "
+                "AI Chat plugin may not function correctly.")
+    endif ()
+endforeach ()
+
 # --- Copy python3.dll (Windows only) -----------------------------------------
 # shiboken6.abi3.dll uses the Python stable ABI and depends on python3.dll,
 # which is NOT a link dependency of any CMake target — TARGET_RUNTIME_DLLS
