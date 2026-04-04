@@ -23,6 +23,11 @@ class JsonHighlighter(QSyntaxHighlighter):
         super().__init__(parent)
         self._build_formats(theme)
 
+    def set_theme(self, theme: ThemeColors) -> None:
+        """Update highlighting colors for a new theme."""
+        self._build_formats(theme)
+        self.rehighlight()
+
     def _build_formats(self, theme: ThemeColors | None) -> None:
         """Construct text formats from theme colors."""
         if theme is None:
