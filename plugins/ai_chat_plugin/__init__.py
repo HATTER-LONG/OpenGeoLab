@@ -5,7 +5,7 @@ OpenGeoLab commands. Full chat functionality is added in Segment 2.
 """
 from __future__ import annotations
 
-_active_windows: list = []
+_active_engines: list = []
 
 
 def describe_plugin() -> dict:
@@ -19,21 +19,41 @@ def describe_plugin() -> dict:
 
 def launch_ui() -> dict:
     """Show the AI Chat plugin window (Action Debugger in Segment 1)."""
-    from PySide6.QtCore import Qt
+    import sys
+    from pathlib import Path
+
+    from PySide6.QtCore import QUrl
+    from PySide6.QtQml import QQmlApplicationEngine
     from PySide6.QtWidgets import QApplication
 
     application = QApplication.instance()
     if application is None:
-        return {
-            "ok": False,
-            "message": "No QApplication instance.",
-        }
+        return {"ok": False, "message": "No QApplication instance."}
 
-    from ai_chat_plugin.action_debugger import ActionDebuggerWindow
+    from ai_chat_plugin.debugger_backend import DebuggerBackend
+    from ai_chat_plugin._qml_setup import setup_engine
 
-    window = ActionDebuggerWindow(embedded=True)
-    window.setAttribute(Qt.WA_DeleteOnClose)
-    window.destroyed.connect(lambda: _active_windows.remove(window))
-    _active_windows.append(window)
-    window.show()
+    backend = DebuggerBackend()
+    engine = QQmlApplicationEngine()
+
+    engine.rootContext().setContextProperty("backend", backend)
+
+    qml_dir = Path(__file__).resolve().parent / "qml"
+    engine.addImportPath(str(qml_dir))
+
+    engine.load(QUrl.fromLocalFile(str(qml_dir / "ActionDebuggerWindow.qml")))
+
+    if not engine.rootObjects():
+        return {"ok": False, "message": "QML failed to load."}
+
+    setup_engine(engine, backend)
+
+    # prevent GC
+    engine._backend = backend
+    _active_engines.append(engine)
+
+    # Clean up when window closes.
+    window = engine.rootObjects()[0]
+    window.closing.connect(lambda: _active_engines.remove(engine))
+
     return {"ok": True, "message": "AI Chat (Action Debugger) launched."}

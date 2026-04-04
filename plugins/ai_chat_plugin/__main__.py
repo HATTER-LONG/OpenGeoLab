@@ -1,8 +1,8 @@
 """Standalone entry point: python -m ai_chat_plugin.
 
-Launches the Action Debugger window.  When run from ``build/bin/plugins/``,
-the native pywrapper module is discovered automatically so the full schema
-and execute features are available.
+Launches the Action Debugger window using QML.  When run from
+``build/bin/plugins/``, the native pywrapper module is discovered
+automatically so the full schema and execute features are available.
 """
 from __future__ import annotations
 
@@ -17,23 +17,47 @@ def _setup_standalone_paths() -> None:
     plugins_dir = plugin_pkg.parent                # plugins/
     bin_dir = plugins_dir.parent                   # build/bin/
 
-    # Look for the compiled pywrapper .pyd next to the plugins directory.
     if any(bin_dir.glob("opengeolab_pywrapper*.pyd")):
         bin_str = str(bin_dir)
         if bin_str not in sys.path:
             sys.path.insert(0, bin_str)
-        # Windows: register DLL search directory for native deps.
         if hasattr(os, "add_dll_directory"):
             os.add_dll_directory(bin_str)
         os.environ["PATH"] = bin_str + os.pathsep + os.environ.get("PATH", "")
 
-        # Preload the command library so transitive DLL deps are resolved
-        # before Python attempts to import the pybind11 module.
         import ctypes
-
         cmd_dll = bin_dir / "opengeolab_command.dll"
         if cmd_dll.exists():
             ctypes.CDLL(str(cmd_dll), winmode=0)
+
+
+def _create_engine():
+    """Create QQmlApplicationEngine with backend and highlighters."""
+    from PySide6.QtCore import QUrl
+    from PySide6.QtQml import QQmlApplicationEngine
+
+    from ai_chat_plugin.debugger_backend import DebuggerBackend
+    from ai_chat_plugin._qml_setup import setup_engine
+
+    backend = DebuggerBackend()
+    engine = QQmlApplicationEngine()
+
+    engine.rootContext().setContextProperty("backend", backend)
+
+    qml_dir = Path(__file__).resolve().parent / "qml"
+    engine.addImportPath(str(qml_dir))
+
+    engine.load(QUrl.fromLocalFile(str(qml_dir / "ActionDebuggerWindow.qml")))
+
+    if not engine.rootObjects():
+        print("Error: QML failed to load.", file=sys.stderr)
+        sys.exit(1)
+
+    setup_engine(engine, backend)
+
+    # Keep references alive.
+    engine._backend = backend
+    return engine
 
 
 def main() -> None:
@@ -46,10 +70,7 @@ def main() -> None:
     if app is None:
         app = QApplication(sys.argv)
 
-    from ai_chat_plugin.action_debugger import ActionDebuggerWindow
-
-    window = ActionDebuggerWindow(embedded=False)
-    window.show()
+    engine = _create_engine()
     sys.exit(app.exec())
 
 
