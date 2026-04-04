@@ -43,7 +43,7 @@ def launch_ui() -> dict:
     )
 
     # Import shared theme from sibling plugin.
-    from demo_ui_plugin.plugin_theme import build_stylesheet, current_theme
+    from _shared.plugin_theme import build_stylesheet, current_theme
 
     application = QApplication.instance()
     if application is None:
