@@ -5,6 +5,7 @@ invokable methods for QML, and routes worker signals to model updates.
 """
 from __future__ import annotations
 
+import threading
 import uuid
 
 from PySide6.QtCore import (
@@ -14,6 +15,7 @@ from PySide6.QtCore import (
     Slot,
 )
 
+from ai_chat_plugin.chat_config import ChatConfig
 from ai_chat_plugin.chat_message_model import ChatMessageModel
 from ai_chat_plugin.copilot_worker import CopilotWorker
 from ai_chat_plugin.markdown_converter import markdown_to_html
@@ -27,16 +29,20 @@ class ChatBackend(QObject):
     isStreamingChanged = Signal()
     connectionErrorChanged = Signal()
     darkModeChanged = Signal()
+    connectionStatusChanged = Signal()
+    testConnectionResult = Signal(bool, str)
 
-    def __init__(self, parent=None) -> None:
+    def __init__(self, config=None, parent=None) -> None:
         super().__init__(parent)
+        self._config = config if config is not None else ChatConfig(parent=self)
         self._message_model = ChatMessageModel(self)
-        self._worker = CopilotWorker(self)
+        self._worker = CopilotWorker(config=self._config, parent=self)
         self._is_connecting = True
         self._is_streaming = False
         self._connection_error = ""
         self._dark_mode = True
         self._active_msg_id = ""
+        self._test_thread: threading.Thread | None = None
 
         # Connect worker signals
         self._worker.messageDelta.connect(self._on_delta)
@@ -88,6 +94,23 @@ class ChatBackend(QObject):
 
     darkMode = Property(
         bool, _get_dark_mode, _set_dark_mode, notify=darkModeChanged
+    )
+
+    @Property(QObject, constant=True)
+    def chatConfig(self):
+        """Expose ChatConfig to QML for binding."""
+        return self._config
+
+    def _get_connection_status(self) -> str:
+        """Computed status: 'connecting', 'error', or 'connected'."""
+        if self._is_connecting:
+            return "connecting"
+        if self._connection_error:
+            return "error"
+        return "connected"
+
+    connectionStatus = Property(
+        str, _get_connection_status, notify=connectionStatusChanged,
     )
 
     # -- Invokable methods for QML ---------------------------------------------
@@ -144,6 +167,68 @@ class ChatBackend(QObject):
         if not self._worker.isRunning():
             self._worker.start()
 
+    @Slot(str)
+    def switchModel(self, model: str) -> None:
+        """Update selected model in config and create a new SDK session."""
+        model = model.strip()
+        if self._config.authMethod == "byok":
+            self._config.byokModel = model
+        else:
+            self._config.lastModel = model
+        self.newSession()
+
+    @Slot(str)
+    def testConnection(self, settings_json: str) -> None:
+        """Test BYOK connectivity via HTTP health check (background thread).
+
+        *settings_json* is a JSON object with keys: ``provider``,
+        ``base_url``, ``api_key``.  Emits ``testConnectionResult(success,
+        error_message)`` when done.  Does NOT modify ChatConfig.
+        """
+        import json as _json
+
+        if self._test_thread is not None and self._test_thread.is_alive():
+            return
+
+        settings = _json.loads(settings_json)
+        self._test_thread = threading.Thread(
+            target=self._run_connection_test,
+            args=(settings,),
+            daemon=True,
+        )
+        self._test_thread.start()
+
+    def _run_connection_test(self, settings: dict) -> None:
+        """HTTP health check against BYOK provider (runs in background)."""
+        import urllib.error
+        import urllib.request
+
+        base_url = (settings.get("base_url") or "").rstrip("/")
+        api_key = settings.get("api_key", "")
+
+        if not base_url:
+            self.testConnectionResult.emit(False, "Base URL is required")
+            return
+
+        try:
+            url = f"{base_url}/models"
+            req = urllib.request.Request(url, method="GET")
+            req.add_header("Accept", "application/json")
+            if api_key:
+                req.add_header("Authorization", f"Bearer {api_key}")
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                self.testConnectionResult.emit(True, "")
+        except urllib.error.HTTPError as exc:
+            self.testConnectionResult.emit(
+                False, f"HTTP {exc.code}: {exc.reason}",
+            )
+        except urllib.error.URLError as exc:
+            self.testConnectionResult.emit(
+                False, f"Connection failed: {exc.reason}",
+            )
+        except Exception as exc:
+            self.testConnectionResult.emit(False, str(exc))
+
     # -- Worker signal handlers ------------------------------------------------
 
     def _on_delta(self, delta: str) -> None:
@@ -174,18 +259,19 @@ class ChatBackend(QObject):
         )
 
     def _on_connected(self) -> None:
-        self._set_connecting(False)
         self._connection_error = ""
         self.connectionErrorChanged.emit()
+        self._set_connecting(False)
         self._message_model.appendMessage(
             "system", "Connected to AI assistant. How can I help?"
         )
 
     def _on_connection_failed(self, error: str) -> None:
-        self._set_connecting(False)
-        self._set_streaming(False)
         self._connection_error = error
         self.connectionErrorChanged.emit()
+        self._set_connecting(False)
+        self._set_streaming(False)
+        self.connectionStatusChanged.emit()
 
     def _on_idle(self) -> None:
         self._set_streaming(False)
@@ -201,3 +287,4 @@ class ChatBackend(QObject):
         if self._is_connecting != value:
             self._is_connecting = value
             self.isConnectingChanged.emit()
+            self.connectionStatusChanged.emit()
