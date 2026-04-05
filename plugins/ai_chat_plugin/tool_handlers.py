@@ -9,6 +9,7 @@ Tool handlers are also exposed as module-level functions for testability.
 from __future__ import annotations
 
 import json
+import threading
 import traceback
 
 from pydantic import BaseModel, Field
@@ -39,6 +40,12 @@ class _ExecuteActionParams(BaseModel):
     )
     action: str = Field(description="Action name within the module")
     params: dict = Field(default_factory=dict, description="Action parameters")
+
+
+class _CaptureViewportParams(BaseModel):
+    width: int = Field(default=1024, description="Screenshot width in pixels (default 1024)")
+    height: int = Field(default=768, description="Screenshot height in pixels (default 768)")
+    format: str = Field(default="png", description="Image format: png or jpeg (default png)")
 
 
 def _truncate(text: str) -> str:
@@ -98,6 +105,71 @@ def _execute_action_handler(module: str, action: str, params: dict) -> str:
         )
 
 
+# Thread-local storage for pending attachments (set by tool, read by worker)
+_pending_attachments_local = threading.local()
+
+
+def get_pending_attachments() -> list[dict]:
+    """Retrieve and clear pending attachments set by tool handlers."""
+    attachments = getattr(_pending_attachments_local, "items", [])
+    _pending_attachments_local.items = []
+    return attachments
+
+
+def _capture_viewport_handler(width: int, height: int, fmt: str) -> str:
+    """Handler for the capture_viewport tool."""
+    if not scene_tools.HOSTED_MODE:
+        return json.dumps({"ok": False, "error": "Not in hosted mode — pywrapper unavailable"})
+
+    try:
+        result = scene_tools.execute_action(
+            "scene", "capture_viewport",
+            {"width": width, "height": height},
+        )
+    except Exception:
+        return json.dumps({
+            "ok": False,
+            "error": f"Capture failed: {traceback.format_exc(limit=3)}",
+        })
+
+    # Extract image for BlobAttachment (not returned in tool result)
+    image_b64 = result.pop("image", None)
+    image_attached = False
+
+    if image_b64 and isinstance(image_b64, str):
+        mime_type = "image/jpeg" if fmt == "jpeg" else "image/png"
+        blob = {
+            "type": "blob",
+            "data": image_b64,
+            "mimeType": mime_type,
+            "displayName": f"viewport.{fmt}",
+        }
+        if not hasattr(_pending_attachments_local, "items"):
+            _pending_attachments_local.items = []
+        _pending_attachments_local.items.append(blob)
+        image_attached = True
+
+    # Build metadata-only return value
+    metadata = result.get("metadata", {})
+    tool_return = {
+        **metadata,
+        "imageAttached": image_attached,
+    }
+
+    if not image_attached:
+        image_error = result.get("imageError")
+        if image_error:
+            tool_return["imageError"] = image_error
+
+    tool_return["note"] = (
+        "Screenshot captured. Visible shapes and their screen positions are listed above."
+        if image_attached
+        else "Screenshot capture failed. Only metadata is available."
+    )
+
+    return json.dumps(tool_return, default=str)
+
+
 def build_tools() -> list:
     """Build the list of SDK Tool objects based on current mode.
 
@@ -135,4 +207,15 @@ def build_tools() -> list:
     def execute_action(params: _ExecuteActionParams) -> str:
         return _execute_action_handler(params.module, params.action, params.params)
 
-    return [describe_module, describe_action, execute_action]
+    @define_tool(
+        description=(
+            "Capture the current 3D viewport as a screenshot with scene metadata. "
+            "Returns camera position, visible shapes with screen bounding boxes, "
+            "selections, and labels. The image is automatically attached so you can "
+            "see what the user sees. Use this to understand the current view."
+        ),
+    )
+    def capture_viewport(params: _CaptureViewportParams) -> str:
+        return _capture_viewport_handler(params.width, params.height, params.format)
+
+    return [describe_module, describe_action, execute_action, capture_viewport]

@@ -33,6 +33,8 @@ class ChatBackend(QObject):
     connectionStatusChanged = Signal()
     testConnectionResult = Signal(bool, str)
     availableModelsChanged = Signal()
+    pendingAttachmentChanged = Signal()
+    _captureReady = Signal(str)  # internal: delivers base64 from bg thread
 
     def __init__(self, config=None, parent=None) -> None:
         super().__init__(parent)
@@ -46,6 +48,8 @@ class ChatBackend(QObject):
         self._active_msg_id = ""
         self._available_models: list[dict] = []
         self._test_thread: threading.Thread | None = None
+        self._pending_attachment: dict | None = None
+        self._pending_thumbnail: str = ""
 
         # Connect worker signals
         self._worker.messageDelta.connect(self._on_delta)
@@ -59,6 +63,7 @@ class ChatBackend(QObject):
         self._worker.connectionReady.connect(self._on_connected)
         self._worker.connectionFailed.connect(self._on_connection_failed)
         self._worker.sessionIdle.connect(self._on_idle)
+        self._captureReady.connect(self._on_capture_ready)
 
         # Start the worker thread
         self._worker.start()
@@ -126,6 +131,20 @@ class ChatBackend(QObject):
         "QVariantList", _get_available_models, notify=availableModelsChanged,
     )
 
+    def _get_pending_thumbnail(self) -> str:
+        return self._pending_thumbnail
+
+    pendingThumbnail = Property(
+        str, _get_pending_thumbnail, notify=pendingAttachmentChanged,
+    )
+
+    def _get_has_pending_attachment(self) -> bool:
+        return self._pending_attachment is not None
+
+    hasPendingAttachment = Property(
+        bool, _get_has_pending_attachment, notify=pendingAttachmentChanged,
+    )
+
     # -- Invokable methods for QML ---------------------------------------------
 
     @Slot(str)
@@ -134,6 +153,15 @@ class ChatBackend(QObject):
         text = text.strip()
         if not text:
             return
+
+        # Collect pending attachment (from 📎 button)
+        attachments: list[dict] = []
+        if self._pending_attachment is not None:
+            attachments.append(self._pending_attachment)
+            self._pending_attachment = None
+            self._pending_thumbnail = ""
+            self.pendingAttachmentChanged.emit()
+
         self._message_model.appendMessage("user", text)
 
         # Create an assistant placeholder row for streaming
@@ -143,7 +171,7 @@ class ChatBackend(QObject):
         )
 
         self._set_streaming(True)
-        self._worker.queueMessage(text)
+        self._worker.queueMessage(text, attachments)
 
     @Slot(str)
     def respondToAskUser(self, answer: str) -> None:
@@ -189,6 +217,56 @@ class ChatBackend(QObject):
         else:
             self._config.lastModel = model
         self.newSession()
+
+    @Slot()
+    def captureViewport(self) -> None:
+        """Capture viewport screenshot in a background thread.
+
+        The C++ capture action blocks while waiting for the render thread.
+        Running it on the main thread would deadlock (main thread can't
+        process the viewport update event while blocked).  A daemon thread
+        performs the blocking call; the result is delivered back via the
+        ``_captureReady`` signal (auto-queued to the main thread).
+        """
+        from ai_chat_plugin import scene_tools
+
+        if not scene_tools.HOSTED_MODE:
+            return
+
+        def _do_capture() -> None:
+            try:
+                result = scene_tools.execute_action(
+                    "scene", "capture_viewport",
+                    {"width": 1024, "height": 768, "captureImage": True},
+                )
+                image_b64 = result.get("image")
+                if image_b64 and isinstance(image_b64, str):
+                    self._captureReady.emit(image_b64)
+            except Exception:
+                pass  # Capture is optional — fail silently
+
+        threading.Thread(target=_do_capture, daemon=True).start()
+
+    @Slot(str)
+    def _on_capture_ready(self, image_b64: str) -> None:
+        """Apply capture result on the main thread."""
+        self._pending_attachment = {
+            "type": "blob",
+            "data": image_b64,
+            "mimeType": "image/png",
+            "displayName": "viewport.png",
+        }
+        self._pending_thumbnail = (
+            f"data:image/png;base64,{image_b64[:200]}..."
+        )
+        self.pendingAttachmentChanged.emit()
+
+    @Slot()
+    def clearPendingAttachment(self) -> None:
+        """Remove the pending viewport screenshot."""
+        self._pending_attachment = None
+        self._pending_thumbnail = ""
+        self.pendingAttachmentChanged.emit()
 
     def shutdown(self) -> None:
         """Stop the worker thread gracefully (call before app exit)."""

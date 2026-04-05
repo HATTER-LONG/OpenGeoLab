@@ -62,7 +62,7 @@ class CopilotWorker(QThread):
         super().__init__(parent)
         self._config = config
         self._loop: asyncio.AbstractEventLoop | None = None
-        self._queue: asyncio.Queue[str | None] | None = None
+        self._queue: asyncio.Queue[tuple[str, list[dict]] | None] | None = None
         self._shutdown = False
         self._terminate = False  # permanent exit (vs session restart)
 
@@ -72,11 +72,12 @@ class CopilotWorker(QThread):
 
     # -- Slots (main thread → worker) -----------------------------------------
 
-    @Slot(str)
-    def queueMessage(self, text: str) -> None:
-        """Enqueue a user message from the main thread."""
+    @Slot(str, list)
+    def queueMessage(self, text: str, attachments: list | None = None) -> None:
+        """Enqueue a user message with optional attachments from the main thread."""
         if self._loop is not None and self._queue is not None:
-            self._loop.call_soon_threadsafe(self._queue.put_nowait, text)
+            msg = (text, attachments or [])
+            self._loop.call_soon_threadsafe(self._queue.put_nowait, msg)
 
     @Slot(str)
     def setAskUserResponse(self, answer: str) -> None:
@@ -184,10 +185,20 @@ class CopilotWorker(QThread):
                     self.connectionReady.emit()
 
                     while not self._shutdown:
-                        msg = await self._queue.get()
-                        if msg is None:
+                        item = await self._queue.get()
+                        if item is None:
                             break
-                        await session.send(msg)
+                        text, attachments = item
+
+                        # Collect any pending attachments from tool handlers
+                        from ai_chat_plugin.tool_handlers import get_pending_attachments
+                        tool_attachments = get_pending_attachments()
+                        all_attachments = attachments + tool_attachments
+
+                        if all_attachments:
+                            await session.send(text, attachments=all_attachments)
+                        else:
+                            await session.send(text)
 
             except Exception as exc:
                 self.connectionFailed.emit(
