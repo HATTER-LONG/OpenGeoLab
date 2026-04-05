@@ -13,14 +13,16 @@ namespace OpenGeoLab::Scene {
 class SceneGraph;
 
 /**
- * @brief Capture viewport metadata (camera, visible shapes, selections, labels).
+ * @brief Capture viewport metadata and optionally a screenshot.
  *
- * Returns structured JSON describing the current scene state.
- * When image capture is wired (Part 2), also returns a base64-encoded screenshot.
+ * Returns structured JSON with camera, visible shapes, selections,
+ * labels, and hover state. When captureImage is true (default),
+ * requests an FBO readback from the render thread and returns a
+ * base64-encoded PNG screenshot.
  */
 class OPENGEOLAB_SCENE_EXPORT CaptureViewportAction final : public Core::IAction {
 public:
-    explicit CaptureViewportAction(const SceneGraph& graph);
+    explicit CaptureViewportAction(SceneGraph& graph);
     ~CaptureViewportAction() override;
 
     [[nodiscard]] nlohmann::json describe() const override;
@@ -30,7 +32,7 @@ public:
     static constexpr std::string_view ACTION_NAME{"capture_viewport"};
 
 private:
-    const SceneGraph& m_graph;
+    SceneGraph& m_graph;
 };
 
 } // namespace OpenGeoLab::Scene

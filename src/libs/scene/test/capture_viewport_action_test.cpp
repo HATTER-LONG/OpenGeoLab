@@ -16,6 +16,19 @@
 using OpenGeoLab::Scene::CaptureViewportAction;
 using OpenGeoLab::Scene::SceneGraph;
 
+namespace {
+
+/// Helper: default params that skip image capture (no render thread in tests).
+nlohmann::json metaOnly(nlohmann::json extra = {}) {
+    nlohmann::json params = {{"captureImage", false}};
+    if(extra.is_object()) {
+        params.merge_patch(extra);
+    }
+    return params;
+}
+
+} // namespace
+
 TEST_SUITE("CaptureViewportAction") {
 
     TEST_CASE("describe returns expected schema") {
@@ -29,17 +42,19 @@ TEST_SUITE("CaptureViewportAction") {
         CHECK(desc["params"].contains("width"));
         CHECK(desc["params"].contains("height"));
         CHECK(desc["params"].contains("includeMetadata"));
+        CHECK(desc["params"].contains("captureImage"));
         CHECK(desc.contains("returns"));
         CHECK(desc["returns"].contains("ok"));
         CHECK(desc["returns"].contains("action"));
         CHECK(desc["returns"].contains("metadata"));
+        CHECK(desc["returns"].contains("image"));
     }
 
     TEST_CASE("execute on empty scene returns valid metadata") {
         SceneGraph graph;
         CaptureViewportAction action(graph);
 
-        auto result = action.execute({}, nullptr);
+        auto result = action.execute(metaOnly(), nullptr);
 
         CHECK(result["ok"] == true);
         CHECK(result["action"] == "capture_viewport");
@@ -72,7 +87,7 @@ TEST_SUITE("CaptureViewportAction") {
         SceneGraph graph;
         CaptureViewportAction action(graph);
 
-        auto result = action.execute({{"width", 512}, {"height", 384}}, nullptr);
+        auto result = action.execute(metaOnly({{"width", 512}, {"height", 384}}), nullptr);
 
         CHECK(result["ok"] == true);
         CHECK(result["metadata"]["viewport"]["width"] == 512);
@@ -83,7 +98,8 @@ TEST_SUITE("CaptureViewportAction") {
         SceneGraph graph;
         CaptureViewportAction action(graph);
 
-        auto result = action.execute({{"includeMetadata", false}}, nullptr);
+        auto result =
+            action.execute({{"includeMetadata", false}, {"captureImage", false}}, nullptr);
 
         CHECK(result["ok"] == true);
         CHECK_FALSE(result.contains("metadata"));
@@ -99,7 +115,7 @@ TEST_SUITE("CaptureViewportAction") {
         graph.viewportState().setCamera(cam);
 
         CaptureViewportAction action(graph);
-        auto result = action.execute({}, nullptr);
+        auto result = action.execute(metaOnly(), nullptr);
 
         auto& camera_json = result["metadata"]["camera"];
         auto eye = camera_json["eye"];
@@ -120,7 +136,7 @@ TEST_SUITE("CaptureViewportAction") {
         graph.selectionState().addSelection(entity);
 
         CaptureViewportAction action(graph);
-        auto result = action.execute({}, nullptr);
+        auto result = action.execute(metaOnly(), nullptr);
 
         auto& sels = result["metadata"]["selections"];
         REQUIRE(sels.size() == 1);
@@ -136,7 +152,7 @@ TEST_SUITE("CaptureViewportAction") {
         graph.labelManager().addLabel({entity, "E:5"});
 
         CaptureViewportAction action(graph);
-        auto result = action.execute({}, nullptr);
+        auto result = action.execute(metaOnly(), nullptr);
 
         auto& labels = result["metadata"]["labels"];
         REQUIRE(labels.size() == 1);
@@ -156,7 +172,7 @@ TEST_SUITE("CaptureViewportAction") {
         node->setVisible(true);
 
         CaptureViewportAction action(graph);
-        auto result = action.execute({}, nullptr);
+        auto result = action.execute(metaOnly(), nullptr);
 
         auto& shapes = result["metadata"]["visibleShapes"];
         REQUIRE(shapes.size() == 1);
@@ -174,7 +190,7 @@ TEST_SUITE("CaptureViewportAction") {
         node->setVisible(false);
 
         CaptureViewportAction action(graph);
-        auto result = action.execute({}, nullptr);
+        auto result = action.execute(metaOnly(), nullptr);
 
         CHECK(result["metadata"]["visibleShapes"].empty());
     }
@@ -195,7 +211,7 @@ TEST_SUITE("CaptureViewportAction") {
         child->setVisible(true);
 
         CaptureViewportAction action(graph);
-        auto result = action.execute({}, nullptr);
+        auto result = action.execute(metaOnly(), nullptr);
 
         CHECK(result["metadata"]["visibleShapes"].empty());
     }
@@ -207,7 +223,7 @@ TEST_SUITE("CaptureViewportAction") {
         graph.selectionState().setHovered(entity);
 
         CaptureViewportAction action(graph);
-        auto result = action.execute({}, nullptr);
+        auto result = action.execute(metaOnly(), nullptr);
 
         auto& hover = result["metadata"]["hover"];
         CHECK_FALSE(hover.is_null());
@@ -220,7 +236,7 @@ TEST_SUITE("CaptureViewportAction") {
         SceneGraph graph;
 
         CaptureViewportAction action(graph);
-        auto result = action.execute({}, nullptr);
+        auto result = action.execute(metaOnly(), nullptr);
 
         CHECK(result["metadata"]["hover"].is_null());
     }
@@ -239,7 +255,6 @@ TEST_SUITE("CaptureViewportAction") {
         bounds.max = {1.0F, 1.0F, 1.0F};
         node->setLocalBounds(bounds);
 
-        // Set camera looking at origin from Z+5
         OpenGeoLab::Scene::CameraState cam;
         cam.position = {0.0F, 0.0F, 5.0F};
         cam.target = {0.0F, 0.0F, 0.0F};
@@ -247,7 +262,7 @@ TEST_SUITE("CaptureViewportAction") {
         graph.viewportState().setCamera(cam);
 
         CaptureViewportAction action(graph);
-        auto result = action.execute({{"width", 800}, {"height", 600}}, nullptr);
+        auto result = action.execute(metaOnly({{"width", 800}, {"height", 600}}), nullptr);
 
         auto& shapes = result["metadata"]["visibleShapes"];
         REQUIRE(shapes.size() == 1);
@@ -266,8 +281,8 @@ TEST_SUITE("CaptureViewportAction") {
         SceneGraph graph;
         CaptureViewportAction action(graph);
 
-        // String instead of integer — should use defaults gracefully
-        auto result = action.execute({{"width", "not_a_number"}}, nullptr);
+        auto result =
+            action.execute({{"width", "not_a_number"}, {"captureImage", false}}, nullptr);
 
         CHECK(result["ok"] == true);
         CHECK(result["metadata"]["viewport"]["width"] == 1024);

@@ -16,6 +16,8 @@
 #include <glad/gl.h>
 
 #include <QCoreApplication>
+#include <QBuffer>
+#include <QImage>
 #include <QMetaObject>
 #include <QOpenGLContext>
 #include <QOpenGLFramebufferObject>
@@ -23,6 +25,8 @@
 #include <QQuickWindow>
 
 #include <algorithm>
+#include <cstring>
+#include <vector>
 
 namespace OpenGeoLab::App {
 
@@ -121,6 +125,12 @@ void GLViewportRenderer::synchronize(QQuickFramebufferObject* item) {
     m_pendingPickArea.reset();
     if(viewport->sceneGraph() != nullptr) {
         m_pendingPickArea = viewport->sceneGraph()->viewportState().consumePickArea();
+    }
+
+    // Consume pending viewport capture request.
+    m_pendingCapture.reset();
+    if(viewport->sceneGraph() != nullptr) {
+        m_pendingCapture = viewport->sceneGraph()->viewportState().consumeCapture();
     }
 
     // Resolve SelectionState → DrawRanges (only when version changes)
@@ -260,6 +270,12 @@ void GLViewportRenderer::render() {
             dispatchPickAreaResults(*m_pendingPickArea);
             m_pendingPickArea.reset();
         }
+    }
+
+    // Viewport capture (independent of picking state).
+    if(m_pendingCapture.has_value()) {
+        executeCaptureRequest(*m_pendingCapture);
+        m_pendingCapture.reset();
     }
 
     QQuickOpenGLUtils::resetOpenGLState();
@@ -498,6 +514,43 @@ void GLViewportRenderer::dispatchPickAreaResults(const Scene::PendingPickArea& a
             }
         },
         Qt::QueuedConnection);
+}
+
+void GLViewportRenderer::executeCaptureRequest(const Scene::PendingCapture& capture) {
+    const int w = m_frameState.viewportWidth;
+    const int h = m_frameState.viewportHeight;
+
+    if(w <= 0 || h <= 0) {
+        if(capture.promise) {
+            capture.promise->set_value({});
+        }
+        return;
+    }
+
+    // Read pixels from the current FBO (already rendered).
+    std::vector<uint8_t> pixels(static_cast<size_t>(w) * h * 4);
+    glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+
+    // OpenGL reads bottom-up; QImage expects top-down — mirror vertically.
+    QImage image(pixels.data(), w, h, QImage::Format_RGBA8888);
+    QImage flipped = image.mirrored(false, true);
+
+    // Encode to PNG in memory.
+    QByteArray png_bytes;
+    QBuffer buffer(&png_bytes);
+    buffer.open(QIODevice::WriteOnly);
+    if(!flipped.save(&buffer, "PNG") || png_bytes.isEmpty()) {
+        if(capture.promise) {
+            capture.promise->set_value({});
+        }
+        return;
+    }
+
+    std::string base64 = png_bytes.toBase64().toStdString();
+
+    if(capture.promise) {
+        capture.promise->set_value(std::move(base64));
+    }
 }
 
 } // namespace OpenGeoLab::App

@@ -54,7 +54,7 @@ SceneModule::SceneModule(Kangaroo::Util::PluginComponentFactory& factory)
     registerAction<ClearLabelsAction>(std::ref(m_sceneGraph.labelManager()));
     registerAction<SetLabelsVisibleAction>(std::ref(m_sceneGraph.labelManager()));
     registerAction<SetAutoLabelAction>(std::ref(m_sceneGraph.labelManager()));
-    registerAction<CaptureViewportAction>(std::cref(m_sceneGraph));
+    registerAction<CaptureViewportAction>(std::ref(m_sceneGraph));
 
     m_graphConnections.push_back(m_sceneGraph.nodeAdded.connect(
         [this](NodeId) { dataChanged.emit(Core::ModuleDataEvent::ItemAdded); }));
@@ -92,6 +92,8 @@ SceneModule::SceneModule(Kangaroo::Util::PluginComponentFactory& factory)
     m_graphConnections.push_back(vps.cameraChanged.connect(
         [this]() { dataChanged.emit(Core::ModuleDataEvent::ViewportChanged); }));
     m_graphConnections.push_back(vps.pickAreaRequested.connect(
+        [this]() { dataChanged.emit(Core::ModuleDataEvent::ViewportChanged); }));
+    m_graphConnections.push_back(vps.captureRequested.connect(
         [this]() { dataChanged.emit(Core::ModuleDataEvent::ViewportChanged); }));
 }
 

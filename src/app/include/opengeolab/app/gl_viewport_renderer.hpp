@@ -45,6 +45,7 @@ private:
     void dispatchHoverResult(const Render::PickResult& result) const;
     void dispatchBoxSelectResults(const GLViewport::PendingBoxSelect& box) const;
     void dispatchPickAreaResults(const Scene::PendingPickArea& area) const;
+    void executeCaptureRequest(const Scene::PendingCapture& capture);
 
     QPointer<GLViewport> m_viewport;
     Render::RenderPipeline m_pipeline;
@@ -53,6 +54,7 @@ private:
     GLViewport::PendingPick m_hoverPick;
     GLViewport::PendingBoxSelect m_pendingBoxSelect;
     std::optional<Scene::PendingPickArea> m_pendingPickArea;
+    std::optional<Scene::PendingCapture> m_pendingCapture;
     bool m_pickingEnabled{true};
     Render::PickMode m_pickMode{Render::PickMode::VEF};
     bool m_gladInitialized{false};
