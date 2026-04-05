@@ -97,4 +97,19 @@ std::optional<PendingPickArea> ViewportState::consumePickArea() {
     return result;
 }
 
+void ViewportState::requestCapture(PendingCapture request) {
+    {
+        const std::lock_guard lock(m_mutex);
+        m_pendingCapture = std::move(request);
+    }
+    captureRequested.emit();
+}
+
+std::optional<PendingCapture> ViewportState::consumeCapture() {
+    const std::lock_guard lock(m_mutex);
+    auto result = std::move(m_pendingCapture);
+    m_pendingCapture.reset();
+    return result;
+}
+
 } // namespace OpenGeoLab::Scene

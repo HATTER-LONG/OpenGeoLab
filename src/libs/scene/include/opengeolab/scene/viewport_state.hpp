@@ -19,8 +19,11 @@
 
 #include <atomic>
 #include <cstdint>
+#include <future>
+#include <memory>
 #include <mutex>
 #include <optional>
+#include <string>
 
 namespace OpenGeoLab::Scene {
 
@@ -37,8 +40,16 @@ struct PendingPickArea {
     Core::PickAction action{Core::PickAction::Add};
 };
 
+/// @brief Pending viewport capture request (async, consumed by renderer).
+struct PendingCapture {
+    int width{1024};   ///< Desired capture width in pixels
+    int height{768};   ///< Desired capture height in pixels
+    /// Shared promise to deliver the base64 PNG result back to the requester.
+    std::shared_ptr<std::promise<std::string>> promise;
+};
+
 /**
- * @brief Thread-safe viewport state: camera + pending pick requests.
+ * @brief Thread-safe viewport state: camera + pending pick/capture requests.
  *
  * All accessors acquire m_mutex. Signals are emitted after releasing
  * the lock to avoid deadlock in signal handlers.
@@ -69,14 +80,22 @@ public:
     /// @brief Consume and return the pending pick area (if any).
     [[nodiscard]] std::optional<PendingPickArea> consumePickArea();
 
-    Kangaroo::Util::Signal<> cameraChanged;     ///< Fired after camera mutation
-    Kangaroo::Util::Signal<> pickAreaRequested; ///< Fired after pick area queued
+    /// @brief Queue a viewport capture request for the renderer.
+    void requestCapture(PendingCapture request);
+
+    /// @brief Consume and return the pending capture (if any).
+    [[nodiscard]] std::optional<PendingCapture> consumeCapture();
+
+    Kangaroo::Util::Signal<> cameraChanged;      ///< Fired after camera mutation
+    Kangaroo::Util::Signal<> pickAreaRequested;  ///< Fired after pick area queued
+    Kangaroo::Util::Signal<> captureRequested;   ///< Fired after capture queued
 
 private:
     mutable std::mutex m_mutex;
     CameraState m_camera;
     std::atomic<uint64_t> m_cameraVersion{0};
     std::optional<PendingPickArea> m_pendingPickArea;
+    std::optional<PendingCapture> m_pendingCapture;
 };
 
 } // namespace OpenGeoLab::Scene
