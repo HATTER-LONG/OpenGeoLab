@@ -96,6 +96,7 @@ if (OPENGEOLAB_BUILD_TESTS)
         test/scene_module_test.cpp
         test/selection_actions_test.cpp
         test/camera_state_test.cpp
+        test/capture_viewport_action_test.cpp
         test/describe_labels_action_test.cpp
         test/label_actions_test.cpp
         test/viewport_state_test.cpp
