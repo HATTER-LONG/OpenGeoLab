@@ -6,15 +6,15 @@ from unittest.mock import patch, MagicMock
 
 
 def test_build_tools_hosted_mode():
-    """In hosted mode, build_tools returns 3 tool objects."""
+    """In hosted mode, build_tools returns 4 tool objects."""
     with patch("ai_chat_plugin.tool_handlers.scene_tools") as mock_st:
         mock_st.HOSTED_MODE = True
         from ai_chat_plugin.tool_handlers import build_tools
 
         tools = build_tools()
-    assert len(tools) == 3
+    assert len(tools) == 4
     names = {t.name for t in tools}
-    assert names == {"describe_module", "describe_action", "execute_action"}
+    assert names == {"describe_module", "describe_action", "execute_action", "capture_viewport"}
 
 
 def test_build_tools_standalone_mode():

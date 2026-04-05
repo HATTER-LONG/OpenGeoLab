@@ -207,10 +207,14 @@ Item {
             Layout.margins: PluginTheme.gapTight
             enabled: !root.chatBackend.isConnecting
                      && !root.chatBackend.isStreaming
+            hasAttachment: root.chatBackend.hasPendingAttachment
+            attachmentThumbnail: root.chatBackend.pendingThumbnail
 
             onSendMessage: function(text) {
                 root.chatBackend.sendMessage(text)
             }
+            onCaptureViewport: root.chatBackend.captureViewport()
+            onClearAttachment: root.chatBackend.clearPendingAttachment()
         }
     }
 }

@@ -61,9 +61,18 @@ PYBIND11_MODULE(opengeolab_pywrapper, m) {
                 };
             }
 
+            // Release the GIL during dispatch — actions may block on
+            // cross-thread synchronisation (e.g. viewport capture waits for
+            // the Qt render thread, whose event processing can require the GIL
+            // when PySide6 queued signals are pending).
             try {
-                auto result = getDispatcher().dispatch(request, cpp_progress);
-                return result.dump();
+                std::string result_str;
+                {
+                    const Py::gil_scoped_release release;
+                    auto result = getDispatcher().dispatch(request, cpp_progress);
+                    result_str = result.dump();
+                }
+                return result_str;
             } catch(const std::exception& e) {
                 const auto module = request.value("module", "unknown");
                 const auto action = request.value("action", "unknown");
