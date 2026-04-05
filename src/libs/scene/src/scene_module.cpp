@@ -8,6 +8,7 @@
 #include <opengeolab/core/logger.hpp>
 #include <opengeolab/core/module_data_event.hpp>
 #include <opengeolab/scene/add_label_action.hpp>
+#include <opengeolab/scene/capture_viewport_action.hpp>
 #include <opengeolab/scene/clear_labels_action.hpp>
 #include <opengeolab/scene/clear_selection_action.hpp>
 #include <opengeolab/scene/describe_labels_action.hpp>
@@ -53,6 +54,7 @@ SceneModule::SceneModule(Kangaroo::Util::PluginComponentFactory& factory)
     registerAction<ClearLabelsAction>(std::ref(m_sceneGraph.labelManager()));
     registerAction<SetLabelsVisibleAction>(std::ref(m_sceneGraph.labelManager()));
     registerAction<SetAutoLabelAction>(std::ref(m_sceneGraph.labelManager()));
+    registerAction<CaptureViewportAction>(std::cref(m_sceneGraph));
 
     m_graphConnections.push_back(m_sceneGraph.nodeAdded.connect(
         [this](NodeId) { dataChanged.emit(Core::ModuleDataEvent::ItemAdded); }));
