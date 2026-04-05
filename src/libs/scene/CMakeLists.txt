@@ -2,6 +2,7 @@ set(scene_public_headers
     include/opengeolab/scene/add_label_action.hpp
     include/opengeolab/scene/bounding_box3d.hpp
     include/opengeolab/scene/camera_state.hpp
+    include/opengeolab/scene/capture_viewport_action.hpp
     include/opengeolab/scene/clear_labels_action.hpp
     include/opengeolab/scene/clear_selection_action.hpp
     include/opengeolab/scene/describe_labels_action.hpp
@@ -39,6 +40,7 @@ set(scene_sources
     src/add_label_action.cpp
     src/bounding_box3d.cpp
     src/camera_state.cpp
+    src/capture_viewport_action.cpp
     src/clear_labels_action.cpp
     src/clear_selection_action.cpp
     src/describe_labels_action.cpp
