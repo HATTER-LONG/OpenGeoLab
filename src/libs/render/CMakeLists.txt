@@ -22,6 +22,7 @@ set(render_sources
     src/pass/highlight_pass.cpp
     src/pass/selection_pass.cpp
     src/pass/label_pass.cpp
+    src/pass/tessellation_overlay_pass.cpp
     src/label_anchor.cpp
     src/font/font_atlas.cpp)
 
@@ -66,6 +67,7 @@ if (OPENGEOLAB_BUILD_TESTS)
         test/batch_utils_test.cpp
         test/render_pass_base_test.cpp
         test/selection_pass_test.cpp
+        test/tessellation_overlay_pass_test.cpp
         test/render_pipeline_test.cpp
         test/label_anchor_test.cpp
         test/font_atlas_test.cpp
