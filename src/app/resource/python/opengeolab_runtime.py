@@ -226,6 +226,159 @@ def _capabilities_response() -> str:
     )
 
 
+def _describe_response(request: dict[str, Any]) -> str:
+    """Handle system.describe — return full system schema from C++ dispatcher."""
+    wrapper = _import_backend_wrapper()
+    if wrapper is None:
+        return _make_response(
+            "system", "describe", False, "Backend wrapper unavailable."
+        )
+    try:
+        schema = json.loads(wrapper.describe())
+        return _make_response(
+            "system", "describe", True, "Full system schema.", schema
+        )
+    except Exception as exc:
+        return _make_response(
+            "system", "describe", False, f"describe() failed: {exc}"
+        )
+
+
+def _list_modules_response() -> str:
+    """Handle system.list_modules — return module names and descriptions."""
+    wrapper = _import_backend_wrapper()
+    if wrapper is None:
+        return _make_response(
+            "system", "list_modules", False, "Backend wrapper unavailable."
+        )
+    try:
+        schema = json.loads(wrapper.describe())
+        modules = [
+            {"name": m["name"], "description": m.get("description", "")}
+            for m in schema.get("modules", [])
+        ]
+        return _make_response(
+            "system",
+            "list_modules",
+            True,
+            "Modules listed.",
+            {"modules": modules},
+        )
+    except Exception as exc:
+        return _make_response(
+            "system", "list_modules", False, f"list_modules failed: {exc}"
+        )
+
+
+def _describe_module_response(request: dict[str, Any]) -> str:
+    """Handle system.describe_module — return one module's action list."""
+    param = request.get("param", {})
+    module_name = param.get("module", "")
+    if not module_name:
+        return _make_response(
+            "system",
+            "describe_module",
+            False,
+            "Missing 'module' in param.",
+        )
+
+    wrapper = _import_backend_wrapper()
+    if wrapper is None:
+        return _make_response(
+            "system",
+            "describe_module",
+            False,
+            "Backend wrapper unavailable.",
+        )
+    try:
+        schema = json.loads(wrapper.describe())
+        for m in schema.get("modules", []):
+            if m["name"] == module_name:
+                actions = [
+                    {"name": a["name"], "description": a.get("description", "")}
+                    for a in m.get("actions", [])
+                ]
+                return _make_response(
+                    "system",
+                    "describe_module",
+                    True,
+                    f"Module '{module_name}' described.",
+                    {
+                        "module": m["name"],
+                        "description": m.get("description", ""),
+                        "actions": actions,
+                    },
+                )
+        return _make_response(
+            "system",
+            "describe_module",
+            False,
+            f"Module '{module_name}' not found.",
+        )
+    except Exception as exc:
+        return _make_response(
+            "system",
+            "describe_module",
+            False,
+            f"describe_module failed: {exc}",
+        )
+
+
+def _describe_action_response(request: dict[str, Any]) -> str:
+    """Handle system.describe_action — return one action's full param/return schema."""
+    param = request.get("param", {})
+    module_name = param.get("module", "")
+    action_name = param.get("action", "")
+    if not module_name or not action_name:
+        return _make_response(
+            "system",
+            "describe_action",
+            False,
+            "Missing 'module' and/or 'action' in param.",
+        )
+
+    wrapper = _import_backend_wrapper()
+    if wrapper is None:
+        return _make_response(
+            "system",
+            "describe_action",
+            False,
+            "Backend wrapper unavailable.",
+        )
+    try:
+        schema = json.loads(wrapper.describe())
+        for m in schema.get("modules", []):
+            if m["name"] == module_name:
+                for a in m.get("actions", []):
+                    if a["name"] == action_name:
+                        return _make_response(
+                            "system",
+                            "describe_action",
+                            True,
+                            f"Action '{module_name}.{action_name}' described.",
+                            a,
+                        )
+                return _make_response(
+                    "system",
+                    "describe_action",
+                    False,
+                    f"Action '{action_name}' not found in module '{module_name}'.",
+                )
+        return _make_response(
+            "system",
+            "describe_action",
+            False,
+            f"Module '{module_name}' not found.",
+        )
+    except Exception as exc:
+        return _make_response(
+            "system",
+            "describe_action",
+            False,
+            f"describe_action failed: {exc}",
+        )
+
+
 def _import_backend_wrapper() -> Any:
     """Lazy-import the C++ pybind11 wrapper module."""
     try:
@@ -270,6 +423,14 @@ def process(request_json: str, progress_callback=None) -> str:
     if module == "system":
         if action == "capabilities":
             return _capabilities_response()
+        if action == "describe":
+            return _describe_response(request)
+        if action == "list_modules":
+            return _list_modules_response()
+        if action == "describe_module":
+            return _describe_module_response(request)
+        if action == "describe_action":
+            return _describe_action_response(request)
         return _make_response(
             module,
             action,
