@@ -88,9 +88,11 @@ Item {
         anchors.rightMargin: 12
         theme: root.theme
         xRayActive: viewport.xRayMode
+        showTessellationActive: viewport.showTessellation
 
         onFitRequested: viewport.fitToScene()
         onPresetRequested: (preset) => viewport.setViewPreset(preset)
         onXRayToggled: viewport.toggleXRay()
+        onShowTessellationToggled: viewport.toggleShowTessellation()
     }
 }
