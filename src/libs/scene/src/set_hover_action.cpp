@@ -37,7 +37,10 @@ nlohmann::json SetHoverAction::describe() const {
          {{"entity",
            {{"type", "object"},
             {"required", false},
-            {"description", "Optional {shapeId, type, localId} entity reference. Null clears."}}}}},
+            {"description",
+             "Optional {shapeId, type, localId} entity reference. Null clears. "
+             "type must be one of: GeoVertex, GeoEdge, GeoWire, GeoFace, "
+             "GeoSolid, MeshNode, MeshEdge, or MeshElement."}}}}},
         {"returns",
          {{"ok",
            {{"type", "boolean"}, {"description", "true when the action completes successfully."}}},

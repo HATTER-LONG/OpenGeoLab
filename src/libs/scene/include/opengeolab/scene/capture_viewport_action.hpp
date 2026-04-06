@@ -1,6 +1,6 @@
 /**
  * @file capture_viewport_action.hpp
- * @brief CaptureViewportAction — capture viewport metadata for AI context
+ * @brief CaptureViewportAction — capture viewport metadata and optional PNG output
  */
 
 #pragma once
@@ -18,7 +18,8 @@ class SceneGraph;
  * Returns structured JSON with camera, visible shapes, selections,
  * labels, and hover state. When captureImage is true (default),
  * requests an FBO readback from the render thread and returns a
- * base64-encoded PNG screenshot.
+ * base64-encoded PNG screenshot. When outputPath is provided,
+ * the same render capture is also written as a PNG file.
  */
 class OPENGEOLAB_SCENE_EXPORT CaptureViewportAction final : public Core::IAction {
 public:

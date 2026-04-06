@@ -28,7 +28,9 @@ nlohmann::json AddLabelAction::describe() const {
           {"entityType",
            {{"type", "string"},
             {"required", true},
-            {"description", "Entity type: GeoVertex, GeoEdge, GeoWire, GeoFace, or GeoSolid."}}},
+            {"description",
+             "Entity type: GeoVertex, GeoEdge, GeoWire, GeoFace, GeoSolid, "
+             "MeshNode, MeshEdge, or MeshElement."}}},
           {"localId",
            {{"type", "integer"}, {"required", true}, {"description", "Topology-local id."}}}}},
         {"returns",

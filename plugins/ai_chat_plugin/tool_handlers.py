@@ -45,7 +45,22 @@ class _ExecuteActionParams(BaseModel):
 class _CaptureViewportParams(BaseModel):
     width: int = Field(default=1024, description="Screenshot width in pixels (default 1024)")
     height: int = Field(default=768, description="Screenshot height in pixels (default 768)")
-    format: str = Field(default="png", description="Image format: png or jpeg (default png)")
+    format: str = Field(
+        default="png",
+        description="MIME-type hint for the attached image: png or jpeg (default png). "
+        "The actual capture is always PNG; this only affects the attachment label.",
+    )
+    capture_image: bool = Field(
+        default=True,
+        description="Whether to return a base64 image attachment (default true). "
+        "Set false when only saving to output_path to skip the attachment.",
+    )
+    output_path: str | None = Field(
+        default=None,
+        description="Absolute file path to save the captured PNG. "
+        "The renderer writes directly to this path. "
+        "When set, savedPath (or savedPathError) is returned.",
+    )
 
 
 def _truncate(text: str) -> str:
@@ -116,15 +131,29 @@ def get_pending_attachments() -> list[dict]:
     return attachments
 
 
-def _capture_viewport_handler(width: int, height: int, fmt: str) -> str:
+def _capture_viewport_handler(
+    width: int,
+    height: int,
+    fmt: str,
+    capture_image: bool = True,
+    output_path: str | None = None,
+) -> str:
     """Handler for the capture_viewport tool."""
     if not scene_tools.HOSTED_MODE:
         return json.dumps({"ok": False, "error": "Not in hosted mode — pywrapper unavailable"})
 
+    params: dict[str, object] = {
+        "width": width,
+        "height": height,
+        "captureImage": capture_image,
+    }
+    if output_path:
+        params["outputPath"] = output_path
+
     try:
         result = scene_tools.execute_action(
             "scene", "capture_viewport",
-            {"width": width, "height": height},
+            params,
         )
     except Exception:
         return json.dumps({
@@ -160,12 +189,20 @@ def _capture_viewport_handler(width: int, height: int, fmt: str) -> str:
         image_error = result.get("imageError")
         if image_error:
             tool_return["imageError"] = image_error
+    saved_path = result.get("savedPath")
+    if saved_path:
+        tool_return["savedPath"] = saved_path
+    saved_path_error = result.get("savedPathError")
+    if saved_path_error:
+        tool_return["savedPathError"] = saved_path_error
 
-    tool_return["note"] = (
-        "Screenshot captured. Visible shapes and their screen positions are listed above."
-        if image_attached
-        else "Screenshot capture failed. Only metadata is available."
-    )
+    if image_attached:
+        note = "Screenshot captured. Visible shapes and their screen positions are listed above."
+    elif saved_path:
+        note = f"Screenshot saved to {saved_path}."
+    else:
+        note = "Screenshot capture failed. Only metadata is available."
+    tool_return["note"] = note
 
     return json.dumps(tool_return, default=str)
 
@@ -212,10 +249,17 @@ def build_tools() -> list:
             "Capture the current 3D viewport as a screenshot with scene metadata. "
             "Returns camera position, visible shapes with screen bounding boxes, "
             "selections, and labels. The image is automatically attached so you can "
-            "see what the user sees. Use this to understand the current view."
+            "see what the user sees. Use this to understand the current view. "
+            "Optionally save the PNG to a file via output_path."
         ),
     )
     def capture_viewport(params: _CaptureViewportParams) -> str:
-        return _capture_viewport_handler(params.width, params.height, params.format)
+        return _capture_viewport_handler(
+            params.width,
+            params.height,
+            params.format,
+            params.capture_image,
+            params.output_path,
+        )
 
     return [describe_module, describe_action, execute_action, capture_viewport]
