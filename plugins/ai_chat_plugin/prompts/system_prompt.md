@@ -70,7 +70,7 @@
    ```json
    {
      "viewport": {"width": 1024, "height": 768},
-     "camera": {"position": [x,y,z], "target": [x,y,z], "up": [x,y,z]},
+     "camera": {"eye": [x,y,z], "target": [x,y,z], "up": [x,y,z]},
      "visibleShapes": [{"shapeId": 0, "name": "Box", "screenBBox": {"x": 100, "y": 50, "w": 200, "h": 150}}],
      "selections": [{"shapeId": 0, "type": "GeoFace", "localId": 3}],
      "labels": [{"shapeId": 0, "entityType": "GeoFace", "localId": 3, "text": "Face 3"}],

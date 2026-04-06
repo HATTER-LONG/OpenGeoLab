@@ -81,7 +81,7 @@ ID 规则：
 ```json
 {
   "viewport": {"width": 1024, "height": 768},
-  "camera": {"position": [x,y,z], "target": [x,y,z], "up": [x,y,z]},
+  "camera": {"eye": [x,y,z], "target": [x,y,z], "up": [x,y,z]},
   "visibleShapes": [{"shapeId": 0, "name": "Box", "screenBBox": {"x": 100, "y": 50, "w": 200, "h": 150}}],
   "selections": [{"shapeId": 0, "type": "GeoFace", "localId": 3}],
   "labels": [{"shapeId": 0, "entityType": "GeoFace", "localId": 3, "text": "Face 3"}],
@@ -100,7 +100,7 @@ ID 规则：
 
 查询所有场景节点。无参数。
 
-返回：`{ok, nodes: [{nodeId, name, type, visible, shapeId, ...}]}`
+返回：`{ok, nodes: [{sourceType, sourceId, name, visible}]}`
 
 ### query_selection
 
@@ -112,7 +112,7 @@ ID 规则：
 
 查询所有标签状态。无参数。
 
-返回：`{ok, labels: [{shapeId, entityType, localId, text, visible}]}`
+返回：`{ok, labels: [{text, shapeId, entityType, localId, color}]}`
 
 ---
 
