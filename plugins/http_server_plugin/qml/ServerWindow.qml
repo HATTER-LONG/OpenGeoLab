@@ -6,13 +6,50 @@ import theme
 ApplicationWindow {
     id: window
 
-    width: 640
-    height: 560
+    width: 720
+    height: 700
+    minimumWidth: 480
+    minimumHeight: 400
     title: qsTr("HTTP Server — OpenGeoLab")
     color: PluginTheme.bg
     visible: true
 
     required property var backend
+
+    // ── JSON Syntax Highlighter ─────────────────────────────────────
+    function highlightJson(obj) {
+        if (obj === undefined || obj === null)
+            return "";
+        const raw = JSON.stringify(obj, null, 2);
+        let safe = raw.replace(/&/g, "&amp;")
+                      .replace(/</g, "&lt;")
+                      .replace(/>/g, "&gt;");
+
+        const keyColor = PluginTheme.darkMode ? "#5aa2ff" : "#1473e6";
+        const strColor = PluginTheme.darkMode ? "#6fe3b0" : "#1f9d68";
+        const numColor = PluginTheme.darkMode ? "#ffb86c" : "#d08800";
+        const boolColor = PluginTheme.darkMode ? "#c9a0ff" : "#7c3aed";
+        const nullColor = PluginTheme.darkMode ? "#ff8d7d" : "#d9534f";
+
+        safe = safe.replace(
+            /("(?:\\.|[^"\\])*")(\s*:)?|\b(true|false)\b|\bnull\b|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g,
+            function(match, str, colon, bool, num) {
+                if (str) {
+                    if (colon)
+                        return '<span style="color:' + keyColor + '">' + str + '</span>' + colon;
+                    return '<span style="color:' + strColor + '">' + str + '</span>';
+                }
+                if (bool !== undefined && bool !== "")
+                    return '<span style="color:' + boolColor + '">' + bool + '</span>';
+                if (match === "null")
+                    return '<span style="color:' + nullColor + '">null</span>';
+                if (num !== undefined && num !== "")
+                    return '<span style="color:' + numColor + '">' + num + '</span>';
+                return match;
+            }
+        );
+        return "<pre style='margin:0; white-space:pre-wrap; font-size:11px;'>" + safe + "</pre>";
+    }
 
     ColumnLayout {
         anchors.fill: parent
@@ -196,154 +233,297 @@ ApplicationWindow {
             }
         }
 
-        // ── Request Log ─────────────────────────────────────────────
-        Rectangle {
+        // ── Main SplitView (Log + Detail) ───────────────────────────
+        SplitView {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            color: PluginTheme.surface
-            radius: PluginTheme.radius
-            border.width: 1
-            border.color: PluginTheme.borderSubtle
+            orientation: Qt.Vertical
 
-            ColumnLayout {
-                anchors.fill: parent
-                anchors.margins: 12
-                spacing: 8
+            handle: Rectangle {
+                implicitWidth: parent.width
+                implicitHeight: 6
+                color: SplitHandle.hovered || SplitHandle.pressed
+                       ? PluginTheme.accent : PluginTheme.borderSubtle
 
-                Text {
-                    text: qsTr("Request Log")
-                    color: PluginTheme.textPrimary
-                    font.pixelSize: 14
-                    font.bold: true
+                Rectangle {
+                    anchors.centerIn: parent
+                    width: 40
+                    height: 2
+                    radius: 1
+                    color: SplitHandle.hovered || SplitHandle.pressed
+                           ? "#ffffff" : PluginTheme.textTertiary
                 }
+            }
 
-                ListView {
-                    id: logList
+            // ── Request Log Panel ───────────────────────────────────
+            Rectangle {
+                SplitView.preferredHeight: 260
+                SplitView.minimumHeight: 100
+                SplitView.fillWidth: true
+                color: PluginTheme.surface
+                radius: PluginTheme.radius
+                border.width: 1
+                border.color: PluginTheme.borderSubtle
 
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    model: window.backend.requestLog
-                    clip: true
-                    spacing: 2
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: 12
+                    spacing: 8
 
-                    delegate: Rectangle {
-                        id: logEntry
-
-                        required property int index
-                        required property var modelData
-
-                        width: logList.width
-                        height: logContent.implicitHeight + 8
-                        color: logEntry.index === logList.currentIndex
-                               ? PluginTheme.surfaceStrong
-                               : (logMouse.containsMouse ? PluginTheme.surfaceMuted : "transparent")
-                        radius: 4
-
-                        ColumnLayout {
-                            id: logContent
-
-                            anchors.left: parent.left
-                            anchors.right: parent.right
-                            anchors.verticalCenter: parent.verticalCenter
-                            anchors.margins: 6
-                            spacing: 2
-
-                            Text {
-                                text: {
-                                    const d = logEntry.modelData;
-                                    const label = d.module
-                                        ? d.module + "." + d.action
-                                        : d.path;
-                                    return d.time + "  " + d.method + "  " + label;
-                                }
-                                color: PluginTheme.textPrimary
-                                font.pixelSize: 12
-                                font.family: "monospace"
-                            }
-
-                            Text {
-                                text: {
-                                    const d = logEntry.modelData;
-                                    const statusText = d.ok ? "OK" : "FAIL";
-                                    return "→ " + d.status + " " + statusText
-                                           + " (" + d.duration_ms + "ms)";
-                                }
-                                color: logEntry.modelData.ok
-                                       ? PluginTheme.success
-                                       : PluginTheme.danger
-                                font.pixelSize: 11
-                                font.family: "monospace"
-                            }
-                        }
-
-                        MouseArea {
-                            id: logMouse
-
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            onClicked: logList.currentIndex = logEntry.index
-                        }
+                    Text {
+                        text: qsTr("Request Log")
+                        color: PluginTheme.textPrimary
+                        font.pixelSize: 14
+                        font.bold: true
                     }
 
-                    onCountChanged: {
-                        if (count > 0) {
-                            positionViewAtEnd();
+                    ListView {
+                        id: logList
+
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        model: window.backend.requestLog
+                        clip: true
+                        spacing: 2
+
+                        delegate: Rectangle {
+                            id: logEntry
+
+                            required property int index
+                            required property var modelData
+
+                            width: logList.width
+                            height: logContent.implicitHeight + 8
+                            color: logEntry.index === logList.currentIndex
+                                   ? PluginTheme.surfaceStrong
+                                   : (logMouse.containsMouse ? PluginTheme.surfaceMuted : "transparent")
+                            radius: 4
+
+                            ColumnLayout {
+                                id: logContent
+
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.margins: 6
+                                spacing: 2
+
+                                Text {
+                                    text: {
+                                        const d = logEntry.modelData;
+                                        const label = d.module
+                                            ? d.module + "." + d.action
+                                            : d.path;
+                                        return d.time + "  " + d.method + "  " + label;
+                                    }
+                                    color: PluginTheme.textPrimary
+                                    font.pixelSize: 12
+                                    font.family: "monospace"
+                                }
+
+                                Text {
+                                    text: {
+                                        const d = logEntry.modelData;
+                                        const statusText = d.ok ? "OK" : "FAIL";
+                                        return "→ " + d.status + " " + statusText
+                                               + " (" + d.duration_ms + "ms)";
+                                    }
+                                    color: logEntry.modelData.ok
+                                           ? PluginTheme.success
+                                           : PluginTheme.danger
+                                    font.pixelSize: 11
+                                    font.family: "monospace"
+                                }
+                            }
+
+                            MouseArea {
+                                id: logMouse
+
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                onClicked: logList.currentIndex = logEntry.index
+                            }
+                        }
+
+                        onCountChanged: {
+                            if (count > 0) {
+                                positionViewAtEnd();
+                            }
                         }
                     }
                 }
             }
-        }
 
-        // ── Detail Panel ────────────────────────────────────────────
-        Rectangle {
-            Layout.fillWidth: true
-            Layout.preferredHeight: 160
-            color: PluginTheme.surface
-            radius: PluginTheme.radius
-            border.width: 1
-            border.color: PluginTheme.borderSubtle
-            visible: logList.currentIndex >= 0 && logList.currentIndex < window.backend.requestLog.length
+            // ── Detail Panel (Request | Response) ───────────────────
+            Rectangle {
+                id: detailPanel
 
-            ColumnLayout {
-                anchors.fill: parent
-                anchors.margins: 12
-                spacing: 4
+                SplitView.preferredHeight: 240
+                SplitView.minimumHeight: 80
+                SplitView.fillWidth: true
+                color: PluginTheme.surface
+                radius: PluginTheme.radius
+                border.width: 1
+                border.color: PluginTheme.borderSubtle
+                visible: logList.currentIndex >= 0 && logList.currentIndex < window.backend.requestLog.length
 
-                Text {
-                    text: qsTr("Request / Response Detail")
-                    color: PluginTheme.textPrimary
-                    font.pixelSize: 13
-                    font.bold: true
+                property var selectedEntry: {
+                    const idx = logList.currentIndex;
+                    const log = window.backend.requestLog;
+                    if (idx >= 0 && idx < log.length) return log[idx];
+                    return null;
                 }
 
-                Flickable {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    contentWidth: width
-                    contentHeight: detailText.implicitHeight
-                    clip: true
+                SplitView {
+                    anchors.fill: parent
+                    anchors.margins: 8
+                    orientation: Qt.Horizontal
 
-                    Text {
-                        id: detailText
+                    handle: Rectangle {
+                        implicitWidth: 6
+                        implicitHeight: parent.height
+                        color: SplitHandle.hovered || SplitHandle.pressed
+                               ? PluginTheme.accent : PluginTheme.borderSubtle
 
-                        width: parent.width
-                        wrapMode: Text.Wrap
-                        font.pixelSize: 11
-                        font.family: "monospace"
-                        color: PluginTheme.textSecondary
-                        text: {
-                            const idx = logList.currentIndex;
-                            const log = window.backend.requestLog;
-                            if (idx < 0 || idx >= log.length) return "";
-                            const entry = log[idx];
-                            let result = "";
-                            if (entry.request_body) {
-                                result += "Request:\n" + JSON.stringify(entry.request_body, null, 2) + "\n\n";
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: 2
+                            height: 30
+                            radius: 1
+                            color: SplitHandle.hovered || SplitHandle.pressed
+                                   ? "#ffffff" : PluginTheme.textTertiary
+                        }
+                    }
+
+                    // ── Request Side ────────────────────────────────
+                    Rectangle {
+                        SplitView.preferredWidth: parent.width / 2
+                        SplitView.minimumWidth: 120
+                        color: "transparent"
+
+                        ColumnLayout {
+                            anchors.fill: parent
+                            spacing: 4
+
+                            RowLayout {
+                                spacing: 6
+
+                                Rectangle {
+                                    width: 6
+                                    height: 14
+                                    radius: 2
+                                    color: PluginTheme.accent
+                                }
+
+                                Text {
+                                    text: qsTr("Request")
+                                    color: PluginTheme.textPrimary
+                                    font.pixelSize: 13
+                                    font.bold: true
+                                }
                             }
-                            if (entry.response_body) {
-                                result += "Response:\n" + JSON.stringify(entry.response_body, null, 2);
+
+                            Flickable {
+                                Layout.fillWidth: true
+                                Layout.fillHeight: true
+                                contentWidth: width
+                                contentHeight: requestText.implicitHeight
+                                clip: true
+                                boundsBehavior: Flickable.StopAtBounds
+
+                                ScrollBar.vertical: ScrollBar {
+                                    policy: ScrollBar.AsNeeded
+                                }
+
+                                Text {
+                                    id: requestText
+
+                                    width: parent.width
+                                    wrapMode: Text.Wrap
+                                    textFormat: Text.RichText
+                                    font.family: "monospace"
+                                    color: PluginTheme.textSecondary
+                                    text: {
+                                        if (!detailPanel.selectedEntry || !detailPanel.selectedEntry.request_body)
+                                            return '<span style="color:' + PluginTheme.textTertiary + '">'
+                                                   + qsTr("No request body.") + '</span>';
+                                        return window.highlightJson(detailPanel.selectedEntry.request_body);
+                                    }
+                                }
                             }
-                            return result || qsTr("No detail available.");
+                        }
+                    }
+
+                    // ── Response Side ───────────────────────────────
+                    Rectangle {
+                        SplitView.fillWidth: true
+                        SplitView.minimumWidth: 120
+                        color: "transparent"
+
+                        ColumnLayout {
+                            anchors.fill: parent
+                            spacing: 4
+
+                            RowLayout {
+                                spacing: 6
+
+                                Rectangle {
+                                    width: 6
+                                    height: 14
+                                    radius: 2
+                                    color: (detailPanel.selectedEntry && detailPanel.selectedEntry.ok)
+                                           ? PluginTheme.success : PluginTheme.danger
+                                }
+
+                                Text {
+                                    text: qsTr("Response")
+                                    color: PluginTheme.textPrimary
+                                    font.pixelSize: 13
+                                    font.bold: true
+                                }
+
+                                Text {
+                                    text: {
+                                        if (!detailPanel.selectedEntry) return "";
+                                        return detailPanel.selectedEntry.ok
+                                               ? "✓ " + detailPanel.selectedEntry.status
+                                               : "✗ " + detailPanel.selectedEntry.status;
+                                    }
+                                    color: (detailPanel.selectedEntry && detailPanel.selectedEntry.ok)
+                                           ? PluginTheme.success : PluginTheme.danger
+                                    font.pixelSize: 11
+                                    font.family: "monospace"
+                                }
+                            }
+
+                            Flickable {
+                                Layout.fillWidth: true
+                                Layout.fillHeight: true
+                                contentWidth: width
+                                contentHeight: responseText.implicitHeight
+                                clip: true
+                                boundsBehavior: Flickable.StopAtBounds
+
+                                ScrollBar.vertical: ScrollBar {
+                                    policy: ScrollBar.AsNeeded
+                                }
+
+                                Text {
+                                    id: responseText
+
+                                    width: parent.width
+                                    wrapMode: Text.Wrap
+                                    textFormat: Text.RichText
+                                    font.family: "monospace"
+                                    color: PluginTheme.textSecondary
+                                    text: {
+                                        if (!detailPanel.selectedEntry || !detailPanel.selectedEntry.response_body)
+                                            return '<span style="color:' + PluginTheme.textTertiary + '">'
+                                                   + qsTr("No response body.") + '</span>';
+                                        return window.highlightJson(detailPanel.selectedEntry.response_body);
+                                    }
+                                }
+                            }
                         }
                     }
                 }
