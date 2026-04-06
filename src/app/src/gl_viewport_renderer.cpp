@@ -544,7 +544,9 @@ void GLViewportRenderer::executeCaptureRequest(const Scene::PendingCapture& capt
     // The viewport FBO uses 4× MSAA, so direct glReadPixels yields
     // undefined data.  QOpenGLFramebufferObject::toImage() resolves the
     // multisample buffer, reads the pixels and flips the image in one step.
-    QImage flipped = framebufferObject()->toImage();
+    // Convert to RGB32 (opaque) so the saved PNG matches the on-screen
+    // composite regardless of FBO alpha state.
+    QImage image = framebufferObject()->toImage().convertToFormat(QImage::Format_RGB32);
 
     Scene::CaptureResult result;
 
@@ -554,7 +556,7 @@ void GLViewportRenderer::executeCaptureRequest(const Scene::PendingCapture& capt
         QDir outputDir = outputFile.dir();
         if(!outputDir.exists() && !outputDir.mkpath(QStringLiteral("."))) {
             result.savedPathError = "Failed to create the output directory for outputPath.";
-        } else if(!flipped.save(outputPath, "PNG")) {
+        } else if(!image.save(outputPath, "PNG")) {
             result.savedPathError = "Failed to write PNG to outputPath.";
         } else {
             result.savedPath = capture.outputPath;
@@ -565,7 +567,7 @@ void GLViewportRenderer::executeCaptureRequest(const Scene::PendingCapture& capt
         QByteArray pngBytes;
         QBuffer buffer(&pngBytes);
         buffer.open(QIODevice::WriteOnly);
-        if(!flipped.save(&buffer, "PNG") || pngBytes.isEmpty()) {
+        if(!image.save(&buffer, "PNG") || pngBytes.isEmpty()) {
             result.imageError = "Failed to encode the captured viewport as PNG.";
         } else {
             result.image = pngBytes.toBase64().toStdString();
