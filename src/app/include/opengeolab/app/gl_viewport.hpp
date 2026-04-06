@@ -38,6 +38,8 @@ class GLViewport : public QQuickFramebufferObject {
                    pickingEnabledChanged)
     Q_PROPERTY(int pickMode READ pickMode WRITE setPickMode NOTIFY pickModeChanged)
     Q_PROPERTY(bool xRayMode READ xRayMode WRITE setXRayMode NOTIFY xRayModeChanged)
+    Q_PROPERTY(bool showTessellation READ showTessellation WRITE setShowTessellation NOTIFY
+                   showTessellationChanged)
     Q_PROPERTY(bool boxSelectActive READ boxSelectActive NOTIFY boxSelectActiveChanged)
     Q_PROPERTY(QRectF boxSelectRect READ boxSelectRect NOTIFY boxSelectRectChanged)
 
@@ -80,6 +82,12 @@ public:
 
     /** @brief Enable or disable x-ray rendering. */
     void setXRayMode(bool enabled);
+
+    /** @brief Whether tessellation overlay is enabled. */
+    [[nodiscard]] bool showTessellation() const { return m_showTessellation; }
+
+    /** @brief Enable or disable tessellation mesh overlay. */
+    void setShowTessellation(bool enabled);
 
     /**
      * @brief Pending click pick request consumed by the renderer.
@@ -151,10 +159,14 @@ public:
     /** @brief Toggle x-ray rendering on or off. */
     Q_INVOKABLE void toggleXRay();
 
+    /** @brief Toggle tessellation overlay on or off. */
+    Q_INVOKABLE void toggleShowTessellation();
+
 Q_SIGNALS:
     void pickingEnabledChanged();
     void pickModeChanged();
     void xRayModeChanged();
+    void showTessellationChanged();
     void entityPicked(int shape_id, int entity_type, int local_id);
     void entityHovered(int shape_id, int entity_type, int local_id);
     void pickCleared();
@@ -180,6 +192,7 @@ private:
     bool m_pickingEnabled{true};
     Render::PickMode m_pickMode{Render::PickMode::VEF};
     bool m_xRayMode{false};
+    bool m_showTessellation{false};
 
     PendingPick m_pendingPick;
     PendingBoxSelect m_pendingBoxSelect;

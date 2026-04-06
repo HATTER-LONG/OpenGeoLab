@@ -15,8 +15,8 @@
 
 #include <glad/gl.h>
 
-#include <QCoreApplication>
 #include <QBuffer>
+#include <QCoreApplication>
 #include <QDir>
 #include <QFileInfo>
 #include <QImage>
@@ -90,8 +90,8 @@ void GLViewportRenderer::synchronize(QQuickFramebufferObject* item) {
             }
             return nullptr;
         };
-        m_pipeline.setFontAtlasDir(
-            QCoreApplication::applicationDirPath().toStdString() + "/resources/fonts");
+        m_pipeline.setFontAtlasDir(QCoreApplication::applicationDirPath().toStdString() +
+                                   "/resources/fonts");
         m_pipeline.initialize(gl_loader);
         m_pipelineInitialized = true;
     }
@@ -120,6 +120,7 @@ void GLViewportRenderer::synchronize(QQuickFramebufferObject* item) {
     m_frameState.viewportHeight = static_cast<int>(height_px);
     m_frameState.devicePixelRatio = device_pixel_ratio;
     m_frameState.xRayMode = viewport->xRayMode();
+    m_frameState.showTessellation = viewport->showTessellation();
 
     m_pickingEnabled = viewport->pickingEnabled();
     m_pickMode = static_cast<Render::PickMode>(viewport->pickMode());

@@ -196,4 +196,25 @@ TEST_CASE("GLViewport fits the camera to the scene and creates a renderer") {
     }
 }
 
+TEST_CASE("GLViewport toggles tessellation overlay state and emits change signal") {
+    static_cast<void>(ensureGuiApplication());
+
+    TestGLViewport viewport;
+    int changed_count = 0;
+    QObject::connect(&viewport, &GLViewport::showTessellationChanged, [&]() { ++changed_count; });
+
+    CHECK_FALSE(viewport.showTessellation());
+
+    viewport.setShowTessellation(true);
+    CHECK(viewport.showTessellation());
+    CHECK(changed_count == 1);
+
+    viewport.setShowTessellation(true);
+    CHECK(changed_count == 1);
+
+    viewport.toggleShowTessellation();
+    CHECK_FALSE(viewport.showTessellation());
+    CHECK(changed_count == 2);
+}
+
 } // namespace OpenGeoLab::App::Tests
