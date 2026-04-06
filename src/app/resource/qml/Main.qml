@@ -97,21 +97,6 @@ Window {
             return;
         }
 
-        // AI Chat — launch via plugin system.
-        if (actionKey === "aiChat") {
-            root.statusNote = qsTr("Launching AI Chat…");
-            root.menuOpen = false;
-            RequestService.executeOnMainThread(JSON.stringify({
-                module: "plugins",
-                action: "invoke_ui",
-                param: {
-                    pluginName: "ai_chat_plugin"
-                },
-                mute: true
-            }));
-            return;
-        }
-
         // PySide6 UI plugins — must execute on main thread.
         if (actionKey.startsWith("pluginUI_")) {
             const pluginName = actionKey.substring(9);

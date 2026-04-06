@@ -37,7 +37,11 @@ nlohmann::json DeselectAction::describe() const {
          {{"entities",
            {{"type", "array"},
             {"required", true},
-            {"description", "Array of {shapeId, type, localId} entity references."}}}}},
+            {"description",
+             "Array of {shapeId, type, localId} entity references. "
+             "type must exactly match the entity type string: GeoVertex, GeoEdge, "
+             "GeoWire, GeoFace, GeoSolid, MeshNode, MeshEdge, or MeshElement. "
+             "Use query_selection to get the exact type of each selected entity."}}}}},
         {"returns",
          {{"ok",
            {{"type", "boolean"}, {"description", "true when the action completes successfully."}}},

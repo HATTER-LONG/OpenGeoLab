@@ -41,11 +41,21 @@ struct PendingPickArea {
 };
 
 /// @brief Pending viewport capture request (async, consumed by renderer).
+struct CaptureResult {
+    std::string image;          ///< Base64 PNG for JSON response
+    std::string imageError;     ///< Error while producing JSON image data
+    std::string savedPath;      ///< Output path written successfully
+    std::string savedPathError; ///< Error while writing outputPath
+};
+
+/// @brief Pending viewport capture request (async, consumed by renderer).
 struct PendingCapture {
-    int width{1024};   ///< Desired capture width in pixels
-    int height{768};   ///< Desired capture height in pixels
-    /// Shared promise to deliver the base64 PNG result back to the requester.
-    std::shared_ptr<std::promise<std::string>> promise;
+    int width{1024};             ///< Desired capture width in pixels
+    int height{768};             ///< Desired capture height in pixels
+    std::string outputPath;      ///< Optional PNG output path
+    bool captureImage{true};     ///< Whether JSON image data is requested
+    /// Shared promise to deliver capture results back to the requester.
+    std::shared_ptr<std::promise<CaptureResult>> promise;
 };
 
 /**

@@ -17,6 +17,8 @@
 
 #include <QCoreApplication>
 #include <QBuffer>
+#include <QDir>
+#include <QFileInfo>
 #include <QImage>
 #include <QMetaObject>
 #include <QOpenGLContext>
@@ -45,6 +47,12 @@ namespace {
     }
 
     return Render::PickMask::Vertex | Render::PickMask::Edge | Render::PickMask::Face;
+}
+
+void fulfillCapturePromise(const Scene::PendingCapture& capture, Scene::CaptureResult result) {
+    if(capture.promise) {
+        capture.promise->set_value(std::move(result));
+    }
 }
 
 } // namespace
@@ -521,36 +529,49 @@ void GLViewportRenderer::executeCaptureRequest(const Scene::PendingCapture& capt
     const int h = m_frameState.viewportHeight;
 
     if(w <= 0 || h <= 0) {
-        if(capture.promise) {
-            capture.promise->set_value({});
+        Scene::CaptureResult result;
+        if(capture.captureImage) {
+            result.imageError = "Capture failed because the viewport size is invalid.";
         }
+        if(!capture.outputPath.empty()) {
+            result.savedPathError = "Capture failed because the viewport size is invalid.";
+        }
+        fulfillCapturePromise(capture, std::move(result));
         return;
     }
 
-    // Read pixels from the current FBO (already rendered).
-    std::vector<uint8_t> pixels(static_cast<size_t>(w) * h * 4);
-    glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+    // The viewport FBO uses 4× MSAA, so direct glReadPixels yields
+    // undefined data.  QOpenGLFramebufferObject::toImage() resolves the
+    // multisample buffer, reads the pixels and flips the image in one step.
+    QImage flipped = framebufferObject()->toImage();
 
-    // OpenGL reads bottom-up; QImage expects top-down — mirror vertically.
-    QImage image(pixels.data(), w, h, QImage::Format_RGBA8888);
-    QImage flipped = image.mirrored(false, true);
+    Scene::CaptureResult result;
 
-    // Encode to PNG in memory.
-    QByteArray png_bytes;
-    QBuffer buffer(&png_bytes);
-    buffer.open(QIODevice::WriteOnly);
-    if(!flipped.save(&buffer, "PNG") || png_bytes.isEmpty()) {
-        if(capture.promise) {
-            capture.promise->set_value({});
+    if(!capture.outputPath.empty()) {
+        const QString outputPath = QString::fromStdString(capture.outputPath);
+        const QFileInfo outputFile(outputPath);
+        QDir outputDir = outputFile.dir();
+        if(!outputDir.exists() && !outputDir.mkpath(QStringLiteral("."))) {
+            result.savedPathError = "Failed to create the output directory for outputPath.";
+        } else if(!flipped.save(outputPath, "PNG")) {
+            result.savedPathError = "Failed to write PNG to outputPath.";
+        } else {
+            result.savedPath = capture.outputPath;
         }
-        return;
     }
 
-    std::string base64 = png_bytes.toBase64().toStdString();
-
-    if(capture.promise) {
-        capture.promise->set_value(std::move(base64));
+    if(capture.captureImage) {
+        QByteArray pngBytes;
+        QBuffer buffer(&pngBytes);
+        buffer.open(QIODevice::WriteOnly);
+        if(!flipped.save(&buffer, "PNG") || pngBytes.isEmpty()) {
+            result.imageError = "Failed to encode the captured viewport as PNG.";
+        } else {
+            result.image = pngBytes.toBase64().toStdString();
+        }
     }
+
+    fulfillCapturePromise(capture, std::move(result));
 }
 
 } // namespace OpenGeoLab::App

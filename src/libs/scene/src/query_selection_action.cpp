@@ -25,7 +25,10 @@ nlohmann::json QuerySelectionAction::describe() const {
           {"action", {{"type", "string"}, {"description", "Echo of the action name."}}},
           {"selections",
            {{"type", "array"},
-            {"description", "Array of {shapeId, type, localId} selected entities."}}}}}};
+            {"description",
+             "Array of {shapeId, type, localId} selected entities. "
+             "type is one of: GeoVertex, GeoEdge, GeoWire, GeoFace, "
+             "GeoSolid, MeshNode, MeshEdge, or MeshElement."}}}}}};
 }
 
 nlohmann::json QuerySelectionAction::execute(const nlohmann::json& param,

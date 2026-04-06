@@ -12,6 +12,7 @@
 1. **查 schema**：`describe_action(module_name, action_name)` 获取目标 action 的完整参数
 2. **执行**：`execute_action(module, action, params)` 用正确参数执行，任何任务执行前一定要思考下是否符合任务要求
 3. **可选**：`describe_module(module_name)` 查看模块内所有 action（通常不需要，action 列表已在 skill 文档中）
+4. **收尾验收**：任务末尾优先调用 `scene.capture_viewport` 进行可视化二次确认
 
 ## ask_user 交互协议
 
@@ -33,6 +34,12 @@
 - 执行前必须先 `describe_action` 获取参数 schema，不要猜测参数
 - `shapeId` 是 0-based（由 create_box 等返回），`localId` 是 **1-based**（子形状索引）
 - 生成网格前，**必须**先调用 `geometry.list_sub_shapes` 获取正确的 localId 列表
+- scene 中实体字段名不要混用：
+	- `select` / `deselect` / `query_selection` / `set_hover` 使用 `type`
+	- `add_label` / `remove_label` / `describe_labels` 使用 `entityType`
+- 实体类型值：`GeoVertex` / `GeoEdge` / `GeoWire` / `GeoFace` / `GeoSolid` / `MeshNode` / `MeshEdge` / `MeshElement`
+- **实体类型必须精确匹配**：从 `query_selection` 或 `describe_labels` 获取的类型值原样传给 `select` / `deselect`，不要猜测
+- `pick_area` 是异步动作，返回后必须再调用 `query_selection` 读取最终结果
 - 执行后清晰报告结果，建议后续步骤
 - action 失败时解释错误并提出修正建议
 
@@ -44,6 +51,8 @@
 2. 截图会自动作为附件添加到你的上下文中
 3. 元数据包括：相机位置、可见形状及其屏幕包围盒、当前选择和标签
 4. 结合图像和元数据给出精确的空间相关回答
+5. 可通过 `output_path` 参数将 PNG 直接保存到指定路径（用户请求导出截图时使用）
+6. 仅保存文件时设置 `capture_image=false` + `output_path` 可跳过 base64 附件
 
 用户也可以通过输入框的 📎 按钮手动附加视口截图。
 

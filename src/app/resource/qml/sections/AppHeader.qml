@@ -18,7 +18,7 @@ Rectangle {
     property var ribbonTabs: []
     property var ribbonGroups: []
     property var pluginList: []
-    property int pluginTabIndex: 3
+    property int pluginTabIndex: 2
     property int ribbonButtonWidth: 68
     signal toggleMenu
     signal selectTab(int index)

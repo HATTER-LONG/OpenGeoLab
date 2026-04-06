@@ -3,7 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQml
 
 QtObject {
-    readonly property var tabs: [qsTr("Geometry"), qsTr("Mesh"), qsTr("AI"), qsTr("Plugins")]
+    readonly property var tabs: [qsTr("Geometry"), qsTr("Mesh"), qsTr("Plugins")]
     readonly property var groupsModel: [[
             {
                 "title": qsTr("Create"),
@@ -97,26 +97,6 @@ QtObject {
                         "title": qsTr("Query"),
                         "icon": "query",
                         "accentOne": "accentC",
-                        "accentTwo": "accentA"
-                    }
-                ]
-            }
-        ], [
-            {
-                "title": qsTr("Assist"),
-                "actions": [
-                    {
-                        "key": "aiSuggest",
-                        "title": qsTr("Suggest"),
-                        "icon": "aiSuggest",
-                        "accentOne": "accentE",
-                        "accentTwo": "accentA"
-                    },
-                    {
-                        "key": "aiChat",
-                        "title": qsTr("Chat"),
-                        "icon": "aiChat",
-                        "accentOne": "accentE",
                         "accentTwo": "accentA"
                     }
                 ]

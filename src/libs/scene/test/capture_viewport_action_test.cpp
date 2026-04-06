@@ -43,11 +43,13 @@ TEST_SUITE("CaptureViewportAction") {
         CHECK(desc["params"].contains("height"));
         CHECK(desc["params"].contains("includeMetadata"));
         CHECK(desc["params"].contains("captureImage"));
+        CHECK(desc["params"].contains("outputPath"));
         CHECK(desc.contains("returns"));
         CHECK(desc["returns"].contains("ok"));
         CHECK(desc["returns"].contains("action"));
         CHECK(desc["returns"].contains("metadata"));
         CHECK(desc["returns"].contains("image"));
+        CHECK(desc["returns"].contains("savedPath"));
     }
 
     TEST_CASE("execute on empty scene returns valid metadata") {
@@ -103,6 +105,22 @@ TEST_SUITE("CaptureViewportAction") {
 
         CHECK(result["ok"] == true);
         CHECK_FALSE(result.contains("metadata"));
+    }
+
+    TEST_CASE("outputPath requests capture even when captureImage is false") {
+        SceneGraph graph;
+        CaptureViewportAction action(graph);
+
+        auto result = action.execute(
+            {{"includeMetadata", false},
+             {"captureImage", false},
+             {"outputPath", "C:\\temp\\viewport.png"}},
+            nullptr);
+
+        CHECK(result["ok"] == true);
+        CHECK(result["action"] == "capture_viewport");
+        CHECK_FALSE(result.contains("image"));
+        CHECK(result.contains("imageError"));
     }
 
     TEST_CASE("camera state is captured from ViewportState") {

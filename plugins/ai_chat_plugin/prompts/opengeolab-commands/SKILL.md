@@ -1,9 +1,18 @@
 ---
 name: opengeolab-commands
-description: OpenGeoLab CAD 命令协议 — 模块名 geometry / mesh / scene / io
+description: OpenGeoLab 命令协议与执行工作流，适用于 geometry mesh scene io；先 describe_action 再 execute_action，避免参数名和 localId 误用
 ---
 
 # OpenGeoLab 命令协议
+
+## 执行铁律（每次都要遵守）
+
+1. 先确定目标 action
+2. 必须先调用 `describe_action(module_name, action_name)` 获取当前 schema
+3. 参数名、类型、必填严格按 schema 构造
+4. 调用 `execute_action(module, action, params)`
+5. 若 `ok: false`：读取 `summary`/`error`，修正后重试
+6. 任务末尾统一用 `scene.capture_viewport` 做二次验收
 
 ## 模块名称（必须严格匹配，区分大小写）
 
@@ -18,9 +27,11 @@ description: OpenGeoLab CAD 命令协议 — 模块名 geometry / mesh / scene /
 
 ## 工作流
 
-1. 根据下方 action 列表确定目标 → `describe_action(module_name, action_name)` 获取参数 schema
-2. 用正确参数调用 `execute_action(module, action, params)`
-3. `describe_module` 通常不需要（action 列表已在下方），仅在需要动态发现时使用
+1. 根据下方 action 列表确定目标
+2. `describe_action(module_name, action_name)` 获取参数 schema
+3. 用正确参数调用 `execute_action(module, action, params)`
+4. `describe_module` 通常不需要（action 列表已知），仅在动态发现时使用
+5. 若涉及选择/标签/可见性/相机变化，最后执行 `scene.capture_viewport` 验证结果
 
 ## ID 体系（关键！）
 
@@ -37,6 +48,33 @@ description: OpenGeoLab CAD 命令协议 — 模块名 geometry / mesh / scene /
 3. execute_action("mesh", "generate_mesh", {entities:[{shapeId:0, type:"GeoFace", localId:1}, ...], ...})
 ```
 **⚠️ 禁止假设 localId！必须先用 `list_sub_shapes` 查询。**
+
+## 参数名易错点（重点）
+
+实体语义一致，但字段名不统一：
+
+| 场景 | 实体类型字段名 |
+|------|----------------|
+| `scene.select` / `scene.deselect` / `scene.query_selection` / `scene.set_hover` | `type` |
+| `scene.add_label` / `scene.remove_label` / `scene.describe_labels` | `entityType` |
+
+有效的实体类型值（`type` 和 `entityType` 通用）：
+
+- 几何：`GeoVertex`、`GeoEdge`、`GeoWire`、`GeoFace`、`GeoSolid`
+- 网格：`MeshNode`、`MeshEdge`、`MeshElement`
+
+⚠️ **实体类型必须精确匹配，不要猜测**：
+- `describe_labels` 返回 `entityType: "MeshElement"` → `deselect` 时 `type` 必须用 `"MeshElement"`，不能用 `"GeoFace"`
+- 先 `query_selection` 获取精确的 `type` 值，再原样传给 `select` / `deselect`
+
+速查模板：
+
+```json
+{
+	"selectionEntity": {"shapeId": 0, "type": "GeoFace", "localId": 3},
+	"labelEntity": {"shapeId": 0, "entityType": "GeoFace", "localId": 3}
+}
+```
 
 ## geometry 模块 (11 actions)
 
@@ -62,10 +100,11 @@ description: OpenGeoLab CAD 命令协议 — 模块名 geometry / mesh / scene /
 | query_mesh_info | 查询网格统计 | shapeId (可选) |
 | clear_mesh | 清除网格数据 | shapeId (可选, 不传则全部清除) |
 
-## scene 模块 (19 actions)
+## scene 模块 (20 actions)
 
 | Action | 描述 |
 |--------|------|
+| capture_viewport | 捕获视口截图与元数据（AI 视觉验收核心），支持 outputPath 直接保存 PNG |
 | select | 添加实体到选择集 |
 | deselect | 移除选择 |
 | clear_selection | 清空选择集 |
@@ -86,6 +125,8 @@ description: OpenGeoLab CAD 命令协议 — 模块名 geometry / mesh / scene /
 | set_labels_visible | 启用/禁用标签渲染 |
 | set_auto_label | 启用/禁用自动标签 |
 
+说明：`pick_area` 为异步动作，返回 `async: true` 后要再调用 `query_selection` 获取最终选择结果。
+
 ## io 模块 (1 action)
 
 | Action | 描述 |
@@ -98,8 +139,17 @@ description: OpenGeoLab CAD 命令协议 — 模块名 geometry / mesh / scene /
 - `shapeId` 来自创建/导入结果，禁止虚构
 - `localId` 是 **1-based**，禁止使用 0
 - 数值参数使用标准 JSON 数字格式
+- 对 scene 任务，优先补充一次 `capture_viewport` 做最终状态验收
 
 ## 错误处理
 
 - `ok: false` 时，`summary` 或 `errors` 包含错误描述
 - 出错时先 `describe_action` 检查参数 schema，再修正重试
+
+## 完成判定（Completion Checks）
+
+1. 核心业务 action 返回 `ok: true`
+2. 必要回查已完成：
+	- 框选后做 `query_selection`
+	- 网格后做 `query_mesh_info`（若任务目标包含网格）
+3. 最后一轮做 `scene.capture_viewport`，确认视图状态与任务一致

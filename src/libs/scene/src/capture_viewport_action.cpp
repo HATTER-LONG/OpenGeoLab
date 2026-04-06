@@ -34,12 +34,12 @@ nlohmann::json CaptureViewportAction::describe() const {
             {"description",
              "Capture viewport metadata and optionally a screenshot. "
              "Returns structured JSON with scene state for AI context."},
-            {"params",
-             {{"width",
-               {{"type", "integer"},
-                {"required", false},
-                {"description", "Desired capture width in pixels (default 1024). "
-                                "Used for screen bounding-box calculation."}}},
+             {"params",
+              {{"width",
+                {{"type", "integer"},
+                 {"required", false},
+                 {"description", "Desired capture width in pixels (default 1024). "
+                                 "Used for screen bounding-box calculation."}}},
               {"height",
                {{"type", "integer"},
                 {"required", false},
@@ -48,26 +48,42 @@ nlohmann::json CaptureViewportAction::describe() const {
                {{"type", "boolean"},
                 {"required", false},
                 {"description", "Whether to collect scene metadata (default true)."}}},
-              {"captureImage",
-               {{"type", "boolean"},
-                {"required", false},
-                {"description",
-                 "Whether to capture a screenshot (default true). "
-                 "Set false to skip image capture (e.g. in tests)."}}}}},
-            {"returns",
-             {{"ok",
-               {{"type", "boolean"},
-                {"description", "true when the action completes successfully."}}},
-              {"action", {{"type", "string"}, {"description", "Echo of the action name."}}},
+               {"captureImage",
+                {{"type", "boolean"},
+                 {"required", false},
+                 {"description",
+                  "Whether to capture a screenshot (default true). "
+                  "Set false to skip JSON image data."}}},
+               {"outputPath",
+                {{"type", "string"},
+                 {"required", false},
+                 {"description",
+                  "Optional PNG output path. When provided, the renderer writes "
+                  "the captured image to this path in addition to any JSON image "
+                  "response requested by captureImage."}}}}},
+             {"returns",
+              {{"ok",
+                {{"type", "boolean"},
+                 {"description", "true when the action completes successfully."}}},
+               {"action", {{"type", "string"}, {"description", "Echo of the action name."}}},
               {"metadata",
                {{"type", "object"},
                 {"description",
                  "Scene metadata: viewport, camera, visibleShapes, selections, "
                  "labels, hover."}}},
-              {"image",
-               {{"type", "string"},
-                {"description",
-                 "Base64-encoded PNG screenshot, or null if capture timed out."}}}}}};
+               {"image",
+                {{"type", "string"},
+                 {"description",
+                  "Base64-encoded PNG screenshot, or null if capture timed out."}}},
+               {"imageError",
+                {{"type", "string"},
+                 {"description", "Reason the JSON image capture failed, if any."}}},
+               {"savedPath",
+                {{"type", "string"},
+                 {"description", "PNG output path written successfully, if requested."}}},
+               {"savedPathError",
+                {{"type", "string"},
+                 {"description", "Reason writing outputPath failed, if requested."}}}}}};
 }
 
 nlohmann::json CaptureViewportAction::execute(const nlohmann::json& param,
@@ -78,6 +94,7 @@ nlohmann::json CaptureViewportAction::execute(const nlohmann::json& param,
     int height = 768;
     bool includeMeta = true;
     bool captureImage = true;
+    std::string outputPath;
     try {
         if(args.contains("width") && args["width"].is_number()) {
             width = args["width"].get<int>();
@@ -91,13 +108,17 @@ nlohmann::json CaptureViewportAction::execute(const nlohmann::json& param,
         if(args.contains("captureImage") && args["captureImage"].is_boolean()) {
             captureImage = args["captureImage"].get<bool>();
         }
+        if(args.contains("outputPath") && args["outputPath"].is_string()) {
+            outputPath = args["outputPath"].get<std::string>();
+        }
     } catch(const nlohmann::json::exception& e) {
         return {{"ok", false}, {"action", ACTION_NAME}, {"error", e.what()}};
     }
 
     nlohmann::json result = {{"ok", true}, {"action", ACTION_NAME}};
+    const bool shouldCapture = captureImage || !outputPath.empty();
 
-    if(!includeMeta && !captureImage) {
+    if(!includeMeta && !shouldCapture) {
         if(progress) {
             progress(1.0, "Done");
         }
@@ -209,28 +230,53 @@ nlohmann::json CaptureViewportAction::execute(const nlohmann::json& param,
     }
 
     // ── Request image capture from render thread ──
-    if(captureImage) {
-        auto promise = std::make_shared<std::promise<std::string>>();
+    if(shouldCapture) {
+        auto promise = std::make_shared<std::promise<CaptureResult>>();
         auto future = promise->get_future();
 
         PendingCapture capture_req;
         capture_req.width = width;
         capture_req.height = height;
+        capture_req.outputPath = outputPath;
+        capture_req.captureImage = captureImage;
         capture_req.promise = promise;
         m_graph.viewportState().requestCapture(std::move(capture_req));
 
         if(future.wait_for(std::chrono::seconds(5)) == std::future_status::ready) {
-            auto image_data = future.get();
-            if(!image_data.empty()) {
-                result["image"] = std::move(image_data);
-            } else {
-                result["image"] = nullptr;
-                result["imageError"] = "Capture returned empty data.";
+            auto captureResult = future.get();
+            if(captureImage) {
+                if(!captureResult.image.empty()) {
+                    result["image"] = std::move(captureResult.image);
+                } else {
+                    result["image"] = nullptr;
+                    if(captureResult.imageError.empty()) {
+                        captureResult.imageError = "Capture returned empty data.";
+                    }
+                }
+                if(!captureResult.imageError.empty()) {
+                    result["imageError"] = captureResult.imageError;
+                }
+            }
+
+            if(!captureResult.savedPath.empty()) {
+                result["savedPath"] = std::move(captureResult.savedPath);
+            }
+            if(!captureResult.savedPathError.empty()) {
+                result["savedPathError"] = captureResult.savedPathError;
+                if(!captureImage) {
+                    result["imageError"] = captureResult.savedPathError;
+                }
             }
         } else {
-            result["image"] = nullptr;
             result["imageError"] =
                 "Capture timed out — render thread did not respond within 5s.";
+            if(captureImage) {
+                result["image"] = nullptr;
+            }
+            if(!outputPath.empty()) {
+                result["savedPathError"] =
+                    "Capture timed out — render thread did not respond within 5s.";
+            }
         }
     }
 

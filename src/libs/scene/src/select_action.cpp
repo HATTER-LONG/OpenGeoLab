@@ -37,7 +37,10 @@ nlohmann::json SelectAction::describe() const {
          {{"entities",
            {{"type", "array"},
             {"required", true},
-            {"description", "Array of {shapeId, type, localId} entity references."}}},
+            {"description",
+             "Array of {shapeId, type, localId} entity references. "
+             "type must be one of: GeoVertex, GeoEdge, GeoWire, GeoFace, "
+             "GeoSolid, MeshNode, MeshEdge, or MeshElement."}}},
           {"append",
            {{"type", "boolean"},
             {"required", false},
