@@ -155,6 +155,7 @@ qt_add_qml_module(
     resource/icons/viewLeft.svg
     resource/icons/viewRight.svg
     resource/icons/viewXray.svg
+    resource/icons/viewMesh.svg
     resource/icons/meshDisplay.svg
     resource/icons/face.svg
     resource/icons/entityVertex.svg

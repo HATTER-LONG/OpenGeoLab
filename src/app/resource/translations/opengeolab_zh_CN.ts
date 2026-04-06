@@ -631,4 +631,11 @@
             <translation>选择 BRep (.brep, .brp) 或 STEP (.step, .stp) 文件进行导入。</translation>
         </message>
     </context>
+    <context>
+        <name>ViewportToolbar</name>
+        <message>
+            <source>Toggle tessellation wireframe</source>
+            <translation>切换离散网格线框</translation>
+        </message>
+    </context>
 </TS>

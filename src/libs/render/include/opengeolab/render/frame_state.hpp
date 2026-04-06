@@ -46,6 +46,7 @@ struct FrameState {
     int viewportHeight{0};
 
     bool xRayMode{false};
+    bool showTessellation{false};  ///< Overlay tessellation triangle edges and vertices.
     Scene::DisplayModeMask displayMask{Scene::DisplayModeMask::Surface |
                                        Scene::DisplayModeMask::Wireframe};
 

@@ -18,8 +18,10 @@ Item {
     signal fitRequested
     signal presetRequested(int preset)
     signal xRayToggled
+    signal showTessellationToggled
 
     property bool xRayActive: false
+    property bool showTessellationActive: false
 
     implicitWidth: bar.implicitWidth + 20
     implicitHeight: 40
@@ -104,6 +106,14 @@ Item {
             tooltip: qsTr("Toggle X-Ray mode")
             toggled: root.xRayActive
             onClicked: root.xRayToggled()
+        }
+
+        ViewportToolButton {
+            theme: root.theme
+            iconKind: "viewMesh"
+            tooltip: qsTr("Toggle tessellation wireframe")
+            toggled: root.showTessellationActive
+            onClicked: root.showTessellationToggled()
         }
     }
 }

@@ -8,14 +8,15 @@
 #include "core/gpu_buffer_manager.hpp"
 #include "core/thick_line_renderer.hpp"
 #include "font/font_atlas.hpp"
-#include <opengeolab/render/label_anchor.hpp>
 #include "pass/highlight_pass.hpp"
 #include "pass/label_pass.hpp"
 #include "pass/opaque_pass.hpp"
 #include "pass/selection_pass.hpp"
+#include "pass/tessellation_overlay_pass.hpp"
 #include "pass/wireframe_pass.hpp"
 #include "pick_resolver.hpp"
 #include "render_pipeline_detail.hpp"
+#include <opengeolab/render/label_anchor.hpp>
 
 #include <opengeolab/scene/pick_id.hpp>
 #include <opengeolab/scene/scene_graph.hpp>
@@ -53,9 +54,10 @@ struct RenderPipeline::Impl {
     ThickLineRenderer thickLineRenderer;
     FontAtlas fontAtlas;
     LabelPass labelPass;
+    TessellationOverlayPass tessellationOverlayPass;
     std::unique_ptr<PickResolver> pickResolver;
     std::string fontAtlasDir;
-    uint64_t resolverVersion{0}; ///< Scene version when resolver was last built.
+    uint64_t resolverVersion{0};      ///< Scene version when resolver was last built.
     float lastDevicePixelRatio{1.0F}; ///< Cached DPR for pick radius scaling.
     bool initialized{false};
 };
@@ -74,6 +76,7 @@ void RenderPipeline::initialize(GlLoaderFunc gl_loader) {
     m_impl->wireframePass.initialize();
     m_impl->highlightPass.initialize();
     m_impl->selectionPass.initialize();
+    m_impl->tessellationOverlayPass.initialize();
     if(!m_impl->thickLineRenderer.initialize()) {
         return;
     }
@@ -126,6 +129,7 @@ void RenderPipeline::render(const FrameState& state) {
     m_impl->opaquePass.render(state, m_impl->bufferManager);
     m_impl->highlightPass.render(state, m_impl->bufferManager);
     m_impl->wireframePass.render(state, m_impl->bufferManager);
+    m_impl->tessellationOverlayPass.render(state, m_impl->bufferManager);
     m_impl->labelPass.render(state, m_impl->bufferManager);
     m_impl->selectionPass.render(state, m_impl->bufferManager);
 }
@@ -184,6 +188,7 @@ void RenderPipeline::cleanup() {
     m_impl->selectionPass.cleanup();
     m_impl->highlightPass.cleanup();
     m_impl->wireframePass.cleanup();
+    m_impl->tessellationOverlayPass.cleanup();
     m_impl->opaquePass.cleanup();
     m_impl->bufferManager.cleanup();
     m_impl->pickResolver.reset();
@@ -215,13 +220,11 @@ std::vector<Scene::DrawRange> RenderPipeline::resolveShapeDrawRanges(uint32_t sh
     return result;
 }
 
-void RenderPipeline::setFontAtlasDir(const std::string& dir) {
-    m_impl->fontAtlasDir = dir;
-}
+void RenderPipeline::setFontAtlasDir(const std::string& dir) { m_impl->fontAtlasDir = dir; }
 
 glm::vec3 RenderPipeline::resolveEntityAnchor(uint32_t shape_id,
-                                               Core::EntityType entity_type,
-                                               uint32_t local_id) const {
+                                              Core::EntityType entity_type,
+                                              uint32_t local_id) const {
     auto ranges = m_impl->bufferManager.lookupEntity(shape_id, entity_type, local_id);
     if(ranges.empty()) {
         return glm::vec3{0.0F};

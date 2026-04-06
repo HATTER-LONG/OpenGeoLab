@@ -196,4 +196,65 @@ TEST_CASE("GLViewport fits the camera to the scene and creates a renderer") {
     }
 }
 
+TEST_CASE("GLViewport toggles tessellation overlay state and emits change signal") {
+    static_cast<void>(ensureGuiApplication());
+
+    TestGLViewport viewport;
+    int changed_count = 0;
+    QObject::connect(&viewport, &GLViewport::showTessellationChanged, [&]() { ++changed_count; });
+
+    CHECK_FALSE(viewport.showTessellation());
+
+    viewport.setShowTessellation(true);
+    CHECK(viewport.showTessellation());
+    CHECK(changed_count == 1);
+
+    viewport.setShowTessellation(true);
+    CHECK(changed_count == 1);
+
+    viewport.toggleShowTessellation();
+    CHECK_FALSE(viewport.showTessellation());
+    CHECK(changed_count == 2);
+}
+
+TEST_CASE("Viewport toolbar exposes tessellation overlay toggle wiring and assets") {
+    const auto toolbar_path = appSourceDir() / "resource/qml/components/ViewportToolbar.qml";
+    REQUIRE_MESSAGE(Fs::exists(toolbar_path), "Missing file: " << toolbar_path.string());
+
+    const auto panel_path = appSourceDir() / "resource/qml/sections/ViewportPanel.qml";
+    REQUIRE_MESSAGE(Fs::exists(panel_path), "Missing file: " << panel_path.string());
+
+    const auto icon_path = appSourceDir() / "resource/icons/viewMesh.svg";
+    REQUIRE_MESSAGE(Fs::exists(icon_path), "Missing file: " << icon_path.string());
+
+    const auto translation_path = appSourceDir() / "resource/translations/opengeolab_zh_CN.ts";
+    REQUIRE_MESSAGE(Fs::exists(translation_path), "Missing file: " << translation_path.string());
+
+    const auto toolbar_content = readFile(toolbar_path);
+    CHECK(toolbar_content.find("signal showTessellationToggled") != std::string::npos);
+    CHECK(toolbar_content.find("property bool showTessellationActive: false") != std::string::npos);
+    CHECK(toolbar_content.find("iconKind: \"viewMesh\"") != std::string::npos);
+    CHECK(toolbar_content.find("tooltip: qsTr(\"Toggle tessellation wireframe\")") !=
+          std::string::npos);
+    CHECK(toolbar_content.find("toggled: root.showTessellationActive") != std::string::npos);
+    CHECK(toolbar_content.find("onClicked: root.showTessellationToggled()") != std::string::npos);
+
+    const auto panel_content = readFile(panel_path);
+    CHECK(panel_content.find("showTessellationActive: viewport.showTessellation") !=
+          std::string::npos);
+    CHECK(panel_content.find("onShowTessellationToggled: viewport.toggleShowTessellation()") !=
+          std::string::npos);
+
+    const auto icon_content = readFile(icon_path);
+    CHECK(icon_content.find("<polygon points=\"3,19 12,4 21,19\"") != std::string::npos);
+    CHECK(icon_content.find("<circle cx=\"12\" cy=\"4\" r=\"1.5\"") != std::string::npos);
+
+    const auto translation_content = readFile(translation_path);
+    CHECK(translation_content.find("<name>ViewportToolbar</name>") != std::string::npos);
+    CHECK(translation_content.find("<source>Toggle tessellation wireframe</source>") !=
+          std::string::npos);
+    CHECK(translation_content.find("<translation>切换离散网格线框</translation>") !=
+          std::string::npos);
+}
+
 } // namespace OpenGeoLab::App::Tests

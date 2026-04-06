@@ -141,6 +141,18 @@ void GLViewport::setViewPreset(int preset) {
 
 void GLViewport::toggleXRay() { setXRayMode(!m_xRayMode); }
 
+void GLViewport::setShowTessellation(bool enabled) {
+    if(m_showTessellation == enabled) {
+        return;
+    }
+
+    m_showTessellation = enabled;
+    Q_EMIT showTessellationChanged();
+    update();
+}
+
+void GLViewport::toggleShowTessellation() { setShowTessellation(!m_showTessellation); }
+
 void GLViewport::mousePressEvent(QMouseEvent* event) {
     m_pressPos = event->position();
     m_movedSincePress = false;
