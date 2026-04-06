@@ -109,6 +109,19 @@ void SelectionService::setLabelManager(Scene::LabelManager* manager) {
                 this, [this]() { Q_EMIT labelsVisibleChanged(); }, Qt::QueuedConnection);
         }));
         m_connections.push_back(m_labelManager->autoLabelChanged.connect([this]() {
+            // LabelManager and SelectionState are both thread-safe, so
+            // retroactive labeling can run synchronously on the dispatch
+            // thread before the action response is sent.
+            if(m_labelManager->autoLabel() && m_state != nullptr) {
+                for(const auto& entity : m_state->selections()) {
+                    addLabelForSelection(static_cast<int>(entity.shapeId),
+                                         static_cast<int>(entity.entityType),
+                                         static_cast<int>(entity.localId));
+                }
+            } else if(!m_labelManager->autoLabel()) {
+                m_labelManager->clearLabels();
+            }
+
             QMetaObject::invokeMethod(
                 this, [this]() { Q_EMIT autoLabelChanged(); }, Qt::QueuedConnection);
         }));

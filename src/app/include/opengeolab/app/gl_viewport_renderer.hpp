@@ -60,6 +60,7 @@ private:
     bool m_gladInitialized{false};
     bool m_pipelineInitialized{false};
 
+    uint64_t m_cachedSceneVersion{0};     ///< Tracks GPU buffer rebuilds.
     uint64_t m_cachedSelectionVersion{0};
     uint64_t m_cachedHoverVersion{0};
     std::vector<Render::HighlightEntry> m_resolvedSelectedEntries;

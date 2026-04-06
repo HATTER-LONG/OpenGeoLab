@@ -145,10 +145,19 @@ void GLViewportRenderer::synchronize(QQuickFramebufferObject* item) {
     // Resolve SelectionState → DrawRanges (only when version changes)
     if(const auto* scene = viewport->sceneGraph(); scene != nullptr) {
         const auto& sel = scene->selectionState();
+        const uint64_t scene_ver = scene->version();
         const uint64_t sel_ver = sel.selectionVersion();
         const uint64_t hov_ver = sel.hoverVersion();
 
-        if(sel_ver != m_cachedSelectionVersion) {
+        // When the scene version changes (visibility toggle, node add/remove),
+        // GPU buffers are rebuilt and all DrawRange offsets shift.  Force
+        // re-resolution of selection, hover and label caches.
+        const bool buffer_dirty = (scene_ver != m_cachedSceneVersion);
+        if(buffer_dirty) {
+            m_cachedSceneVersion = scene_ver;
+        }
+
+        if(sel_ver != m_cachedSelectionVersion || buffer_dirty) {
             m_resolvedSelectedEntries.clear();
             for(const auto& entity : sel.selections()) {
                 // Solid / Wire: expand to all shape DrawRanges (face, edge, vertex).
@@ -169,7 +178,7 @@ void GLViewportRenderer::synchronize(QQuickFramebufferObject* item) {
             m_cachedSelectionVersion = sel_ver;
         }
 
-        if(hov_ver != m_cachedHoverVersion) {
+        if(hov_ver != m_cachedHoverVersion || buffer_dirty) {
             m_resolvedHoveredEntries.clear();
             if(const auto hovered = sel.hovered(); hovered.has_value()) {
                 if(hovered->entityType == Core::EntityType::GeoSolid ||
@@ -199,7 +208,7 @@ void GLViewportRenderer::synchronize(QQuickFramebufferObject* item) {
         m_frameState.labelsVisible = lbl_mgr.isVisible();
         const uint64_t lbl_ver = lbl_mgr.version();
 
-        if(lbl_ver != m_cachedLabelVersion) {
+        if(lbl_ver != m_cachedLabelVersion || buffer_dirty) {
             m_frameState.resolvedLabels.clear();
             auto labels = lbl_mgr.labels();
 
