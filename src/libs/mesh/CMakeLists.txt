@@ -12,9 +12,15 @@ set(mesh_public_headers
 
 set(mesh_sources src/mesh_store.cpp src/mesh_module.cpp
                  src/mesh_scene_bridge.cpp src/mesh_render_builder.cpp
-                 src/action/generate_mesh_action.cpp
                  src/action/clear_mesh_action.cpp
                  src/action/query_mesh_info_action.cpp)
+
+set(mesh_private_links "")
+
+if(OPENGEOLAB_USE_GMSH)
+    list(APPEND mesh_sources src/action/generate_mesh_action.cpp)
+    list(APPEND mesh_private_links gmsh)
+endif()
 
 opengeolab_add_module(
     opengeolab_mesh
@@ -29,7 +35,11 @@ opengeolab_add_module(
     OpenGeoLab::Geometry
     OpenGeoLab::Scene
     PRIVATE_LINKS
-    gmsh)
+    ${mesh_private_links})
+
+if(OPENGEOLAB_USE_GMSH)
+    target_compile_definitions(opengeolab_mesh PRIVATE OPENGEOLAB_USE_GMSH)
+endif()
 
 target_include_directories(opengeolab_mesh PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
@@ -43,4 +53,7 @@ if(OPENGEOLAB_BUILD_TESTS)
         OpenGeoLab::Mesh)
     target_include_directories(opengeolab_mesh_test
                                PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+    if(OPENGEOLAB_USE_GMSH)
+        target_compile_definitions(opengeolab_mesh_test PRIVATE OPENGEOLAB_USE_GMSH)
+    endif()
 endif()

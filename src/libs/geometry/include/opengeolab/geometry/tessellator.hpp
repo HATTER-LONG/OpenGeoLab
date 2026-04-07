@@ -31,14 +31,17 @@ namespace OpenGeoLab::Geometry {
 struct OPENGEOLAB_GEOMETRY_EXPORT TessellationParams {
     double linearDeflection = 0.05;  /**< Maximum chord deviation from the true surface */
     double angularDeflection = 0.25; /**< Maximum angular deviation (radians) */
+    bool keepTriangulation = false;  /**< Preserve existing Poly_Triangulation on faces */
 
     /**
      * @brief Build TessellationParams from a JSON object, falling back to defaults.
      *
-     * Recognised keys: `"linearDeflection"`, `"angularDeflection"`.
+     * Recognised keys: `"linearDeflection"`, `"angularDeflection"`, `"keepTriangulation"`.
      */
     static TessellationParams fromJson(const nlohmann::json& j) {
-        return {j.value("linearDeflection", 0.05), j.value("angularDeflection", 0.25)};
+        return {j.value("linearDeflection", 0.05),
+                j.value("angularDeflection", 0.25),
+                j.value("keepTriangulation", false)};
     }
 };
 

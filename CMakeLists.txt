@@ -19,6 +19,7 @@ option(OPENGEOLAB_BUILD_TESTS "Build OpenGeoLab tests" ON)
 option(OPENGEOLAB_FETCH_DEPENDENCIES "Fetch missing dependencies with CPM" ON)
 option(OPENGEOLAB_BUILD_SHARED_LIBS
        "Build first-party OpenGeoLab libraries as shared libraries" ON)
+option(OPENGEOLAB_USE_GMSH "Enable gmsh mesh generation support" ON)
 
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE
@@ -231,10 +232,53 @@ endif ()
 # OpenCASCADE Technology
 # ---------------------------------------------------------------------------
 find_package(OpenCASCADE REQUIRED)
-find_package(gmsh REQUIRED)
-if(TARGET gmsh::shared AND NOT TARGET gmsh)
-    add_library(gmsh INTERFACE IMPORTED)
-    target_link_libraries(gmsh INTERFACE gmsh::shared)
+
+# OCC 7.6.x cmake config omits INTERFACE_INCLUDE_DIRECTORIES on imported
+# targets.  Patch them so downstream targets get the OCC headers.
+if(DEFINED OpenCASCADE_INCLUDE_DIR AND EXISTS "${OpenCASCADE_INCLUDE_DIR}")
+    foreach(_occ_lib IN LISTS OpenCASCADE_LIBRARIES)
+        if(TARGET ${_occ_lib})
+            get_target_property(_inc ${_occ_lib} INTERFACE_INCLUDE_DIRECTORIES)
+            if(NOT _inc)
+                set_target_properties(
+                    ${_occ_lib} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
+                                           "${OpenCASCADE_INCLUDE_DIR}")
+            endif()
+        endif()
+    endforeach()
+endif()
+
+# OCC 7.8+ consolidated data-exchange into TKDE / TKDESTEP.  Provide
+# compatibility aliases when building against OCC 7.6.x.
+if(NOT TARGET TKDE)
+    add_library(TKDE INTERFACE IMPORTED)
+    set(_tkde_fallback TKXSBase)
+    foreach(_t IN ITEMS TKIGES TKSTEPBase TKSTEPAttr TKSTEP209 TKSTEP TKSTL TKVRML)
+        if(TARGET ${_t})
+            list(APPEND _tkde_fallback ${_t})
+        endif()
+    endforeach()
+    target_link_libraries(TKDE INTERFACE ${_tkde_fallback})
+endif()
+if(NOT TARGET TKDESTEP)
+    add_library(TKDESTEP INTERFACE IMPORTED)
+    set(_tkdestep_fallback "")
+    foreach(_t IN ITEMS TKSTEPBase TKSTEPAttr TKSTEP209 TKSTEP TKXDESTEP)
+        if(TARGET ${_t})
+            list(APPEND _tkdestep_fallback ${_t})
+        endif()
+    endforeach()
+    if(_tkdestep_fallback)
+        target_link_libraries(TKDESTEP INTERFACE ${_tkdestep_fallback})
+    endif()
+endif()
+
+if(OPENGEOLAB_USE_GMSH)
+    find_package(gmsh REQUIRED)
+    if(TARGET gmsh::shared AND NOT TARGET gmsh)
+        add_library(gmsh INTERFACE IMPORTED)
+        target_link_libraries(gmsh INTERFACE gmsh::shared)
+    endif()
 endif()
 
 # ---------------------------------------------------------------------------

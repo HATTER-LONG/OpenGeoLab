@@ -15,10 +15,11 @@ FunctionPageBase {
     property string selectedFilePath: ""
     property string selectedFormat: ""
     property string shapeName: ""
+    property bool keepTriangulation: false
 
     function getParameters() {
         const action = root.selectedFormat === "brep" ? "import_brep" : "import_step";
-        return {
+        let params = {
             module: "geometry",
             action: action,
             param: {
@@ -28,12 +29,17 @@ FunctionPageBase {
             },
             mute: false
         };
+        if (root.selectedFormat === "brep" && root.keepTriangulation) {
+            params.param.keepTriangulation = true;
+        }
+        return params;
     }
 
     function open(payload) {
         root.selectedFilePath = "";
         root.selectedFormat = "";
         root.shapeName = "";
+        root.keepTriangulation = false;
         root.x = 292;
         root.y = 0;
         root.pageVisible = true;
@@ -195,6 +201,57 @@ FunctionPageBase {
                     font.bold: true
                 }
             }
+        }
+    }
+
+    Rectangle {
+        width: parent.width
+        height: keepTriRow.implicitHeight + 16
+        radius: root.theme.radiusSmall
+        color: root.theme.surfaceMuted
+        visible: root.selectedFormat === "brep"
+
+        RowLayout {
+            id: keepTriRow
+
+            anchors.fill: parent
+            anchors.margins: 8
+            spacing: 8
+
+            Rectangle {
+                Layout.preferredWidth: 16
+                Layout.preferredHeight: 16
+                radius: 3
+                color: root.keepTriangulation
+                    ? root.theme.accentA
+                    : "transparent"
+                border.width: 1
+                border.color: root.keepTriangulation
+                    ? root.theme.accentA
+                    : root.theme.borderSubtle
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "✓"
+                    color: root.theme.textOnAccent
+                    font.pixelSize: 11
+                    font.bold: true
+                    visible: root.keepTriangulation
+                }
+            }
+
+            Text {
+                Layout.fillWidth: true
+                text: qsTr("Keep existing triangulation")
+                color: root.theme.textPrimary
+                font.pixelSize: 12
+            }
+        }
+
+        MouseArea {
+            anchors.fill: parent
+            cursorShape: Qt.PointingHandCursor
+            onClicked: root.keepTriangulation = !root.keepTriangulation
         }
     }
 
