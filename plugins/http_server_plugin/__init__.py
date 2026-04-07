@@ -17,8 +17,18 @@ def describe_plugin() -> dict:
     }
 
 
-def launch_ui() -> dict:
-    """Show the HTTP Server management panel."""
+def launch_ui(param: dict | None = None) -> dict:
+    """Show the HTTP Server management panel.
+
+    Parameters
+    ----------
+    param:
+        Optional configuration dict.  Recognised keys:
+
+        * ``autoStart`` (*bool*) – when *True*, the HTTP server is started
+          automatically after the panel is created (e.g. triggered by the
+          ``--start-http-server`` CLI flag).
+    """
     from pathlib import Path
 
     from PySide6.QtCore import QUrl
@@ -52,5 +62,9 @@ def launch_ui() -> dict:
 
     # Stop server gracefully on app exit.
     application.aboutToQuit.connect(backend.stop)
+
+    # Auto-start the server when requested (e.g. via --start-http-server).
+    if bool((param or {}).get("autoStart", False)):
+        backend.start()
 
     return {"ok": True, "message": "HTTP Server panel launched."}

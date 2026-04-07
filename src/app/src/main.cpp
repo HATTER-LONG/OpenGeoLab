@@ -23,10 +23,12 @@
 #include <kangaroo/util/plugin_component_factory.hpp>
 
 #include <QApplication>
+#include <QCommandLineParser>
 #include <QQmlApplicationEngine>
 #include <QQuickStyle>
 #include <QQuickWindow>
 #include <QSurfaceFormat>
+#include <QTimer>
 #include <QtQml/qqml.h>
 
 #include <filesystem>
@@ -63,6 +65,18 @@ int main(int argc, char* argv[]) {
     QQuickStyle::setStyle("Fusion");
     app.setApplicationName("OpenGeoLab");
     app.setOrganizationName("OpenGeoLab");
+
+    QCommandLineParser parser;
+    parser.setApplicationDescription("OpenGeoLab — open-source CAD/CAE platform");
+    parser.addHelpOption();
+
+    const QCommandLineOption start_http_server_opt(
+        QStringLiteral("start-http-server"),
+        QStringLiteral("Auto-launch http_server_plugin and start the HTTP server."));
+    parser.addOption(start_http_server_opt);
+    parser.process(app);
+
+    const bool auto_start_http = parser.isSet(start_http_server_opt);
 
     // Use Qt's applicationDirPath for a reliable absolute path regardless of
     // how the executable was launched (double-click, debugger, terminal, etc.).
@@ -136,6 +150,15 @@ int main(int argc, char* argv[]) {
         QObject::connect(&module_notifier,
                          &OpenGeoLab::App::ModuleDataNotifier::viewportRefreshNeeded, viewport,
                          [viewport]() { viewport->update(); });
+    }
+
+    if(auto_start_http) {
+        QTimer::singleShot(0, &request_service, [&request_service]() {
+            request_service.executeOnMainThread(
+                QStringLiteral(R"({"module":"plugins","action":"invoke_ui",)"
+                               R"("param":{"pluginName":"http_server_plugin",)"
+                               R"("autoStart":true},"mute":true})"));
+        });
     }
 
     // Release GIL before entering the event loop. EmbeddedPythonRuntime::process()
