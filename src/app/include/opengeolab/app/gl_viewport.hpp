@@ -11,6 +11,8 @@
 #include <opengeolab/render/pick_result.hpp>
 #include <opengeolab/scene/view_preset.hpp>
 
+#include <kangaroo/util/signal.hpp>
+
 #include <QPointF>
 #include <QQuickFramebufferObject>
 #include <QRectF>
@@ -206,6 +208,7 @@ private:
     bool m_movedSincePress{false};
     Qt::MouseButtons m_pressedButtons{Qt::NoButton};
     Qt::KeyboardModifiers m_pressedModifiers{Qt::NoModifier};
+    Kangaroo::Util::ScopedConnection m_displayModeConnection;
 };
 
 } // namespace OpenGeoLab::App

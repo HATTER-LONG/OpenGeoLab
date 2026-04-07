@@ -100,12 +100,28 @@ public:
     Kangaroo::Util::Signal<> pickAreaRequested;  ///< Fired after pick area queued
     Kangaroo::Util::Signal<> captureRequested;   ///< Fired after capture queued
 
+    /// @brief Whether x-ray rendering is enabled.
+    [[nodiscard]] bool xRayMode() const;
+
+    /// @brief Enable or disable x-ray rendering.
+    void setXRayMode(bool enabled);
+
+    /// @brief Whether tessellation overlay is enabled.
+    [[nodiscard]] bool showTessellation() const;
+
+    /// @brief Enable or disable tessellation mesh overlay.
+    void setShowTessellation(bool enabled);
+
+    Kangaroo::Util::Signal<> displayModeChanged; ///< Fired after xRay/tessellation change
+
 private:
     mutable std::mutex m_mutex;
     CameraState m_camera;
     std::atomic<uint64_t> m_cameraVersion{0};
     std::optional<PendingPickArea> m_pendingPickArea;
     std::optional<PendingCapture> m_pendingCapture;
+    bool m_xRayMode{false};
+    bool m_showTessellation{false};
 };
 
 } // namespace OpenGeoLab::Scene

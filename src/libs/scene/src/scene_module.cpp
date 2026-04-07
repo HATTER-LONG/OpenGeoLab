@@ -22,6 +22,7 @@
 #include <opengeolab/scene/select_action.hpp>
 #include <opengeolab/scene/set_auto_label_action.hpp>
 #include <opengeolab/scene/set_camera_action.hpp>
+#include <opengeolab/scene/set_display_mode_action.hpp>
 #include <opengeolab/scene/set_hover_action.hpp>
 #include <opengeolab/scene/set_labels_visible_action.hpp>
 #include <opengeolab/scene/set_pick_mode_action.hpp>
@@ -47,6 +48,7 @@ SceneModule::SceneModule(Kangaroo::Util::PluginComponentFactory& factory)
     registerAction<NewModelAction>(std::ref(m_sceneGraph), std::ref(factory));
     registerAction<SetViewPresetAction>(std::ref(m_sceneGraph.viewportState()));
     registerAction<SetCameraAction>(std::ref(m_sceneGraph.viewportState()));
+    registerAction<SetDisplayModeAction>(std::ref(m_sceneGraph.viewportState()));
     registerAction<PickAreaAction>(std::ref(m_sceneGraph.viewportState()));
     registerAction<DescribeLabelsAction>(std::cref(m_sceneGraph.labelManager()));
     registerAction<AddLabelAction>(std::ref(m_sceneGraph.labelManager()));
@@ -94,6 +96,8 @@ SceneModule::SceneModule(Kangaroo::Util::PluginComponentFactory& factory)
     m_graphConnections.push_back(vps.pickAreaRequested.connect(
         [this]() { dataChanged.emit(Core::ModuleDataEvent::ViewportChanged); }));
     m_graphConnections.push_back(vps.captureRequested.connect(
+        [this]() { dataChanged.emit(Core::ModuleDataEvent::ViewportChanged); }));
+    m_graphConnections.push_back(vps.displayModeChanged.connect(
         [this]() { dataChanged.emit(Core::ModuleDataEvent::ViewportChanged); }));
 }
 

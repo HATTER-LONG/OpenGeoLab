@@ -148,4 +148,48 @@ TEST_SUITE("ViewportState") {
         CHECK(count == 1);
     }
 
+    TEST_CASE("xRayMode defaults to false") {
+        ViewportState vps;
+        CHECK_FALSE(vps.xRayMode());
+    }
+
+    TEST_CASE("setXRayMode toggles and fires signal") {
+        ViewportState vps;
+        int count = 0;
+        auto conn = vps.displayModeChanged.connect([&]() { ++count; });
+
+        vps.setXRayMode(true);
+        CHECK(vps.xRayMode());
+        CHECK(count == 1);
+
+        vps.setXRayMode(true); // no-op
+        CHECK(count == 1);
+
+        vps.setXRayMode(false);
+        CHECK_FALSE(vps.xRayMode());
+        CHECK(count == 2);
+    }
+
+    TEST_CASE("showTessellation defaults to false") {
+        ViewportState vps;
+        CHECK_FALSE(vps.showTessellation());
+    }
+
+    TEST_CASE("setShowTessellation toggles and fires signal") {
+        ViewportState vps;
+        int count = 0;
+        auto conn = vps.displayModeChanged.connect([&]() { ++count; });
+
+        vps.setShowTessellation(true);
+        CHECK(vps.showTessellation());
+        CHECK(count == 1);
+
+        vps.setShowTessellation(true); // no-op
+        CHECK(count == 1);
+
+        vps.setShowTessellation(false);
+        CHECK_FALSE(vps.showTessellation());
+        CHECK(count == 2);
+    }
+
 } // TEST_SUITE
