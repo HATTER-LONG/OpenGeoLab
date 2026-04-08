@@ -630,6 +630,10 @@
             <source>Select a BRep (.brep, .brp) or STEP (.step, .stp) file to import.</source>
             <translation>选择 BRep (.brep, .brp) 或 STEP (.step, .stp) 文件进行导入。</translation>
         </message>
+        <message>
+            <source>Keep existing triangulation</source>
+            <translation>保留已有三角化数据</translation>
+        </message>
     </context>
     <context>
         <name>ViewportToolbar</name>

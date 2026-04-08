@@ -6,7 +6,9 @@
 #include <opengeolab/mesh/mesh_module.hpp>
 
 #include "action/clear_mesh_action.hpp"
+#ifdef OPENGEOLAB_USE_GMSH
 #include "action/generate_mesh_action.hpp"
+#endif
 #include "action/query_mesh_info_action.hpp"
 #include "mesh_scene_bridge.hpp"
 
@@ -31,7 +33,9 @@ const MeshStore& MeshModule::meshStore() const { return m_meshStore; }
 void MeshModule::initBridge(Scene::SceneGraph& scene, Geometry::ShapeStore& store) {
     if(m_shapeStore == nullptr) {
         m_shapeStore = &store;
+#ifdef OPENGEOLAB_USE_GMSH
         registerAction<GenerateMeshAction>(std::ref(m_meshStore), std::ref(*m_shapeStore));
+#endif
     }
 
     if(m_bridge) {

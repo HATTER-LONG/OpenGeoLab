@@ -193,9 +193,21 @@ static void extractVertices(const ShapeEntry& entry, TessellationResult& result)
 }
 
 TessellationResult tessellate(const ShapeEntry& entry, const TessellationParams& params) {
-    // Run incremental mesher
-    const BRepMesh_IncrementalMesh mesher(entry.shape, params.linearDeflection, Standard_False,
-                                          params.angularDeflection);
+    if(params.keepTriangulation) {
+        // Preserve existing Poly_Triangulation; only mesh faces that lack one.
+        for(int fi = 1; fi <= entry.faceMap.Extent(); ++fi) {
+            const auto face = TopoDS::Face(entry.faceMap.FindKey(fi));
+            TopLoc_Location loc;
+            const auto tri = BRep_Tool::Triangulation(face, loc);
+            if(tri.IsNull()) {
+                const BRepMesh_IncrementalMesh mesher(face, params.linearDeflection,
+                                                     Standard_False, params.angularDeflection);
+            }
+        }
+    } else {
+        const BRepMesh_IncrementalMesh mesher(entry.shape, params.linearDeflection, Standard_False,
+                                              params.angularDeflection);
+    }
 
     TessellationResult result;
     extractFaces(entry, result);

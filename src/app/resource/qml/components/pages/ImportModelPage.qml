@@ -15,10 +15,11 @@ FunctionPageBase {
     property string selectedFilePath: ""
     property string selectedFormat: ""
     property string shapeName: ""
+    property bool keepTriangulation: false
 
     function getParameters() {
         const action = root.selectedFormat === "brep" ? "import_brep" : "import_step";
-        return {
+        let params = {
             module: "geometry",
             action: action,
             param: {
@@ -28,12 +29,20 @@ FunctionPageBase {
             },
             mute: false
         };
+        if (root.selectedFormat === "brep" && root.keepTriangulation) {
+            params.param.keepTriangulation = true;
+        }
+        return params;
     }
+
+    property bool pendingFit_: false
 
     function open(payload) {
         root.selectedFilePath = "";
         root.selectedFormat = "";
         root.shapeName = "";
+        root.keepTriangulation = false;
+        root.pendingFit_ = false;
         root.x = 292;
         root.y = 0;
         root.pageVisible = true;
@@ -45,8 +54,28 @@ FunctionPageBase {
         if (root.selectedFilePath.length === 0) {
             return;
         }
+        root.pendingFit_ = true;
         RequestService.submitAsync(JSON.stringify(root.getParameters()));
         root.close();
+    }
+
+    Connections {
+        target: RequestService
+        function onResponseReady(response, muted) {
+            if (!root.pendingFit_) return;
+            root.pendingFit_ = false;
+            try {
+                const result = JSON.parse(response);
+                if (result.ok) {
+                    RequestService.submitAsync(JSON.stringify({
+                        module: "scene",
+                        action: "fit_to_scene",
+                        param: {},
+                        mute: true
+                    }));
+                }
+            } catch (e) { /* ignore parse errors */ }
+        }
     }
 
     FileDialog {
@@ -195,6 +224,57 @@ FunctionPageBase {
                     font.bold: true
                 }
             }
+        }
+    }
+
+    Rectangle {
+        width: parent.width
+        height: keepTriRow.implicitHeight + 16
+        radius: root.theme.radiusSmall
+        color: root.theme.surfaceMuted
+        visible: root.selectedFormat === "brep"
+
+        RowLayout {
+            id: keepTriRow
+
+            anchors.fill: parent
+            anchors.margins: 8
+            spacing: 8
+
+            Rectangle {
+                Layout.preferredWidth: 16
+                Layout.preferredHeight: 16
+                radius: 3
+                color: root.keepTriangulation
+                    ? root.theme.accentA
+                    : "transparent"
+                border.width: 1
+                border.color: root.keepTriangulation
+                    ? root.theme.accentA
+                    : root.theme.borderSubtle
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "✓"
+                    color: root.theme.textOnAccent
+                    font.pixelSize: 11
+                    font.bold: true
+                    visible: root.keepTriangulation
+                }
+            }
+
+            Text {
+                Layout.fillWidth: true
+                text: qsTr("Keep existing triangulation")
+                color: root.theme.textPrimary
+                font.pixelSize: 12
+            }
+        }
+
+        MouseArea {
+            anchors.fill: parent
+            cursorShape: Qt.PointingHandCursor
+            onClicked: root.keepTriangulation = !root.keepTriangulation
         }
     }
 

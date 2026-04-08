@@ -7,7 +7,9 @@
 #include <opengeolab/mesh/mesh_store.hpp>
 
 #include "../src/action/clear_mesh_action.hpp"
+#ifdef OPENGEOLAB_USE_GMSH
 #include "../src/action/generate_mesh_action.hpp"
+#endif
 #include "../src/action/query_mesh_info_action.hpp"
 
 #include <opengeolab/core/progress_callback.hpp>
@@ -202,6 +204,7 @@ TEST_CASE("QueryMeshInfoAction returns node, edge and element information") {
     CHECK(result["entities"][2]["nodeLocalIds"] == nlohmann::json::array({1, 2, 3}));
 }
 
+#ifdef OPENGEOLAB_USE_GMSH
 TEST_CASE("GenerateMeshAction generates mesh for a face entity") {
     OpenGeoLab::Mesh::MeshStore mesh_store;
     OpenGeoLab::Geometry::ShapeStore shape_store;
@@ -229,6 +232,7 @@ TEST_CASE("GenerateMeshAction generates mesh for a face entity") {
     CHECK_FALSE(entry->nodes.empty());
     CHECK_FALSE(entry->elements.empty());
 }
+#endif
 
 TEST_CASE("MeshModule registers mesh actions and generate_mesh after bridge init") {
     Kangaroo::Util::PluginComponentFactory factory;
@@ -242,5 +246,9 @@ TEST_CASE("MeshModule registers mesh actions and generate_mesh after bridge init
     module.initBridge(scene, shape_store);
 
     desc = module.describe();
+#ifdef OPENGEOLAB_USE_GMSH
     CHECK(desc["actions"].size() == 3);
+#else
+    CHECK(desc["actions"].size() == 2);
+#endif
 }
