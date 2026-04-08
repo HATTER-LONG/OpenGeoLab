@@ -12,7 +12,7 @@
 
 **Tech Stack:** Python 3.12+, `http.server` stdlib, PySide6 (QObject + QML), pytest
 
-**Spec:** `docs/superpowers/specs/2025-07-14-plugin-cleanup-and-http-server-design.md`
+**Spec:** `docs/superpowers/specs/2026-04-06-plugin-cleanup-and-http-server-design.md`
 
 ---
 

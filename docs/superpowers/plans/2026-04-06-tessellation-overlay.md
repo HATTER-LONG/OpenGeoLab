@@ -10,7 +10,7 @@
 
 **Tech Stack:** C++20, OpenGL 3.3 core, Qt 6 Quick (QML), CMake/Ninja.
 
-**Spec:** `docs/superpowers/specs/2025-07-15-tessellation-overlay-design.md`
+**Spec:** `docs/superpowers/specs/2026-04-06-tessellation-overlay-design.md`
 
 ---
 

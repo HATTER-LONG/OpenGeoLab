@@ -8,7 +8,7 @@
 
 **Tech Stack:** OpenGL 3.3 Core, GLAD, GLSL 330 core, GLM, TBO (GL_TEXTURE_BUFFER)
 
-**Spec:** `docs/superpowers/specs/2025-07-18-thick-line-renderer-design.md`
+**Spec:** `docs/superpowers/specs/2026-04-01-thick-line-renderer-design.md`
 
 ---
 
