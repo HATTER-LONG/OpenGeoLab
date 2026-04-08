@@ -7,6 +7,7 @@
 #include <opengeolab/scene/pick_area_action.hpp>
 #include <opengeolab/scene/scene_graph.hpp>
 #include <opengeolab/scene/set_camera_action.hpp>
+#include <opengeolab/scene/set_display_mode_action.hpp>
 #include <opengeolab/scene/set_view_preset_action.hpp>
 
 #include <doctest/doctest.h>
@@ -15,6 +16,7 @@ using OpenGeoLab::Scene::FitToSceneAction;
 using OpenGeoLab::Scene::PickAreaAction;
 using OpenGeoLab::Scene::SceneGraph;
 using OpenGeoLab::Scene::SetCameraAction;
+using OpenGeoLab::Scene::SetDisplayModeAction;
 using OpenGeoLab::Scene::SetViewPresetAction;
 
 TEST_SUITE("ViewportActions") {
@@ -149,6 +151,62 @@ TEST_SUITE("ViewportActions") {
         REQUIRE(pending.has_value());
         CHECK(pending->coordType == OpenGeoLab::Scene::PickAreaCoordType::Normalized);
         CHECK(pending->action == OpenGeoLab::Core::PickAction::Add);
+    }
+
+    TEST_CASE("SetDisplayModeAction sets xRayMode") {
+        SceneGraph graph;
+        auto& vps = graph.viewportState();
+        SetDisplayModeAction action(vps);
+
+        const auto result = action.execute({{"xRayMode", true}}, nullptr);
+        CHECK(result["ok"] == true);
+        CHECK(result["xRayMode"] == true);
+        CHECK(result["showTessellation"] == false);
+        CHECK(vps.xRayMode());
+    }
+
+    TEST_CASE("SetDisplayModeAction sets showTessellation") {
+        SceneGraph graph;
+        auto& vps = graph.viewportState();
+        SetDisplayModeAction action(vps);
+
+        const auto result = action.execute({{"showTessellation", true}}, nullptr);
+        CHECK(result["ok"] == true);
+        CHECK(result["showTessellation"] == true);
+        CHECK(vps.showTessellation());
+    }
+
+    TEST_CASE("SetDisplayModeAction sets both") {
+        SceneGraph graph;
+        auto& vps = graph.viewportState();
+        SetDisplayModeAction action(vps);
+
+        const auto result =
+            action.execute({{"xRayMode", true}, {"showTessellation", true}}, nullptr);
+        CHECK(result["ok"] == true);
+        CHECK(result["xRayMode"] == true);
+        CHECK(result["showTessellation"] == true);
+    }
+
+    TEST_CASE("SetDisplayModeAction with empty params returns current state") {
+        SceneGraph graph;
+        auto& vps = graph.viewportState();
+        vps.setXRayMode(true);
+        SetDisplayModeAction action(vps);
+
+        const auto result = action.execute({}, nullptr);
+        CHECK(result["ok"] == true);
+        CHECK(result["xRayMode"] == true);
+        CHECK(result["showTessellation"] == false);
+    }
+
+    TEST_CASE("SetDisplayModeAction describe contains all params") {
+        SceneGraph graph;
+        SetDisplayModeAction action(graph.viewportState());
+        const auto desc = action.describe();
+        CHECK(desc["name"] == "set_display_mode");
+        CHECK(desc["params"].contains("xRayMode"));
+        CHECK(desc["params"].contains("showTessellation"));
     }
 
 } // TEST_SUITE

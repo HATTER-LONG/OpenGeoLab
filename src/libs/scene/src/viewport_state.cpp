@@ -112,4 +112,36 @@ std::optional<PendingCapture> ViewportState::consumeCapture() {
     return result;
 }
 
+bool ViewportState::xRayMode() const {
+    const std::lock_guard lock(m_mutex);
+    return m_xRayMode;
+}
+
+void ViewportState::setXRayMode(bool enabled) {
+    {
+        const std::lock_guard lock(m_mutex);
+        if(m_xRayMode == enabled) {
+            return;
+        }
+        m_xRayMode = enabled;
+    }
+    displayModeChanged.emit();
+}
+
+bool ViewportState::showTessellation() const {
+    const std::lock_guard lock(m_mutex);
+    return m_showTessellation;
+}
+
+void ViewportState::setShowTessellation(bool enabled) {
+    {
+        const std::lock_guard lock(m_mutex);
+        if(m_showTessellation == enabled) {
+            return;
+        }
+        m_showTessellation = enabled;
+    }
+    displayModeChanged.emit();
+}
+
 } // namespace OpenGeoLab::Scene

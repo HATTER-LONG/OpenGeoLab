@@ -119,8 +119,15 @@ void GLViewportRenderer::synchronize(QQuickFramebufferObject* item) {
     m_frameState.viewportWidth = static_cast<int>(width_px);
     m_frameState.viewportHeight = static_cast<int>(height_px);
     m_frameState.devicePixelRatio = device_pixel_ratio;
-    m_frameState.xRayMode = viewport->xRayMode();
-    m_frameState.showTessellation = viewport->showTessellation();
+    // Read display mode from ViewportState (authoritative) with GLViewport fallback.
+    if(viewport->sceneGraph() != nullptr) {
+        m_frameState.xRayMode = viewport->sceneGraph()->viewportState().xRayMode();
+        m_frameState.showTessellation =
+            viewport->sceneGraph()->viewportState().showTessellation();
+    } else {
+        m_frameState.xRayMode = viewport->xRayMode();
+        m_frameState.showTessellation = viewport->showTessellation();
+    }
 
     m_pickingEnabled = viewport->pickingEnabled();
     m_pickMode = static_cast<Render::PickMode>(viewport->pickMode());

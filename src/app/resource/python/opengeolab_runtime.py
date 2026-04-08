@@ -197,7 +197,11 @@ def _launch_plugin_ui(request: dict[str, Any]) -> str:
                 False,
                 f"Plugin '{plugin_name}' has no launch_ui().",
             )
-        result = mod.launch_ui()
+        sig = inspect.signature(mod.launch_ui)
+        if sig.parameters:
+            result = mod.launch_ui(param)
+        else:
+            result = mod.launch_ui()
         return _make_response(
             "plugins",
             "invoke_ui",

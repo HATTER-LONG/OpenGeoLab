@@ -32,6 +32,7 @@ set(scene_public_headers
     include/opengeolab/scene/fit_to_scene_action.hpp
     include/opengeolab/scene/pick_area_action.hpp
     include/opengeolab/scene/set_camera_action.hpp
+    include/opengeolab/scene/set_display_mode_action.hpp
     include/opengeolab/scene/set_labels_visible_action.hpp
     include/opengeolab/scene/set_view_preset_action.hpp
     include/opengeolab/scene/topology_index.hpp)
@@ -66,6 +67,7 @@ set(scene_sources
     src/fit_to_scene_action.cpp
     src/pick_area_action.cpp
     src/set_camera_action.cpp
+    src/set_display_mode_action.cpp
     src/set_view_preset_action.cpp)
 
 opengeolab_add_module(

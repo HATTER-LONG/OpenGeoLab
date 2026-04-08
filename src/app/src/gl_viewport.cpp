@@ -11,6 +11,7 @@
 
 #include <QHoverEvent>
 #include <QLineF>
+#include <QMetaObject>
 #include <QMouseEvent>
 #include <QWheelEvent>
 
@@ -45,7 +46,36 @@ void GLViewport::setSceneGraph(Scene::SceneGraph* scene) {
         return;
     }
 
+    m_displayModeConnection = {};
     m_sceneGraph = scene;
+
+    if(m_sceneGraph != nullptr) {
+        // Sync initial display mode from ViewportState.
+        m_xRayMode = m_sceneGraph->viewportState().xRayMode();
+        m_showTessellation = m_sceneGraph->viewportState().showTessellation();
+
+        // Keep Q_PROPERTYs in sync when actions change display mode.
+        m_displayModeConnection =
+            m_sceneGraph->viewportState().displayModeChanged.connect([this]() {
+                QMetaObject::invokeMethod(this, [this]() {
+                    if(m_sceneGraph == nullptr) {
+                        return;
+                    }
+                    const bool xray = m_sceneGraph->viewportState().xRayMode();
+                    const bool tess = m_sceneGraph->viewportState().showTessellation();
+                    if(m_xRayMode != xray) {
+                        m_xRayMode = xray;
+                        Q_EMIT xRayModeChanged();
+                    }
+                    if(m_showTessellation != tess) {
+                        m_showTessellation = tess;
+                        Q_EMIT showTessellationChanged();
+                    }
+                    update();
+                });
+            });
+    }
+
     update();
 }
 
@@ -83,6 +113,9 @@ void GLViewport::setXRayMode(bool enabled) {
     }
 
     m_xRayMode = enabled;
+    if(m_sceneGraph != nullptr) {
+        m_sceneGraph->viewportState().setXRayMode(enabled);
+    }
     Q_EMIT xRayModeChanged();
     update();
 }
@@ -147,6 +180,9 @@ void GLViewport::setShowTessellation(bool enabled) {
     }
 
     m_showTessellation = enabled;
+    if(m_sceneGraph != nullptr) {
+        m_sceneGraph->viewportState().setShowTessellation(enabled);
+    }
     Q_EMIT showTessellationChanged();
     update();
 }
