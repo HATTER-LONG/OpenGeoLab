@@ -35,11 +35,14 @@ FunctionPageBase {
         return params;
     }
 
+    property bool pendingFit_: false
+
     function open(payload) {
         root.selectedFilePath = "";
         root.selectedFormat = "";
         root.shapeName = "";
         root.keepTriangulation = false;
+        root.pendingFit_ = false;
         root.x = 292;
         root.y = 0;
         root.pageVisible = true;
@@ -51,8 +54,28 @@ FunctionPageBase {
         if (root.selectedFilePath.length === 0) {
             return;
         }
+        root.pendingFit_ = true;
         RequestService.submitAsync(JSON.stringify(root.getParameters()));
         root.close();
+    }
+
+    Connections {
+        target: RequestService
+        function onResponseReady(response, muted) {
+            if (!root.pendingFit_) return;
+            root.pendingFit_ = false;
+            try {
+                const result = JSON.parse(response);
+                if (result.ok) {
+                    RequestService.submitAsync(JSON.stringify({
+                        module: "scene",
+                        action: "fit_to_scene",
+                        param: {},
+                        mute: true
+                    }));
+                }
+            } catch (e) { /* ignore parse errors */ }
+        }
     }
 
     FileDialog {
