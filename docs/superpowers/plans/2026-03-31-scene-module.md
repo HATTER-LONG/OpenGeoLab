@@ -11,7 +11,7 @@
 **Build:** `cmake --build build --config RelWithDebInfo --parallel 8`
 **Test:** `ctest --test-dir build -C RelWithDebInfo --output-on-failure`
 
-**Spec:** `docs/superpowers/specs/2025-07-21-scene-module-design.md`
+**Spec:** `docs/superpowers/specs/2026-03-31-scene-module-design.md`
 
 ---
 

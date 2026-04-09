@@ -100,3 +100,5 @@ out
 /pyvenv/
 
 .superpowers
+
+node_modules

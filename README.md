@@ -81,35 +81,9 @@ EntityRef 抽象统一寻址几何拓扑（面/边/顶点）、网格单元和
 
 ## 🏗️ 架构总览
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                      Qt6 / QML 应用层                         │
-│   ┌──────────┐  ┌───────────┐  ┌───────────┐  ┌───────────┐ │
-│   │ Viewport │  │ Scene Tree│  │ Properties│  │  AI Chat  │ │
-│   └────┬─────┘  └─────┬─────┘  └─────┬─────┘  └─────┬─────┘ │
-├────────┼───────────────┼──────────────┼──────────────┼───────┤
-│        └───────────────┼──────────────┘              │       │
-│                   RequestService          CopilotWorker      │
-│                        │                       │             │
-│              ┌─────────▼──────────┐    ┌───────▼───────┐     │
-│              │  Command Dispatcher│◄───│ Python Runtime │     │
-│              │  (module.action)   │    │  (pybind11)   │     │
-│              └──┬──┬──┬──┬──┬────┘    └───────┬───────┘     │
-├─────────────────┼──┼──┼──┼──┼─────────────────┼─────────────┤
-│  ┌──────┐ ┌─────┤  │  │  │  ├─────┐    ┌─────▼─────┐       │
-│  │Render│ │Scene│  │  │  │  │ I/O │    │  Plugins  │       │
-│  │      │ │     │  │  │  │  │     │    │(Python UI)│       │
-│  │Multi-│ │Graph│  │  │  │  │BREP │    │ AI Chat   │       │
-│  │ Pass │ │Label│  │  │  │  │STEP │    │ Selection │       │
-│  │OpenGL│ │Pick │  │  │  │  │     │    │ Demo UI   │       │
-│  └──────┘ └─────┘  │  │  │  └─────┘    └───────────┘       │
-│              ┌──────┘  │  └──────┐                           │
-│              │Geometry  │  Mesh  │                           │
-│              │         Core      │                           │
-│              │(OCCT)  (Entity)  (Gmsh)                      │
-│              └─────────┴─────────┘                           │
-└──────────────────────────────────────────────────────────────┘
-```
+<div align="center">
+<img src="docs/images/architecture-layers.png" alt="Architecture Layers" width="800" />
+</div>
 
 ---
 
@@ -118,14 +92,23 @@ EntityRef 抽象统一寻址几何拓扑（面/边/顶点）、网格单元和
 OpenGeoLab 的核心设计哲学之一是 **AI-First**：所有模块操作通过统一的
 JSON Action 协议暴露，使 AI 可以像人类用户一样操控整个平台。
 
-```
-用户 ──自然语言──▶ AI Chat Plugin ──Function Call──▶ Command Dispatcher
-                                                           │
-              ┌────────────────────────────────────────────┘
-              ▼               ▼               ▼            ▼
-        geometry.*      mesh.*         scene.*        io.*
-        创建几何体      生成网格       管理场景       导入导出
-```
+### 内嵌 AI — Action 调用循环
+
+用户在 AI Chat 面板中用自然语言描述需求，LLM 通过 Tool Calling 自动调用
+Action 接口，形成"对话 → 调用 → 反馈 → 再调用"的闭环。
+
+<div align="center">
+<img src="docs/images/ai-internal-loop.png" alt="AI Action Loop" width="700" />
+</div>
+
+### 外部 AI — 自动调试循环
+
+AI 作为外部代理完整控制 OpenGeoLab：修改 C++/OCC 源码 → 编译 → 启动 →
+HTTP 远程操作 → 截图验证 → 自动迭代，直到问题解决。
+
+<div align="center">
+<img src="docs/images/ai-external-loop.png" alt="AI Auto Debug Loop" width="700" />
+</div>
 
 **AI 可调用的能力示例：**
 

@@ -7,6 +7,7 @@
 
 #include <BRepAdaptor_Curve.hxx>
 #include <BRepMesh_IncrementalMesh.hxx>
+#include <BRepTools.hxx>
 #include <BRep_Tool.hxx>
 #include <Poly_Triangulation.hxx>
 #include <TopLoc_Location.hxx>
@@ -205,6 +206,10 @@ TessellationResult tessellate(const ShapeEntry& entry, const TessellationParams&
             }
         }
     } else {
+        // TODO: Clean existing triangulations to force complete re-tessellation.
+        // Without this, BRepMesh_IncrementalMesh may reuse broken Poly_Triangulation
+        // data loaded from BREP files if the stored deflection passes the consistency check.
+        // BRepTools::Clean(entry.shape);
         const BRepMesh_IncrementalMesh mesher(entry.shape, params.linearDeflection, Standard_False,
                                               params.angularDeflection);
     }

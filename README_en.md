@@ -86,35 +86,9 @@ click pick, box select, type filtering, and hover highlight.
 
 ## 🏗️ Architecture
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                   Qt6 / QML Application Layer                 │
-│   ┌──────────┐  ┌───────────┐  ┌───────────┐  ┌───────────┐ │
-│   │ Viewport │  │ Scene Tree│  │ Properties│  │  AI Chat  │ │
-│   └────┬─────┘  └─────┬─────┘  └─────┬─────┘  └─────┬─────┘ │
-├────────┼───────────────┼──────────────┼──────────────┼───────┤
-│        └───────────────┼──────────────┘              │       │
-│                   RequestService          CopilotWorker      │
-│                        │                       │             │
-│              ┌─────────▼──────────┐    ┌───────▼───────┐     │
-│              │  Command Dispatcher│◄───│ Python Runtime │     │
-│              │  (module.action)   │    │  (pybind11)   │     │
-│              └──┬──┬──┬──┬──┬────┘    └───────┬───────┘     │
-├─────────────────┼──┼──┼──┼──┼─────────────────┼─────────────┤
-│  ┌──────┐ ┌─────┤  │  │  │  ├─────┐    ┌─────▼─────┐       │
-│  │Render│ │Scene│  │  │  │  │ I/O │    │  Plugins  │       │
-│  │      │ │     │  │  │  │  │     │    │(Python UI)│       │
-│  │Multi-│ │Graph│  │  │  │  │BREP │    │ AI Chat   │       │
-│  │ Pass │ │Label│  │  │  │  │STEP │    │ Selection │       │
-│  │OpenGL│ │Pick │  │  │  │  │     │    │ Demo UI   │       │
-│  └──────┘ └─────┘  │  │  │  └─────┘    └───────────┘       │
-│              ┌──────┘  │  └──────┐                           │
-│              │Geometry  │  Mesh  │                           │
-│              │         Core      │                           │
-│              │(OCCT)  (Entity)  (Gmsh)                      │
-│              └─────────┴─────────┘                           │
-└──────────────────────────────────────────────────────────────┘
-```
+<div align="center">
+<img src="docs/images/architecture-layers.png" alt="Architecture Layers" width="800" />
+</div>
 
 ---
 
@@ -124,14 +98,25 @@ One of OpenGeoLab's core design philosophies is **AI-First**: every module
 operation is exposed through a unified JSON Action protocol, enabling AI to
 control the platform just like a human user.
 
-```
-User ──natural language──▶ AI Chat Plugin ──Function Call──▶ Command Dispatcher
-                                                                  │
-                 ┌────────────────────────────────────────────────┘
-                 ▼              ▼              ▼               ▼
-           geometry.*     mesh.*        scene.*           io.*
-           Create shapes  Generate mesh  Manage scene      Import/Export
-```
+### Embedded AI — Action Call Loop
+
+Users describe needs in natural language via the AI Chat panel. The LLM
+automatically invokes Action endpoints through Tool Calling, forming a
+closed loop of "conversation → invocation → feedback → re-invocation".
+
+<div align="center">
+<img src="docs/images/ai-internal-loop.png" alt="AI Action Loop" width="700" />
+</div>
+
+### External AI — Auto Debug Loop
+
+AI acts as an external agent with full control over OpenGeoLab: modify
+C++/OCC source → compile → launch → HTTP remote operation → screenshot
+verification → auto-iterate until the issue is resolved.
+
+<div align="center">
+<img src="docs/images/ai-external-loop.png" alt="AI Auto Debug Loop" width="700" />
+</div>
 
 **Example AI-callable actions:**
 
