@@ -42,6 +42,7 @@ target_link_libraries(
             OpenGeoLab::Scene
             OpenGeoLab::Render
             glad::glad)
+add_dependencies(opengeolab_app opengeolab_pywrapper)
 
 set_source_files_properties(resource/qml/MainPages.qml
                             PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
@@ -194,9 +195,10 @@ file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/qt.conf"
 add_custom_command(
     TARGET opengeolab_app
     POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${CMAKE_CURRENT_BINARY_DIR}/qt.conf"
-            "$<TARGET_FILE_DIR:opengeolab_app>/qt.conf"
+    COMMAND
+        ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_CURRENT_BINARY_DIR}/qt.conf"
+        "$<TARGET_FILE_DIR:opengeolab_app>/qt.conf"
     COMMENT "Deploying qt.conf")
 
 install(TARGETS opengeolab_app RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
