@@ -52,6 +52,10 @@
             <translation>偏移</translation>
         </message>
         <message>
+            <source>Delete</source>
+            <translation>删除</translation>
+        </message>
+        <message>
             <source>Inspect</source>
             <translation>检查</translation>
         </message>
@@ -640,6 +644,56 @@
         <message>
             <source>Toggle tessellation wireframe</source>
             <translation>切换离散网格线框</translation>
+        </message>
+    </context>
+    <context>
+        <name>DeleteEntityPage</name>
+        <message>
+            <source>Delete Entity</source>
+            <translation>删除实体</translation>
+        </message>
+        <message>
+            <source>Entity Filter</source>
+            <translation>实体过滤</translation>
+        </message>
+        <message>
+            <source>Click to select · Right-click to deselect</source>
+            <translation>左键选中 · 右键取消</translation>
+        </message>
+        <message>
+            <source>Selected: %1</source>
+            <translation>已选中: %1</translation>
+        </message>
+        <message>
+            <source>Face</source>
+            <translation>面</translation>
+        </message>
+        <message>
+            <source>Solid</source>
+            <translation>实体</translation>
+        </message>
+        <message>
+            <source>Click faces or solids in the viewport to select.
+Right-click to remove from selection.</source>
+            <translation>在视口中点击面或实体以选中。
+右键移除选中。</translation>
+        </message>
+        <message>
+            <source>No entities selected.
+Activate pick mode to begin.</source>
+            <translation>未选中任何实体。
+激活拾取模式以开始。</translation>
+        </message>
+        <message>
+            <source>Clear All</source>
+            <translation>全部清除</translation>
+        </message>
+    </context>
+    <context>
+        <name>ShapeListItem</name>
+        <message>
+            <source>Delete Shape</source>
+            <translation>删除形体</translation>
         </message>
     </context>
 </TS>

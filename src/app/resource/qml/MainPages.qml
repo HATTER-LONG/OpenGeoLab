@@ -19,7 +19,8 @@ QtObject {
         "importModel": { path: "components/pages/ImportModelPage.qml" },
         "queryGeometry": { path: "components/pages/GeoQueryPage.qml" },
         "generateMesh":  { path: "components/pages/MeshGeneratePage.qml" },
-        "queryMesh":     { path: "components/pages/MeshQueryPage.qml" }
+        "queryMesh":     { path: "components/pages/MeshQueryPage.qml" },
+        "deleteEntity":  { path: "components/pages/DeleteEntityPage.qml" }
     })
 
     function hasPage(actionId) {

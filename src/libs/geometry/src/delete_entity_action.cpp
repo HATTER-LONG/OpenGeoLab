@@ -42,7 +42,7 @@ nlohmann::json DeleteEntityAction::describe() const {
                             "type must be 'GeoFace' or 'GeoSolid'. "
                             "localId is 1-based index into the sub-shape map."}}}}},
         {"returns",
-         {{"ok", {{"type", "boolean"}, {"description", "true if all deletions succeeded."}}},
+         {{"ok", {{"type", "boolean"}, {"description", "true when the action completes successfully."}}},
           {"action", {{"type", "string"}, {"description", "Echo of the action name."}}},
           {"results",
            {{"type", "array"},
