@@ -4,6 +4,7 @@ set(geometry_public_headers
     include/opengeolab/geometry/create_cylinder_action.hpp
     include/opengeolab/geometry/create_sphere_action.hpp
     include/opengeolab/geometry/create_torus_action.hpp
+    include/opengeolab/geometry/delete_entity_action.hpp
     include/opengeolab/geometry/delete_shape_action.hpp
     include/opengeolab/geometry/import_brep_action.hpp
     include/opengeolab/geometry/import_step_action.hpp
@@ -20,6 +21,7 @@ set(geometry_sources
     src/create_cylinder_action.cpp
     src/create_sphere_action.cpp
     src/create_torus_action.cpp
+    src/delete_entity_action.cpp
     src/delete_shape_action.cpp
     src/import_brep_action.cpp
     src/import_step_action.cpp
@@ -51,13 +53,15 @@ opengeolab_add_module(
     TKDESTEP
     TKDE
     TKXSBase
-    TKShHealing)
+    TKShHealing
+    TKBO)
 
 if (OPENGEOLAB_BUILD_TESTS)
     opengeolab_add_doctest_test(
         opengeolab_geometry_test
         SOURCES
         test/geometry_module_test.cpp
+        test/delete_entity_action_test.cpp
         test/shape_store_test.cpp
         test/tessellator_test.cpp
         LINKS

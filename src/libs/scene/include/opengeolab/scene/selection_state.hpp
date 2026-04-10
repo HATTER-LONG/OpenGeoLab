@@ -17,8 +17,10 @@
 #include <kangaroo/util/signal.hpp>
 
 #include <atomic>
+#include <initializer_list>
 #include <optional>
 #include <shared_mutex>
+#include <span>
 #include <vector>
 
 namespace OpenGeoLab::Scene {
@@ -43,6 +45,10 @@ public:
 
     void addSelection(const Core::EntityRef& entity);
     void removeSelection(const Core::EntityRef& entity);
+    void addSelections(std::span<const Core::EntityRef> entities);
+    void removeSelections(std::span<const Core::EntityRef> entities);
+    void addSelections(std::initializer_list<Core::EntityRef> entities);
+    void removeSelections(std::initializer_list<Core::EntityRef> entities);
     void clearSelection();
     [[nodiscard]] std::vector<Core::EntityRef> selections() const;
     [[nodiscard]] bool isSelected(const Core::EntityRef& entity) const;
@@ -54,8 +60,8 @@ public:
     [[nodiscard]] uint64_t selectionVersion() const noexcept;
     [[nodiscard]] uint64_t hoverVersion() const noexcept;
 
-    Kangaroo::Util::Signal<Core::EntityRef> entitySelected;
-    Kangaroo::Util::Signal<Core::EntityRef> entityDeselected;
+    Kangaroo::Util::Signal<std::vector<Core::EntityRef>> entitiesSelected;
+    Kangaroo::Util::Signal<std::vector<Core::EntityRef>> entitiesDeselected;
     Kangaroo::Util::Signal<> selectionCleared;
     Kangaroo::Util::Signal<std::optional<Core::EntityRef>> hoverChanged;
     Kangaroo::Util::Signal<> pickConfigChanged;

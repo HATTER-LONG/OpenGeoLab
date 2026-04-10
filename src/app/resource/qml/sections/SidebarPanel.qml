@@ -224,6 +224,14 @@ Item {
 
                 onToggleGeoVisibility: (sid) => root.toggleGeoVisibility(sid)
                 onToggleMeshVisibility: (sid) => root.toggleMeshVisibility(sid)
+                onDeleteShapeRequested: function(sid) {
+                    RequestService.submitAsync(JSON.stringify({
+                        module: "geometry",
+                        action: "delete_shape",
+                        param: { shapeId: sid },
+                        mute: false
+                    }));
+                }
             }
         }
     }

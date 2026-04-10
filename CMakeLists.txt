@@ -15,6 +15,23 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Enforce dynamic CRT (/MD, /MDd) for all targets including third-party deps.
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 
+# Customize RelWithDebInfo flags: reduce optimization for easier debugging.
+if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    set(CMAKE_C_FLAGS_RELWITHDEBINFO
+        "/Zi /Od /DNDEBUG"
+        CACHE STRING "C flags for RelWithDebInfo (MSVC)" FORCE)
+    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO
+        "/Zi /Od /DNDEBUG"
+        CACHE STRING "CXX flags for RelWithDebInfo (MSVC)" FORCE)
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    set(CMAKE_C_FLAGS_RELWITHDEBINFO
+        "-O -g -DNDEBUG"
+        CACHE STRING "C flags for RelWithDebInfo (Clang/GCC)" FORCE)
+    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO
+        "-O -g -DNDEBUG"
+        CACHE STRING "CXX flags for RelWithDebInfo (Clang/GCC)" FORCE)
+endif ()
+
 option(OPENGEOLAB_BUILD_TESTS "Build OpenGeoLab tests" ON)
 option(OPENGEOLAB_FETCH_DEPENDENCIES "Fetch missing dependencies with CPM" ON)
 option(OPENGEOLAB_BUILD_SHARED_LIBS

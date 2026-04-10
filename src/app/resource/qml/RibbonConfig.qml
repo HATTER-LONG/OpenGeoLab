@@ -54,6 +54,13 @@ QtObject {
                         "icon": "offset",
                         "accentOne": "accentD",
                         "accentTwo": "accentD"
+                    },
+                    {
+                        "key": "deleteEntity",
+                        "title": qsTr("Delete"),
+                        "icon": "trash",
+                        "accentOne": "accentD",
+                        "accentTwo": "accentC"
                     }
                 ]
             },

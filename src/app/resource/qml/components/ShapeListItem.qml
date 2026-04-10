@@ -2,6 +2,8 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Controls.Basic
+import Qt5Compat.GraphicalEffects
 import "../theme"
 
 /// @brief Single shape entry — collapsed header with expandable details.
@@ -21,6 +23,7 @@ Item {
 
     signal toggleGeoVisibility(int shapeId)
     signal toggleMeshVisibility(int shapeId)
+    signal deleteShapeRequested(int shapeId)
 
     property bool expanded: false
 
@@ -55,8 +58,105 @@ Item {
 
             MouseArea {
                 anchors.fill: parent
+                acceptedButtons: Qt.LeftButton | Qt.RightButton
                 cursorShape: Qt.PointingHandCursor
-                onClicked: root.expanded = !root.expanded
+                onClicked: function(mouse) {
+                    if (mouse.button === Qt.RightButton) {
+                        contextMenu.x = mouse.x;
+                        contextMenu.y = mouse.y;
+                        contextMenu.open();
+                    } else {
+                        root.expanded = !root.expanded;
+                    }
+                }
+            }
+
+            Popup {
+                id: contextMenu
+
+                padding: 4
+                modal: false
+                closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+
+                background: Rectangle {
+                    radius: root.theme.radiusSmall
+                    color: root.theme.surfaceStrong
+                    border.width: 1
+                    border.color: root.theme.borderSubtle
+
+                    layer.enabled: true
+                    layer.effect: DropShadow {
+                        transparentBorder: true
+                        horizontalOffset: 0
+                        verticalOffset: 2
+                        radius: 8
+                        samples: 17
+                        color: "#30000000"
+                    }
+                }
+
+                contentItem: Item {
+                    implicitWidth: deleteRow.implicitWidth + 24
+                    implicitHeight: deleteRow.implicitHeight + 12
+
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: root.theme.radiusSmall
+                        color: deleteMouseArea.containsMouse
+                            ? root.theme.tint(root.theme.danger, root.theme.darkMode ? 0.18 : 0.10)
+                            : "transparent"
+
+                        Behavior on color {
+                            ColorAnimation { duration: root.theme.animFast }
+                        }
+                    }
+
+                    MouseArea {
+                        id: deleteMouseArea
+
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            contextMenu.close();
+                            root.deleteShapeRequested(root.shapeId);
+                        }
+                    }
+
+                    Row {
+                        id: deleteRow
+
+                        anchors.centerIn: parent
+                        spacing: 8
+
+                        AppIcon {
+                            theme: root.theme
+                            iconKind: "trash"
+                            useThemeContrast: false
+                            primaryColor: deleteMouseArea.containsMouse
+                                ? root.theme.danger : root.theme.textSecondary
+                            width: 14
+                            height: 14
+                            anchors.verticalCenter: parent.verticalCenter
+
+                            Behavior on primaryColor {
+                                ColorAnimation { duration: root.theme.animFast }
+                            }
+                        }
+
+                        Text {
+                            text: qsTr("Delete Shape")
+                            color: deleteMouseArea.containsMouse
+                                ? root.theme.danger : root.theme.textPrimary
+                            font.pixelSize: 12
+                            anchors.verticalCenter: parent.verticalCenter
+
+                            Behavior on color {
+                                ColorAnimation { duration: root.theme.animFast }
+                            }
+                        }
+                    }
+                }
             }
 
             RowLayout {
