@@ -89,6 +89,34 @@ void ShapeStore::remove(uint32_t shape_id) {
     shapeRemoved.emit(shape_id);
 }
 
+void ShapeStore::replaceShape(uint32_t shape_id, const TopoDS_Shape& new_shape) {
+    const ShapeEntry* entry_ptr{};
+    {
+        const std::lock_guard lock(m_mutex);
+        if(shape_id >= m_slots.size() || !m_slots[shape_id]) {
+            throw std::invalid_argument("ShapeStore::replaceShape: unknown shapeId");
+        }
+        auto& entry = *m_slots[shape_id];
+        entry.shape = new_shape;
+
+        entry.vertexMap.Clear();
+        entry.edgeMap.Clear();
+        entry.wireMap.Clear();
+        entry.faceMap.Clear();
+        entry.solidMap.Clear();
+
+        entry.visualData.reset();
+        entry.triangleTags.clear();
+        entry.edgeTags.clear();
+        entry.vertexTags.clear();
+
+        buildSubShapeIndex(entry);
+        entry_ptr = &entry;
+    }
+
+    shapeUpdated.emit(shape_id, *entry_ptr);
+}
+
 void ShapeStore::tessellate(uint32_t shape_id, const TessellationParams& params) {
     const ShapeEntry* entry_ptr{};
     {

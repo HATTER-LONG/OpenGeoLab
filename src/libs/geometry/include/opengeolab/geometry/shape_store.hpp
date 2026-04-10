@@ -65,6 +65,16 @@ public:
     void remove(uint32_t shape_id);
 
     /**
+     * @brief Replace the OCC shape of an existing entry, keeping its id and name.
+     * @param shape_id  Target shape
+     * @param new_shape Replacement OCC shape
+     * @throws std::invalid_argument if shape_id is unknown
+     * @post Sub-shape maps are rebuilt; tessellation cache is cleared.
+     * @post shapeUpdated signal is emitted.
+     */
+    void replaceShape(uint32_t shape_id, const TopoDS_Shape& new_shape);
+
+    /**
      * @brief Rename a shape.
      * @param shape_id Target shape
      * @param new_name New display name
