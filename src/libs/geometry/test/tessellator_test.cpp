@@ -1,17 +1,22 @@
 /**
  * @file tessellator_test.cpp
- * @brief Unit tests for the tessellator free function
+ * @brief Unit tests for the tessellator free function and calculateDeflection
  */
 
 #include <opengeolab/geometry/tessellator.hpp>
 
+#include <BRepBuilderAPI_MakeEdge.hxx>
+#include <BRepBuilderAPI_MakeWire.hxx>
 #include <BRepPrimAPI_MakeBox.hxx>
 #include <BRepPrimAPI_MakeSphere.hxx>
+#include <Precision.hxx>
 #include <TopExp.hxx>
+#include <gp_Pnt.hxx>
 
 #include <doctest/doctest.h>
 
 using OpenGeoLab::Core::EntityType;
+using OpenGeoLab::Geometry::calculateDeflection;
 using OpenGeoLab::Geometry::ShapeEntry;
 using OpenGeoLab::Geometry::tessellate;
 
@@ -100,4 +105,68 @@ TEST_CASE("Tessellate sphere produces valid data") {
 
     // Vertices should be present
     CHECK(result.visualData.points.size() >= 1);
+}
+
+// ── calculateDeflection tests ───────────────────────────────────
+
+TEST_CASE("calculateDeflection returns positive value for unit box") {
+    const auto shape = BRepPrimAPI_MakeBox(1.0, 1.0, 1.0).Shape();
+    const double defl = calculateDeflection(shape);
+
+    CHECK(defl > 0.0);
+    CHECK(defl >= Precision::Confusion() * 1.5); // above safety floor
+}
+
+TEST_CASE("calculateDeflection scales with bounding-box size") {
+    const auto small_box = BRepPrimAPI_MakeBox(1.0, 1.0, 1.0).Shape();
+    const auto large_box = BRepPrimAPI_MakeBox(100.0, 100.0, 100.0).Shape();
+
+    const double defl_small = calculateDeflection(small_box);
+    const double defl_large = calculateDeflection(large_box);
+
+    // Larger shape should yield a larger (or equal via clamping) deflection
+    CHECK(defl_large >= defl_small);
+}
+
+TEST_CASE("calculateDeflection respects tessRatio") {
+    const auto shape = BRepPrimAPI_MakeBox(10.0, 10.0, 10.0).Shape();
+
+    const double defl_default = calculateDeflection(shape, 1.0);
+    const double defl_fine = calculateDeflection(shape, 0.5);
+
+    // Smaller ratio should produce equal or smaller deflection (finer mesh)
+    CHECK(defl_fine <= defl_default);
+}
+
+TEST_CASE("calculateDeflection for wire shape is finer than solid") {
+    // Build a simple wire
+    const auto edge = BRepBuilderAPI_MakeEdge(gp_Pnt(0, 0, 0), gp_Pnt(10, 0, 0)).Edge();
+    const auto wire = BRepBuilderAPI_MakeWire(edge).Wire();
+
+    const auto box = BRepPrimAPI_MakeBox(10.0, 10.0, 10.0).Shape();
+
+    const double defl_wire = calculateDeflection(wire);
+    const double defl_box = calculateDeflection(box);
+
+    // Wire deflection should be capped smaller for finer edge display
+    CHECK(defl_wire <= defl_box);
+}
+
+TEST_CASE("calculateDeflection never returns below safety floor") {
+    // Small but valid shape (above OCCT precision threshold)
+    const auto small = BRepPrimAPI_MakeBox(1e-4, 1e-4, 1e-4).Shape();
+    const double defl = calculateDeflection(small);
+
+    CHECK(defl >= std::max(1.0e-7, Precision::Confusion() * 1.5));
+}
+
+TEST_CASE("Tessellate with auto deflection (linearDeflection=0) produces valid data") {
+    auto entry = makeEntry(BRepPrimAPI_MakeBox(5.0, 5.0, 5.0).Shape());
+
+    // Default TessellationParams has linearDeflection = 0 (auto)
+    auto result = tessellate(entry);
+
+    CHECK(result.visualData.surfaces.size() == 6);
+    CHECK_FALSE(result.triangleTags.empty());
+    CHECK(result.visualData.edges.size() == 12);
 }

@@ -27,21 +27,29 @@ namespace OpenGeoLab::Geometry {
  * Centralises all deflection-related knobs that were previously scattered
  * as magic literals across actions.  Use the default-constructed instance
  * for a sensible starting point.
+ *
+ * When @c linearDeflection is zero (the default), the tessellator will
+ * automatically compute an appropriate value from the shape's bounding box
+ * via @ref calculateDeflection.
  */
 struct OPENGEOLAB_GEOMETRY_EXPORT TessellationParams {
-    double linearDeflection = 0.05;  /**< Maximum chord deviation from the true surface */
+    double linearDeflection = 0.0;   /**< Chord deviation; 0 = auto-calculate from shape */
     double angularDeflection = 0.25; /**< Maximum angular deviation (radians) */
-    bool keepTriangulation = false;  /**< Preserve existing Poly_Triangulation on faces */
+    double tessRatio = 1.0;         /**< Quality multiplier applied to auto-calculated deflection */
+    bool keepTriangulation = false; /**< Preserve existing Poly_Triangulation on faces */
 
     /**
      * @brief Build TessellationParams from a JSON object, falling back to defaults.
      *
-     * Recognised keys: `"linearDeflection"`, `"angularDeflection"`, `"keepTriangulation"`.
+     * Recognised keys: `"linearDeflection"`, `"angularDeflection"`,
+     * `"tessRatio"`, `"keepTriangulation"`.
+     *
+     * If `"linearDeflection"` is absent, the value stays at 0 and the
+     * tessellator will auto-calculate from the shape bounding box.
      */
     static TessellationParams fromJson(const nlohmann::json& j) {
-        return {j.value("linearDeflection", 0.05),
-                j.value("angularDeflection", 0.25),
-                j.value("keepTriangulation", false)};
+        return {j.value("linearDeflection", 0.0), j.value("angularDeflection", 0.25),
+                j.value("tessRatio", 1.0), j.value("keepTriangulation", false)};
     }
 };
 
@@ -56,7 +64,26 @@ struct OPENGEOLAB_GEOMETRY_EXPORT TessellationResult {
 };
 
 /**
+ * @brief Compute a suitable linear deflection for the given shape.
+ *
+ * The deflection is proportional to the largest bounding-box dimension,
+ * scaled by a base accuracy (0.0001) and the caller-supplied @p tess_ratio.
+ * Wire-like shapes receive finer resolution automatically.
+ * The result is clamped to a safe range above Precision::Confusion().
+ *
+ * @param shape     OCC topological shape
+ * @param tess_ratio Quality multiplier (default 1.0; smaller = finer mesh)
+ * @return Positive linear deflection suitable for BRepMesh_IncrementalMesh
+ */
+[[nodiscard]] OPENGEOLAB_GEOMETRY_EXPORT double calculateDeflection(const TopoDS_Shape& shape,
+                                                                    double tess_ratio = 1.0);
+
+/**
  * @brief Tessellate a ShapeEntry into render-ready data.
+ *
+ * If @c params.linearDeflection is zero (the default), the function
+ * calls @ref calculateDeflection internally to derive an appropriate
+ * value from the shape's bounding box and @c params.tess_ratio.
  *
  * @param entry  ShapeEntry with valid shape and sub-shape maps
  * @param params Tessellation quality parameters

@@ -6,10 +6,13 @@
 #include <opengeolab/geometry/tessellator.hpp>
 
 #include <BRepAdaptor_Curve.hxx>
+#include <BRepBndLib.hxx>
 #include <BRepMesh_IncrementalMesh.hxx>
 #include <BRepTools.hxx>
 #include <BRep_Tool.hxx>
+#include <Bnd_Box.hxx>
 #include <Poly_Triangulation.hxx>
+#include <Precision.hxx>
 #include <TopLoc_Location.hxx>
 #include <TopoDS.hxx>
 #include <TopoDS_Edge.hxx>
@@ -17,10 +20,70 @@
 #include <TopoDS_Vertex.hxx>
 #include <gp_Pnt.hxx>
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 
 namespace OpenGeoLab::Geometry {
+
+// ── Deflection calculation ──────────────────────────────────────
+
+/** @brief Default deflection when bounding box cannot be computed. */
+constexpr double K_FALLBACK_DEFLECTION = 0.05;
+
+/** @brief Base accuracy constant for deflection computation. */
+constexpr double K_BASE_ACCURACY = 0.0001;
+
+/** @brief Extra refinement divisor for wire-like shapes (edges need finer sampling). */
+constexpr double K_EDGE_ACCURACY_RATIO = 5.0;
+
+double calculateDeflection(const TopoDS_Shape& shape, double tess_ratio) {
+    Bnd_Box bbox;
+    BRepBndLib::Add(shape, bbox);
+    if(bbox.IsVoid()) {
+        return K_FALLBACK_DEFLECTION;
+    }
+
+    double x_min{};
+    double y_min{};
+    double z_min{};
+    double x_max{};
+    double y_max{};
+    double z_max{};
+    bbox.Get(x_min, y_min, z_min, x_max, y_max, z_max);
+
+    // Base accuracy scaled by quality ratio
+    double deflection = K_BASE_ACCURACY * tess_ratio;
+
+    // Wire-like shapes (WIRE, EDGE, VERTEX) get finer base accuracy
+    if(shape.ShapeType() >= TopAbs_WIRE) {
+        deflection /= K_EDGE_ACCURACY_RATIO;
+    }
+
+    // Scale by largest bounding-box dimension
+    const double max_dim = std::max({x_max - x_min, y_max - y_min, z_max - z_min});
+    deflection *= max_dim;
+
+    // Clamp outlier ranges
+    if(deflection > 20.0 && deflection < 100.0) {
+        deflection = 10.0;
+    } else if(deflection > 1.0 && deflection < 20.0) {
+        deflection = 1.0;
+    }
+
+    // Wire shapes: cap deflection for smoother edge display
+    if(shape.ShapeType() >= TopAbs_WIRE && deflection > 0.01) {
+        deflection = std::min(deflection / 10.0, 0.01);
+    }
+
+    // Safety floor: never go below OCCT precision threshold
+    const double min_prec = Precision::Confusion();
+    if(deflection < min_prec * 1.5) {
+        deflection = std::max(1.0e-7, min_prec * 1.5);
+    }
+
+    return deflection;
+}
 
 /** @brief Computes face normal for a triangle when triangulation lacks per-vertex normals. */
 static std::array<float, 3>
@@ -194,6 +257,11 @@ static void extractVertices(const ShapeEntry& entry, TessellationResult& result)
 }
 
 TessellationResult tessellate(const ShapeEntry& entry, const TessellationParams& params) {
+    // Resolve linear deflection: 0 means auto-calculate from shape bounding box
+    const double linear_deflection = (params.linearDeflection > 0.0)
+                                         ? params.linearDeflection
+                                         : calculateDeflection(entry.shape, params.tessRatio);
+
     if(params.keepTriangulation) {
         // Preserve existing Poly_Triangulation; only mesh faces that lack one.
         for(int fi = 1; fi <= entry.faceMap.Extent(); ++fi) {
@@ -201,8 +269,8 @@ TessellationResult tessellate(const ShapeEntry& entry, const TessellationParams&
             TopLoc_Location loc;
             const auto tri = BRep_Tool::Triangulation(face, loc);
             if(tri.IsNull()) {
-                const BRepMesh_IncrementalMesh mesher(face, params.linearDeflection,
-                                                     Standard_False, params.angularDeflection);
+                const BRepMesh_IncrementalMesh mesher(face, linear_deflection, Standard_False,
+                                                      params.angularDeflection);
             }
         }
     } else {
@@ -210,7 +278,7 @@ TessellationResult tessellate(const ShapeEntry& entry, const TessellationParams&
         // Without this, BRepMesh_IncrementalMesh may reuse broken Poly_Triangulation
         // data loaded from BREP files if the stored deflection passes the consistency check.
         // BRepTools::Clean(entry.shape);
-        const BRepMesh_IncrementalMesh mesher(entry.shape, params.linearDeflection, Standard_False,
+        const BRepMesh_IncrementalMesh mesher(entry.shape, linear_deflection, Standard_False,
                                               params.angularDeflection);
     }
 
