@@ -28,7 +28,9 @@
       "displayName": "RelWithDebInfo",
       "inherits": "base",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_CXX_FLAGS_RELWITHDEBINFO": "/Zi /Od /DNDEBUG",
+        "CMAKE_C_FLAGS_RELWITHDEBINFO": "/Zi /Od /DNDEBUG"
       }
     },
     {

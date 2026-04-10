@@ -3,8 +3,8 @@
  * @brief Unit tests for SelectionState
  */
 
-#include <opengeolab/scene/selection_state.hpp>
 #include <opengeolab/scene/scene_graph.hpp>
+#include <opengeolab/scene/selection_state.hpp>
 
 #include <doctest/doctest.h>
 
@@ -12,6 +12,7 @@ using OpenGeoLab::Core::EntityRef;
 using OpenGeoLab::Core::EntityType;
 using OpenGeoLab::Core::PickMask;
 using OpenGeoLab::Scene::SelectionState;
+namespace Core = OpenGeoLab::Core;
 
 namespace {
 constexpr EntityRef FACE_1{1, EntityType::GeoFace, 3};
@@ -131,22 +132,26 @@ TEST_SUITE("SelectionState") {
 
     TEST_CASE("signal emitted on add") {
         SelectionState state;
-        EntityRef captured;
-        auto conn = state.entitySelected.connect([&](EntityRef ref) { captured = ref; });
+        std::vector<Core::EntityRef> captured;
+        auto conn = state.entitiesSelected.connect(
+            [&](std::vector<Core::EntityRef> refs) { captured = std::move(refs); });
 
         state.addSelection(FACE_1);
-        CHECK(captured == FACE_1);
+        REQUIRE(captured.size() == 1);
+        CHECK(captured[0] == FACE_1);
     }
 
     TEST_CASE("signal emitted on remove") {
         SelectionState state;
         state.addSelection(FACE_1);
 
-        EntityRef captured;
-        auto conn = state.entityDeselected.connect([&](EntityRef ref) { captured = ref; });
+        std::vector<Core::EntityRef> captured;
+        auto conn = state.entitiesDeselected.connect(
+            [&](std::vector<Core::EntityRef> refs) { captured = std::move(refs); });
 
         state.removeSelection(FACE_1);
-        CHECK(captured == FACE_1);
+        REQUIRE(captured.size() == 1);
+        CHECK(captured[0] == FACE_1);
     }
 
     TEST_CASE("signal emitted on clear") {
@@ -195,6 +200,125 @@ TEST_SUITE("SelectionState") {
         REQUIRE(sels.size() == 3);
         CHECK(sels[0] < sels[1]);
         CHECK(sels[1] < sels[2]);
+    }
+
+    TEST_CASE("addSelections batch — basic") {
+        SelectionState state;
+        const std::vector<EntityRef> batch = {FACE_1, EDGE_1, FACE_2};
+        state.addSelections(batch);
+
+        CHECK(state.selections().size() == 3);
+        CHECK(state.isSelected(FACE_1));
+        CHECK(state.isSelected(EDGE_1));
+        CHECK(state.isSelected(FACE_2));
+        CHECK(state.selectionVersion() == 1);
+    }
+
+    TEST_CASE("addSelections batch — empty input") {
+        SelectionState state;
+        state.addSelections({});
+        CHECK(state.selections().empty());
+        CHECK(state.selectionVersion() == 0);
+    }
+
+    TEST_CASE("addSelections batch — duplicates in input") {
+        SelectionState state;
+        const std::vector<EntityRef> batch = {FACE_1, FACE_1, FACE_2};
+        state.addSelections(batch);
+
+        CHECK(state.selections().size() == 2);
+        CHECK(state.selectionVersion() == 1);
+    }
+
+    TEST_CASE("addSelections batch — partial overlap with existing") {
+        SelectionState state;
+        state.addSelection(FACE_1);
+
+        const std::vector<EntityRef> batch = {FACE_1, FACE_2, EDGE_1};
+        state.addSelections(batch);
+
+        CHECK(state.selections().size() == 3);
+        CHECK(state.selectionVersion() == 2);
+    }
+
+    TEST_CASE("addSelections batch — signal emits actually added") {
+        SelectionState state;
+        state.addSelection(FACE_1);
+
+        std::vector<Core::EntityRef> captured;
+        auto conn = state.entitiesSelected.connect(
+            [&](std::vector<Core::EntityRef> refs) { captured = std::move(refs); });
+
+        const std::vector<EntityRef> batch = {FACE_1, FACE_2, EDGE_1};
+        state.addSelections(batch);
+
+        REQUIRE(captured.size() == 2);
+        CHECK(std::find(captured.begin(), captured.end(), FACE_2) != captured.end());
+        CHECK(std::find(captured.begin(), captured.end(), EDGE_1) != captured.end());
+    }
+
+    TEST_CASE("addSelections batch — invalid entities filtered") {
+        SelectionState state;
+        const std::vector<EntityRef> batch = {FACE_1, EntityRef{}, EDGE_1};
+        state.addSelections(batch);
+
+        CHECK(state.selections().size() == 2);
+        CHECK(state.selectionVersion() == 1);
+    }
+
+    TEST_CASE("removeSelections batch — basic") {
+        SelectionState state;
+        state.addSelections({FACE_1, FACE_2, EDGE_1, VERTEX_1});
+
+        const std::vector<EntityRef> to_remove = {FACE_1, EDGE_1};
+        state.removeSelections(to_remove);
+
+        CHECK(state.selections().size() == 2);
+        CHECK(state.isSelected(FACE_2));
+        CHECK(state.isSelected(VERTEX_1));
+        CHECK_FALSE(state.isSelected(FACE_1));
+        CHECK_FALSE(state.isSelected(EDGE_1));
+    }
+
+    TEST_CASE("removeSelections batch — empty input") {
+        SelectionState state;
+        state.addSelection(FACE_1);
+        state.removeSelections({});
+
+        CHECK(state.selections().size() == 1);
+        CHECK(state.selectionVersion() == 1);
+    }
+
+    TEST_CASE("removeSelections batch — none present") {
+        SelectionState state;
+        state.addSelection(FACE_1);
+
+        state.removeSelections({FACE_2, EDGE_1});
+        CHECK(state.selections().size() == 1);
+        CHECK(state.selectionVersion() == 1);
+    }
+
+    TEST_CASE("removeSelections batch — signal emits actually removed") {
+        SelectionState state;
+        state.addSelections({FACE_1, FACE_2, EDGE_1});
+
+        std::vector<Core::EntityRef> captured;
+        auto conn = state.entitiesDeselected.connect(
+            [&](std::vector<Core::EntityRef> refs) { captured = std::move(refs); });
+
+        state.removeSelections({FACE_1, VERTEX_1});
+
+        REQUIRE(captured.size() == 1);
+        CHECK(captured[0] == FACE_1);
+    }
+
+    TEST_CASE("removeSelections batch — version increments once") {
+        SelectionState state;
+        state.addSelections({FACE_1, FACE_2, EDGE_1});
+        const uint64_t before = state.selectionVersion();
+
+        state.removeSelections({FACE_1, FACE_2});
+        CHECK(state.selectionVersion() == before + 1);
     }
 }
 

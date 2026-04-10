@@ -176,39 +176,42 @@ void SelectionService::connectSignals() {
         return;
     }
 
-    m_connections.push_back(m_state->entitySelected.connect([this](const Core::EntityRef& entity) {
-        QMetaObject::invokeMethod(
-            this,
-            [this, entity]() {
-                Q_EMIT entitySelected(static_cast<int>(entity.shapeId),
-                                      static_cast<int>(entity.entityType),
-                                      static_cast<int>(entity.localId));
-                Q_EMIT selectionChanged();
-
-                if(m_labelManager != nullptr && m_labelManager->autoLabel()) {
-                    addLabelForSelection(static_cast<int>(entity.shapeId),
-                                         static_cast<int>(entity.entityType),
-                                         static_cast<int>(entity.localId));
-                }
-            },
-            Qt::QueuedConnection);
-    }));
-
     m_connections.push_back(
-        m_state->entityDeselected.connect([this](const Core::EntityRef& entity) {
+        m_state->entitiesSelected.connect([this](std::vector<Core::EntityRef> entities) {
             QMetaObject::invokeMethod(
                 this,
-                [this, entity]() {
-                    Q_EMIT entityDeselected(static_cast<int>(entity.shapeId),
-                                            static_cast<int>(entity.entityType),
-                                            static_cast<int>(entity.localId));
+                [this, entities = std::move(entities)]() {
+                    for(const auto& entity : entities) {
+                        Q_EMIT entitySelected(static_cast<int>(entity.shapeId),
+                                              static_cast<int>(entity.entityType),
+                                              static_cast<int>(entity.localId));
+                        if(m_labelManager != nullptr && m_labelManager->autoLabel()) {
+                            addLabelForSelection(static_cast<int>(entity.shapeId),
+                                                 static_cast<int>(entity.entityType),
+                                                 static_cast<int>(entity.localId));
+                        }
+                    }
                     Q_EMIT selectionChanged();
+                },
+                Qt::QueuedConnection);
+        }));
 
-                    if(m_labelManager != nullptr && m_labelManager->autoLabel()) {
-                        removeLabelForSelection(static_cast<int>(entity.shapeId),
+    m_connections.push_back(
+        m_state->entitiesDeselected.connect([this](std::vector<Core::EntityRef> entities) {
+            QMetaObject::invokeMethod(
+                this,
+                [this, entities = std::move(entities)]() {
+                    for(const auto& entity : entities) {
+                        Q_EMIT entityDeselected(static_cast<int>(entity.shapeId),
                                                 static_cast<int>(entity.entityType),
                                                 static_cast<int>(entity.localId));
+                        if(m_labelManager != nullptr && m_labelManager->autoLabel()) {
+                            removeLabelForSelection(static_cast<int>(entity.shapeId),
+                                                    static_cast<int>(entity.entityType),
+                                                    static_cast<int>(entity.localId));
+                        }
                     }
+                    Q_EMIT selectionChanged();
                 },
                 Qt::QueuedConnection);
         }));

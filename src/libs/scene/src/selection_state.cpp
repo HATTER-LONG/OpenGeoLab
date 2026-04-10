@@ -6,6 +6,7 @@
 #include <opengeolab/scene/selection_state.hpp>
 
 #include <algorithm>
+#include <span>
 
 namespace OpenGeoLab::Scene {
 
@@ -45,32 +46,119 @@ Core::PickMask SelectionState::pickMask() const {
 }
 
 void SelectionState::addSelection(const Core::EntityRef& entity) {
-    if(!entity.isValid()) {
-        return;
-    }
-    {
-        std::unique_lock lock(m_mutex);
-        const auto it = std::lower_bound(m_selections.begin(), m_selections.end(), entity);
-        if(it != m_selections.end() && *it == entity) {
-            return;
-        }
-        m_selections.insert(it, entity);
-        ++m_selectionVersion;
-    }
-    entitySelected.emit(entity);
+    addSelections(std::span<const Core::EntityRef>(&entity, 1));
 }
 
 void SelectionState::removeSelection(const Core::EntityRef& entity) {
+    removeSelections(std::span<const Core::EntityRef>(&entity, 1));
+}
+
+void SelectionState::addSelections(std::initializer_list<Core::EntityRef> entities) {
+    addSelections(std::span<const Core::EntityRef>(entities.begin(), entities.size()));
+}
+
+void SelectionState::removeSelections(std::initializer_list<Core::EntityRef> entities) {
+    removeSelections(std::span<const Core::EntityRef>(entities.begin(), entities.size()));
+}
+
+void SelectionState::addSelections(std::span<const Core::EntityRef> entities) {
+    std::vector<Core::EntityRef> sorted;
+    sorted.reserve(entities.size());
+    for(const auto& entity : entities) {
+        if(entity.isValid()) {
+            sorted.push_back(entity);
+        }
+    }
+    if(sorted.empty()) {
+        return;
+    }
+    std::sort(sorted.begin(), sorted.end());
+    sorted.erase(std::unique(sorted.begin(), sorted.end()), sorted.end());
+
+    std::vector<Core::EntityRef> added;
     {
         std::unique_lock lock(m_mutex);
-        const auto it = std::lower_bound(m_selections.begin(), m_selections.end(), entity);
-        if(it == m_selections.end() || *it != entity) {
+        added.reserve(sorted.size());
+        std::vector<Core::EntityRef> merged;
+        merged.reserve(m_selections.size() + sorted.size());
+
+        auto selectionIt = m_selections.begin();
+        auto newIt = sorted.begin();
+        while(selectionIt != m_selections.end() && newIt != sorted.end()) {
+            if(*selectionIt < *newIt) {
+                merged.push_back(*selectionIt);
+                ++selectionIt;
+            } else if(*newIt < *selectionIt) {
+                added.push_back(*newIt);
+                merged.push_back(*newIt);
+                ++newIt;
+            } else {
+                merged.push_back(*selectionIt);
+                ++selectionIt;
+                ++newIt;
+            }
+        }
+        while(selectionIt != m_selections.end()) {
+            merged.push_back(*selectionIt);
+            ++selectionIt;
+        }
+        while(newIt != sorted.end()) {
+            added.push_back(*newIt);
+            merged.push_back(*newIt);
+            ++newIt;
+        }
+
+        if(added.empty()) {
             return;
         }
-        m_selections.erase(it);
+        m_selections = std::move(merged);
         ++m_selectionVersion;
     }
-    entityDeselected.emit(entity);
+    entitiesSelected.emit(std::move(added));
+}
+
+void SelectionState::removeSelections(std::span<const Core::EntityRef> entities) {
+    if(entities.empty()) {
+        return;
+    }
+
+    std::vector<Core::EntityRef> sorted(entities.begin(), entities.end());
+    std::sort(sorted.begin(), sorted.end());
+    sorted.erase(std::unique(sorted.begin(), sorted.end()), sorted.end());
+
+    std::vector<Core::EntityRef> removed;
+    {
+        std::unique_lock lock(m_mutex);
+        removed.reserve(sorted.size());
+        std::vector<Core::EntityRef> remaining;
+        remaining.reserve(m_selections.size());
+
+        auto selectionIt = m_selections.begin();
+        auto removeIt = sorted.begin();
+        while(selectionIt != m_selections.end() && removeIt != sorted.end()) {
+            if(*selectionIt < *removeIt) {
+                remaining.push_back(*selectionIt);
+                ++selectionIt;
+            } else if(*removeIt < *selectionIt) {
+                ++removeIt;
+            } else {
+                removed.push_back(*selectionIt);
+                ++selectionIt;
+                ++removeIt;
+            }
+        }
+        while(selectionIt != m_selections.end()) {
+            remaining.push_back(*selectionIt);
+            ++selectionIt;
+        }
+
+        if(removed.empty()) {
+            return;
+        }
+        m_selections = std::move(remaining);
+        ++m_selectionVersion;
+    }
+    entitiesDeselected.emit(std::move(removed));
 }
 
 void SelectionState::clearSelection() {

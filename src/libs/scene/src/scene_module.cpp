@@ -70,12 +70,14 @@ SceneModule::SceneModule(Kangaroo::Util::PluginComponentFactory& factory)
     // Selection/hover/label changes wake the viewport but do NOT trigger scene data refresh
     // (SidebarPanel listens to sceneDataChanged; selection/label state is not node data).
     auto& sel = m_sceneGraph.selectionState();
-    m_graphConnections.push_back(sel.entitySelected.connect([this](const Core::EntityRef&) {
-        dataChanged.emit(Core::ModuleDataEvent::ViewportChanged);
-    }));
-    m_graphConnections.push_back(sel.entityDeselected.connect([this](const Core::EntityRef&) {
-        dataChanged.emit(Core::ModuleDataEvent::ViewportChanged);
-    }));
+    m_graphConnections.push_back(
+        sel.entitiesSelected.connect([this](const std::vector<Core::EntityRef>&) {
+            dataChanged.emit(Core::ModuleDataEvent::ViewportChanged);
+        }));
+    m_graphConnections.push_back(
+        sel.entitiesDeselected.connect([this](const std::vector<Core::EntityRef>&) {
+            dataChanged.emit(Core::ModuleDataEvent::ViewportChanged);
+        }));
     m_graphConnections.push_back(sel.selectionCleared.connect(
         [this]() { dataChanged.emit(Core::ModuleDataEvent::ViewportChanged); }));
     m_graphConnections.push_back(
