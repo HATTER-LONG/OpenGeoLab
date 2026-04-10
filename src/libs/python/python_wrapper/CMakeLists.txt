@@ -54,6 +54,7 @@ if (WIN32
                 "-Dtarget_dir=$<TARGET_FILE_DIR:opengeolab_pywrapper>" -P
                 "${OPENGEOLAB_MODULE_CMAKE_DIR}/copy_runtime_dlls.cmake"
             DEPENDS ${_occ_runtime_dlls}
+            COMMENT "Synchronizing OCC runtime DLLs"
             VERBATIM)
         set_target_properties(opengeolab_pywrapper_occ_runtime_sync
                               PROPERTIES FOLDER "python")
