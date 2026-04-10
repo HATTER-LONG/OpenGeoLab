@@ -8,6 +8,8 @@ description: 需要通过 HTTP 控制 OpenGeoLab 时使用 — 创建几何体�
 OpenGeoLab 暴露统一的 HTTP REST API（`POST /api/v1/action`）用于远程控制。
 所有操作共享同一 JSON 信封格式；使用内置 **schema 发现** action 在运行时查询精确参数，而不是死记硬背。
 
+启动 opengeolab 时使用 --start-http-server 参数自动启动 http server，以便你使用 http remote call actions。
+
 ## 快速开始
 
 ```bash
