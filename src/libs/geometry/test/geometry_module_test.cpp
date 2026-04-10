@@ -4,6 +4,7 @@
  */
 
 #include <opengeolab/geometry/create_box_action.hpp>
+#include <opengeolab/geometry/delete_entity_action.hpp>
 #include <opengeolab/geometry/delete_shape_action.hpp>
 #include <opengeolab/geometry/geometry_module.hpp>
 #include <opengeolab/geometry/import_brep_action.hpp>
@@ -23,7 +24,7 @@ TEST_CASE("GeometryModule describe returns module info with actions") {
     CHECK(desc["name"] == "geometry");
     CHECK(desc.contains("description"));
     CHECK(desc["actions"].is_array());
-    CHECK(desc["actions"].size() == 11);
+    CHECK(desc["actions"].size() == 12);
 
     // Verify create_box is present (order depends on factory enumeration)
     bool found_create_box = false;
@@ -113,6 +114,14 @@ TEST_CASE("Geometry actions include action in direct error responses") {
         const auto result = action.execute({{"shapeId", 999U}}, NO_PROGRESS_CALLBACK);
         CHECK(result["ok"] == false);
         CHECK(result["action"] == "delete_shape");
+    }
+
+    SUBCASE("delete_entity empty entities") {
+        OpenGeoLab::Geometry::DeleteEntityAction action(store);
+        const auto result =
+            action.execute({{"entities", nlohmann::json::array()}}, NO_PROGRESS_CALLBACK);
+        CHECK(result["ok"] == false);
+        CHECK(result["action"] == "delete_entity");
     }
 
     SUBCASE("query_shape unknown shapeId") {

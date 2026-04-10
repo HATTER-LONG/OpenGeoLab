@@ -7,6 +7,7 @@
 #include <opengeolab/geometry/create_cylinder_action.hpp>
 #include <opengeolab/geometry/create_sphere_action.hpp>
 #include <opengeolab/geometry/create_torus_action.hpp>
+#include <opengeolab/geometry/delete_entity_action.hpp>
 #include <opengeolab/geometry/delete_shape_action.hpp>
 #include <opengeolab/geometry/geometry_module.hpp>
 #include <opengeolab/geometry/import_brep_action.hpp>
@@ -35,6 +36,7 @@ GeometryModule::GeometryModule(Kangaroo::Util::PluginComponentFactory& factory)
     registerAction<ListShapesAction>(std::ref(m_shapeStore));
     registerAction<ListSubShapesAction>(std::ref(m_shapeStore));
     registerAction<DeleteShapeAction>(std::ref(m_shapeStore));
+    registerAction<DeleteEntityAction>(std::ref(m_shapeStore));
 
     // Bridge ShapeStore signals → ModuleBase::dataChanged for event bus
     m_storeConnections.push_back(
