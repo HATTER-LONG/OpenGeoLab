@@ -274,12 +274,19 @@ TessellationResult tessellate(const ShapeEntry& entry, const TessellationParams&
             }
         }
     } else {
-        // TODO: Clean existing triangulations to force complete re-tessellation.
         // Without this, BRepMesh_IncrementalMesh may reuse broken Poly_Triangulation
         // data loaded from BREP files if the stored deflection passes the consistency check.
-        // BRepTools::Clean(entry.shape);
-        const BRepMesh_IncrementalMesh mesher(entry.shape, linear_deflection, Standard_False,
-                                              params.angularDeflection);
+        BRepTools::Clean(entry.shape);
+        IMeshTools_Parameters mesh_params;
+        mesh_params.Deflection = linear_deflection;
+        mesh_params.Angle = params.angularDeflection;
+        mesh_params.Relative = Standard_False;
+        mesh_params.InParallel = Standard_True;
+        mesh_params.MinSize = Precision::Confusion();
+        mesh_params.InternalVerticesMode = Standard_True;
+        mesh_params.ControlSurfaceDeflection = Standard_True;
+
+        const BRepMesh_IncrementalMesh mesher(entry.shape, mesh_params);
     }
 
     TessellationResult result;

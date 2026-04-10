@@ -34,7 +34,7 @@ namespace OpenGeoLab::Geometry {
  */
 struct OPENGEOLAB_GEOMETRY_EXPORT TessellationParams {
     double linearDeflection = 0.0;   /**< Chord deviation; 0 = auto-calculate from shape */
-    double angularDeflection = 0.25; /**< Maximum angular deviation (radians) */
+    double angularDeflection = 0.35; /**< Maximum angular deviation (radians) */
     double tessRatio = 1.0;         /**< Quality multiplier applied to auto-calculated deflection */
     bool keepTriangulation = false; /**< Preserve existing Poly_Triangulation on faces */
 
@@ -48,7 +48,7 @@ struct OPENGEOLAB_GEOMETRY_EXPORT TessellationParams {
      * tessellator will auto-calculate from the shape bounding box.
      */
     static TessellationParams fromJson(const nlohmann::json& j) {
-        return {j.value("linearDeflection", 0.0), j.value("angularDeflection", 0.25),
+        return {j.value("linearDeflection", 0.0), j.value("angularDeflection", 0.35),
                 j.value("tessRatio", 1.0), j.value("keepTriangulation", false)};
     }
 };
