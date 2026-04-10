@@ -286,8 +286,13 @@ automatic distance calculation to fit the entity in the viewport.
 
 ## Enhanced `capture_viewport`
 
-Add `includeTopology` boolean parameter to the existing action (default
-`false`).
+Two changes to the existing action:
+
+1. **Remove base64 image return** — replace `captureImage` boolean with a
+   required `filePath` string.  The screenshot is always saved to disk and
+   the response returns only the file path.  This keeps the JSON compact,
+   especially when combined with topology data.
+2. **Add `includeTopology`** boolean parameter (default `false`).
 
 **Request:**
 
@@ -298,20 +303,33 @@ Add `includeTopology` boolean parameter to the existing action (default
   "param": {
     "width": 1024,
     "height": 768,
-    "captureImage": true,
+    "filePath": "C:/tmp/viewport_001.png",
     "includeMetadata": true,
     "includeTopology": true
   }
 }
 ```
 
+**Parameters:**
+
+- `filePath` (string, **required**) — absolute path where the PNG screenshot
+  will be saved.  Replaces the old `captureImage` boolean; there is no longer
+  a base64 `image` field in the response.
+- `includeTopology` (boolean, default `false`) — when `true`, each entry in
+  `visibleShapes` includes a `topology` field with the same structure as
+  `describe_topology` (counts, faces summary, edges summary).
+- `width`, `height`, `includeMetadata` — unchanged from the current action.
+
 When `includeTopology` is `true`, each entry in `visibleShapes` includes a
 `topology` field with the same structure as `describe_topology` (counts, faces
 summary, edges summary).
 
+**Response:**
+
 ```json
 {
   "ok": true,
+  "savedPath": "C:/tmp/viewport_001.png",
   "metadata": {
     "camera": { "eye": [0, 0, 50], "target": [5, 5, 5], "up": [0, 1, 0] },
     "visibleShapes": [
@@ -329,8 +347,7 @@ summary, edges summary).
     ],
     "selections": [ ... ],
     "labels": [ ... ]
-  },
-  "image": "<base64 PNG>"
+  }
 }
 ```
 
