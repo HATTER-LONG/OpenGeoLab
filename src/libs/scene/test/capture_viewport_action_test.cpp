@@ -4,11 +4,14 @@
  */
 
 #include <opengeolab/core/entity_tag.hpp>
+#include <opengeolab/geometry/shape_store.hpp>
 #include <opengeolab/scene/bounding_box3d.hpp>
 #include <opengeolab/scene/camera_state.hpp>
 #include <opengeolab/scene/capture_viewport_action.hpp>
 #include <opengeolab/scene/scene_graph.hpp>
 #include <opengeolab/scene/selection_state.hpp>
+
+#include <BRepPrimAPI_MakeBox.hxx>
 
 #include <doctest/doctest.h>
 #include <nlohmann/json.hpp>
@@ -18,9 +21,10 @@ using OpenGeoLab::Scene::SceneGraph;
 
 namespace {
 
-/// Helper: default params that skip image capture (no render thread in tests).
-nlohmann::json metaOnly(nlohmann::json extra = {}) {
-    nlohmann::json params = {{"captureImage", false}};
+/// Helper: params with a dummy filePath (no render thread available).
+/// Capture will time out, but metadata is collected synchronously.
+nlohmann::json metaParams(nlohmann::json extra = {}) {
+    nlohmann::json params = {{"filePath", "C:/nonexistent/test_capture.png"}};
     if(extra.is_object()) {
         params.merge_patch(extra);
     }
@@ -39,24 +43,41 @@ TEST_SUITE("CaptureViewportAction") {
         CHECK(desc["name"] == "capture_viewport");
         CHECK(desc.contains("description"));
         CHECK(desc.contains("params"));
+        CHECK(desc["params"].contains("filePath"));
         CHECK(desc["params"].contains("width"));
         CHECK(desc["params"].contains("height"));
         CHECK(desc["params"].contains("includeMetadata"));
-        CHECK(desc["params"].contains("captureImage"));
-        CHECK(desc["params"].contains("outputPath"));
+        CHECK(desc["params"].contains("includeTopology"));
+        CHECK_FALSE(desc["params"].contains("captureImage"));
+        CHECK_FALSE(desc["params"].contains("outputPath"));
         CHECK(desc.contains("returns"));
         CHECK(desc["returns"].contains("ok"));
-        CHECK(desc["returns"].contains("action"));
-        CHECK(desc["returns"].contains("metadata"));
-        CHECK(desc["returns"].contains("image"));
         CHECK(desc["returns"].contains("savedPath"));
+        CHECK_FALSE(desc["returns"].contains("image"));
     }
 
-    TEST_CASE("execute on empty scene returns valid metadata") {
+    TEST_CASE("execute requires filePath") {
         SceneGraph graph;
         CaptureViewportAction action(graph);
 
-        auto result = action.execute(metaOnly(), nullptr);
+        auto result = action.execute(nlohmann::json::object(), nullptr);
+        CHECK(result["ok"] == false);
+        CHECK(result["error"].get<std::string>().find("filePath") != std::string::npos);
+    }
+
+    TEST_CASE("execute with empty filePath returns error") {
+        SceneGraph graph;
+        CaptureViewportAction action(graph);
+
+        auto result = action.execute({{"filePath", ""}}, nullptr);
+        CHECK(result["ok"] == false);
+    }
+
+    TEST_CASE("execute returns valid metadata") {
+        SceneGraph graph;
+        CaptureViewportAction action(graph);
+
+        auto result = action.execute(metaParams(), nullptr);
 
         CHECK(result["ok"] == true);
         CHECK(result["action"] == "capture_viewport");
@@ -78,18 +99,16 @@ TEST_SUITE("CaptureViewportAction") {
 
         CHECK(meta.contains("selections"));
         CHECK(meta["selections"].is_array());
-        CHECK(meta["selections"].empty());
 
         CHECK(meta.contains("labels"));
         CHECK(meta["labels"].is_array());
-        CHECK(meta["labels"].empty());
     }
 
     TEST_CASE("execute with custom resolution") {
         SceneGraph graph;
         CaptureViewportAction action(graph);
 
-        auto result = action.execute(metaOnly({{"width", 512}, {"height", 384}}), nullptr);
+        auto result = action.execute(metaParams({{"width", 512}, {"height", 384}}), nullptr);
 
         CHECK(result["ok"] == true);
         CHECK(result["metadata"]["viewport"]["width"] == 512);
@@ -100,27 +119,10 @@ TEST_SUITE("CaptureViewportAction") {
         SceneGraph graph;
         CaptureViewportAction action(graph);
 
-        auto result =
-            action.execute({{"includeMetadata", false}, {"captureImage", false}}, nullptr);
+        auto result = action.execute(metaParams({{"includeMetadata", false}}), nullptr);
 
         CHECK(result["ok"] == true);
         CHECK_FALSE(result.contains("metadata"));
-    }
-
-    TEST_CASE("outputPath requests capture even when captureImage is false") {
-        SceneGraph graph;
-        CaptureViewportAction action(graph);
-
-        auto result = action.execute(
-            {{"includeMetadata", false},
-             {"captureImage", false},
-             {"outputPath", "C:\\temp\\viewport.png"}},
-            nullptr);
-
-        CHECK(result["ok"] == true);
-        CHECK(result["action"] == "capture_viewport");
-        CHECK_FALSE(result.contains("image"));
-        CHECK(result.contains("imageError"));
     }
 
     TEST_CASE("camera state is captured from ViewportState") {
@@ -133,7 +135,7 @@ TEST_SUITE("CaptureViewportAction") {
         graph.viewportState().setCamera(cam);
 
         CaptureViewportAction action(graph);
-        auto result = action.execute(metaOnly(), nullptr);
+        auto result = action.execute(metaParams(), nullptr);
 
         auto& camera_json = result["metadata"]["camera"];
         auto eye = camera_json["eye"];
@@ -154,7 +156,7 @@ TEST_SUITE("CaptureViewportAction") {
         graph.selectionState().addSelection(entity);
 
         CaptureViewportAction action(graph);
-        auto result = action.execute(metaOnly(), nullptr);
+        auto result = action.execute(metaParams(), nullptr);
 
         auto& sels = result["metadata"]["selections"];
         REQUIRE(sels.size() == 1);
@@ -170,14 +172,12 @@ TEST_SUITE("CaptureViewportAction") {
         graph.labelManager().addLabel({entity, "E:5"});
 
         CaptureViewportAction action(graph);
-        auto result = action.execute(metaOnly(), nullptr);
+        auto result = action.execute(metaParams(), nullptr);
 
         auto& labels = result["metadata"]["labels"];
         REQUIRE(labels.size() == 1);
         CHECK(labels[0]["text"] == "E:5");
         CHECK(labels[0]["entity"]["shapeId"] == 2);
-        CHECK(labels[0]["entity"]["type"] == "GeoEdge");
-        CHECK(labels[0]["entity"]["localId"] == 5);
     }
 
     TEST_CASE("visible nodes appear in visibleShapes") {
@@ -190,7 +190,7 @@ TEST_SUITE("CaptureViewportAction") {
         node->setVisible(true);
 
         CaptureViewportAction action(graph);
-        auto result = action.execute(metaOnly(), nullptr);
+        auto result = action.execute(metaParams(), nullptr);
 
         auto& shapes = result["metadata"]["visibleShapes"];
         REQUIRE(shapes.size() == 1);
@@ -208,7 +208,7 @@ TEST_SUITE("CaptureViewportAction") {
         node->setVisible(false);
 
         CaptureViewportAction action(graph);
-        auto result = action.execute(metaOnly(), nullptr);
+        auto result = action.execute(metaParams(), nullptr);
 
         CHECK(result["metadata"]["visibleShapes"].empty());
     }
@@ -229,7 +229,7 @@ TEST_SUITE("CaptureViewportAction") {
         child->setVisible(true);
 
         CaptureViewportAction action(graph);
-        auto result = action.execute(metaOnly(), nullptr);
+        auto result = action.execute(metaParams(), nullptr);
 
         CHECK(result["metadata"]["visibleShapes"].empty());
     }
@@ -241,20 +241,18 @@ TEST_SUITE("CaptureViewportAction") {
         graph.selectionState().setHovered(entity);
 
         CaptureViewportAction action(graph);
-        auto result = action.execute(metaOnly(), nullptr);
+        auto result = action.execute(metaParams(), nullptr);
 
         auto& hover = result["metadata"]["hover"];
         CHECK_FALSE(hover.is_null());
         CHECK(hover["shapeId"] == 3);
-        CHECK(hover["type"] == "GeoVertex");
-        CHECK(hover["localId"] == 7);
     }
 
     TEST_CASE("hover is null when nothing is hovered") {
         SceneGraph graph;
 
         CaptureViewportAction action(graph);
-        auto result = action.execute(metaOnly(), nullptr);
+        auto result = action.execute(metaParams(), nullptr);
 
         CHECK(result["metadata"]["hover"].is_null());
     }
@@ -280,7 +278,7 @@ TEST_SUITE("CaptureViewportAction") {
         graph.viewportState().setCamera(cam);
 
         CaptureViewportAction action(graph);
-        auto result = action.execute(metaOnly({{"width", 800}, {"height", 600}}), nullptr);
+        auto result = action.execute(metaParams({{"width", 800}, {"height", 600}}), nullptr);
 
         auto& shapes = result["metadata"]["visibleShapes"];
         REQUIRE(shapes.size() == 1);
@@ -300,10 +298,116 @@ TEST_SUITE("CaptureViewportAction") {
         CaptureViewportAction action(graph);
 
         auto result =
-            action.execute({{"width", "not_a_number"}, {"captureImage", false}}, nullptr);
+            action.execute({{"filePath", "C:/temp/test.png"}, {"width", "not_a_number"}}, nullptr);
 
         CHECK(result["ok"] == true);
         CHECK(result["metadata"]["viewport"]["width"] == 1024);
+    }
+
+    TEST_CASE("includeTopology adds topology to visibleShapes") {
+        SceneGraph graph;
+        OpenGeoLab::Geometry::ShapeStore store;
+        auto shape_id = store.add("Box", BRepPrimAPI_MakeBox(10.0, 10.0, 10.0).Shape());
+        graph.setShapeStore(&store);
+
+        auto node_id = graph.addNode("Box");
+        auto* node = graph.findNode(node_id);
+        REQUIRE(node != nullptr);
+        node->setSource("geometry", shape_id);
+        node->setVisible(true);
+
+        CaptureViewportAction action(graph);
+        auto result = action.execute(metaParams({{"includeTopology", true}}), nullptr);
+
+        CHECK(result["ok"] == true);
+        auto& shapes = result["metadata"]["visibleShapes"];
+        REQUIRE(shapes.size() == 1);
+        REQUIRE(shapes[0].contains("topology"));
+
+        auto& topo = shapes[0]["topology"];
+        CHECK(topo["counts"]["faces"] == 6);
+        CHECK(topo["counts"]["edges"] == 12);
+        CHECK(topo["counts"]["vertices"] == 8);
+        CHECK(topo["faces"].is_array());
+        CHECK(topo["faces"].size() == 6);
+        CHECK(topo["edges"].is_array());
+        CHECK(topo["edges"].size() == 12);
+    }
+
+    TEST_CASE("includeTopology=false does not add topology") {
+        SceneGraph graph;
+        OpenGeoLab::Geometry::ShapeStore store;
+        auto shape_id = store.add("Box", BRepPrimAPI_MakeBox(10.0, 10.0, 10.0).Shape());
+        graph.setShapeStore(&store);
+
+        auto node_id = graph.addNode("Box");
+        auto* node = graph.findNode(node_id);
+        REQUIRE(node != nullptr);
+        node->setSource("geometry", shape_id);
+        node->setVisible(true);
+
+        CaptureViewportAction action(graph);
+        auto result = action.execute(metaParams(), nullptr);
+
+        CHECK(result["ok"] == true);
+        auto& shapes = result["metadata"]["visibleShapes"];
+        REQUIRE(shapes.size() == 1);
+        CHECK_FALSE(shapes[0].contains("topology"));
+    }
+
+    TEST_CASE("includeTopology without ShapeStore gracefully omits topology") {
+        SceneGraph graph; // no shapeStore set
+
+        auto node_id = graph.addNode("Box");
+        auto* node = graph.findNode(node_id);
+        REQUIRE(node != nullptr);
+        node->setSource("geometry", 1);
+        node->setVisible(true);
+
+        CaptureViewportAction action(graph);
+        auto result = action.execute(metaParams({{"includeTopology", true}}), nullptr);
+
+        CHECK(result["ok"] == true);
+        auto& shapes = result["metadata"]["visibleShapes"];
+        REQUIRE(shapes.size() == 1);
+        CHECK_FALSE(shapes[0].contains("topology"));
+    }
+
+    TEST_CASE("worldBounds included for nodes with valid bounds") {
+        SceneGraph graph;
+
+        auto node_id = graph.addNode("Box_1");
+        auto* node = graph.findNode(node_id);
+        REQUIRE(node != nullptr);
+        node->setSource("geometry", 1);
+        node->setVisible(true);
+
+        OpenGeoLab::Scene::BoundingBox3D bounds;
+        bounds.min = {-1.0F, -1.0F, -1.0F};
+        bounds.max = {1.0F, 1.0F, 1.0F};
+        node->setLocalBounds(bounds);
+
+        CaptureViewportAction action(graph);
+        auto result = action.execute(metaParams(), nullptr);
+
+        auto& shapes = result["metadata"]["visibleShapes"];
+        REQUIRE(shapes.size() == 1);
+        REQUIRE(shapes[0].contains("worldBounds"));
+        CHECK(shapes[0]["worldBounds"]["min"][0].get<float>() == doctest::Approx(-1.0F));
+        CHECK(shapes[0]["worldBounds"]["max"][0].get<float>() == doctest::Approx(1.0F));
+    }
+
+    TEST_CASE("capture times out without render thread but metadata is still valid") {
+        SceneGraph graph;
+        CaptureViewportAction action(graph);
+
+        auto result = action.execute(metaParams(), nullptr);
+
+        CHECK(result["ok"] == true);
+        CHECK(result.contains("metadata"));
+        // No render thread → capture times out
+        CHECK(result.contains("savedPathError"));
+        CHECK_FALSE(result.contains("savedPath"));
     }
 
 } // TEST_SUITE

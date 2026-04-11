@@ -18,32 +18,33 @@ DescribeTopologyAction::DescribeTopologyAction(ShapeStore& store) : m_store(stor
 DescribeTopologyAction::~DescribeTopologyAction() = default;
 
 nlohmann::json DescribeTopologyAction::describe() const {
-    return {{"name", ACTION_NAME},
-            {"description",
-             "Return a structured overview of a shape's topology: face/edge/vertex "
-             "counts and per-entity summary with type, coordinates, and dimensions."},
-            {"params",
-             {{"shapeId",
-               {{"type", "integer"},
-                {"required", true},
-                {"description", "Shape identifier to inspect."}}}}},
-            {"returns",
-             {{"ok", {{"type", "boolean"}, {"description", "true on success."}}},
-              {"action", {{"type", "string"}, {"description", "Echo of the action name."}}},
-              {"shapeId", {{"type", "integer"}, {"description", "Queried shape identifier."}}},
-              {"shapeName", {{"type", "string"}, {"description", "Registered shape name."}}},
-              {"boundingBox",
-               {{"type", "object"}, {"description", "AABB as {min: [x,y,z], max: [x,y,z]}."}}},
-              {"counts",
-               {{"type", "object"}, {"description", "Topology counts: {faces, edges, vertices}."}}},
-              {"faces",
-               {{"type", "array"},
-                {"description", "Per-face summary: localId, surfaceType, center, normal, area, "
-                                "and optional axis/radius for curved faces."}}},
-              {"edges",
-               {{"type", "array"},
-                {"description", "Per-edge summary: localId, curveType, start, end, length, "
-                                "and optional center/radius for curved edges."}}}}}};
+    return {
+        {"name", ACTION_NAME},
+        {"description", "Return a structured overview of a shape's topology: face/edge/vertex "
+                        "counts and per-entity summary with type, coordinates, and dimensions."},
+        {"params",
+         {{"shapeId",
+           {{"type", "integer"},
+            {"required", true},
+            {"description", "Shape identifier to inspect."}}}}},
+        {"returns",
+         {{"ok",
+           {{"type", "boolean"}, {"description", "true when the action completes successfully."}}},
+          {"action", {{"type", "string"}, {"description", "Echo of the action name."}}},
+          {"shapeId", {{"type", "integer"}, {"description", "Queried shape identifier."}}},
+          {"shapeName", {{"type", "string"}, {"description", "Registered shape name."}}},
+          {"boundingBox",
+           {{"type", "object"}, {"description", "AABB as {min: [x,y,z], max: [x,y,z]}."}}},
+          {"counts",
+           {{"type", "object"}, {"description", "Topology counts: {faces, edges, vertices}."}}},
+          {"faces",
+           {{"type", "array"},
+            {"description", "Per-face summary: localId, surfaceType, center, normal, area, "
+                            "and optional axis/radius for curved faces."}}},
+          {"edges",
+           {{"type", "array"},
+            {"description", "Per-edge summary: localId, curveType, start, end, length, "
+                            "and optional center/radius for curved edges."}}}}}};
 }
 
 nlohmann::json DescribeTopologyAction::execute(const nlohmann::json& param,

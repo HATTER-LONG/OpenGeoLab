@@ -1,11 +1,13 @@
 /**
  * @file capture_viewport_action.cpp
- * @brief CaptureViewportAction — collect scene metadata + optional screenshot
+ * @brief CaptureViewportAction — collect scene metadata + save screenshot to file
  */
 
 #include <opengeolab/scene/capture_viewport_action.hpp>
 
 #include <opengeolab/core/entity_tag.hpp>
+#include <opengeolab/geometry/shape_store.hpp>
+#include <opengeolab/geometry/topology_utils.hpp>
 #include <opengeolab/scene/bounding_box3d.hpp>
 #include <opengeolab/scene/camera_state.hpp>
 #include <opengeolab/scene/label_manager.hpp>
@@ -13,6 +15,8 @@
 #include <opengeolab/scene/scene_node.hpp>
 #include <opengeolab/scene/selection_state.hpp>
 #include <opengeolab/scene/viewport_state.hpp>
+
+#include <TopoDS.hxx>
 
 #include <glm/glm.hpp>
 
@@ -30,71 +34,63 @@ CaptureViewportAction::CaptureViewportAction(SceneGraph& graph) : m_graph(graph)
 CaptureViewportAction::~CaptureViewportAction() = default;
 
 nlohmann::json CaptureViewportAction::describe() const {
-    return {{"name", ACTION_NAME},
-            {"description",
-             "Capture viewport metadata and optionally a screenshot. "
-             "Returns structured JSON with scene state for AI context."},
-             {"params",
-              {{"width",
-                {{"type", "integer"},
-                 {"required", false},
-                 {"description", "Desired capture width in pixels (default 1024). "
-                                 "Used for screen bounding-box calculation."}}},
-              {"height",
-               {{"type", "integer"},
-                {"required", false},
-                {"description", "Desired capture height in pixels (default 768)."}}},
-              {"includeMetadata",
-               {{"type", "boolean"},
-                {"required", false},
-                {"description", "Whether to collect scene metadata (default true)."}}},
-               {"captureImage",
-                {{"type", "boolean"},
-                 {"required", false},
-                 {"description",
-                  "Whether to capture a screenshot (default true). "
-                  "Set false to skip JSON image data."}}},
-               {"outputPath",
-                {{"type", "string"},
-                 {"required", false},
-                 {"description",
-                  "Optional PNG output path. When provided, the renderer writes "
-                  "the captured image to this path in addition to any JSON image "
-                  "response requested by captureImage."}}}}},
-             {"returns",
-              {{"ok",
-                {{"type", "boolean"},
-                 {"description", "true when the action completes successfully."}}},
-               {"action", {{"type", "string"}, {"description", "Echo of the action name."}}},
-              {"metadata",
-               {{"type", "object"},
-                {"description",
-                 "Scene metadata: viewport, camera, visibleShapes, selections, "
-                 "labels, hover."}}},
-               {"image",
-                {{"type", "string"},
-                 {"description",
-                  "Base64-encoded PNG screenshot, or null if capture timed out."}}},
-               {"imageError",
-                {{"type", "string"},
-                 {"description", "Reason the JSON image capture failed, if any."}}},
-               {"savedPath",
-                {{"type", "string"},
-                 {"description", "PNG output path written successfully, if requested."}}},
-               {"savedPathError",
-                {{"type", "string"},
-                 {"description", "Reason writing outputPath failed, if requested."}}}}}};
+    return {
+        {"name", ACTION_NAME},
+        {"description", "Capture a viewport screenshot to file and return structured "
+                        "scene metadata for AI context."},
+        {"params",
+         {{"filePath",
+           {{"type", "string"},
+            {"required", true},
+            {"description", "Absolute path where the PNG screenshot will be saved."}}},
+          {"width",
+           {{"type", "integer"},
+            {"required", false},
+            {"description", "Desired capture width in pixels (default 1024)."}}},
+          {"height",
+           {{"type", "integer"},
+            {"required", false},
+            {"description", "Desired capture height in pixels (default 768)."}}},
+          {"includeMetadata",
+           {{"type", "boolean"},
+            {"required", false},
+            {"description", "Whether to collect scene metadata (default true)."}}},
+          {"includeTopology",
+           {{"type", "boolean"},
+            {"required", false},
+            {"description", "When true, each visibleShape includes a topology summary "
+                            "(counts, faces, edges). Default false."}}}}},
+        {"returns",
+         {{"ok",
+           {{"type", "boolean"}, {"description", "true when the action completes successfully."}}},
+          {"action", {{"type", "string"}, {"description", "Echo of the action name."}}},
+          {"savedPath",
+           {{"type", "string"}, {"description", "PNG file path written successfully."}}},
+          {"savedPathError",
+           {{"type", "string"}, {"description", "Reason writing filePath failed, if any."}}},
+          {"metadata",
+           {{"type", "object"},
+            {"description", "Scene metadata: viewport, camera, visibleShapes (with "
+                            "optional topology), selections, labels, hover."}}}}}};
 }
 
 nlohmann::json CaptureViewportAction::execute(const nlohmann::json& param,
                                               const Core::ProgressCallback& progress) {
     const auto args = param.is_object() ? param : nlohmann::json::object();
 
+    // filePath is required
+    if(!args.contains("filePath") || !args["filePath"].is_string() ||
+       args["filePath"].get<std::string>().empty()) {
+        return {{"ok", false},
+                {"action", ACTION_NAME},
+                {"error", "Missing or empty required parameter 'filePath'."}};
+    }
+
+    std::string file_path = args["filePath"].get<std::string>();
     int width = 1024;
     int height = 768;
-    bool includeMeta = true;
-    bool captureImage = true;
-    std::string outputPath;
+    bool include_meta = true;
+    bool include_topology = false;
     try {
         if(args.contains("width") && args["width"].is_number()) {
             width = args["width"].get<int>();
@@ -103,41 +99,29 @@ nlohmann::json CaptureViewportAction::execute(const nlohmann::json& param,
             height = args["height"].get<int>();
         }
         if(args.contains("includeMetadata") && args["includeMetadata"].is_boolean()) {
-            includeMeta = args["includeMetadata"].get<bool>();
+            include_meta = args["includeMetadata"].get<bool>();
         }
-        if(args.contains("captureImage") && args["captureImage"].is_boolean()) {
-            captureImage = args["captureImage"].get<bool>();
-        }
-        if(args.contains("outputPath") && args["outputPath"].is_string()) {
-            outputPath = args["outputPath"].get<std::string>();
+        if(args.contains("includeTopology") && args["includeTopology"].is_boolean()) {
+            include_topology = args["includeTopology"].get<bool>();
         }
     } catch(const nlohmann::json::exception& e) {
         return {{"ok", false}, {"action", ACTION_NAME}, {"error", e.what()}};
     }
 
     nlohmann::json result = {{"ok", true}, {"action", ACTION_NAME}};
-    const bool shouldCapture = captureImage || !outputPath.empty();
-
-    if(!includeMeta && !shouldCapture) {
-        if(progress) {
-            progress(1.0, "Done");
-        }
-        return result;
-    }
 
     // ── Collect metadata ──
-    if(includeMeta) {
+    if(include_meta) {
         const auto cam = m_graph.viewportState().camera();
         const float aspect =
             (height > 0) ? static_cast<float>(width) / static_cast<float>(height) : 1.0F;
-        const auto viewMat = cam.viewMatrix();
-        const auto projMat = cam.projMatrix(aspect);
-        const auto mvp = projMat * viewMat;
+        const auto view_mat = cam.viewMatrix();
+        const auto proj_mat = cam.projMatrix(aspect);
+        const auto mvp = proj_mat * view_mat;
 
-        nlohmann::json camera_json = {
-            {"eye", {cam.position.x, cam.position.y, cam.position.z}},
-            {"target", {cam.target.x, cam.target.y, cam.target.z}},
-            {"up", {cam.up.x, cam.up.y, cam.up.z}}};
+        nlohmann::json camera_json = {{"eye", {cam.position.x, cam.position.y, cam.position.z}},
+                                      {"target", {cam.target.x, cam.target.y, cam.target.z}},
+                                      {"up", {cam.up.x, cam.up.y, cam.up.z}}};
 
         nlohmann::json shapes_json = nlohmann::json::array();
 
@@ -146,14 +130,15 @@ nlohmann::json CaptureViewportAction::execute(const nlohmann::json& param,
                 return;
             }
 
-            nlohmann::json shape = {
-                {"shapeId", node.sourceId()},
-                {"name", std::string(node.name())}};
+            nlohmann::json shape = {{"shapeId", node.sourceId()},
+                                    {"name", std::string(node.name())}};
 
             const auto bounds = node.worldBounds();
             if(bounds.isValid()) {
                 const auto mn = bounds.min;
                 const auto mx = bounds.max;
+                shape["worldBounds"] = {{"min", {mn.x, mn.y, mn.z}}, {"max", {mx.x, mx.y, mx.z}}};
+
                 const std::array<glm::vec3, 8> corners = {
                     glm::vec3{mn.x, mn.y, mn.z}, glm::vec3{mx.x, mn.y, mn.z},
                     glm::vec3{mn.x, mx.y, mn.z}, glm::vec3{mx.x, mx.y, mn.z},
@@ -161,11 +146,11 @@ nlohmann::json CaptureViewportAction::execute(const nlohmann::json& param,
                     glm::vec3{mn.x, mx.y, mx.z}, glm::vec3{mx.x, mx.y, mx.z},
                 };
 
-                float minX = std::numeric_limits<float>::max();
-                float minY = std::numeric_limits<float>::max();
-                float maxX = std::numeric_limits<float>::lowest();
-                float maxY = std::numeric_limits<float>::lowest();
-                bool anyVisible = false;
+                float min_x = std::numeric_limits<float>::max();
+                float min_y = std::numeric_limits<float>::max();
+                float max_x = std::numeric_limits<float>::lowest();
+                float max_y = std::numeric_limits<float>::lowest();
+                bool any_visible = false;
 
                 for(const auto& corner : corners) {
                     const auto clip = mvp * glm::vec4(corner, 1.0F);
@@ -175,21 +160,49 @@ nlohmann::json CaptureViewportAction::execute(const nlohmann::json& param,
 
                     const auto ndc = glm::vec3(clip) / clip.w;
                     const float sx = (ndc.x * 0.5F + 0.5F) * static_cast<float>(width);
-                    const float sy =
-                        (1.0F - (ndc.y * 0.5F + 0.5F)) * static_cast<float>(height);
-                    minX = std::min(minX, sx);
-                    minY = std::min(minY, sy);
-                    maxX = std::max(maxX, sx);
-                    maxY = std::max(maxY, sy);
-                    anyVisible = true;
+                    const float sy = (1.0F - (ndc.y * 0.5F + 0.5F)) * static_cast<float>(height);
+                    min_x = std::min(min_x, sx);
+                    min_y = std::min(min_y, sy);
+                    max_x = std::max(max_x, sx);
+                    max_y = std::max(max_y, sy);
+                    any_visible = true;
                 }
 
-                if(anyVisible) {
-                    shape["screenBBox"] = {
-                        {"x", static_cast<int>(minX)},
-                        {"y", static_cast<int>(minY)},
-                        {"w", static_cast<int>(maxX - minX)},
-                        {"h", static_cast<int>(maxY - minY)}};
+                if(any_visible) {
+                    shape["screenBBox"] = {{"x", static_cast<int>(min_x)},
+                                           {"y", static_cast<int>(min_y)},
+                                           {"w", static_cast<int>(max_x - min_x)},
+                                           {"h", static_cast<int>(max_y - min_y)}};
+                }
+            }
+
+            // ── Per-shape topology (when requested) ──
+            if(include_topology) {
+                auto* store = m_graph.shapeStore();
+                if(store) {
+                    const auto* entry = store->find(node.sourceId());
+                    if(entry) {
+                        nlohmann::json topo;
+                        topo["counts"] = {{"faces", entry->faceMap.Extent()},
+                                          {"edges", entry->edgeMap.Extent()},
+                                          {"vertices", entry->vertexMap.Extent()}};
+
+                        nlohmann::json faces_arr = nlohmann::json::array();
+                        for(int i = 1; i <= entry->faceMap.Extent(); ++i) {
+                            faces_arr.push_back(Geometry::toJson(Geometry::extractFaceInfo(
+                                static_cast<uint32_t>(i), TopoDS::Face(entry->faceMap(i)))));
+                        }
+                        topo["faces"] = std::move(faces_arr);
+
+                        nlohmann::json edges_arr = nlohmann::json::array();
+                        for(int i = 1; i <= entry->edgeMap.Extent(); ++i) {
+                            edges_arr.push_back(Geometry::toJson(Geometry::extractEdgeInfo(
+                                static_cast<uint32_t>(i), TopoDS::Edge(entry->edgeMap(i)))));
+                        }
+                        topo["edges"] = std::move(edges_arr);
+
+                        shape["topology"] = std::move(topo);
+                    }
                 }
             }
 
@@ -198,20 +211,18 @@ nlohmann::json CaptureViewportAction::execute(const nlohmann::json& param,
 
         nlohmann::json selections_json = nlohmann::json::array();
         for(const auto& entity : m_graph.selectionState().selections()) {
-            selections_json.push_back(
-                {{"shapeId", entity.shapeId},
-                 {"type", Core::entityTypeName(entity.entityType)},
-                 {"localId", entity.localId}});
+            selections_json.push_back({{"shapeId", entity.shapeId},
+                                       {"type", Core::entityTypeName(entity.entityType)},
+                                       {"localId", entity.localId}});
         }
 
         nlohmann::json labels_json = nlohmann::json::array();
         for(const auto& label : m_graph.labelManager().labels()) {
-            labels_json.push_back(
-                {{"text", label.text},
-                 {"entity",
-                  {{"shapeId", label.entity.shapeId},
-                   {"type", Core::entityTypeName(label.entity.entityType)},
-                   {"localId", label.entity.localId}}}});
+            labels_json.push_back({{"text", label.text},
+                                   {"entity",
+                                    {{"shapeId", label.entity.shapeId},
+                                     {"type", Core::entityTypeName(label.entity.entityType)},
+                                     {"localId", label.entity.localId}}}});
         }
 
         nlohmann::json hover_json = nlohmann::json();
@@ -230,54 +241,26 @@ nlohmann::json CaptureViewportAction::execute(const nlohmann::json& param,
     }
 
     // ── Request image capture from render thread ──
-    if(shouldCapture) {
-        auto promise = std::make_shared<std::promise<CaptureResult>>();
-        auto future = promise->get_future();
+    auto promise = std::make_shared<std::promise<CaptureResult>>();
+    auto future = promise->get_future();
 
-        PendingCapture capture_req;
-        capture_req.width = width;
-        capture_req.height = height;
-        capture_req.outputPath = outputPath;
-        capture_req.captureImage = captureImage;
-        capture_req.promise = promise;
-        m_graph.viewportState().requestCapture(std::move(capture_req));
+    PendingCapture capture_req;
+    capture_req.width = width;
+    capture_req.height = height;
+    capture_req.outputPath = file_path;
+    capture_req.promise = promise;
+    m_graph.viewportState().requestCapture(std::move(capture_req));
 
-        if(future.wait_for(std::chrono::seconds(5)) == std::future_status::ready) {
-            auto captureResult = future.get();
-            if(captureImage) {
-                if(!captureResult.image.empty()) {
-                    result["image"] = std::move(captureResult.image);
-                } else {
-                    result["image"] = nullptr;
-                    if(captureResult.imageError.empty()) {
-                        captureResult.imageError = "Capture returned empty data.";
-                    }
-                }
-                if(!captureResult.imageError.empty()) {
-                    result["imageError"] = captureResult.imageError;
-                }
-            }
-
-            if(!captureResult.savedPath.empty()) {
-                result["savedPath"] = std::move(captureResult.savedPath);
-            }
-            if(!captureResult.savedPathError.empty()) {
-                result["savedPathError"] = captureResult.savedPathError;
-                if(!captureImage) {
-                    result["imageError"] = captureResult.savedPathError;
-                }
-            }
-        } else {
-            result["imageError"] =
-                "Capture timed out — render thread did not respond within 5s.";
-            if(captureImage) {
-                result["image"] = nullptr;
-            }
-            if(!outputPath.empty()) {
-                result["savedPathError"] =
-                    "Capture timed out — render thread did not respond within 5s.";
-            }
+    if(future.wait_for(std::chrono::seconds(5)) == std::future_status::ready) {
+        auto capture_result = future.get();
+        if(!capture_result.savedPath.empty()) {
+            result["savedPath"] = std::move(capture_result.savedPath);
         }
+        if(!capture_result.savedPathError.empty()) {
+            result["savedPathError"] = capture_result.savedPathError;
+        }
+    } else {
+        result["savedPathError"] = "Capture timed out — render thread did not respond within 5s.";
     }
 
     if(progress) {

@@ -29,8 +29,9 @@ nlohmann::json LookAtEntityAction::describe() const {
           {"localId",
            {{"type", "integer"}, {"required", true}, {"description", "1-based local index."}}}}},
         {"returns",
-         {{"ok", {{"type", "boolean"}}},
-          {"action", {{"type", "string"}}},
+         {{"ok",
+           {{"type", "boolean"}, {"description", "true when the action completes successfully."}}},
+          {"action", {{"type", "string"}, {"description", "Echo of the action name."}}},
           {"camera",
            {{"type", "object"},
             {"description", "Resulting camera state: {position, target, up}."}}}}}};
