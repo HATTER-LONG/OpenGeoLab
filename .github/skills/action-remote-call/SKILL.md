@@ -71,9 +71,9 @@ curl -s -X POST $URL -d '{"module":"system","action":"describe","param":{}}'
 
 | 模块 | Action 数 | 职责 |
 |------|-----------|------|
-| `geometry` | 11 | **创建**基元体（长方体、球体、圆柱、圆环）、**导入**外部 CAD 文件（STEP、BRep）、**查询**形状拓扑/包围盒、**列出**子拓扑（面、边、顶点）、**删除**形状、**细分**可视化 |
+| `geometry` | 14 | **创建**基元体（长方体、球体、圆柱、圆环）、**导入**外部 CAD 文件（STEP、BRep）、**查询**形状拓扑/包围盒、**列出**子拓扑（面、边、顶点）、**描述**拓扑结构、**查询**单实体详情与邻接、**删除**形状、**细分**可视化 |
 | `mesh` | 3 | 从几何面/体**生成**有限元网格（三角形/四边形，可配置算法）、**查询**网格节点/边/单元信息、**清除**网格数据 |
-| `scene` | 20 | **截取**视窗截图（PNG 文件或 base64 + 元数据）、**控制**相机（位置/预设/适配）、**选择/取消选择**实体、**标注**几何实体、**管理**可见性和场景树、**重置**工作区 |
+| `scene` | 22 | **截取**视窗截图（PNG 文件 + 元数据 + 可选拓扑）、**控制**相机（位置/预设/适配/对准实体/最佳视角）、**选择/取消选择**实体、**标注**几何实体、**管理**可见性和场景树、**重置**工作区 |
 | `io` | 1 | 文件读取操作（部分实现） |
 | `system` | 5 | `capabilities`、`describe`、`list_modules`、`describe_module`、`describe_action` — 运行时内省 |
 
@@ -98,15 +98,16 @@ curl -s -X POST $URL -d '{"module":"geometry","action":"create_box","param":{"wi
 ### scene.capture_viewport — 截图与场景分析
 
 ```bash
-# 保存到文件
-curl -s -X POST $URL -d '{"module":"scene","action":"capture_viewport","param":{"outputPath":"C:/test/viewport.png","captureImage":false}}'
+# 保存到文件（filePath 必填）
+curl -s -X POST $URL -d '{"module":"scene","action":"capture_viewport","param":{"filePath":"C:/test/viewport.png"}}'
 
-# 获取 base64 图片 + 元数据
-curl -s -X POST $URL -d '{"module":"scene","action":"capture_viewport","param":{"captureImage":true,"includeMetadata":true}}'
+# 包含拓扑信息
+curl -s -X POST $URL -d '{"module":"scene","action":"capture_viewport","param":{"filePath":"C:/test/viewport.png","includeTopology":true}}'
 ```
 
-返回元数据（相机、可见形状及屏幕包围盒、选择状态、标签）和/或 base64 PNG 图片。
-`outputPath` 和 `captureImage` 可独立使用或同时使用。
+返回元数据（相机、可见形状及屏幕包围盒/世界包围盒、选择状态、标签）和 PNG 截图路径。
+`includeTopology: true` 时，每个可见形状附带面/边/顶点拓扑数据。
+⚠️ `filePath` 是**必填**参数。不再支持 base64 图片模式。
 
 ### scene.select — 选择实体
 
@@ -153,7 +154,18 @@ curl -s -X POST $URL -d '{"module":"mesh","action":"generate_mesh","param":{"ent
 curl -s -X POST $URL -d '{"module":"geometry","action":"create_box","param":{"width":3,"height":2,"depth":1}}'
 curl -s -X POST $URL -d '{"module":"scene","action":"fit_to_scene","param":{}}'
 curl -s -X POST $URL -d '{"module":"scene","action":"set_view_preset","param":{"preset":"Isometric"}}'
-curl -s -X POST $URL -d '{"module":"scene","action":"capture_viewport","param":{"outputPath":"C:/test/shot.png","captureImage":false}}'
+curl -s -X POST $URL -d '{"module":"scene","action":"capture_viewport","param":{"filePath":"C:/test/shot.png"}}'
+```
+
+### 拓扑分析 → 定位圆柱面 → 网格剖分
+
+```bash
+curl -s -X POST $URL -d '{"module":"geometry","action":"describe_topology","param":{"shapeId":0}}'
+# 从返回的 faces 中找到 surfaceType="cylinder" 的 localId
+curl -s -X POST $URL -d '{"module":"geometry","action":"query_entity_info","param":{"shapeId":0,"entityType":"face","localId":2}}'
+curl -s -X POST $URL -d '{"module":"scene","action":"best_view_for_entity","param":{"shapeId":0,"entityType":"face","localId":2}}'
+curl -s -X POST $URL -d '{"module":"mesh","action":"generate_mesh","param":{"entities":[{"shapeId":0,"type":"GeoFace","localId":2}],"elementSize":5}}'
+curl -s -X POST $URL -d '{"module":"scene","action":"capture_viewport","param":{"filePath":"C:/test/mesh.png"}}'
 ```
 
 ### 选择 → 标注 → 分析
@@ -162,7 +174,7 @@ curl -s -X POST $URL -d '{"module":"scene","action":"capture_viewport","param":{
 curl -s -X POST $URL -d '{"module":"geometry","action":"list_sub_shapes","param":{"shapeId":0}}'
 curl -s -X POST $URL -d '{"module":"scene","action":"select","param":{"entities":[{"shapeId":0,"type":"GeoFace","localId":1}]}}'
 curl -s -X POST $URL -d '{"module":"scene","action":"add_label","param":{"shapeId":0,"entityType":"GeoFace","localId":1}}'
-curl -s -X POST $URL -d '{"module":"scene","action":"capture_viewport","param":{}}'
+curl -s -X POST $URL -d '{"module":"scene","action":"capture_viewport","param":{"filePath":"C:/test/labeled.png"}}'
 ```
 
 ---
@@ -173,9 +185,11 @@ curl -s -X POST $URL -d '{"module":"scene","action":"capture_viewport","param":{
 |----------|----------|
 | 猜测参数名 | 先用 `system.describe_action` 查询 |
 | `localId` 从 0 开始 | `localId` 是 **1-based**，先用 `list_sub_shapes` 查 |
-| 用 `filePath` 导入文件 | 参数名是 **`path`** |
+| 用 `filePath` 导入文件 | 导入操作参数名是 **`path`** |
 | sphere 用 `origin` | sphere 使用 **`center`** |
 | add_label 用 `type` | 标签操作使用 **`entityType`** |
 | 把 `pick_area` 当同步 | `pick_area` 是异步 — 需后续调用 `query_selection` |
 | 文件路径用单反斜杠 | 使用 `C:/path` 或 `C:\\path` |
 | 未启动 HTTP Server 就调用 | 需先在 OpenGeoLab UI 中启动 HTTP Server 插件 |
+| capture_viewport 不带 filePath | `filePath` 是**必填**参数 |
+| camera 动作用 `GeoFace` | `look_at_entity`/`best_view_for_entity` 的 `entityType` 用短名 **`face`/`edge`/`vertex`** |
