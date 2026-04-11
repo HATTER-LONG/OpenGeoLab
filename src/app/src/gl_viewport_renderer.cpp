@@ -15,7 +15,6 @@
 
 #include <glad/gl.h>
 
-#include <QBuffer>
 #include <QCoreApplication>
 #include <QDir>
 #include <QFileInfo>
@@ -122,8 +121,7 @@ void GLViewportRenderer::synchronize(QQuickFramebufferObject* item) {
     // Read display mode from ViewportState (authoritative) with GLViewport fallback.
     if(viewport->sceneGraph() != nullptr) {
         m_frameState.xRayMode = viewport->sceneGraph()->viewportState().xRayMode();
-        m_frameState.showTessellation =
-            viewport->sceneGraph()->viewportState().showTessellation();
+        m_frameState.showTessellation = viewport->sceneGraph()->viewportState().showTessellation();
     } else {
         m_frameState.xRayMode = viewport->xRayMode();
         m_frameState.showTessellation = viewport->showTessellation();
@@ -547,12 +545,7 @@ void GLViewportRenderer::executeCaptureRequest(const Scene::PendingCapture& capt
 
     if(w <= 0 || h <= 0) {
         Scene::CaptureResult result;
-        if(capture.captureImage) {
-            result.imageError = "Capture failed because the viewport size is invalid.";
-        }
-        if(!capture.outputPath.empty()) {
-            result.savedPathError = "Capture failed because the viewport size is invalid.";
-        }
+        result.savedPathError = "Capture failed because the viewport size is invalid.";
         fulfillCapturePromise(capture, std::move(result));
         return;
     }
@@ -566,28 +559,15 @@ void GLViewportRenderer::executeCaptureRequest(const Scene::PendingCapture& capt
 
     Scene::CaptureResult result;
 
-    if(!capture.outputPath.empty()) {
-        const QString outputPath = QString::fromStdString(capture.outputPath);
-        const QFileInfo outputFile(outputPath);
-        QDir outputDir = outputFile.dir();
-        if(!outputDir.exists() && !outputDir.mkpath(QStringLiteral("."))) {
-            result.savedPathError = "Failed to create the output directory for outputPath.";
-        } else if(!image.save(outputPath, "PNG")) {
-            result.savedPathError = "Failed to write PNG to outputPath.";
-        } else {
-            result.savedPath = capture.outputPath;
-        }
-    }
-
-    if(capture.captureImage) {
-        QByteArray pngBytes;
-        QBuffer buffer(&pngBytes);
-        buffer.open(QIODevice::WriteOnly);
-        if(!image.save(&buffer, "PNG") || pngBytes.isEmpty()) {
-            result.imageError = "Failed to encode the captured viewport as PNG.";
-        } else {
-            result.image = pngBytes.toBase64().toStdString();
-        }
+    const QString output_path = QString::fromStdString(capture.outputPath);
+    const QFileInfo output_file(output_path);
+    QDir output_dir = output_file.dir();
+    if(!output_dir.exists() && !output_dir.mkpath(QStringLiteral("."))) {
+        result.savedPathError = "Failed to create the output directory for filePath.";
+    } else if(!image.save(output_path, "PNG")) {
+        result.savedPathError = "Failed to write PNG to filePath.";
+    } else {
+        result.savedPath = capture.outputPath;
     }
 
     fulfillCapturePromise(capture, std::move(result));

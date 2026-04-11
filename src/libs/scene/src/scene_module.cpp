@@ -8,6 +8,7 @@
 #include <opengeolab/core/logger.hpp>
 #include <opengeolab/core/module_data_event.hpp>
 #include <opengeolab/scene/add_label_action.hpp>
+#include <opengeolab/scene/best_view_for_entity_action.hpp>
 #include <opengeolab/scene/capture_viewport_action.hpp>
 #include <opengeolab/scene/clear_labels_action.hpp>
 #include <opengeolab/scene/clear_selection_action.hpp>
@@ -15,6 +16,7 @@
 #include <opengeolab/scene/deselect_action.hpp>
 #include <opengeolab/scene/fit_to_scene_action.hpp>
 #include <opengeolab/scene/list_nodes_action.hpp>
+#include <opengeolab/scene/look_at_entity_action.hpp>
 #include <opengeolab/scene/new_model_action.hpp>
 #include <opengeolab/scene/pick_area_action.hpp>
 #include <opengeolab/scene/query_selection_action.hpp>
@@ -57,6 +59,8 @@ SceneModule::SceneModule(Kangaroo::Util::PluginComponentFactory& factory)
     registerAction<SetLabelsVisibleAction>(std::ref(m_sceneGraph.labelManager()));
     registerAction<SetAutoLabelAction>(std::ref(m_sceneGraph.labelManager()));
     registerAction<CaptureViewportAction>(std::ref(m_sceneGraph));
+    registerAction<LookAtEntityAction>(std::ref(m_sceneGraph));
+    registerAction<BestViewForEntityAction>(std::ref(m_sceneGraph));
 
     m_graphConnections.push_back(m_sceneGraph.nodeAdded.connect(
         [this](NodeId) { dataChanged.emit(Core::ModuleDataEvent::ItemAdded); }));
@@ -109,6 +113,7 @@ void SceneModule::initBridge(Geometry::ShapeStore& store) {
     if(m_bridge) {
         return; // Already initialized.
     }
+    m_sceneGraph.setShapeStore(&store);
     m_bridge = std::make_unique<GeometrySceneBridge>(m_sceneGraph, store);
     LOG_INFO("SceneModule: GeometrySceneBridge created successfully");
 }

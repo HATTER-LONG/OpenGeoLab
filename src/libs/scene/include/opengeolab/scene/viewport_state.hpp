@@ -40,20 +40,17 @@ struct PendingPickArea {
     Core::PickAction action{Core::PickAction::Add};
 };
 
-/// @brief Pending viewport capture request (async, consumed by renderer).
+/// @brief Result of a viewport capture request.
 struct CaptureResult {
-    std::string image;          ///< Base64 PNG for JSON response
-    std::string imageError;     ///< Error while producing JSON image data
     std::string savedPath;      ///< Output path written successfully
-    std::string savedPathError; ///< Error while writing outputPath
+    std::string savedPathError; ///< Error while writing filePath
 };
 
 /// @brief Pending viewport capture request (async, consumed by renderer).
 struct PendingCapture {
-    int width{1024};             ///< Desired capture width in pixels
-    int height{768};             ///< Desired capture height in pixels
-    std::string outputPath;      ///< Optional PNG output path
-    bool captureImage{true};     ///< Whether JSON image data is requested
+    int width{1024};        ///< Desired capture width in pixels
+    int height{768};        ///< Desired capture height in pixels
+    std::string outputPath; ///< PNG output file path (always set)
     /// Shared promise to deliver capture results back to the requester.
     std::shared_ptr<std::promise<CaptureResult>> promise;
 };
@@ -96,9 +93,9 @@ public:
     /// @brief Consume and return the pending capture (if any).
     [[nodiscard]] std::optional<PendingCapture> consumeCapture();
 
-    Kangaroo::Util::Signal<> cameraChanged;      ///< Fired after camera mutation
-    Kangaroo::Util::Signal<> pickAreaRequested;  ///< Fired after pick area queued
-    Kangaroo::Util::Signal<> captureRequested;   ///< Fired after capture queued
+    Kangaroo::Util::Signal<> cameraChanged;     ///< Fired after camera mutation
+    Kangaroo::Util::Signal<> pickAreaRequested; ///< Fired after pick area queued
+    Kangaroo::Util::Signal<> captureRequested;  ///< Fired after capture queued
 
     /// @brief Whether x-ray rendering is enabled.
     [[nodiscard]] bool xRayMode() const;

@@ -27,6 +27,10 @@
 #include <shared_mutex>
 #include <vector>
 
+namespace OpenGeoLab::Geometry {
+class ShapeStore;
+} // namespace OpenGeoLab::Geometry
+
 namespace OpenGeoLab::Scene {
 
 /**
@@ -181,6 +185,17 @@ public:
     [[nodiscard]] ViewportState& viewportState() { return m_viewportState; }
     [[nodiscard]] const ViewportState& viewportState() const { return m_viewportState; }
 
+    /**
+     * @brief Optional ShapeStore pointer, set via initBridge.
+     *
+     * May be nullptr before initBridge is called. Camera actions that need
+     * topology data must null-check before use.
+     */
+    void setShapeStore(Geometry::ShapeStore* store);
+
+    /** @brief Get ShapeStore pointer (may be nullptr). */
+    [[nodiscard]] Geometry::ShapeStore* shapeStore() const;
+
     /** @brief Compute scene-wide AABB from all visible nodes. */
     [[nodiscard]] BoundingBox3D sceneBounds() const;
 
@@ -220,6 +235,7 @@ private:
     LabelManager m_labelManager;
     ViewportState m_viewportState;
     TopologyIndex m_topologyIndex;
+    Geometry::ShapeStore* m_shapeStore{nullptr};
     mutable std::shared_mutex m_mutex;
 };
 

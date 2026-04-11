@@ -467,4 +467,7 @@ void SceneGraph::traverseDirtyImpl(const SceneNode* node, // NOLINT(misc-no-recu
     }
 }
 
+void SceneGraph::setShapeStore(Geometry::ShapeStore* store) { m_shapeStore = store; }
+Geometry::ShapeStore* SceneGraph::shapeStore() const { return m_shapeStore; }
+
 } // namespace OpenGeoLab::Scene

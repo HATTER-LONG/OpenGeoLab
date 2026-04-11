@@ -9,11 +9,13 @@
 #include <opengeolab/geometry/create_torus_action.hpp>
 #include <opengeolab/geometry/delete_entity_action.hpp>
 #include <opengeolab/geometry/delete_shape_action.hpp>
+#include <opengeolab/geometry/describe_topology_action.hpp>
 #include <opengeolab/geometry/geometry_module.hpp>
 #include <opengeolab/geometry/import_brep_action.hpp>
 #include <opengeolab/geometry/import_step_action.hpp>
 #include <opengeolab/geometry/list_shapes_action.hpp>
 #include <opengeolab/geometry/list_sub_shapes_action.hpp>
+#include <opengeolab/geometry/query_entity_info_action.hpp>
 #include <opengeolab/geometry/query_shape_action.hpp>
 #include <opengeolab/geometry/tessellate_action.hpp>
 
@@ -37,6 +39,8 @@ GeometryModule::GeometryModule(Kangaroo::Util::PluginComponentFactory& factory)
     registerAction<ListSubShapesAction>(std::ref(m_shapeStore));
     registerAction<DeleteShapeAction>(std::ref(m_shapeStore));
     registerAction<DeleteEntityAction>(std::ref(m_shapeStore));
+    registerAction<DescribeTopologyAction>(std::ref(m_shapeStore));
+    registerAction<QueryEntityInfoAction>(std::ref(m_shapeStore));
 
     // Bridge ShapeStore signals → ModuleBase::dataChanged for event bus
     m_storeConnections.push_back(
