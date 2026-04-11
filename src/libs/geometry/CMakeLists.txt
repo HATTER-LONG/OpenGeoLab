@@ -6,10 +6,12 @@ set(geometry_public_headers
     include/opengeolab/geometry/create_torus_action.hpp
     include/opengeolab/geometry/delete_entity_action.hpp
     include/opengeolab/geometry/delete_shape_action.hpp
+    include/opengeolab/geometry/describe_topology_action.hpp
     include/opengeolab/geometry/import_brep_action.hpp
     include/opengeolab/geometry/import_step_action.hpp
     include/opengeolab/geometry/list_shapes_action.hpp
     include/opengeolab/geometry/list_sub_shapes_action.hpp
+    include/opengeolab/geometry/query_entity_info_action.hpp
     include/opengeolab/geometry/query_shape_action.hpp
     include/opengeolab/geometry/shape_entry.hpp
     include/opengeolab/geometry/shape_store.hpp
@@ -24,10 +26,12 @@ set(geometry_sources
     src/create_torus_action.cpp
     src/delete_entity_action.cpp
     src/delete_shape_action.cpp
+    src/describe_topology_action.cpp
     src/import_brep_action.cpp
     src/import_step_action.cpp
     src/list_shapes_action.cpp
     src/list_sub_shapes_action.cpp
+    src/query_entity_info_action.cpp
     src/query_shape_action.cpp
     src/shape_store.cpp
     src/tessellate_action.cpp
@@ -112,6 +116,8 @@ if (OPENGEOLAB_BUILD_TESTS)
         SOURCES
         test/geometry_module_test.cpp
         test/delete_entity_action_test.cpp
+        test/describe_topology_action_test.cpp
+        test/query_entity_info_action_test.cpp
         test/shape_store_test.cpp
         test/tessellator_test.cpp
         test/topology_utils_test.cpp
