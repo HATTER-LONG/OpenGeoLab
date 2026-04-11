@@ -35,7 +35,9 @@ set(scene_public_headers
     include/opengeolab/scene/set_display_mode_action.hpp
     include/opengeolab/scene/set_labels_visible_action.hpp
     include/opengeolab/scene/set_view_preset_action.hpp
-    include/opengeolab/scene/topology_index.hpp)
+    include/opengeolab/scene/topology_index.hpp
+    include/opengeolab/scene/look_at_entity_action.hpp
+    include/opengeolab/scene/best_view_for_entity_action.hpp)
 
 set(scene_sources
     src/add_label_action.cpp
@@ -68,7 +70,11 @@ set(scene_sources
     src/pick_area_action.cpp
     src/set_camera_action.cpp
     src/set_display_mode_action.cpp
-    src/set_view_preset_action.cpp)
+    src/set_view_preset_action.cpp
+    src/entity_camera_utils.hpp
+    src/entity_camera_utils.cpp
+    src/look_at_entity_action.cpp
+    src/best_view_for_entity_action.cpp)
 
 opengeolab_add_module(
     opengeolab_scene
@@ -103,6 +109,7 @@ if (OPENGEOLAB_BUILD_TESTS)
         test/label_actions_test.cpp
         test/viewport_state_test.cpp
         test/viewport_actions_test.cpp
+        test/camera_entity_actions_test.cpp
         LINKS
         OpenGeoLab::Scene)
 endif ()
