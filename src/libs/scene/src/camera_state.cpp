@@ -25,7 +25,9 @@ glm::mat4 CameraState::projMatrix(float aspect) const {
 
 void CameraState::updateClipping() {
     const float camera_distance = std::max(distance(), 1.0e-4F);
-    const float half_range = camera_distance * 10.0F;
+    // Use the larger of camera-based range and scene-based range so the
+    // clipping volume never collapses when zooming into a large model.
+    const float half_range = std::max(camera_distance * 10.0F, sceneExtent * 2.0F);
     nearPlane = -half_range;
     farPlane = half_range;
 }
@@ -34,6 +36,7 @@ void CameraState::reset() {
     position = {0.0F, 0.0F, 50.0F};
     target = {0.0F, 0.0F, 0.0F};
     up = {0.0F, 1.0F, 0.0F};
+    sceneExtent = 100.0F;
     updateClipping();
 }
 
@@ -54,6 +57,7 @@ void CameraState::fitToBoundingBox(const BoundingBox3D& bounds) {
 
     target = bounds.center();
     const float diagonal = bounds.diagonal();
+    sceneExtent = diagonal;
     const float fit_distance = diagonal * 1.1F;
     position = target + view_dir * fit_distance;
     updateClipping();
