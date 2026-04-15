@@ -24,6 +24,7 @@ struct OPENGEOLAB_SCENE_EXPORT CameraState {
     glm::vec3 up{0.0F, 1.0F, 0.0F};        /**< Up direction */
     float nearPlane{-500.0F};              /**< Near clipping plane */
     float farPlane{500.0F};                /**< Far clipping plane */
+    float sceneExtent{100.0F};             /**< Remembered scene diagonal for clipping floor */
 
     /** @brief Compute the view matrix via glm::lookAt. */
     [[nodiscard]] glm::mat4 viewMatrix() const;
@@ -40,7 +41,7 @@ struct OPENGEOLAB_SCENE_EXPORT CameraState {
     /** @brief Distance from eye to target. */
     [[nodiscard]] float distance() const;
 
-    /** @brief Recalculate near/far planes as ±10× distance. */
+    /** @brief Recalculate near/far planes, floored by scene extent. */
     void updateClipping();
 
     /** @brief Reset to default values. */

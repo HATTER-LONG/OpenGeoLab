@@ -20,6 +20,8 @@
 #include <TopoDS_Vertex.hxx>
 #include <gp_Pnt.hxx>
 
+#include <opengeolab/core/logger.hpp>
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -110,6 +112,23 @@ static void extractFaces(const ShapeEntry& entry, TessellationResult& result) {
         const auto tri = BRep_Tool::Triangulation(face, loc);
         if(tri.IsNull()) {
             continue;
+        }
+
+        // Tessellation quality check: detect faces with suspicious tri/node ratio.
+        // A healthy triangulation has ratio ≈ 1.5–2.0 (each node in ~2 triangles).
+        // Very low ratios (< 0.5) indicate Delaunay domain-classification failures,
+        // often caused by degenerate edge discretization in OCC BRepMesh.
+        {
+            const int nb_tris = tri->NbTriangles();
+            const int nb_nds = tri->NbNodes();
+            if(nb_nds > 20 && nb_tris > 0) {
+                const double ratio = static_cast<double>(nb_tris) / static_cast<double>(nb_nds);
+                if(ratio < 0.5) {
+                    LOG_WARN("Face {} may have degenerate tessellation: {} triangles, "
+                             "{} nodes (ratio: {:.2f})",
+                             fi, nb_tris, nb_nds, ratio);
+                }
+            }
         }
 
         const bool reversed = (face.Orientation() == TopAbs_REVERSED);

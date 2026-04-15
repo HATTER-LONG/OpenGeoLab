@@ -54,6 +54,7 @@ TEST_CASE("Scene::CameraState reset and updateClipping") {
     CameraState camera;
     camera.position = {5.0F, -2.0F, 6.0F};
     camera.target = {1.0F, -2.0F, 1.0F};
+    camera.sceneExtent = 0.0F; // Disable scene floor to test camera-based range
 
     camera.updateClipping();
 
@@ -64,6 +65,19 @@ TEST_CASE("Scene::CameraState reset and updateClipping") {
     camera.reset();
     checkVec3(camera.position, glm::vec3{0.0F, 0.0F, 50.0F});
     checkVec3(camera.target, glm::vec3{0.0F, 0.0F, 0.0F});
+}
+
+TEST_CASE("Scene::CameraState clipping floored by sceneExtent") {
+    CameraState camera;
+    camera.position = {0.0F, 0.0F, 1.0F};
+    camera.target = {0.0F, 0.0F, 0.0F};
+    camera.sceneExtent = 500.0F;
+
+    camera.updateClipping();
+
+    // camera_distance=1 → camera-based=10, scene-based=1000 → floor wins
+    CHECK(camera.nearPlane == doctest::Approx(-1000.0F));
+    CHECK(camera.farPlane == doctest::Approx(1000.0F));
 }
 
 TEST_CASE("Scene::CameraState fitToBoundingBox") {
