@@ -35,6 +35,7 @@ public:
 
 private:
     void onMeshAdded(uint32_t shape_id, const MeshEntry& entry);
+    void onMeshModified(uint32_t shape_id);
     void onMeshRemoved(uint32_t shape_id);
     void onStoreCleared();
 

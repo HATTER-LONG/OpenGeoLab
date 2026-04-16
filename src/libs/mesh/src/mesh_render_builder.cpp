@@ -95,6 +95,14 @@ void appendElementTriangles(MeshElementType type, std::vector<TriangleCorners>& 
         triangles.push_back({2, 3, 4});
         triangles.push_back({3, 0, 4});
         return;
+    case MeshElementType::Tri6:
+        triangles.push_back({0, 1, 2});
+        return;
+    case MeshElementType::Quad8:
+    case MeshElementType::Quad9:
+        triangles.push_back({0, 1, 2});
+        triangles.push_back({0, 2, 3});
+        return;
     }
 }
 
@@ -129,6 +137,13 @@ void appendElementEdges(MeshElementType type, std::vector<EdgeCorners>& edges) {
         return;
     case MeshElementType::Pyramid:
         edges.insert(edges.end(), {{0, 1}, {1, 2}, {2, 3}, {3, 0}, {0, 4}, {1, 4}, {2, 4}, {3, 4}});
+        return;
+    case MeshElementType::Tri6:
+        edges.insert(edges.end(), {{0, 1}, {1, 2}, {2, 0}});
+        return;
+    case MeshElementType::Quad8:
+    case MeshElementType::Quad9:
+        edges.insert(edges.end(), {{0, 1}, {1, 2}, {2, 3}, {3, 0}});
         return;
     }
 }

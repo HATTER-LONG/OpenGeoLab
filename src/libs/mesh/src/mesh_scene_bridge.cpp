@@ -50,6 +50,8 @@ MeshSceneBridge::MeshSceneBridge(Scene::SceneGraph& scene, MeshStore& store)
     : m_scene(scene), m_store(store) {
     m_connections.push_back(store.meshAdded.connect(
         [this](uint32_t id, const MeshEntry& entry) { onMeshAdded(id, entry); }));
+    m_connections.push_back(
+        store.meshModified.connect([this](uint32_t id) { onMeshModified(id); }));
     m_connections.push_back(store.meshRemoved.connect([this](uint32_t id) { onMeshRemoved(id); }));
     m_connections.push_back(store.storeCleared.connect([this]() { onStoreCleared(); }));
 }
@@ -82,6 +84,13 @@ void MeshSceneBridge::onMeshAdded(uint32_t shape_id, const MeshEntry& entry) {
         node.setRenderComponent(std::move(render_component));
         node.setPickComponent(std::make_unique<MeshPickComponent>(render_component_ptr));
     });
+}
+
+void MeshSceneBridge::onMeshModified(uint32_t shape_id) {
+    const auto* entry = m_store.find(shape_id);
+    if(entry != nullptr) {
+        onMeshAdded(shape_id, *entry);
+    }
 }
 
 void MeshSceneBridge::onMeshRemoved(uint32_t shape_id) {

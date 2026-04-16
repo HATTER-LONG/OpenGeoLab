@@ -20,6 +20,7 @@ QtObject {
         "queryGeometry": { path: "components/pages/GeoQueryPage.qml" },
         "generateMesh":  { path: "components/pages/MeshGeneratePage.qml" },
         "queryMesh":     { path: "components/pages/MeshQueryPage.qml" },
+        "splitMesh":     { path: "components/pages/MeshSplitPage.qml" },
         "deleteEntity":  { path: "components/pages/DeleteEntityPage.qml" }
     })
 

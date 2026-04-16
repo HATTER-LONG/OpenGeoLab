@@ -132,6 +132,48 @@ TEST_CASE("MeshRenderBuilder: shared edges are deduplicated across elements") {
     CHECK(data.lineRanges.size() == 5);
 }
 
+TEST_CASE("MeshRenderBuilder: Tri6 renders as single triangle with 6 point ranges") {
+    Mesh::MeshEntry entry;
+    entry.shapeId = 1;
+    entry.nodes = {
+        Mesh::MeshNode{{0.0F, 0.0F, 0.0F}}, Mesh::MeshNode{{2.0F, 0.0F, 0.0F}},
+        Mesh::MeshNode{{1.0F, 2.0F, 0.0F}}, Mesh::MeshNode{{1.0F, 0.0F, 0.0F}},
+        Mesh::MeshNode{{1.5F, 1.0F, 0.0F}}, Mesh::MeshNode{{0.5F, 1.0F, 0.0F}},
+    };
+    Mesh::MeshElement tri6;
+    tri6.type = Mesh::MeshElementType::Tri6;
+    tri6.nodeLocalIds = {1, 2, 3, 4, 5, 6, 0, 0, 0};
+    entry.elements = {tri6};
+
+    const auto data = Mesh::MeshRenderBuilder::build(1, entry);
+    CHECK(data.triangleRanges.size() == 1);
+    CHECK(data.triangleRanges[0].indexCount == 3);
+    CHECK(data.lineRanges.size() == 3);
+    CHECK(data.pointRanges.size() == 6);
+}
+
+TEST_CASE("MeshRenderBuilder: Quad9 renders as 2 triangles with 4 edges and 9 nodes") {
+    Mesh::MeshEntry entry;
+    entry.shapeId = 1;
+    entry.nodes = {
+        Mesh::MeshNode{{0.0F, 0.0F, 0.0F}}, Mesh::MeshNode{{2.0F, 0.0F, 0.0F}},
+        Mesh::MeshNode{{2.0F, 2.0F, 0.0F}}, Mesh::MeshNode{{0.0F, 2.0F, 0.0F}},
+        Mesh::MeshNode{{1.0F, 0.0F, 0.0F}}, Mesh::MeshNode{{2.0F, 1.0F, 0.0F}},
+        Mesh::MeshNode{{1.0F, 2.0F, 0.0F}}, Mesh::MeshNode{{0.0F, 1.0F, 0.0F}},
+        Mesh::MeshNode{{1.0F, 1.0F, 0.0F}},
+    };
+    Mesh::MeshElement quad9;
+    quad9.type = Mesh::MeshElementType::Quad9;
+    quad9.nodeLocalIds = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+    entry.elements = {quad9};
+
+    const auto data = Mesh::MeshRenderBuilder::build(1, entry);
+    CHECK(data.triangleRanges.size() == 1);
+    CHECK(data.triangleRanges[0].indexCount == 6);
+    CHECK(data.lineRanges.size() == 4);
+    CHECK(data.pointRanges.size() == 9);
+}
+
 TEST_CASE("MeshRenderBuilder: tetra emits non-zero triangle normals") {
     Mesh::MeshEntry entry;
     entry.shapeId = 3;

@@ -93,6 +93,13 @@ QtObject {
                         "icon": "smoothMesh",
                         "accentOne": "accentB",
                         "accentTwo": "accentA"
+                    },
+                    {
+                        "key": "splitMesh",
+                        "title": qsTr("Split"),
+                        "icon": "mesh",
+                        "accentOne": "accentB",
+                        "accentTwo": "accentA"
                     }
                 ]
             },
