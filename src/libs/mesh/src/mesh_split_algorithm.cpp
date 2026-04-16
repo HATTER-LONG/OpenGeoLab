@@ -5,11 +5,11 @@
 
 #include <opengeolab/mesh/mesh_split_algorithm.hpp>
 
+#include <opengeolab/core/logger.hpp>
 #include <opengeolab/mesh/mesh_element_type.hpp>
 
 #include <algorithm>
 #include <array>
-#include <cassert>
 #include <stdexcept>
 
 namespace OpenGeoLab::Mesh {
@@ -143,7 +143,9 @@ void MeshSplitAlgorithm::processTriangleEdges(SplitContext& ctx,
         const uint32_t midpoint23 = getOrCreateMidpoint(ctx, edge23.value());
         const uint32_t midpoint31 = getOrCreateMidpoint(ctx, edge31.value());
 
-        if(mode == SplitMode::QuadThree) {
+        // Extract triangle-specific mode bits (TriaFour|QuadThree)
+        const auto tri_mode = static_cast<SplitMode>(static_cast<uint8_t>(mode) & 24U);
+        if(tri_mode == SplitMode::QuadThree) {
             const uint32_t center = createCentroid(ctx, elem_index);
             replacement.newElements.push_back(makeQuad(node1, midpoint12, center, midpoint31));
             replacement.newElements.push_back(makeQuad(node2, midpoint23, center, midpoint12));
@@ -330,23 +332,33 @@ void MeshSplitAlgorithm::processQuadEdges(SplitContext& ctx,
         const uint32_t mid_bc = getOrCreateMidpoint(ctx, side_edge_idx[(unsel + 2) % 4].value());
         const uint32_t mid_cd = getOrCreateMidpoint(ctx, side_edge_idx[(unsel + 3) % 4].value());
 
-        if(mode == SplitMode::TriaOneQuadThree) {
+        // Corner/midpoint mapping to reference diagram (ABCD quad, CD unselected):
+        //   D = ca,  A = cb,  B = cc,  C = cd
+        //   Ml = mid_ab (D-A), Mt = mid_bc (A-B), Mr = mid_cd (B-C)
+        // Extract quad-specific mode bits (TriaOneQuadThree|TriaOneQuadTwo|TriaThreeQuadTwo)
+        const auto quad_mode = static_cast<SplitMode>(static_cast<uint8_t>(mode) & 7U);
+
+        if(quad_mode == SplitMode::TriaOneQuadThree) {
+            // 3Q+1T: center P connects to Mt, Mr, Ml, D
             const uint32_t center = createCentroid(ctx, elem_index);
-            replacement.newElements.push_back(makeQuad(ca, mid_ab, center, cd));
             replacement.newElements.push_back(makeQuad(mid_ab, cb, mid_bc, center));
-            replacement.newElements.push_back(makeQuad(center, mid_bc, cc, mid_cd));
-            replacement.newElements.push_back(makeTriangle(cd, center, mid_cd));
-        } else if(mode == SplitMode::TriaOneQuadTwo) {
-            replacement.newElements.push_back(makeQuad(ca, mid_ab, mid_cd, cd));
-            replacement.newElements.push_back(makeTriangle(mid_ab, cb, mid_bc));
-            replacement.newElements.push_back(makeQuad(mid_ab, mid_bc, cc, mid_cd));
+            replacement.newElements.push_back(makeQuad(mid_bc, cc, mid_cd, center));
+            replacement.newElements.push_back(makeQuad(mid_cd, cd, ca, center));
+            replacement.newElements.push_back(makeTriangle(ca, mid_ab, center));
+        } else if(quad_mode == SplitMode::TriaOneQuadTwo) {
+            // 2Q+1T: no center, Mt→Mr and Ml→Mr cuts
+            replacement.newElements.push_back(makeQuad(mid_ab, cb, mid_bc, mid_cd));
+            replacement.newElements.push_back(makeTriangle(mid_bc, cc, mid_cd));
+            replacement.newElements.push_back(makeQuad(mid_ab, mid_cd, cd, ca));
         } else {
+            // Default: TriaThreeQuadTwo (2Q+3T)
+            // center P connects to Mt, Mr, Ml, C, D
             const uint32_t center = createCentroid(ctx, elem_index);
-            replacement.newElements.push_back(makeQuad(ca, mid_ab, center, cd));
-            replacement.newElements.push_back(makeTriangle(mid_ab, cb, center));
-            replacement.newElements.push_back(makeTriangle(cb, mid_bc, center));
-            replacement.newElements.push_back(makeQuad(center, mid_bc, cc, mid_cd));
-            replacement.newElements.push_back(makeTriangle(cd, center, mid_cd));
+            replacement.newElements.push_back(makeQuad(mid_ab, cb, mid_bc, center));
+            replacement.newElements.push_back(makeQuad(mid_bc, cc, mid_cd, center));
+            replacement.newElements.push_back(makeTriangle(mid_cd, cd, center));
+            replacement.newElements.push_back(makeTriangle(cd, ca, center));
+            replacement.newElements.push_back(makeTriangle(ca, mid_ab, center));
         }
     } else if(selected_count == 4) {
         const uint32_t mid01 = getOrCreateMidpoint(ctx, side_edge_idx[0].value());
@@ -398,6 +410,8 @@ SplitResult MeshSplitAlgorithm::compute(const MeshEntry& entry,
     std::unordered_map<uint32_t, std::vector<uint32_t>> element_to_edges;
     for(const auto edge_local_id : selected_edge_local_ids) {
         if(edge_local_id == 0U || edge_local_id > topology.edges.size()) {
+            LOG_WARN("SKIPPING edge_local_id={} (out of range, max={})", edge_local_id,
+                     topology.edges.size());
             continue;
         }
 
@@ -418,7 +432,17 @@ SplitResult MeshSplitAlgorithm::compute(const MeshEntry& entry,
         }
     }
 
-    for(const auto& [element_index, edge_indices] : element_to_edges) {
+    // Sort elements by selected edge count (descending) so elements with more
+    // selected edges are processed first. This prevents a neighbor cut from
+    // "stealing" the target element before it gets its full multi-edge split.
+    std::vector<std::pair<uint32_t, std::vector<uint32_t>>> sorted_elements(
+        element_to_edges.begin(), element_to_edges.end());
+    std::sort(sorted_elements.begin(), sorted_elements.end(), [](const auto& lhs, const auto& rhs) {
+        return lhs.second.size() > rhs.second.size();
+    });
+
+    // Pass 1: split all directly selected elements
+    for(const auto& [element_index, edge_indices] : sorted_elements) {
         if(ctx.processedElements.count(element_index) > 0U) {
             continue;
         }
@@ -430,7 +454,10 @@ SplitResult MeshSplitAlgorithm::compute(const MeshEntry& entry,
         } else if(element.type == MeshElementType::Quad) {
             processQuadEdges(ctx, element_index, edge_indices, mode);
         }
+    }
 
+    // Pass 2: propagate neighbor cuts along shared edges
+    for(const auto& [element_index, edge_indices] : sorted_elements) {
         for(const auto edge_index : edge_indices) {
             for(const auto neighbor_index : topology.edgeToElements[edge_index]) {
                 if(neighbor_index != element_index) {
@@ -447,7 +474,7 @@ SplitResult MeshSplitAlgorithm::compute(const MeshEntry& entry,
 
         const auto& element = entry.elements[element_index];
         if(element.type == MeshElementType::Triangle && node_ids.size() == 3U &&
-           mode == SplitMode::TriaThree) {
+           (static_cast<uint8_t>(mode) & static_cast<uint8_t>(SplitMode::TriaThree)) != 0U) {
             ctx.processedElements.insert(element_index);
             processTriangleNodes(ctx, element_index);
         }

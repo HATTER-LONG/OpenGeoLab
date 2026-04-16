@@ -712,12 +712,16 @@ Activate pick mode to begin.</source>
             <translation>节点</translation>
         </message>
         <message>
-            <source>Split Mode</source>
-            <translation>分割模式</translation>
+            <source>Quad Mode</source>
+            <translation>四边形模式</translation>
         </message>
         <message>
-            <source>Auto</source>
-            <translation>自动</translation>
+            <source>Triangle Mode</source>
+            <translation>三角形模式</translation>
+        </message>
+        <message>
+            <source>Node Mode</source>
+            <translation>节点模式</translation>
         </message>
         <message>
             <source>Click mesh edges in the viewport · Right-click to deselect</source>

@@ -51,7 +51,18 @@ std::optional<uint32_t> parseUint32(const nlohmann::json& value) {
     return static_cast<uint32_t>(parsed_value);
 }
 
-SplitMode parseSplitMode(const std::string& mode_str) {
+SplitMode parseSplitMode(const nlohmann::json& mode_value) {
+    if(mode_value.is_number_unsigned()) {
+        return static_cast<SplitMode>(mode_value.get<uint8_t>());
+    }
+    if(mode_value.is_number_integer()) {
+        const auto value = mode_value.get<int64_t>();
+        if(value >= 0 && value <= 255) {
+            return static_cast<SplitMode>(static_cast<uint8_t>(value));
+        }
+    }
+
+    const auto mode_str = mode_value.get<std::string>();
     if(mode_str.empty() || mode_str == "auto") {
         return SplitMode::Auto;
     }
@@ -121,11 +132,12 @@ nlohmann::json SplitMeshAction::describe() const {
             {"required", true},
             {"description", "Array of {type, localId} — type is \"edge\" or \"node\"."}}},
           {"mode",
-           {{"type", "string"},
+           {{"type", "string|integer"},
             {"required", false},
-            {"description", "Split mode: auto, tria_one_quad_three, tria_one_quad_two, "
-                            "tria_three_quad_two, tria_four, quad_three, tria_three. "
-                            "Default: auto."}}}}},
+            {"description",
+             "Split mode: string name (tria_one_quad_three, etc.) or numeric bitmask "
+             "combining one quad mode (1/2/4) with one triangle mode (8/16). "
+             "Use 32 for node split (tria_three). Default: auto (0)."}}}}},
         {"returns",
          {{"ok",
            {{"type", "boolean"}, {"description", "true when the action completes successfully."}}},
@@ -152,10 +164,10 @@ nlohmann::json SplitMeshAction::execute(const nlohmann::json& param,
         return makeFailure("Missing or invalid 'selections' parameter.");
     }
 
-    const auto mode_str = param.value("mode", std::string{"auto"});
     SplitMode mode{};
     try {
-        mode = parseSplitMode(mode_str);
+        const auto& mode_value = param.contains("mode") ? param["mode"] : nlohmann::json("auto");
+        mode = parseSplitMode(mode_value);
     } catch(const std::invalid_argument& ex) {
         return {{"ok", false}, {"action", ACTION_NAME}, {"summary", ex.what()}};
     }
@@ -227,7 +239,7 @@ nlohmann::json SplitMeshAction::execute(const nlohmann::json& param,
 
     const auto summary = "Split completed: " + std::to_string(result.replacements.size()) +
                          " elements replaced, " + std::to_string(result.newNodes.size()) +
-                         " new nodes, " + std::to_string(new_element_count) + " new elements";
+                         " new nodes, " + std::to_string(new_element_count) + " new elements.";
 
     return {
         {"ok", true},

@@ -21,11 +21,16 @@ FunctionPageBase {
     /** @brief Current selection type: "edge" or "node" */
     property string selectionType: "edge"
 
-    /** @brief Current split mode string for the action request */
-    property string splitMode: "auto"
+    /** @brief Quad-targeted split mode bitmask (1, 2, or 4; 0 = auto) */
+    property int quadMode: 4  // default: TriaThreeQuadTwo
 
-    function defaultSplitMode(type) {
-        return type === "node" ? "tria_three" : "auto";
+    /** @brief Triangle-targeted split mode bitmask (8 or 16; 0 = auto) */
+    property int triMode: 8   // default: TriaFour
+
+    /** @brief Combined mode bitmask sent to the action */
+    readonly property int combinedMode: {
+        if (selectionType === "node") return 32;  // TriaThree
+        return quadMode | triMode;
     }
 
     function open(payload) {
@@ -34,7 +39,8 @@ FunctionPageBase {
         root.pageVisible = true;
         root.forceActiveFocus();
         selectionType = "edge";
-        splitMode = defaultSplitMode(selectionType);
+        quadMode = 4;
+        triMode = 8;
         sceneCommand("set_pick_mode", {
             pickMask: typeSelector.maskMeshEdge,
             enabled: true
@@ -69,7 +75,7 @@ FunctionPageBase {
             "param": {
                 "shapeId": SelectionService.selections[0].shapeId,
                 "selections": selections,
-                "mode": root.splitMode
+                "mode": root.combinedMode
             }
         };
 
@@ -157,17 +163,17 @@ FunctionPageBase {
                         pickMask: modelData.pickMask,
                         enabled: true
                     });
-                    root.splitMode = root.defaultSplitMode(modelData.value);
                 }
             }
         }
     }
 
-    // ── Split Mode Selector ────────────────────────────────────────────
+    // ── Quad Split Mode (radio group 1) ──────────────────────────────────
     Text {
-        text: qsTr("Split Mode")
+        text: qsTr("Quad Mode")
         color: root.theme.textSecondary
         font.pixelSize: 12
+        visible: root.selectionType === "edge"
     }
 
     Flow {
@@ -177,44 +183,37 @@ FunctionPageBase {
 
         Repeater {
             model: [
-                { label: qsTr("Auto"), value: "auto" },
-                { label: qsTr("4△"), value: "tria_four" },
-                { label: qsTr("3□"), value: "quad_three" },
-                { label: qsTr("3□+1△"), value: "tria_one_quad_three" },
-                { label: qsTr("2□+1△"), value: "tria_one_quad_two" },
-                { label: qsTr("2□+3△"), value: "tria_three_quad_two" }
+                { label: qsTr("3□+1△"), value: 1 },
+                { label: qsTr("2□+1△"), value: 2 },
+                { label: qsTr("2□+3△"), value: 4 }
             ]
 
             delegate: AbstractButton {
-                id: edgeModeBtn
+                id: quadModeBtn
 
                 required property var modelData
                 required property int index
 
-                readonly property bool selected: root.splitMode === modelData.value
+                readonly property bool selected: root.quadMode === modelData.value
 
                 width: 64
                 height: 32
                 hoverEnabled: true
 
-                ToolTip.visible: hovered
-                ToolTip.text: modelData.value
-                ToolTip.delay: 500
-
                 background: Rectangle {
                     radius: root.theme.radiusSmall
-                    color: edgeModeBtn.selected
+                    color: quadModeBtn.selected
                         ? root.theme.tint(root.theme.accentB,
                             root.theme.darkMode ? 0.24 : 0.14)
-                        : edgeModeBtn.pressed
+                        : quadModeBtn.pressed
                             ? root.theme.surfaceStrong
-                            : edgeModeBtn.hovered
+                            : quadModeBtn.hovered
                                 ? root.theme.surfaceMuted
                                 : root.theme.surface
-                    border.width: edgeModeBtn.selected ? 1.5 : 1
-                    border.color: edgeModeBtn.selected
+                    border.width: quadModeBtn.selected ? 1.5 : 1
+                    border.color: quadModeBtn.selected
                         ? root.theme.accentB
-                        : edgeModeBtn.hovered
+                        : quadModeBtn.hovered
                             ? root.theme.tint(root.theme.accentB,
                                 root.theme.darkMode ? 0.4 : 0.3)
                             : root.theme.borderSubtle
@@ -225,10 +224,10 @@ FunctionPageBase {
                 }
 
                 contentItem: Text {
-                    text: edgeModeBtn.modelData.label
+                    text: quadModeBtn.modelData.label
                     font.pixelSize: 11
-                    font.bold: edgeModeBtn.selected
-                    color: edgeModeBtn.selected
+                    font.bold: quadModeBtn.selected
+                    color: quadModeBtn.selected
                         ? root.theme.accentB
                         : root.theme.textSecondary
                     horizontalAlignment: Text.AlignHCenter
@@ -236,10 +235,90 @@ FunctionPageBase {
                 }
 
                 onClicked: {
-                    root.splitMode = modelData.value;
+                    root.quadMode = modelData.value;
                 }
             }
         }
+    }
+
+    // ── Triangle Split Mode (radio group 2) ────────────────────────────
+    Text {
+        text: qsTr("Triangle Mode")
+        color: root.theme.textSecondary
+        font.pixelSize: 12
+        visible: root.selectionType === "edge"
+    }
+
+    Flow {
+        width: parent.width
+        spacing: 4
+        visible: root.selectionType === "edge"
+
+        Repeater {
+            model: [
+                { label: qsTr("4△"), value: 8 },
+                { label: qsTr("3□"), value: 16 }
+            ]
+
+            delegate: AbstractButton {
+                id: triModeBtn
+
+                required property var modelData
+                required property int index
+
+                readonly property bool selected: root.triMode === modelData.value
+
+                width: 64
+                height: 32
+                hoverEnabled: true
+
+                background: Rectangle {
+                    radius: root.theme.radiusSmall
+                    color: triModeBtn.selected
+                        ? root.theme.tint(root.theme.accentB,
+                            root.theme.darkMode ? 0.24 : 0.14)
+                        : triModeBtn.pressed
+                            ? root.theme.surfaceStrong
+                            : triModeBtn.hovered
+                                ? root.theme.surfaceMuted
+                                : root.theme.surface
+                    border.width: triModeBtn.selected ? 1.5 : 1
+                    border.color: triModeBtn.selected
+                        ? root.theme.accentB
+                        : triModeBtn.hovered
+                            ? root.theme.tint(root.theme.accentB,
+                                root.theme.darkMode ? 0.4 : 0.3)
+                            : root.theme.borderSubtle
+
+                    Behavior on color {
+                        ColorAnimation { duration: root.theme.animFast }
+                    }
+                }
+
+                contentItem: Text {
+                    text: triModeBtn.modelData.label
+                    font.pixelSize: 11
+                    font.bold: triModeBtn.selected
+                    color: triModeBtn.selected
+                        ? root.theme.accentB
+                        : root.theme.textSecondary
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+
+                onClicked: {
+                    root.triMode = modelData.value;
+                }
+            }
+        }
+    }
+
+    // ── Node Split Mode ───────────────────────────────────────────────
+    Text {
+        text: qsTr("Node Mode")
+        color: root.theme.textSecondary
+        font.pixelSize: 12
+        visible: root.selectionType === "node"
     }
 
     Flow {
@@ -249,7 +328,7 @@ FunctionPageBase {
 
         Repeater {
             model: [
-                { label: qsTr("3△"), value: "tria_three" }
+                { label: qsTr("3△"), value: 32 }
             ]
 
             delegate: AbstractButton {
@@ -258,7 +337,7 @@ FunctionPageBase {
                 required property var modelData
                 required property int index
 
-                readonly property bool selected: root.splitMode === modelData.value
+                readonly property bool selected: true
 
                 width: 64
                 height: 32
@@ -266,40 +345,19 @@ FunctionPageBase {
 
                 background: Rectangle {
                     radius: root.theme.radiusSmall
-                    color: nodeModeBtn.selected
-                        ? root.theme.tint(root.theme.accentB,
-                            root.theme.darkMode ? 0.24 : 0.14)
-                        : nodeModeBtn.pressed
-                            ? root.theme.surfaceStrong
-                            : nodeModeBtn.hovered
-                                ? root.theme.surfaceMuted
-                                : root.theme.surface
-                    border.width: nodeModeBtn.selected ? 1.5 : 1
-                    border.color: nodeModeBtn.selected
-                        ? root.theme.accentB
-                        : nodeModeBtn.hovered
-                            ? root.theme.tint(root.theme.accentB,
-                                root.theme.darkMode ? 0.4 : 0.3)
-                            : root.theme.borderSubtle
-
-                    Behavior on color {
-                        ColorAnimation { duration: root.theme.animFast }
-                    }
+                    color: root.theme.tint(root.theme.accentB,
+                        root.theme.darkMode ? 0.24 : 0.14)
+                    border.width: 1.5
+                    border.color: root.theme.accentB
                 }
 
                 contentItem: Text {
                     text: nodeModeBtn.modelData.label
                     font.pixelSize: 11
-                    font.bold: nodeModeBtn.selected
-                    color: nodeModeBtn.selected
-                        ? root.theme.accentB
-                        : root.theme.textSecondary
+                    font.bold: true
+                    color: root.theme.accentB
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
-                }
-
-                onClicked: {
-                    root.splitMode = modelData.value;
                 }
             }
         }

@@ -511,3 +511,305 @@ TEST_CASE("MeshSplitAlgorithm: TriaThree applySplitResult integrity") {
         }
     }
 }
+
+// ── Quad 3-edge: exact vertex verification ────────────────────────────
+
+/// Helper: extract nodeLocalIds as a vector for easier comparison
+static std::vector<uint32_t> nodeIds(const MeshElement& element) {
+    const auto count = OpenGeoLab::Mesh::nodeCount(element.type);
+    return {element.nodeLocalIds.begin(), element.nodeLocalIds.begin() + count};
+}
+
+/// Helper: create a 2x2 grid of quads (9 nodes, 4 quads)
+/// Layout (node localIds, 1-based):
+///   7---8---9
+///   |   |   |
+///   4---5---6
+///   |   |   |
+///   1---2---3
+static MeshEntry makeQuadGrid2x2() {
+    MeshEntry entry;
+    entry.shapeId = 1;
+    entry.nodes = {
+        MeshNode{{0.0F, 0.0F, 0.0F}}, // 1
+        MeshNode{{1.0F, 0.0F, 0.0F}}, // 2
+        MeshNode{{2.0F, 0.0F, 0.0F}}, // 3
+        MeshNode{{0.0F, 1.0F, 0.0F}}, // 4
+        MeshNode{{1.0F, 1.0F, 0.0F}}, // 5
+        MeshNode{{2.0F, 1.0F, 0.0F}}, // 6
+        MeshNode{{0.0F, 2.0F, 0.0F}}, // 7
+        MeshNode{{1.0F, 2.0F, 0.0F}}, // 8
+        MeshNode{{2.0F, 2.0F, 0.0F}}, // 9
+    };
+
+    // Quads: bottom-left, bottom-right, top-left, top-right
+    MeshElement q0{};
+    q0.type = MeshElementType::Quad;
+    q0.nodeLocalIds = {1, 2, 5, 4, 0, 0, 0, 0};
+
+    MeshElement q1{};
+    q1.type = MeshElementType::Quad;
+    q1.nodeLocalIds = {2, 3, 6, 5, 0, 0, 0, 0};
+
+    MeshElement q2{};
+    q2.type = MeshElementType::Quad;
+    q2.nodeLocalIds = {4, 5, 8, 7, 0, 0, 0, 0};
+
+    MeshElement q3{};
+    q3.type = MeshElementType::Quad;
+    q3.nodeLocalIds = {5, 6, 9, 8, 0, 0, 0, 0};
+
+    entry.elements = {q0, q1, q2, q3};
+    return entry;
+}
+
+TEST_CASE("MeshSplitAlgorithm: quad 3-edge bitmask combined mode extraction") {
+    const auto entry = makeSingleQuad();
+    const auto topo = MeshTopology::build(entry);
+    const MeshSplitAlgorithm algo;
+
+    const auto edge12 = topo.findEdgeIndex(1, 2);
+    const auto edge23 = topo.findEdgeIndex(2, 3);
+    const auto edge34 = topo.findEdgeIndex(3, 4);
+    REQUIRE(edge12.has_value());
+    REQUIRE(edge23.has_value());
+    REQUIRE(edge34.has_value());
+
+    const std::vector<uint32_t> edges = {edge12.value() + 1U, edge23.value() + 1U,
+                                         edge34.value() + 1U};
+
+    SUBCASE("combined mode 9 (TriaOneQuadThree=1 | TriaFour=8) -> 3Q+1T") {
+        const auto result = algo.compute(entry, topo, edges, {}, static_cast<SplitMode>(9));
+
+        CHECK(result.replacements.size() == 1);
+        REQUIRE(result.replacements[0].newElements.size() == 4);
+
+        uint32_t tri_count = 0;
+        uint32_t quad_count = 0;
+        for(const auto& elem : result.replacements[0].newElements) {
+            if(elem.type == MeshElementType::Triangle)
+                ++tri_count;
+            if(elem.type == MeshElementType::Quad)
+                ++quad_count;
+        }
+        CHECK(tri_count == 1);
+        CHECK(quad_count == 3);
+    }
+
+    SUBCASE("combined mode 10 (TriaOneQuadTwo=2 | TriaFour=8) -> 2Q+1T") {
+        const auto result = algo.compute(entry, topo, edges, {}, static_cast<SplitMode>(10));
+
+        CHECK(result.replacements.size() == 1);
+        REQUIRE(result.replacements[0].newElements.size() == 3);
+
+        uint32_t tri_count = 0;
+        uint32_t quad_count = 0;
+        for(const auto& elem : result.replacements[0].newElements) {
+            if(elem.type == MeshElementType::Triangle)
+                ++tri_count;
+            if(elem.type == MeshElementType::Quad)
+                ++quad_count;
+        }
+        CHECK(tri_count == 1);
+        CHECK(quad_count == 2);
+    }
+
+    SUBCASE("combined mode 12 (TriaThreeQuadTwo=4 | TriaFour=8) -> 2Q+3T") {
+        const auto result = algo.compute(entry, topo, edges, {}, static_cast<SplitMode>(12));
+
+        CHECK(result.replacements.size() == 1);
+        REQUIRE(result.replacements[0].newElements.size() == 5);
+
+        uint32_t tri_count = 0;
+        uint32_t quad_count = 0;
+        for(const auto& elem : result.replacements[0].newElements) {
+            if(elem.type == MeshElementType::Triangle)
+                ++tri_count;
+            if(elem.type == MeshElementType::Quad)
+                ++quad_count;
+        }
+        CHECK(tri_count == 3);
+        CHECK(quad_count == 2);
+    }
+}
+
+TEST_CASE("MeshSplitAlgorithm: quad 3-edge exact vertex positions") {
+    // Quad: n1(0,0) n2(2,0) n3(2,2) n4(0,2), edges 1-2, 2-3, 3-4 selected
+    // unsel=3 (side 4→1)
+    // Corners: ca=n1(0,0) cb=n2(2,0) cc=n3(2,2) cd=n4(0,2)
+    // Midpoints: mid_ab=(1,0) mid_bc=(2,1) mid_cd=(1,2)
+    // Center: (1,1)
+    const auto entry = makeSingleQuad();
+    const auto topo = MeshTopology::build(entry);
+    const MeshSplitAlgorithm algo;
+
+    const auto edge12 = topo.findEdgeIndex(1, 2);
+    const auto edge23 = topo.findEdgeIndex(2, 3);
+    const auto edge34 = topo.findEdgeIndex(3, 4);
+    REQUIRE(edge12.has_value());
+    REQUIRE(edge23.has_value());
+    REQUIRE(edge34.has_value());
+
+    const std::vector<uint32_t> edges = {edge12.value() + 1U, edge23.value() + 1U,
+                                         edge34.value() + 1U};
+
+    SUBCASE("TriaOneQuadThree exact vertices") {
+        const auto result = algo.compute(entry, topo, edges, {}, SplitMode::TriaOneQuadThree);
+
+        // New nodes: mid_ab(1,0)=5 mid_bc(2,1)=6 mid_cd(1,2)=7 center(1,1)=8
+        REQUIRE(result.newNodes.size() == 4);
+        CHECK(result.newNodes[0].x == doctest::Approx(1.0));
+        CHECK(result.newNodes[0].y == doctest::Approx(0.0));
+        CHECK(result.newNodes[1].x == doctest::Approx(2.0));
+        CHECK(result.newNodes[1].y == doctest::Approx(1.0));
+        CHECK(result.newNodes[2].x == doctest::Approx(1.0));
+        CHECK(result.newNodes[2].y == doctest::Approx(2.0));
+        CHECK(result.newNodes[3].x == doctest::Approx(1.0));
+        CHECK(result.newNodes[3].y == doctest::Approx(1.0));
+
+        REQUIRE(result.replacements.size() == 1);
+        const auto& elems = result.replacements[0].newElements;
+        REQUIRE(elems.size() == 4);
+
+        // Q1: mid_ab(5), cb(2), mid_bc(6), center(8)
+        CHECK(elems[0].type == MeshElementType::Quad);
+        CHECK(nodeIds(elems[0]) == std::vector<uint32_t>{5, 2, 6, 8});
+
+        // Q2: mid_bc(6), cc(3), mid_cd(7), center(8)
+        CHECK(elems[1].type == MeshElementType::Quad);
+        CHECK(nodeIds(elems[1]) == std::vector<uint32_t>{6, 3, 7, 8});
+
+        // Q3: mid_cd(7), cd(4), ca(1), center(8)
+        CHECK(elems[2].type == MeshElementType::Quad);
+        CHECK(nodeIds(elems[2]) == std::vector<uint32_t>{7, 4, 1, 8});
+
+        // T1: ca(1), mid_ab(5), center(8)
+        CHECK(elems[3].type == MeshElementType::Triangle);
+        CHECK(nodeIds(elems[3]) == std::vector<uint32_t>{1, 5, 8});
+    }
+
+    SUBCASE("TriaOneQuadTwo exact vertices") {
+        const auto result = algo.compute(entry, topo, edges, {}, SplitMode::TriaOneQuadTwo);
+
+        // New nodes: mid_ab(1,0)=5 mid_bc(2,1)=6 mid_cd(1,2)=7 (no center)
+        REQUIRE(result.newNodes.size() == 3);
+
+        REQUIRE(result.replacements.size() == 1);
+        const auto& elems = result.replacements[0].newElements;
+        REQUIRE(elems.size() == 3);
+
+        // Q1: mid_ab(5), cb(2), mid_bc(6), mid_cd(7)
+        CHECK(elems[0].type == MeshElementType::Quad);
+        CHECK(nodeIds(elems[0]) == std::vector<uint32_t>{5, 2, 6, 7});
+
+        // T1: mid_bc(6), cc(3), mid_cd(7)
+        CHECK(elems[1].type == MeshElementType::Triangle);
+        CHECK(nodeIds(elems[1]) == std::vector<uint32_t>{6, 3, 7});
+
+        // Q2: mid_ab(5), mid_cd(7), cd(4), ca(1)
+        CHECK(elems[2].type == MeshElementType::Quad);
+        CHECK(nodeIds(elems[2]) == std::vector<uint32_t>{5, 7, 4, 1});
+    }
+
+    SUBCASE("TriaThreeQuadTwo exact vertices") {
+        const auto result = algo.compute(entry, topo, edges, {}, SplitMode::TriaThreeQuadTwo);
+
+        // New nodes: mid_ab=5 mid_bc=6 mid_cd=7 center=8
+        REQUIRE(result.newNodes.size() == 4);
+
+        REQUIRE(result.replacements.size() == 1);
+        const auto& elems = result.replacements[0].newElements;
+        REQUIRE(elems.size() == 5);
+
+        // Q1: mid_ab(5), cb(2), mid_bc(6), center(8)
+        CHECK(elems[0].type == MeshElementType::Quad);
+        CHECK(nodeIds(elems[0]) == std::vector<uint32_t>{5, 2, 6, 8});
+
+        // Q2: mid_bc(6), cc(3), mid_cd(7), center(8)
+        CHECK(elems[1].type == MeshElementType::Quad);
+        CHECK(nodeIds(elems[1]) == std::vector<uint32_t>{6, 3, 7, 8});
+
+        // T1: mid_cd(7), cd(4), center(8)
+        CHECK(elems[2].type == MeshElementType::Triangle);
+        CHECK(nodeIds(elems[2]) == std::vector<uint32_t>{7, 4, 8});
+
+        // T2: cd(4), ca(1), center(8)
+        CHECK(elems[3].type == MeshElementType::Triangle);
+        CHECK(nodeIds(elems[3]) == std::vector<uint32_t>{4, 1, 8});
+
+        // T3: ca(1), mid_ab(5), center(8)
+        CHECK(elems[4].type == MeshElementType::Triangle);
+        CHECK(nodeIds(elems[4]) == std::vector<uint32_t>{1, 5, 8});
+    }
+}
+
+TEST_CASE("MeshSplitAlgorithm: quad 3-edge in 2x2 grid with neighbor cuts") {
+    // Select 3 edges of bottom-left quad (elem 0): sides 0(1-2), 1(2-5), 2(5-4)
+    // This leaves side 3(4-1) unselected
+    // Neighbors: elem 1 (shares edge 2-5), elem 2 (shares edge 4-5)
+    // Note: edge 1-2 is boundary (no neighbor beyond bottom)
+    const auto entry = makeQuadGrid2x2();
+    const auto topo = MeshTopology::build(entry);
+    const MeshSplitAlgorithm algo;
+
+    const auto e12 = topo.findEdgeIndex(1, 2);
+    const auto e25 = topo.findEdgeIndex(2, 5);
+    const auto e45 = topo.findEdgeIndex(4, 5);
+    REQUIRE(e12.has_value());
+    REQUIRE(e25.has_value());
+    REQUIRE(e45.has_value());
+
+    const std::vector<uint32_t> edges = {e12.value() + 1U, e25.value() + 1U, e45.value() + 1U};
+
+    SUBCASE("TriaOneQuadThree grid: correct element+neighbor counts") {
+        const auto result = algo.compute(entry, topo, edges, {}, SplitMode::TriaOneQuadThree);
+
+        // Should have: 1 replacement for selected quad + up to 2 neighbor cuts
+        // (edge 1-2 has no other neighbor since it's boundary of elem0 only)
+        // Neighbor of edge 2-5: elem 1 (bottom-right quad)
+        // Neighbor of edge 4-5: elem 2 (top-left quad)
+        // Edge 1-2: neighbors are [elem0] only in bottom-left quad, no other neighbor
+        uint32_t selected_replacements = 0;
+        uint32_t neighbor_replacements = 0;
+        for(const auto& rep : result.replacements) {
+            if(rep.originalIndex == 0) {
+                ++selected_replacements;
+            } else {
+                ++neighbor_replacements;
+            }
+        }
+        CHECK(selected_replacements == 1);
+        CHECK(neighbor_replacements == 2); // elem 1 and elem 2
+
+        // Verify all generated elements have valid node IDs
+        applySplitResult(const_cast<MeshEntry&>(entry), result);
+        // After split: original 9 nodes + new midpoints + centroid
+        for(const auto& element : entry.elements) {
+            for(uint8_t i = 0; i < OpenGeoLab::Mesh::nodeCount(element.type); ++i) {
+                CHECK(element.nodeLocalIds[i] >= 1);
+                CHECK(element.nodeLocalIds[i] <= entry.nodes.size());
+            }
+        }
+    }
+
+    SUBCASE("TriaOneQuadThree grid: applySplitResult positions valid") {
+        auto mutable_entry = entry;
+        const auto result = algo.compute(entry, topo, edges, {}, SplitMode::TriaOneQuadThree);
+        applySplitResult(mutable_entry, result);
+
+        // All node references should point to valid positions
+        for(const auto& element : mutable_entry.elements) {
+            for(uint8_t i = 0; i < OpenGeoLab::Mesh::nodeCount(element.type); ++i) {
+                const auto lid = element.nodeLocalIds[i];
+                REQUIRE(lid >= 1);
+                REQUIRE(lid <= mutable_entry.nodes.size());
+                // Verify position is finite
+                const auto& pos = mutable_entry.nodes[lid - 1].position;
+                CHECK(pos[0] >= 0.0F);
+                CHECK(pos[0] <= 2.0F);
+                CHECK(pos[1] >= 0.0F);
+                CHECK(pos[1] <= 2.0F);
+            }
+        }
+    }
+}

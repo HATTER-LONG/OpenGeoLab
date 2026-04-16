@@ -103,6 +103,7 @@ qt_add_qml_module(
     resource/qml/components/pages/MeshGeneratePage.qml
     resource/qml/components/pages/MeshQueryPage.qml
     resource/qml/components/pages/DeleteEntityPage.qml
+    resource/qml/components/pages/MeshSplitPage.qml
     RESOURCES
     resource/icons/menu.svg
     resource/icons/box.svg
