@@ -214,9 +214,12 @@ nlohmann::json SplitMeshAction::execute(const nlohmann::json& param,
     const auto topology = *topology_ptr;
 
     for(const auto& element : entry.elements) {
-        if(element.type != MeshElementType::Triangle && element.type != MeshElementType::Quad) {
-            return makeFailure("Mesh split is not supported for second-order elements. "
-                               "Convert to linear elements first.");
+        if(element.type != MeshElementType::Triangle && element.type != MeshElementType::Quad &&
+           element.type != MeshElementType::Tri6 && element.type != MeshElementType::Quad8) {
+            const auto* message = element.type == MeshElementType::Quad9
+                                      ? "Quad9 element splitting is not supported."
+                                      : "Mesh split is not supported for this element type.";
+            return makeFailure(message);
         }
     }
 
