@@ -10,6 +10,7 @@
 #include "action/generate_mesh_action.hpp"
 #endif
 #include "action/query_mesh_info_action.hpp"
+#include "action/split_mesh_action.hpp"
 #include "mesh_scene_bridge.hpp"
 
 #include <opengeolab/core/logger.hpp>
@@ -22,6 +23,7 @@ MeshModule::MeshModule(Kangaroo::Util::PluginComponentFactory& factory)
     : Core::ModuleBase("mesh", "Mesh generation, query and management", factory) {
     registerAction<ClearMeshAction>(std::ref(m_meshStore));
     registerAction<QueryMeshInfoAction>(std::cref(m_meshStore));
+    registerAction<SplitMeshAction>(std::ref(m_meshStore));
 }
 
 MeshModule::~MeshModule() = default;

@@ -15,11 +15,12 @@ set(mesh_public_headers
     include/opengeolab/mesh/mesh_module.hpp)
 
 set(mesh_sources src/mesh_store.cpp src/mesh_module.cpp
-                  src/mesh_scene_bridge.cpp src/mesh_render_builder.cpp
-                  src/mesh_topology.cpp
-                  src/mesh_split_algorithm.cpp
-                  src/action/clear_mesh_action.cpp
-                  src/action/query_mesh_info_action.cpp)
+                   src/mesh_scene_bridge.cpp src/mesh_render_builder.cpp
+                   src/mesh_topology.cpp
+                   src/mesh_split_algorithm.cpp
+                   src/action/clear_mesh_action.cpp
+                   src/action/split_mesh_action.cpp
+                   src/action/query_mesh_info_action.cpp)
 
 set(mesh_private_links "")
 
@@ -57,6 +58,7 @@ if(OPENGEOLAB_BUILD_TESTS)
         test/mesh_render_builder_test.cpp
         test/mesh_topology_test.cpp
         test/mesh_split_algorithm_test.cpp
+        test/split_mesh_action_test.cpp
         LINKS
         OpenGeoLab::Mesh)
     target_include_directories(opengeolab_mesh_test

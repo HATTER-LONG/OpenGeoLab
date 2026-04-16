@@ -240,7 +240,7 @@ TEST_CASE("MeshModule registers mesh actions and generate_mesh after bridge init
     OpenGeoLab::Mesh::MeshModule module(factory);
     auto desc = module.describe();
     REQUIRE(desc["actions"].is_array());
-    CHECK(desc["actions"].size() == 2);
+    CHECK(desc["actions"].size() == 3);
 
     OpenGeoLab::Scene::SceneGraph scene;
     OpenGeoLab::Geometry::ShapeStore shape_store;
@@ -248,9 +248,9 @@ TEST_CASE("MeshModule registers mesh actions and generate_mesh after bridge init
 
     desc = module.describe();
 #ifdef OPENGEOLAB_USE_GMSH
-    CHECK(desc["actions"].size() == 3);
+    CHECK(desc["actions"].size() == 4);
 #else
-    CHECK(desc["actions"].size() == 2);
+    CHECK(desc["actions"].size() == 3);
 #endif
 }
 
