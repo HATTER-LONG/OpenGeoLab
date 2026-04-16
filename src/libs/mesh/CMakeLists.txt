@@ -7,6 +7,8 @@ set(mesh_public_headers
     include/opengeolab/mesh/mesh_node.hpp
     include/opengeolab/mesh/mesh_element.hpp
     include/opengeolab/mesh/mesh_entry.hpp
+    include/opengeolab/mesh/split_mode.hpp
+    include/opengeolab/mesh/split_result.hpp
     include/opengeolab/mesh/mesh_store.hpp
     include/opengeolab/mesh/mesh_module.hpp)
 
