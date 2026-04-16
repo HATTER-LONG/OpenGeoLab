@@ -213,6 +213,13 @@ nlohmann::json SplitMeshAction::execute(const nlohmann::json& param,
     const auto entry = *entry_ptr;
     const auto topology = *topology_ptr;
 
+    for(const auto& element : entry.elements) {
+        if(element.type != MeshElementType::Triangle && element.type != MeshElementType::Quad) {
+            return makeFailure("Mesh split is not supported for second-order elements. "
+                               "Convert to linear elements first.");
+        }
+    }
+
     const MeshSplitAlgorithm algorithm;
     const auto result = algorithm.compute(entry, topology, selected_edges, selected_nodes, mode);
 

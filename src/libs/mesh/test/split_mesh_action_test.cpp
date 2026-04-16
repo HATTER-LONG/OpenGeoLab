@@ -141,3 +141,24 @@ TEST_CASE("SplitMeshAction: successful node split TriaThree") {
     CHECK(entry->elements.size() == 3);
     CHECK(entry->nodes.size() == 4);
 }
+
+TEST_CASE("SplitMeshAction: rejects second-order elements") {
+    MeshStore store;
+    MeshEntry entry;
+    entry.shapeId = 99;
+    entry.nodes = {
+        MeshNode{{0.0F, 0.0F, 0.0F}}, MeshNode{{2.0F, 0.0F, 0.0F}}, MeshNode{{1.0F, 2.0F, 0.0F}},
+        MeshNode{{1.0F, 0.0F, 0.0F}}, MeshNode{{1.5F, 1.0F, 0.0F}}, MeshNode{{0.5F, 1.0F, 0.0F}},
+    };
+    MeshElement tri6{};
+    tri6.type = MeshElementType::Tri6;
+    tri6.nodeLocalIds = {1, 2, 3, 4, 5, 6, 0, 0, 0};
+    entry.elements = {tri6};
+    store.setMesh(99, std::move(entry));
+
+    SplitMeshAction action(store);
+    const auto result = action.execute(
+        {{"shapeId", 99}, {"selections", {{{"type", "edge"}, {"localId", 1}}}}}, nullptr);
+    CHECK(result["ok"].get<bool>() == false);
+    CHECK(result["summary"].get<std::string>().find("second-order") != std::string::npos);
+}
