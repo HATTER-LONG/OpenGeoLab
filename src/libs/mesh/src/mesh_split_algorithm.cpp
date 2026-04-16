@@ -225,10 +225,143 @@ void MeshSplitAlgorithm::processQuadEdges(SplitContext& ctx,
                                           uint32_t elem_index,
                                           const std::vector<uint32_t>& edge_indices,
                                           SplitMode mode) const {
-    static_cast<void>(ctx);
-    static_cast<void>(elem_index);
-    static_cast<void>(edge_indices);
-    static_cast<void>(mode);
+    const auto& element = ctx.entry.elements[elem_index];
+    const uint32_t n1 = element.nodeLocalIds[0];
+    const uint32_t n2 = element.nodeLocalIds[1];
+    const uint32_t n3 = element.nodeLocalIds[2];
+    const uint32_t n4 = element.nodeLocalIds[3];
+
+    SplitResult::ElementReplacement replacement;
+    replacement.originalIndex = elem_index;
+
+    std::array<std::optional<uint32_t>, 4> side_edge_idx;
+    side_edge_idx[0] = ctx.topology.findEdgeIndex(n1, n2);
+    side_edge_idx[1] = ctx.topology.findEdgeIndex(n2, n3);
+    side_edge_idx[2] = ctx.topology.findEdgeIndex(n3, n4);
+    side_edge_idx[3] = ctx.topology.findEdgeIndex(n4, n1);
+
+    std::array<bool, 4> side_selected{false, false, false, false};
+    uint32_t selected_count = 0;
+    for(uint8_t side = 0; side < 4; ++side) {
+        if(side_edge_idx[side].has_value()) {
+            for(const auto edge_index : edge_indices) {
+                if(edge_index == side_edge_idx[side].value()) {
+                    side_selected[side] = true;
+                    ++selected_count;
+                    break;
+                }
+            }
+        }
+    }
+
+    const std::array<uint32_t, 4> corners = {n1, n2, n3, n4};
+
+    if(selected_count == 1) {
+        uint8_t sel_side = 0;
+        for(uint8_t side = 0; side < 4; ++side) {
+            if(side_selected[side]) {
+                sel_side = side;
+                break;
+            }
+        }
+        const uint32_t mid = getOrCreateMidpoint(ctx, side_edge_idx[sel_side].value());
+        const uint32_t ca = corners[sel_side];
+        const uint32_t cb = corners[(sel_side + 1) % 4];
+        const uint32_t cc = corners[(sel_side + 2) % 4];
+        const uint32_t cd = corners[(sel_side + 3) % 4];
+
+        replacement.newElements.push_back(makeTriangle(ca, mid, cd));
+        replacement.newElements.push_back(makeQuad(mid, cb, cc, cd));
+    } else if(selected_count == 2) {
+        uint8_t s0 = 255;
+        uint8_t s1 = 255;
+        for(uint8_t side = 0; side < 4; ++side) {
+            if(side_selected[side]) {
+                if(s0 == 255) {
+                    s0 = side;
+                } else {
+                    s1 = side;
+                }
+            }
+        }
+        const bool adjacent = ((s1 - s0) == 1) || ((s0 == 0) && (s1 == 3));
+
+        if(!adjacent) {
+            const uint32_t mid0 = getOrCreateMidpoint(ctx, side_edge_idx[s0].value());
+            const uint32_t mid1 = getOrCreateMidpoint(ctx, side_edge_idx[s1].value());
+            const uint32_t ca = corners[s0];
+            const uint32_t cb = corners[(s0 + 1) % 4];
+            const uint32_t cc = corners[(s0 + 2) % 4];
+            const uint32_t cd = corners[(s0 + 3) % 4];
+
+            replacement.newElements.push_back(makeQuad(ca, mid0, mid1, cd));
+            replacement.newElements.push_back(makeQuad(mid0, cb, cc, mid1));
+        } else {
+            if((s0 == 0) && (s1 == 3)) {
+                std::swap(s0, s1);
+            }
+            const uint32_t shared = corners[(s0 + 1) % 4];
+            const uint32_t mid0 = getOrCreateMidpoint(ctx, side_edge_idx[s0].value());
+            const uint32_t mid1 = getOrCreateMidpoint(ctx, side_edge_idx[s1].value());
+
+            const uint32_t ca = corners[s0];
+            const uint32_t cc = corners[(s0 + 2) % 4];
+            const uint32_t cd = corners[(s0 + 3) % 4];
+
+            replacement.newElements.push_back(makeTriangle(mid0, shared, mid1));
+            replacement.newElements.push_back(makeTriangle(ca, mid0, cd));
+            replacement.newElements.push_back(makeQuad(mid0, mid1, cc, cd));
+        }
+    } else if(selected_count == 3) {
+        uint8_t unsel = 0;
+        for(uint8_t side = 0; side < 4; ++side) {
+            if(!side_selected[side]) {
+                unsel = side;
+                break;
+            }
+        }
+
+        const uint32_t ca = corners[(unsel + 1) % 4];
+        const uint32_t cb = corners[(unsel + 2) % 4];
+        const uint32_t cc = corners[(unsel + 3) % 4];
+        const uint32_t cd = corners[unsel];
+
+        const uint32_t mid_ab = getOrCreateMidpoint(ctx, side_edge_idx[(unsel + 1) % 4].value());
+        const uint32_t mid_bc = getOrCreateMidpoint(ctx, side_edge_idx[(unsel + 2) % 4].value());
+        const uint32_t mid_cd = getOrCreateMidpoint(ctx, side_edge_idx[(unsel + 3) % 4].value());
+
+        if(mode == SplitMode::TriaOneQuadThree) {
+            const uint32_t center = createCentroid(ctx, elem_index);
+            replacement.newElements.push_back(makeQuad(ca, mid_ab, center, cd));
+            replacement.newElements.push_back(makeQuad(mid_ab, cb, mid_bc, center));
+            replacement.newElements.push_back(makeQuad(center, mid_bc, cc, mid_cd));
+            replacement.newElements.push_back(makeTriangle(cd, center, mid_cd));
+        } else if(mode == SplitMode::TriaOneQuadTwo) {
+            replacement.newElements.push_back(makeQuad(ca, mid_ab, mid_cd, cd));
+            replacement.newElements.push_back(makeTriangle(mid_ab, cb, mid_bc));
+            replacement.newElements.push_back(makeQuad(mid_ab, mid_bc, cc, mid_cd));
+        } else {
+            const uint32_t center = createCentroid(ctx, elem_index);
+            replacement.newElements.push_back(makeQuad(ca, mid_ab, center, cd));
+            replacement.newElements.push_back(makeTriangle(mid_ab, cb, center));
+            replacement.newElements.push_back(makeTriangle(cb, mid_bc, center));
+            replacement.newElements.push_back(makeQuad(center, mid_bc, cc, mid_cd));
+            replacement.newElements.push_back(makeTriangle(cd, center, mid_cd));
+        }
+    } else if(selected_count == 4) {
+        const uint32_t mid01 = getOrCreateMidpoint(ctx, side_edge_idx[0].value());
+        const uint32_t mid12 = getOrCreateMidpoint(ctx, side_edge_idx[1].value());
+        const uint32_t mid23 = getOrCreateMidpoint(ctx, side_edge_idx[2].value());
+        const uint32_t mid30 = getOrCreateMidpoint(ctx, side_edge_idx[3].value());
+        const uint32_t center = createCentroid(ctx, elem_index);
+
+        replacement.newElements.push_back(makeQuad(n1, mid01, center, mid30));
+        replacement.newElements.push_back(makeQuad(mid01, n2, mid12, center));
+        replacement.newElements.push_back(makeQuad(center, mid12, n3, mid23));
+        replacement.newElements.push_back(makeQuad(mid30, center, mid23, n4));
+    }
+
+    ctx.result.replacements.push_back(std::move(replacement));
 }
 
 void MeshSplitAlgorithm::processTriangleNodes(SplitContext& ctx, uint32_t elem_index) const {

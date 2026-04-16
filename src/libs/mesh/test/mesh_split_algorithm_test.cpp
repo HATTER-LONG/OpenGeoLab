@@ -60,6 +60,22 @@ static MeshEntry makeTwoTrianglesSharedEdge() {
     return entry;
 }
 
+static MeshEntry makeSingleQuad() {
+    MeshEntry entry;
+    entry.shapeId = 1;
+    entry.nodes = {
+        MeshNode{{0.0F, 0.0F, 0.0F}}, // localId 1
+        MeshNode{{2.0F, 0.0F, 0.0F}}, // localId 2
+        MeshNode{{2.0F, 2.0F, 0.0F}}, // localId 3
+        MeshNode{{0.0F, 2.0F, 0.0F}}, // localId 4
+    };
+    MeshElement quad{};
+    quad.type = MeshElementType::Quad;
+    quad.nodeLocalIds = {1, 2, 3, 4, 0, 0, 0, 0};
+    entry.elements = {quad};
+    return entry;
+}
+
 static void applySplitResult(MeshEntry& entry, const SplitResult& result) {
     for(const auto& new_node : result.newNodes) {
         entry.nodes.push_back(
@@ -237,5 +253,194 @@ TEST_CASE("MeshSplitAlgorithm: applySplitResult preserves mesh integrity") {
             CHECK(element.nodeLocalIds[node_offset] >= 1);
             CHECK(element.nodeLocalIds[node_offset] <= entry.nodes.size());
         }
+    }
+}
+
+TEST_CASE("MeshSplitAlgorithm: quad 1 edge -> 1 quad + 1 triangle") {
+    const auto entry = makeSingleQuad();
+    const auto topo = MeshTopology::build(entry);
+    const MeshSplitAlgorithm algo;
+
+    const auto edge12 = topo.findEdgeIndex(1, 2);
+    REQUIRE(edge12.has_value());
+
+    const auto result =
+        algo.compute(entry, topo, {edge12.value() + 1U}, {}, SplitMode::TriaOneQuadThree);
+
+    CHECK(result.newNodes.size() == 1);
+    CHECK(result.replacements.size() == 1);
+    CHECK(result.replacements[0].newElements.size() == 2);
+
+    uint32_t tri_count = 0;
+    uint32_t quad_count = 0;
+    for(const auto& element : result.replacements[0].newElements) {
+        if(element.type == MeshElementType::Triangle) {
+            ++tri_count;
+        }
+        if(element.type == MeshElementType::Quad) {
+            ++quad_count;
+        }
+    }
+    CHECK(tri_count == 1);
+    CHECK(quad_count == 1);
+}
+
+TEST_CASE("MeshSplitAlgorithm: quad 2 adjacent edges -> 3 elements") {
+    const auto entry = makeSingleQuad();
+    const auto topo = MeshTopology::build(entry);
+    const MeshSplitAlgorithm algo;
+
+    const auto edge12 = topo.findEdgeIndex(1, 2);
+    const auto edge23 = topo.findEdgeIndex(2, 3);
+    REQUIRE(edge12.has_value());
+    REQUIRE(edge23.has_value());
+
+    const auto result = algo.compute(entry, topo, {edge12.value() + 1U, edge23.value() + 1U}, {},
+                                     SplitMode::TriaOneQuadThree);
+
+    CHECK(result.newNodes.size() == 2);
+    CHECK(result.replacements.size() == 1);
+    CHECK(result.replacements[0].newElements.size() == 3);
+}
+
+TEST_CASE("MeshSplitAlgorithm: quad 2 opposite edges -> 2 quads") {
+    const auto entry = makeSingleQuad();
+    const auto topo = MeshTopology::build(entry);
+    const MeshSplitAlgorithm algo;
+
+    const auto edge12 = topo.findEdgeIndex(1, 2);
+    const auto edge34 = topo.findEdgeIndex(3, 4);
+    REQUIRE(edge12.has_value());
+    REQUIRE(edge34.has_value());
+
+    const auto result = algo.compute(entry, topo, {edge12.value() + 1U, edge34.value() + 1U}, {},
+                                     SplitMode::TriaOneQuadThree);
+
+    CHECK(result.newNodes.size() == 2);
+    CHECK(result.replacements.size() == 1);
+    CHECK(result.replacements[0].newElements.size() == 2);
+
+    for(const auto& element : result.replacements[0].newElements) {
+        CHECK(element.type == MeshElementType::Quad);
+    }
+}
+
+TEST_CASE("MeshSplitAlgorithm: quad 3 edges TriaOneQuadThree -> 3 quads + 1 triangle") {
+    const auto entry = makeSingleQuad();
+    const auto topo = MeshTopology::build(entry);
+    const MeshSplitAlgorithm algo;
+
+    const auto edge12 = topo.findEdgeIndex(1, 2);
+    const auto edge23 = topo.findEdgeIndex(2, 3);
+    const auto edge34 = topo.findEdgeIndex(3, 4);
+    REQUIRE(edge12.has_value());
+    REQUIRE(edge23.has_value());
+    REQUIRE(edge34.has_value());
+
+    const auto result =
+        algo.compute(entry, topo, {edge12.value() + 1U, edge23.value() + 1U, edge34.value() + 1U},
+                     {}, SplitMode::TriaOneQuadThree);
+
+    CHECK(result.replacements.size() == 1);
+    CHECK(result.replacements[0].newElements.size() == 4);
+
+    uint32_t tri_count = 0;
+    uint32_t quad_count = 0;
+    for(const auto& element : result.replacements[0].newElements) {
+        if(element.type == MeshElementType::Triangle) {
+            ++tri_count;
+        }
+        if(element.type == MeshElementType::Quad) {
+            ++quad_count;
+        }
+    }
+    CHECK(tri_count == 1);
+    CHECK(quad_count == 3);
+}
+
+TEST_CASE("MeshSplitAlgorithm: quad 3 edges TriaOneQuadTwo -> 2 quads + 1 triangle") {
+    const auto entry = makeSingleQuad();
+    const auto topo = MeshTopology::build(entry);
+    const MeshSplitAlgorithm algo;
+
+    const auto edge12 = topo.findEdgeIndex(1, 2);
+    const auto edge23 = topo.findEdgeIndex(2, 3);
+    const auto edge34 = topo.findEdgeIndex(3, 4);
+    REQUIRE(edge12.has_value());
+    REQUIRE(edge23.has_value());
+    REQUIRE(edge34.has_value());
+
+    const auto result =
+        algo.compute(entry, topo, {edge12.value() + 1U, edge23.value() + 1U, edge34.value() + 1U},
+                     {}, SplitMode::TriaOneQuadTwo);
+
+    CHECK(result.replacements.size() == 1);
+    CHECK(result.replacements[0].newElements.size() == 3);
+
+    uint32_t tri_count = 0;
+    uint32_t quad_count = 0;
+    for(const auto& element : result.replacements[0].newElements) {
+        if(element.type == MeshElementType::Triangle) {
+            ++tri_count;
+        }
+        if(element.type == MeshElementType::Quad) {
+            ++quad_count;
+        }
+    }
+    CHECK(tri_count == 1);
+    CHECK(quad_count == 2);
+}
+
+TEST_CASE("MeshSplitAlgorithm: quad 3 edges TriaThreeQuadTwo -> 2 quads + 3 triangles") {
+    const auto entry = makeSingleQuad();
+    const auto topo = MeshTopology::build(entry);
+    const MeshSplitAlgorithm algo;
+
+    const auto edge12 = topo.findEdgeIndex(1, 2);
+    const auto edge23 = topo.findEdgeIndex(2, 3);
+    const auto edge34 = topo.findEdgeIndex(3, 4);
+    REQUIRE(edge12.has_value());
+    REQUIRE(edge23.has_value());
+    REQUIRE(edge34.has_value());
+
+    const auto result =
+        algo.compute(entry, topo, {edge12.value() + 1U, edge23.value() + 1U, edge34.value() + 1U},
+                     {}, SplitMode::TriaThreeQuadTwo);
+
+    CHECK(result.replacements.size() == 1);
+    CHECK(result.replacements[0].newElements.size() == 5);
+
+    uint32_t tri_count = 0;
+    uint32_t quad_count = 0;
+    for(const auto& element : result.replacements[0].newElements) {
+        if(element.type == MeshElementType::Triangle) {
+            ++tri_count;
+        }
+        if(element.type == MeshElementType::Quad) {
+            ++quad_count;
+        }
+    }
+    CHECK(tri_count == 3);
+    CHECK(quad_count == 2);
+}
+
+TEST_CASE("MeshSplitAlgorithm: quad 4 edges -> 4 quads") {
+    const auto entry = makeSingleQuad();
+    const auto topo = MeshTopology::build(entry);
+    const MeshSplitAlgorithm algo;
+
+    std::vector<uint32_t> all_edges;
+    for(uint32_t edge_index = 0; edge_index < topo.edges.size(); ++edge_index) {
+        all_edges.push_back(edge_index + 1U);
+    }
+
+    const auto result = algo.compute(entry, topo, all_edges, {}, SplitMode::TriaOneQuadThree);
+
+    CHECK(result.newNodes.size() == 5); // 4 midpoints + 1 center
+    CHECK(result.replacements.size() == 1);
+    CHECK(result.replacements[0].newElements.size() == 4);
+
+    for(const auto& element : result.replacements[0].newElements) {
+        CHECK(element.type == MeshElementType::Quad);
     }
 }
