@@ -51,6 +51,13 @@ void appendElementEdges(MeshElementType type, std::vector<EdgeCorners>& out) {
     case MeshElementType::Pyramid:
         out.insert(out.end(), {{0, 1}, {1, 2}, {2, 3}, {3, 0}, {0, 4}, {1, 4}, {2, 4}, {3, 4}});
         return;
+    case MeshElementType::Tri6:
+        out.insert(out.end(), {{0, 1}, {1, 2}, {2, 0}});
+        return;
+    case MeshElementType::Quad8:
+    case MeshElementType::Quad9:
+        out.insert(out.end(), {{0, 1}, {1, 2}, {2, 3}, {3, 0}});
+        return;
     }
 }
 

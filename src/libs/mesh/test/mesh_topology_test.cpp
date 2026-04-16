@@ -178,6 +178,41 @@ TEST_CASE("MeshTopology: findEdgeIndex is order-independent") {
     CHECK(idx_forward.value() == idx_reverse.value());
 }
 
+TEST_CASE("MeshTopology: Tri6 has 3 edges (corner-only)") {
+    MeshEntry entry;
+    entry.shapeId = 10;
+    entry.nodes = {
+        MeshNode{{0.0F, 0.0F, 0.0F}}, MeshNode{{2.0F, 0.0F, 0.0F}}, MeshNode{{1.0F, 2.0F, 0.0F}},
+        MeshNode{{1.0F, 0.0F, 0.0F}}, MeshNode{{1.5F, 1.0F, 0.0F}}, MeshNode{{0.5F, 1.0F, 0.0F}},
+    };
+    MeshElement tri6{};
+    tri6.type = MeshElementType::Tri6;
+    tri6.nodeLocalIds = {1, 2, 3, 4, 5, 6, 0, 0, 0};
+    entry.elements = {tri6};
+
+    const auto topo = MeshTopology::build(entry);
+    CHECK(topo.edges.size() == 3);
+    CHECK(topo.edgeToElements.size() == 3);
+}
+
+TEST_CASE("MeshTopology: Quad9 has 4 edges (corner-only)") {
+    MeshEntry entry;
+    entry.shapeId = 11;
+    entry.nodes = {
+        MeshNode{{0.0F, 0.0F, 0.0F}}, MeshNode{{2.0F, 0.0F, 0.0F}}, MeshNode{{2.0F, 2.0F, 0.0F}},
+        MeshNode{{0.0F, 2.0F, 0.0F}}, MeshNode{{1.0F, 0.0F, 0.0F}}, MeshNode{{2.0F, 1.0F, 0.0F}},
+        MeshNode{{1.0F, 2.0F, 0.0F}}, MeshNode{{0.0F, 1.0F, 0.0F}}, MeshNode{{1.0F, 1.0F, 0.0F}},
+    };
+    MeshElement quad9{};
+    quad9.type = MeshElementType::Quad9;
+    quad9.nodeLocalIds = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+    entry.elements = {quad9};
+
+    const auto topo = MeshTopology::build(entry);
+    CHECK(topo.edges.size() == 4);
+    CHECK(topo.edgeToElements.size() == 4);
+}
+
 TEST_CASE("MeshTopology: empty entry produces empty topology") {
     MeshEntry entry;
     entry.shapeId = 99;
