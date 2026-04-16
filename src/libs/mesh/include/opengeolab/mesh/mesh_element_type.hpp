@@ -129,4 +129,10 @@ inline constexpr uint8_t K_MAX_ELEMENT_NODES = 9;
     }
 }
 
+/// True for second-order element types (Tri6, Quad8, Quad9).
+[[nodiscard]] constexpr bool isSecondOrder(MeshElementType type) noexcept {
+    return type == MeshElementType::Tri6 || type == MeshElementType::Quad8 ||
+           type == MeshElementType::Quad9;
+}
+
 } // namespace OpenGeoLab::Mesh

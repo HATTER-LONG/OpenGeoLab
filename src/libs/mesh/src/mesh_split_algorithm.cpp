@@ -51,7 +51,7 @@ uint32_t MeshSplitAlgorithm::getOrCreateMidpoint(SplitContext& ctx, uint32_t edg
 
 uint32_t MeshSplitAlgorithm::createCentroid(SplitContext& ctx, uint32_t elem_index) const {
     const auto& element = ctx.entry.elements[elem_index];
-    const auto element_node_count = nodeCount(element.type);
+    const auto element_node_count = cornerCount(element.type);
 
     double center_x = 0.0;
     double center_y = 0.0;
@@ -74,8 +74,8 @@ uint32_t MeshSplitAlgorithm::createCentroid(SplitContext& ctx, uint32_t elem_ind
 uint32_t MeshSplitAlgorithm::findOppositeNode(const MeshElement& element,
                                               uint32_t edge_node1_local_id,
                                               uint32_t edge_node2_local_id) {
-    const auto element_node_count = nodeCount(element.type);
-    for(uint8_t node_offset = 0; node_offset < element_node_count; ++node_offset) {
+    const auto element_corner_count = cornerCount(element.type);
+    for(uint8_t node_offset = 0; node_offset < element_corner_count; ++node_offset) {
         const auto node_local_id = element.nodeLocalIds[node_offset];
         if(node_local_id != edge_node1_local_id && node_local_id != edge_node2_local_id) {
             return node_local_id;
