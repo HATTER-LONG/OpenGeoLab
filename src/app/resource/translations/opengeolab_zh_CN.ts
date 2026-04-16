@@ -72,6 +72,10 @@
             <translation>平滑</translation>
         </message>
         <message>
+            <source>Split</source>
+            <translation>分割</translation>
+        </message>
+        <message>
             <source>Assist</source>
             <translation>辅助</translation>
         </message>
@@ -687,6 +691,61 @@ Activate pick mode to begin.</source>
         <message>
             <source>Clear All</source>
             <translation>全部清除</translation>
+        </message>
+    </context>
+    <context>
+        <name>MeshSplitPage</name>
+        <message>
+            <source>Split Mesh</source>
+            <translation>分割网格</translation>
+        </message>
+        <message>
+            <source>Selection Type</source>
+            <translation>选择类型</translation>
+        </message>
+        <message>
+            <source>Edge</source>
+            <translation>边</translation>
+        </message>
+        <message>
+            <source>Node</source>
+            <translation>节点</translation>
+        </message>
+        <message>
+            <source>Split Mode</source>
+            <translation>分割模式</translation>
+        </message>
+        <message>
+            <source>Auto</source>
+            <translation>自动</translation>
+        </message>
+        <message>
+            <source>Click mesh edges in the viewport · Right-click to deselect</source>
+            <translation>在视口中点击网格边 · 右键取消选择</translation>
+        </message>
+        <message>
+            <source>Click mesh nodes in the viewport · Right-click to deselect</source>
+            <translation>在视口中点击网格节点 · 右键取消选择</translation>
+        </message>
+        <message>
+            <source>Selected: %1</source>
+            <translation>已选择：%1</translation>
+        </message>
+        <message>
+            <source>Select mesh edges in the viewport to split.
+Right-click to remove from selection.</source>
+            <translation>在视口中选择要分割的网格边。
+右键移除选中项。</translation>
+        </message>
+        <message>
+            <source>Select 3 mesh nodes of a triangle to split.
+Right-click to remove from selection.</source>
+            <translation>选择三角形的 3 个网格节点进行分割。
+右键移除选中项。</translation>
+        </message>
+        <message>
+            <source>Clear All</source>
+            <translation>清除全部</translation>
         </message>
     </context>
     <context>
