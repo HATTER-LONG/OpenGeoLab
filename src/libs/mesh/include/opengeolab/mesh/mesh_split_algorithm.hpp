@@ -60,6 +60,13 @@ private:
         /// The next localId for new nodes (= entry.nodes.size() + 1 initially,
         /// incremented as new nodes are added).
         uint32_t nextNodeLocalId{};
+
+        /// Node-pair midpoint cache — key is packed pair of 1-based localIds.
+        /// Used by upgrade step to find/create midpoints for arbitrary node pairs.
+        std::unordered_map<uint64_t, uint32_t> nodePairMidpoints;
+
+        /// Original node count (entry.nodes.size() at start of compute).
+        uint32_t originalNodeCount{};
     };
 
     /// Add a midpoint node for the given edge, or return existing one.
@@ -96,6 +103,28 @@ private:
     /// Create a MeshElement helper.
     [[nodiscard]] static MeshElement makeTriangle(uint32_t n1, uint32_t n2, uint32_t n3);
     [[nodiscard]] static MeshElement makeQuad(uint32_t n1, uint32_t n2, uint32_t n3, uint32_t n4);
+
+    /// Pack two 1-based node localIds into a single uint64 key (order-independent).
+    [[nodiscard]] static uint64_t packNodePair(uint32_t node_a, uint32_t node_b);
+
+    /// Resolve node position (works for both original and newly-created nodes).
+    void getNodePosition(const SplitContext& ctx,
+                         uint32_t local_id,
+                         double& out_x,
+                         double& out_y,
+                         double& out_z) const;
+
+    /// Find or create midpoint between two nodes by 1-based localIds.
+    uint32_t getOrCreateMidpointByNodes(SplitContext& ctx,
+                                        uint32_t node_a,
+                                        uint32_t node_b) const;
+
+    /// Pre-seed caches with existing mid-edge nodes from second-order elements.
+    void seedMidEdgeNodes(SplitContext& ctx) const;
+
+    /// Upgrade all children in a replacement from linear to second-order types.
+    void upgradeReplacementToSecondOrder(SplitContext& ctx,
+                                         SplitResult::ElementReplacement& rep) const;
 };
 
 } // namespace OpenGeoLab::Mesh
