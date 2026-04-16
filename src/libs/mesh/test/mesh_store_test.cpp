@@ -29,6 +29,7 @@ using OpenGeoLab::Mesh::MeshElementType;
 using OpenGeoLab::Mesh::MeshEntry;
 using OpenGeoLab::Mesh::MeshNode;
 using OpenGeoLab::Mesh::MeshStore;
+using OpenGeoLab::Mesh::MeshTopology;
 
 namespace {
 
@@ -251,4 +252,127 @@ TEST_CASE("MeshModule registers mesh actions and generate_mesh after bridge init
 #else
     CHECK(desc["actions"].size() == 2);
 #endif
+}
+
+TEST_CASE("MeshStore: getTopology returns cached topology after setMesh") {
+    MeshStore store;
+    store.setMesh(1, makeTriangleMesh(1));
+
+    const auto* topo = store.getTopology(1);
+    REQUIRE(topo != nullptr);
+    CHECK(topo->edges.size() == 3);
+}
+
+TEST_CASE("MeshStore: getTopology returns nullptr for missing shapeId") {
+    MeshStore store;
+    CHECK(store.getTopology(42) == nullptr);
+}
+
+TEST_CASE("MeshStore: topology cleared on removeMesh") {
+    MeshStore store;
+    store.setMesh(1, makeTriangleMesh(1));
+    REQUIRE(store.getTopology(1) != nullptr);
+
+    store.removeMesh(1);
+    CHECK(store.getTopology(1) == nullptr);
+}
+
+TEST_CASE("MeshStore: topology cleared on clear()") {
+    MeshStore store;
+    store.setMesh(1, makeTriangleMesh(1));
+    REQUIRE(store.getTopology(1) != nullptr);
+
+    store.clear();
+    CHECK(store.getTopology(1) == nullptr);
+}
+
+TEST_CASE("MeshStore: modifyMesh applies modifier and emits meshModified") {
+    MeshStore store;
+    store.setMesh(1, makeTriangleMesh(1));
+
+    uint32_t modified_id = 0;
+    const auto conn = store.meshModified.connect([&](uint32_t id) { modified_id = id; });
+    static_cast<void>(conn);
+
+    store.modifyMesh(1,
+                     [](MeshEntry& entry) { entry.nodes.push_back(MeshNode{{2.0F, 0.0F, 0.0F}}); });
+
+    CHECK(modified_id == 1);
+
+    const auto* entry = store.find(1);
+    REQUIRE(entry != nullptr);
+    CHECK(entry->nodes.size() == 4);
+}
+
+TEST_CASE("MeshStore: modifyMesh increments version") {
+    MeshStore store;
+    store.setMesh(1, makeTriangleMesh(1));
+    const auto v1 = store.find(1)->version;
+
+    store.modifyMesh(1,
+                     [](MeshEntry& entry) { entry.nodes.push_back(MeshNode{{2.0F, 0.0F, 0.0F}}); });
+    const auto v2 = store.find(1)->version;
+    CHECK(v2 > v1);
+}
+
+TEST_CASE("MeshStore: modifyMesh rebuilds topology") {
+    MeshStore store;
+    store.setMesh(1, makeTriangleMesh(1));
+
+    const auto* topo_before = store.getTopology(1);
+    REQUIRE(topo_before != nullptr);
+    CHECK(topo_before->edges.size() == 3);
+
+    store.modifyMesh(1, [](MeshEntry& entry) {
+        entry.nodes.push_back(MeshNode{{1.5F, 1.0F, 0.0F}});
+        MeshElement tri{};
+        tri.type = MeshElementType::Triangle;
+        tri.nodeLocalIds = {2, 4, 3, 0, 0, 0, 0, 0};
+        entry.elements.push_back(tri);
+    });
+
+    const auto* topo_after = store.getTopology(1);
+    REQUIRE(topo_after != nullptr);
+    CHECK(topo_after->edges.size() == 5);
+}
+
+TEST_CASE("MeshStore: modifyMesh on non-existent shapeId is no-op") {
+    MeshStore store;
+    uint32_t modified_id = 0;
+    const auto conn = store.meshModified.connect([&](uint32_t id) { modified_id = id; });
+    static_cast<void>(conn);
+
+    store.modifyMesh(99, [](MeshEntry&) {});
+    CHECK(modified_id == 0);
+}
+
+TEST_CASE("MeshStore: modifyMesh leaves mesh and topology unchanged if modifier throws") {
+    MeshStore store;
+    store.setMesh(1, makeTriangleMesh(1));
+
+    uint32_t modified_id = 0;
+    const auto conn = store.meshModified.connect([&](uint32_t id) { modified_id = id; });
+    static_cast<void>(conn);
+
+    const auto version_before = store.find(1)->version;
+    REQUIRE(store.getTopology(1) != nullptr);
+    const auto edge_count_before = store.getTopology(1)->edges.size();
+
+    CHECK_THROWS_AS(store.modifyMesh(1,
+                                     [](MeshEntry& entry) {
+                                         entry.nodes.push_back(MeshNode{{2.0F, 0.0F, 0.0F}});
+                                         throw std::runtime_error("modifier failed");
+                                     }),
+                    std::runtime_error);
+
+    CHECK(modified_id == 0);
+
+    const auto* entry = store.find(1);
+    REQUIRE(entry != nullptr);
+    CHECK(entry->nodes.size() == 3);
+    CHECK(entry->version == version_before);
+
+    const auto* topology = store.getTopology(1);
+    REQUIRE(topology != nullptr);
+    CHECK(topology->edges.size() == edge_count_before);
 }
