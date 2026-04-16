@@ -102,9 +102,22 @@ void SelectionPass::render(const FrameState& state, const GpuBufferManager& buff
     // Expand the mask so per-range predicates accept those ranges.
     const bool want_geo_face = hasAny(mask, Core::PickMask::Face | Core::PickMask::Solid);
     const bool want_geo_edge = hasAny(mask, Core::PickMask::Edge | Core::PickMask::Wire);
+    const bool mask_includes_triangles = want_geo_face || hasAny(mask, Core::PickMask::MeshElement);
+
+    // When X-ray is off and the pick mask does NOT include any triangle types,
+    // fill the depth buffer with ALL triangles (depth-only, no pick IDs written).
+    // This ensures back-face edges/nodes are occluded by geometry even when the
+    // pick mask only requests edges or nodes.
+    if(!state.xRayMode && !mask_includes_triangles && !buffers.triangleRanges().empty()) {
+        glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+        const auto depth_batch = BatchUtils::buildIndexedBatch(
+            buffers.triangleRanges(), [](const Scene::DrawRange&) { return true; });
+        BatchUtils::multiDrawElements(GL_TRIANGLES, depth_batch);
+        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    }
 
     // Triangles — draw if Face, Solid, or MeshElement bits are set
-    if(want_geo_face || hasAny(mask, Core::PickMask::MeshElement)) {
+    if(mask_includes_triangles) {
         const auto triangle_batch = BatchUtils::buildIndexedBatch(
             buffers.triangleRanges(), [want_geo_face, mask](const Scene::DrawRange& r) {
                 if(r.entityType == Core::EntityType::GeoFace) {
