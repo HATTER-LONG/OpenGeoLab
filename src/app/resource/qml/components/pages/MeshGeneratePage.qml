@@ -13,13 +13,11 @@ FunctionPageBase {
     actionId: "generateMesh"
     maxContentHeight: 560
 
-    property real elementSize: 1.0
+    property real elementSize: 10.0
     property int meshDimension: 2
     property string elementType: "triangle"
     property string algorithm: "delaunay"
-
-    property real minSize: 0.1
-    property real maxSize: 10.0
+    property string sizeMode: "absolute"
     property int meshOrder: 1
     property bool optimizeMesh: false
 
@@ -102,12 +100,11 @@ FunctionPageBase {
             param: {
                 entities: entities,
                 elementSize: root.elementSize,
+                sizeMode: root.sizeMode,
                 dimension: root.meshDimension,
                 elementType: root.elementType,
                 algorithm: root.algorithm,
                 advanced: {
-                    minSize: root.minSize,
-                    maxSize: root.maxSize,
                     order: root.meshOrder,
                     optimize: root.optimizeMesh
                 }
@@ -119,11 +116,6 @@ FunctionPageBase {
     function execute() {
         if (RequestService.busy || SelectionService.selections.length === 0) {
             return;
-        }
-        if (root.minSize > root.maxSize) {
-            const originalMin = root.minSize;
-            root.minSize = root.maxSize;
-            root.maxSize = originalMin;
         }
         RequestService.submitAsync(JSON.stringify(root.getParameters()));
         root.close();
@@ -290,16 +282,65 @@ FunctionPageBase {
         font.pixelSize: 12
     }
 
-    DimensionInput {
+    RowLayout {
         width: parent.width
-        theme: root.theme
-        label: qsTr("Size")
-        value: root.elementSize
-        accentColor: root.theme.accentB
-        tooltipText: qsTr("Target element size")
+        spacing: 6
 
-        onValueEdited: function(newVal) {
-            root.elementSize = newVal;
+        Row {
+            spacing: 4
+
+            Repeater {
+                model: [
+                    { label: qsTr("Absolute"), value: "absolute" },
+                    { label: "%", value: "percentage" }
+                ]
+
+                delegate: Rectangle {
+                    required property var modelData
+
+                    width: modelData.value === "percentage" ? 30 : 62
+                    height: 24
+                    radius: root.theme.radiusSmall
+                    color: root.sizeMode === modelData.value
+                        ? root.theme.tint(root.theme.accentB, root.theme.darkMode ? 0.24 : 0.14)
+                        : root.theme.surfaceMuted
+                    border.width: root.sizeMode === modelData.value ? 1.5 : 1
+                    border.color: root.sizeMode === modelData.value
+                        ? root.theme.accentB
+                        : root.theme.borderSubtle
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: parent.modelData.label
+                        font.pixelSize: 10
+                        font.bold: root.sizeMode === parent.modelData.value
+                        color: root.sizeMode === parent.modelData.value
+                            ? root.theme.accentB
+                            : root.theme.textSecondary
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.sizeMode = parent.modelData.value
+                    }
+                }
+            }
+        }
+
+        DimensionInput {
+            Layout.fillWidth: true
+            theme: root.theme
+            label: qsTr("Size")
+            value: root.elementSize
+            accentColor: root.theme.accentB
+            tooltipText: root.sizeMode === "percentage"
+                ? qsTr("Percentage of bounding box diagonal")
+                : qsTr("Target element size")
+
+            onValueEdited: function(newVal) {
+                root.elementSize = newVal;
+            }
         }
     }
 
@@ -500,126 +541,74 @@ FunctionPageBase {
         }
     }
 
-    Rectangle {
-        id: advancedHeader
-
+    RowLayout {
         width: parent.width
-        height: 28
-        radius: root.theme.radiusSmall
-        color: advancedMouse.containsMouse ? root.theme.surfaceMuted : "transparent"
+        spacing: 6
 
-        property bool expanded: false
-
-        Row {
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.left: parent.left
-            anchors.leftMargin: 4
-            spacing: 6
-
-            Text {
-                text: advancedHeader.expanded ? qsTr("▾") : qsTr("▸")
-                color: root.theme.textSecondary
-                font.pixelSize: 10
-            }
-
-            Text {
-                text: qsTr("Advanced")
-                color: root.theme.textSecondary
-                font.pixelSize: 12
-            }
+        Text {
+            text: qsTr("Order")
+            color: root.theme.textSecondary
+            font.pixelSize: 12
+            Layout.fillWidth: true
         }
 
-        MouseArea {
-            id: advancedMouse
+        Row {
+            spacing: 4
 
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onClicked: advancedHeader.expanded = !advancedHeader.expanded
+            Repeater {
+                model: [
+                    { label: qsTr("Linear"), value: 1 },
+                    { label: qsTr("Quadratic"), value: 2 }
+                ]
+
+                delegate: Rectangle {
+                    required property var modelData
+
+                    width: modelData.value === 2 ? 72 : 50
+                    height: 24
+                    radius: root.theme.radiusSmall
+                    color: root.meshOrder === modelData.value
+                        ? root.theme.tint(root.theme.accentB, root.theme.darkMode ? 0.24 : 0.14)
+                        : root.theme.surfaceMuted
+                    border.width: root.meshOrder === modelData.value ? 1.5 : 1
+                    border.color: root.meshOrder === modelData.value
+                        ? root.theme.accentB
+                        : root.theme.borderSubtle
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: parent.modelData.label
+                        font.pixelSize: 10
+                        font.bold: root.meshOrder === parent.modelData.value
+                        color: root.meshOrder === parent.modelData.value
+                            ? root.theme.accentB
+                            : root.theme.textSecondary
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.meshOrder = parent.modelData.value
+                    }
+                }
+            }
         }
     }
 
-    Column {
+    RowLayout {
         width: parent.width
         spacing: 8
-        visible: advancedHeader.expanded
 
-        DimensionInput {
-            width: parent.width
-            theme: root.theme
-            label: qsTr("Min")
-            value: root.minSize
-            accentColor: root.theme.accentC
-            tooltipText: qsTr("Minimum element size")
-
-            onValueEdited: function(newVal) {
-                root.minSize = newVal;
-            }
+        Text {
+            text: qsTr("Optimize")
+            color: root.theme.textSecondary
+            font.pixelSize: 12
+            Layout.fillWidth: true
         }
 
-        DimensionInput {
-            width: parent.width
-            theme: root.theme
-            label: qsTr("Max")
-            value: root.maxSize
-            accentColor: root.theme.accentC
-            tooltipText: qsTr("Maximum element size")
-
-            onValueEdited: function(newVal) {
-                root.maxSize = newVal;
-            }
-        }
-
-        DimensionInput {
-            width: parent.width
-            theme: root.theme
-            label: qsTr("P")
-            value: root.meshOrder
-            decimals: 0
-            minValue: 1
-            accentColor: root.theme.accentC
-            tooltipText: qsTr("Mesh order")
-
-            onValueEdited: function(newVal) {
-                root.meshOrder = Math.max(1, Math.round(newVal));
-            }
-        }
-
-        RowLayout {
-            width: parent.width
-            spacing: 8
-
-            Text {
-                text: qsTr("Optimize")
-                color: root.theme.textSecondary
-                font.pixelSize: 12
-                Layout.fillWidth: true
-            }
-
-            Switch {
-                checked: root.optimizeMesh
-                onToggled: root.optimizeMesh = checked
-            }
-        }
-
-        Rectangle {
-            width: parent.width
-            height: advancedNote.implicitHeight + 16
-            radius: root.theme.radiusSmall
-            color: root.theme.surfaceMuted
-
-            Text {
-                id: advancedNote
-
-                anchors.fill: parent
-                anchors.margins: 8
-                text: root.minSize > root.maxSize
-                    ? qsTr("Minimum size is greater than maximum size. Values will be swapped before generation.")
-                    : qsTr("Advanced parameters override the default target size when supported by the meshing backend.")
-                color: root.minSize > root.maxSize ? root.theme.warning : root.theme.textSecondary
-                font.pixelSize: 10
-                wrapMode: Text.WordWrap
-            }
+        Switch {
+            checked: root.optimizeMesh
+            onToggled: root.optimizeMesh = checked
         }
     }
 

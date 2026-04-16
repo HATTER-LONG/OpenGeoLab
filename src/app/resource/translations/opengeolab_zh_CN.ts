@@ -694,6 +694,163 @@ Activate pick mode to begin.</source>
         </message>
     </context>
     <context>
+        <name>MeshGeneratePage</name>
+        <message>
+            <source>Generate Mesh</source>
+            <translation>生成网格</translation>
+        </message>
+        <message>
+            <source>Automatic</source>
+            <translation>自动</translation>
+        </message>
+        <message>
+            <source>MeshAdapt</source>
+            <translation>MeshAdapt</translation>
+        </message>
+        <message>
+            <source>Delaunay</source>
+            <translation>Delaunay</translation>
+        </message>
+        <message>
+            <source>Frontal</source>
+            <translation>Frontal</translation>
+        </message>
+        <message>
+            <source>BAMG</source>
+            <translation>BAMG</translation>
+        </message>
+        <message>
+            <source>Frontal Quad</source>
+            <translation>Frontal Quad</translation>
+        </message>
+        <message>
+            <source>MMG3D</source>
+            <translation>MMG3D</translation>
+        </message>
+        <message>
+            <source>RTree</source>
+            <translation>RTree</translation>
+        </message>
+        <message>
+            <source>HXT</source>
+            <translation>HXT</translation>
+        </message>
+        <message>
+            <source>Target Geometry</source>
+            <translation>目标几何体</translation>
+        </message>
+        <message>
+            <source>Face</source>
+            <translation>面</translation>
+        </message>
+        <message>
+            <source>Solid</source>
+            <translation>实体</translation>
+        </message>
+        <message>
+            <source>Click faces or solids in the viewport</source>
+            <translation>在视口中点选面或实体</translation>
+        </message>
+        <message>
+            <source>Selected: %1</source>
+            <translation>已选中: %1</translation>
+        </message>
+        <message>
+            <source>No geometry selected.
+Pick faces or solids from the viewport.</source>
+            <translation>未选择几何体。
+从视口中拾取面或实体。</translation>
+        </message>
+        <message>
+            <source>Mesh Parameters</source>
+            <translation>网格参数</translation>
+        </message>
+        <message>
+            <source>Absolute</source>
+            <translation>绝对</translation>
+        </message>
+        <message>
+            <source>Size</source>
+            <translation>尺寸</translation>
+        </message>
+        <message>
+            <source>Percentage of bounding box diagonal</source>
+            <translation>包围盒对角线百分比</translation>
+        </message>
+        <message>
+            <source>Target element size</source>
+            <translation>目标单元尺寸</translation>
+        </message>
+        <message>
+            <source>Dimension</source>
+            <translation>维度</translation>
+        </message>
+        <message>
+            <source>2D</source>
+            <translation>2D</translation>
+        </message>
+        <message>
+            <source>3D</source>
+            <translation>3D</translation>
+        </message>
+        <message>
+            <source>Element</source>
+            <translation>单元</translation>
+        </message>
+        <message>
+            <source>Tri</source>
+            <translation>三角形</translation>
+        </message>
+        <message>
+            <source>Quad</source>
+            <translation>四边形</translation>
+        </message>
+        <message>
+            <source>Algorithm</source>
+            <translation>算法</translation>
+        </message>
+        <message>
+            <source>Selected algorithm: %1</source>
+            <translation>选择的算法: %1</translation>
+        </message>
+        <message>
+            <source>3D mesh generation supports Delaunay, Frontal, MMG3D, RTree and HXT.</source>
+            <translation>3D 网格生成支持 Delaunay、Frontal、MMG3D、RTree 和 HXT。</translation>
+        </message>
+        <message>
+            <source>2D mesh generation supports Automatic, MeshAdapt, Delaunay, Frontal, BAMG and Frontal Quad.</source>
+            <translation>2D 网格生成支持自动、MeshAdapt、Delaunay、Frontal、BAMG 和 Frontal Quad。</translation>
+        </message>
+        <message>
+            <source>Order</source>
+            <translation>阶次</translation>
+        </message>
+        <message>
+            <source>Linear</source>
+            <translation>线性</translation>
+        </message>
+        <message>
+            <source>Quadratic</source>
+            <translation>二次</translation>
+        </message>
+        <message>
+            <source>Optimize</source>
+            <translation>优化</translation>
+        </message>
+        <message>
+            <source>Pick at least one face or solid before running mesh generation.</source>
+            <translation>运行网格生成前请至少选择一个面或实体。</translation>
+        </message>
+        <message>
+            <source>Generate Mesh uses the current selection and closes this panel after submitting the request.</source>
+            <translation>生成网格将使用当前选择并在提交请求后关闭此面板。</translation>
+        </message>
+        <message>
+            <source>Clear All Mesh</source>
+            <translation>清除所有网格</translation>
+        </message>
+    </context>
+    <context>
         <name>MeshSplitPage</name>
         <message>
             <source>Split Mesh</source>

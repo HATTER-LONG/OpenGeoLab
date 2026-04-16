@@ -12,9 +12,15 @@ namespace OpenGeoLab::Mesh {
 
 class MeshStore;
 
-/** @brief Split mesh elements based on user-selected edges or nodes. */
+/**
+ * @brief Split mesh elements based on user-selected edges or nodes.
+ */
 class OPENGEOLAB_MESH_EXPORT SplitMeshAction final : public Core::IAction {
 public:
+    /**
+     * @brief Construct a SplitMeshAction bound to the given store.
+     * @param mesh_store Reference to the MeshStore; must outlive this action.
+     */
     explicit SplitMeshAction(MeshStore& mesh_store);
     ~SplitMeshAction() override;
 

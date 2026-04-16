@@ -355,6 +355,10 @@ bool buildMeshEntry(const TopoDS_Compound& compound,
     if(!checkGmsh(ierr, error, "Failed to set Mesh.ElementOrder")) {
         return false;
     }
+    gmshOptionSetNumber("Mesh.SecondOrderIncomplete", actual_settings.order >= 2 ? 1 : 0, &ierr);
+    if(!checkGmsh(ierr, error, "Failed to set Mesh.SecondOrderIncomplete")) {
+        return false;
+    }
     gmshOptionSetNumber("Mesh.RecombineAll", actual_settings.recombine ? 1 : 0, &ierr);
     if(!checkGmsh(ierr, error, "Failed to set Mesh.RecombineAll")) {
         return false;
