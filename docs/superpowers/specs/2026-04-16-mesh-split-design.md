@@ -73,7 +73,7 @@ Values match reference `imMeshSpliter::EdgeType` / `NodeType` for cross-referenc
 
 ### MeshTopology
 
-On-demand topology structure built from MeshEntry. Uses flat vectors indexed by localId for O(1) lookup. Discarded after use.
+On-demand topology structure built from MeshEntry. Uses flat vectors indexed by localId for O(1) lookup. **Cached in MeshStore alongside MeshEntry** — built automatically when mesh is added or modified, avoiding redundant rebuilds on every action call.
 
 ```cpp
 struct MeshTopology {
@@ -216,28 +216,32 @@ Mode values: `tria_one_quad_three`, `tria_one_quad_two`, `tria_three_quad_two`, 
 ```
 1. Validate params (shapeId, selections, mode)
 2. Get MeshEntry from MeshStore
-3. Build MeshTopology from MeshEntry
+3. Get cached MeshTopology from MeshStore (built during mesh creation/modification)
 4. Call MeshSplitAlgorithm::compute()
-5. Apply SplitResult to MeshEntry (append nodes, replace elements)
-6. Bump MeshEntry version
-7. Emit meshModified signal
-8. Return success response
+5. Apply SplitResult via MeshStore::modifyMesh() (append nodes, replace elements)
+   → modifyMesh automatically rebuilds topology cache + emits meshModified
+6. Return success response
 ```
 
 ---
 
 ## MeshStore Changes
 
-Add `meshModified` signal and `modifyMesh()` method:
+Add `meshModified` signal, `modifyMesh()` method, and **topology caching**:
 
 ```cpp
 // mesh_store.hpp
 Kangaroo::Util::Signal<int32_t> meshModified; // emits shapeId
 
 void modifyMesh(int32_t shapeId, std::function<void(MeshEntry&)> modifier);
+
+// Topology cache — built on addMesh/modifyMesh, invalidated on removeMesh
+const MeshTopology* getTopology(int32_t shapeId) const;
 ```
 
-`modifyMesh()` locks the store, applies the modifier function to the entry, bumps version, and emits `meshModified`.
+`modifyMesh()` locks the store, applies the modifier function to the entry, bumps version, **rebuilds the cached MeshTopology**, and emits `meshModified`.
+
+When `addMesh()` is called, the topology is also built and cached. When `removeMesh()` is called, the cached topology is removed.
 
 The `MeshSceneBridge` will connect to `meshModified` to trigger re-rendering of the affected mesh.
 
@@ -301,8 +305,8 @@ The `MeshSceneBridge` will connect to `meshModified` to trigger re-rendering of 
 | File | Change |
 |------|--------|
 | `mesh/src/mesh_module.cpp` | Register SplitMeshAction |
-| `mesh/include/.../mesh_store.hpp` | Add meshModified signal, modifyMesh() |
-| `mesh/src/mesh_store.cpp` | Implement modifyMesh() |
+| `mesh/include/.../mesh_store.hpp` | Add meshModified signal, modifyMesh(), topology cache |
+| `mesh/src/mesh_store.cpp` | Implement modifyMesh(), topology caching on add/modify/remove |
 | `mesh/src/mesh_render_builder.cpp` | Extract edge derivation to use MeshTopology |
 | `mesh/CMakeLists.txt` | Add new source files |
 | `MainPages.qml` | Register splitMesh page |
