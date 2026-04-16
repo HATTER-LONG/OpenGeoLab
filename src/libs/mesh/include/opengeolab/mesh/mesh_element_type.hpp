@@ -22,6 +22,9 @@ enum class MeshElementType : uint8_t {
     Hexa = 3,     ///< 8-node hexahedron (3D)
     Prism = 4,    ///< 6-node prism/wedge (3D)
     Pyramid = 5,  ///< 5-node pyramid (3D)
+    Tri6 = 6,     ///< 6-node quadratic triangle (2D)
+    Quad8 = 7,    ///< 8-node serendipity quadrilateral (2D)
+    Quad9 = 8,    ///< 9-node quadratic quadrilateral (2D)
 };
 
 /// Number of nodes for the given element type.
@@ -39,12 +42,18 @@ enum class MeshElementType : uint8_t {
         return 6;
     case MeshElementType::Pyramid:
         return 5;
+    case MeshElementType::Tri6:
+        return 6;
+    case MeshElementType::Quad8:
+        return 8;
+    case MeshElementType::Quad9:
+        return 9;
     }
     return 0;
 }
 
 /// Maximum node count across all element types.
-inline constexpr uint8_t K_MAX_ELEMENT_NODES = 8;
+inline constexpr uint8_t K_MAX_ELEMENT_NODES = 9;
 
 /// Short label prefix for display (e.g. "Tri", "Tet").
 [[nodiscard]] constexpr std::string_view elementTypePrefix(MeshElementType type) noexcept {
@@ -61,6 +70,12 @@ inline constexpr uint8_t K_MAX_ELEMENT_NODES = 8;
         return "Pri";
     case MeshElementType::Pyramid:
         return "Pyr";
+    case MeshElementType::Tri6:
+        return "Tri6";
+    case MeshElementType::Quad8:
+        return "Q8";
+    case MeshElementType::Quad9:
+        return "Q9";
     }
     return "?";
 }
@@ -70,9 +85,47 @@ inline constexpr uint8_t K_MAX_ELEMENT_NODES = 8;
     switch(type) {
     case MeshElementType::Triangle:
     case MeshElementType::Quad:
+    case MeshElementType::Tri6:
+    case MeshElementType::Quad8:
+    case MeshElementType::Quad9:
         return 2;
     default:
         return 3;
+    }
+}
+
+/// Number of corner (vertex) nodes — excludes mid-edge/mid-face nodes.
+[[nodiscard]] constexpr uint8_t cornerCount(MeshElementType type) noexcept {
+    switch(type) {
+    case MeshElementType::Triangle:
+    case MeshElementType::Tri6:
+        return 3;
+    case MeshElementType::Quad:
+    case MeshElementType::Quad8:
+    case MeshElementType::Quad9:
+        return 4;
+    case MeshElementType::Tetra:
+        return 4;
+    case MeshElementType::Hexa:
+        return 8;
+    case MeshElementType::Prism:
+        return 6;
+    case MeshElementType::Pyramid:
+        return 5;
+    }
+    return 0;
+}
+
+/// Map a second-order type to its first-order equivalent for rendering.
+[[nodiscard]] constexpr MeshElementType linearEquivalent(MeshElementType type) noexcept {
+    switch(type) {
+    case MeshElementType::Tri6:
+        return MeshElementType::Triangle;
+    case MeshElementType::Quad8:
+    case MeshElementType::Quad9:
+        return MeshElementType::Quad;
+    default:
+        return type;
     }
 }
 
