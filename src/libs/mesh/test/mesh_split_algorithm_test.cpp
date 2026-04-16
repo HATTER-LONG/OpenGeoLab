@@ -444,3 +444,70 @@ TEST_CASE("MeshSplitAlgorithm: quad 4 edges -> 4 quads") {
         CHECK(element.type == MeshElementType::Quad);
     }
 }
+
+TEST_CASE("MeshSplitAlgorithm: triangle 3 nodes TriaThree -> 3 triangles via centroid") {
+    const auto entry = makeSingleTriangle();
+    const auto topo = MeshTopology::build(entry);
+    const MeshSplitAlgorithm algo;
+
+    const auto result = algo.compute(entry, topo, {}, {1, 2, 3}, SplitMode::TriaThree);
+    const uint32_t centroid_local_id = static_cast<uint32_t>(entry.nodes.size()) + 1U;
+
+    CHECK(result.newNodes.size() == 1); // 1 centroid
+    CHECK(result.replacements.size() == 1);
+    CHECK(result.replacements[0].originalIndex == 0);
+    CHECK(result.replacements[0].newElements.size() == 3);
+
+    for(const auto& element : result.replacements[0].newElements) {
+        CHECK(element.type == MeshElementType::Triangle);
+        CHECK(std::find(element.nodeLocalIds.begin(), element.nodeLocalIds.end(),
+                        centroid_local_id) != element.nodeLocalIds.end());
+    }
+
+    CHECK(result.newNodes[0].x == doctest::Approx(1.0));
+    CHECK(result.newNodes[0].y == doctest::Approx(2.0 / 3.0));
+    CHECK(result.newNodes[0].z == doctest::Approx(0.0));
+}
+
+TEST_CASE("MeshSplitAlgorithm: node split ignores quads") {
+    const auto entry = makeSingleQuad();
+    const auto topo = MeshTopology::build(entry);
+    const MeshSplitAlgorithm algo;
+
+    const auto result = algo.compute(entry, topo, {}, {1, 2, 3}, SplitMode::TriaThree);
+
+    CHECK(result.newNodes.empty());
+    CHECK(result.replacements.empty());
+}
+
+TEST_CASE("MeshSplitAlgorithm: node split with fewer than 3 nodes -> no split") {
+    const auto entry = makeSingleTriangle();
+    const auto topo = MeshTopology::build(entry);
+    const MeshSplitAlgorithm algo;
+
+    const auto result = algo.compute(entry, topo, {}, {1, 2}, SplitMode::TriaThree);
+
+    CHECK(result.newNodes.empty());
+    CHECK(result.replacements.empty());
+}
+
+TEST_CASE("MeshSplitAlgorithm: TriaThree applySplitResult integrity") {
+    auto entry = makeSingleTriangle();
+    const auto topo = MeshTopology::build(entry);
+    const MeshSplitAlgorithm algo;
+
+    const auto result = algo.compute(entry, topo, {}, {1, 2, 3}, SplitMode::TriaThree);
+    applySplitResult(entry, result);
+
+    CHECK(entry.nodes.size() == 4);    // 3 original + 1 centroid
+    CHECK(entry.elements.size() == 3); // 3 sub-triangles
+
+    for(const auto& element : entry.elements) {
+        CHECK(element.type == MeshElementType::Triangle);
+        for(uint8_t node_offset = 0; node_offset < OpenGeoLab::Mesh::nodeCount(element.type);
+            ++node_offset) {
+            CHECK(element.nodeLocalIds[node_offset] >= 1);
+            CHECK(element.nodeLocalIds[node_offset] <= entry.nodes.size());
+        }
+    }
+}

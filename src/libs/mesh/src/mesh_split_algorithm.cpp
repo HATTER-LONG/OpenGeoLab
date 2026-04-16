@@ -365,8 +365,20 @@ void MeshSplitAlgorithm::processQuadEdges(SplitContext& ctx,
 }
 
 void MeshSplitAlgorithm::processTriangleNodes(SplitContext& ctx, uint32_t elem_index) const {
-    static_cast<void>(ctx);
-    static_cast<void>(elem_index);
+    const auto& element = ctx.entry.elements[elem_index];
+    const uint32_t node1 = element.nodeLocalIds[0];
+    const uint32_t node2 = element.nodeLocalIds[1];
+    const uint32_t node3 = element.nodeLocalIds[2];
+
+    const uint32_t center = createCentroid(ctx, elem_index);
+
+    SplitResult::ElementReplacement replacement;
+    replacement.originalIndex = elem_index;
+    replacement.newElements.push_back(makeTriangle(node1, node2, center));
+    replacement.newElements.push_back(makeTriangle(node2, node3, center));
+    replacement.newElements.push_back(makeTriangle(node3, node1, center));
+
+    ctx.result.replacements.push_back(std::move(replacement));
 }
 
 SplitResult MeshSplitAlgorithm::compute(const MeshEntry& entry,
