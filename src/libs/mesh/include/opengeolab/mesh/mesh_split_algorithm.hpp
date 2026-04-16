@@ -115,9 +115,7 @@ private:
                          double& out_z) const;
 
     /// Find or create midpoint between two nodes by 1-based localIds.
-    uint32_t getOrCreateMidpointByNodes(SplitContext& ctx,
-                                        uint32_t node_a,
-                                        uint32_t node_b) const;
+    uint32_t getOrCreateMidpointByNodes(SplitContext& ctx, uint32_t node_a, uint32_t node_b) const;
 
     /// Pre-seed caches with existing mid-edge nodes from second-order elements.
     void seedMidEdgeNodes(SplitContext& ctx) const;

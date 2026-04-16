@@ -80,12 +80,12 @@ static MeshEntry makeSingleTri6() {
     MeshEntry entry;
     entry.shapeId = 1;
     entry.nodes = {
-        MeshNode{{0.0F, 0.0F, 0.0F}},  // localId 1 = c0
-        MeshNode{{2.0F, 0.0F, 0.0F}},  // localId 2 = c1
-        MeshNode{{1.0F, 2.0F, 0.0F}},  // localId 3 = c2
-        MeshNode{{1.0F, 0.0F, 0.0F}},  // localId 4 = m01
-        MeshNode{{1.5F, 1.0F, 0.0F}},  // localId 5 = m12
-        MeshNode{{0.5F, 1.0F, 0.0F}},  // localId 6 = m20
+        MeshNode{{0.0F, 0.0F, 0.0F}}, // localId 1 = c0
+        MeshNode{{2.0F, 0.0F, 0.0F}}, // localId 2 = c1
+        MeshNode{{1.0F, 2.0F, 0.0F}}, // localId 3 = c2
+        MeshNode{{1.0F, 0.0F, 0.0F}}, // localId 4 = m01
+        MeshNode{{1.5F, 1.0F, 0.0F}}, // localId 5 = m12
+        MeshNode{{0.5F, 1.0F, 0.0F}}, // localId 6 = m20
     };
     MeshElement tri6{};
     tri6.type = MeshElementType::Tri6;
@@ -98,14 +98,14 @@ static MeshEntry makeSingleQuad8() {
     MeshEntry entry;
     entry.shapeId = 1;
     entry.nodes = {
-        MeshNode{{0.0F, 0.0F, 0.0F}},  // localId 1 = c0
-        MeshNode{{2.0F, 0.0F, 0.0F}},  // localId 2 = c1
-        MeshNode{{2.0F, 2.0F, 0.0F}},  // localId 3 = c2
-        MeshNode{{0.0F, 2.0F, 0.0F}},  // localId 4 = c3
-        MeshNode{{1.0F, 0.0F, 0.0F}},  // localId 5 = m01
-        MeshNode{{2.0F, 1.0F, 0.0F}},  // localId 6 = m12
-        MeshNode{{1.0F, 2.0F, 0.0F}},  // localId 7 = m23
-        MeshNode{{0.0F, 1.0F, 0.0F}},  // localId 8 = m30
+        MeshNode{{0.0F, 0.0F, 0.0F}}, // localId 1 = c0
+        MeshNode{{2.0F, 0.0F, 0.0F}}, // localId 2 = c1
+        MeshNode{{2.0F, 2.0F, 0.0F}}, // localId 3 = c2
+        MeshNode{{0.0F, 2.0F, 0.0F}}, // localId 4 = c3
+        MeshNode{{1.0F, 0.0F, 0.0F}}, // localId 5 = m01
+        MeshNode{{2.0F, 1.0F, 0.0F}}, // localId 6 = m12
+        MeshNode{{1.0F, 2.0F, 0.0F}}, // localId 7 = m23
+        MeshNode{{0.0F, 1.0F, 0.0F}}, // localId 8 = m30
     };
     MeshElement quad8{};
     quad8.type = MeshElementType::Quad8;
@@ -118,13 +118,13 @@ static MeshEntry makeTri6AndTriangleSharedEdge() {
     MeshEntry entry;
     entry.shapeId = 1;
     entry.nodes = {
-        MeshNode{{0.0F, 0.0F, 0.0F}},   // localId 1 = c0 (Tri6 only)
-        MeshNode{{2.0F, 0.0F, 0.0F}},   // localId 2 = c1 (shared corner)
-        MeshNode{{1.0F, 2.0F, 0.0F}},   // localId 3 = c2 (shared corner)
-        MeshNode{{1.0F, 0.0F, 0.0F}},   // localId 4 = m01 (Tri6 mid-edge)
-        MeshNode{{1.5F, 1.0F, 0.0F}},   // localId 5 = m12 (Tri6 mid-edge)
-        MeshNode{{0.5F, 1.0F, 0.0F}},   // localId 6 = m20 (Tri6 mid-edge)
-        MeshNode{{3.0F, 2.0F, 0.0F}},   // localId 7 = extra corner (Triangle only)
+        MeshNode{{0.0F, 0.0F, 0.0F}}, // localId 1 = c0 (Tri6 only)
+        MeshNode{{2.0F, 0.0F, 0.0F}}, // localId 2 = c1 (shared corner)
+        MeshNode{{1.0F, 2.0F, 0.0F}}, // localId 3 = c2 (shared corner)
+        MeshNode{{1.0F, 0.0F, 0.0F}}, // localId 4 = m01 (Tri6 mid-edge)
+        MeshNode{{1.5F, 1.0F, 0.0F}}, // localId 5 = m12 (Tri6 mid-edge)
+        MeshNode{{0.5F, 1.0F, 0.0F}}, // localId 6 = m20 (Tri6 mid-edge)
+        MeshNode{{3.0F, 2.0F, 0.0F}}, // localId 7 = extra corner (Triangle only)
     };
     MeshElement tri6{};
     tri6.type = MeshElementType::Tri6;
@@ -914,9 +914,9 @@ TEST_CASE("MeshSplitAlgorithm: Tri6 3-edge TriaFour -> 4 Tri6") {
     REQUIRE(e20.has_value());
 
     const MeshSplitAlgorithm algo;
-    const auto result = algo.compute(entry, topo,
-                                     {e01.value() + 1U, e12.value() + 1U, e20.value() + 1U},
-                                     {}, SplitMode::TriaFour);
+    const auto result =
+        algo.compute(entry, topo, {e01.value() + 1U, e12.value() + 1U, e20.value() + 1U}, {},
+                     SplitMode::TriaFour);
 
     CHECK(result.replacements.size() == 1);
     CHECK(result.replacements[0].newElements.size() == 4);
@@ -967,8 +967,7 @@ TEST_CASE("MeshSplitAlgorithm: Quad8 1-edge -> 1 Tri6 + 1 Quad8") {
     REQUIRE(edge01.has_value());
 
     const MeshSplitAlgorithm algo;
-    const auto result =
-        algo.compute(entry, topo, {edge01.value() + 1U}, {}, SplitMode::TriaFour);
+    const auto result = algo.compute(entry, topo, {edge01.value() + 1U}, {}, SplitMode::TriaFour);
 
     CHECK(result.replacements.size() == 1);
     CHECK(result.replacements[0].newElements.size() == 2);
@@ -993,8 +992,8 @@ TEST_CASE("MeshSplitAlgorithm: Quad8 2-opposite -> 2 Quad8") {
     REQUIRE(edge23.has_value());
 
     const MeshSplitAlgorithm algo;
-    const auto result = algo.compute(
-        entry, topo, {edge01.value() + 1U, edge23.value() + 1U}, {}, SplitMode::TriaFour);
+    const auto result = algo.compute(entry, topo, {edge01.value() + 1U, edge23.value() + 1U}, {},
+                                     SplitMode::TriaFour);
 
     CHECK(result.replacements.size() == 1);
     CHECK(result.replacements[0].newElements.size() == 2);
@@ -1023,10 +1022,9 @@ TEST_CASE("MeshSplitAlgorithm: Quad8 4-edge -> 4 Quad8") {
     REQUIRE(e30.has_value());
 
     const MeshSplitAlgorithm algo;
-    const auto result =
-        algo.compute(entry, topo,
-                     {e01.value() + 1U, e12.value() + 1U, e23.value() + 1U, e30.value() + 1U},
-                     {}, SplitMode::TriaFour);
+    const auto result = algo.compute(
+        entry, topo, {e01.value() + 1U, e12.value() + 1U, e23.value() + 1U, e30.value() + 1U}, {},
+        SplitMode::TriaFour);
 
     CHECK(result.replacements.size() == 1);
     CHECK(result.replacements[0].newElements.size() == 4);
@@ -1075,8 +1073,8 @@ TEST_CASE("MeshSplitAlgorithm: mixed Tri6 + Triangle shared edge") {
             }
         }
     }
-    CHECK(tri6_count == 2);  // Tri6 element produces 2 Tri6 children
-    CHECK(tri_count == 2);   // Triangle element produces 2 Triangle children
+    CHECK(tri6_count == 2); // Tri6 element produces 2 Tri6 children
+    CHECK(tri_count == 2);  // Triangle element produces 2 Triangle children
 
     applySplitResult(entry, result);
     CHECK(entry.elements.size() == 4);

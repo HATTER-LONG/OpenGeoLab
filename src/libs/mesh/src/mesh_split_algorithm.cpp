@@ -34,11 +34,8 @@ uint64_t MeshSplitAlgorithm::packNodePair(uint32_t node_a, uint32_t node_b) {
     return (static_cast<uint64_t>(hi) << 32U) | static_cast<uint64_t>(lo);
 }
 
-void MeshSplitAlgorithm::getNodePosition(const SplitContext& ctx,
-                                          uint32_t local_id,
-                                          double& out_x,
-                                          double& out_y,
-                                          double& out_z) const {
+void MeshSplitAlgorithm::getNodePosition(
+    const SplitContext& ctx, uint32_t local_id, double& out_x, double& out_y, double& out_z) const {
     if(local_id <= ctx.originalNodeCount) {
         const auto& pos = ctx.entry.nodes[local_id - 1U].position;
         out_x = static_cast<double>(pos[0]);
@@ -53,8 +50,8 @@ void MeshSplitAlgorithm::getNodePosition(const SplitContext& ctx,
 }
 
 uint32_t MeshSplitAlgorithm::getOrCreateMidpointByNodes(SplitContext& ctx,
-                                                         uint32_t node_a,
-                                                         uint32_t node_b) const {
+                                                        uint32_t node_a,
+                                                        uint32_t node_b) const {
     const uint64_t key = packNodePair(node_a, node_b);
     const auto existing = ctx.nodePairMidpoints.find(key);
     if(existing != ctx.nodePairMidpoints.end()) {
@@ -545,14 +542,10 @@ SplitResult MeshSplitAlgorithm::compute(const MeshEntry& entry,
     }
 
     SplitContext ctx{
-        entry,
-        topology,
-        result,
-        {},
-        {},
-        static_cast<uint32_t>(entry.nodes.size()) + 1U,
-        {},
-        static_cast<uint32_t>(entry.nodes.size()),
+        entry,  topology,
+        result, {},
+        {},     static_cast<uint32_t>(entry.nodes.size()) + 1U,
+        {},     static_cast<uint32_t>(entry.nodes.size()),
     };
 
     seedMidEdgeNodes(ctx);
