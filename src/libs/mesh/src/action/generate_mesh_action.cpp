@@ -10,7 +10,9 @@
 #include <opengeolab/mesh/mesh_entry.hpp>
 #include <opengeolab/mesh/mesh_store.hpp>
 
+#include <BRepBndLib.hxx>
 #include <BRep_Builder.hxx>
+#include <Bnd_Box.hxx>
 #include <TopoDS_Compound.hxx>
 #include <TopoDS_Shape.hxx>
 #include <gmsh.h>
@@ -20,6 +22,7 @@ extern "C" {
 
 #include <algorithm>
 #include <cctype>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
@@ -47,6 +50,7 @@ struct MeshSettings {
     bool recombine{false};
     bool optimize{false};
     int algorithmCode{5};
+    std::string sizeMode{"absolute"};
 };
 
 class GmshSession final {
@@ -149,6 +153,12 @@ std::optional<MeshElementType> mapGmshElementType(const int gmsh_type) {
         return MeshElementType::Prism;
     case 7:
         return MeshElementType::Pyramid;
+    case 9:
+        return MeshElementType::Tri6;
+    case 10:
+        return MeshElementType::Quad9;
+    case 16:
+        return MeshElementType::Quad8;
     default:
         return std::nullopt;
     }
@@ -158,7 +168,13 @@ std::optional<MeshSettings> parseSettings(const nlohmann::json& param, std::stri
     MeshSettings settings;
     const double element_size = param.value("elementSize", 1.0);
     settings.dimension = param.value("dimension", 2);
+    settings.sizeMode = toLower(param.value("sizeMode", std::string{"absolute"}));
     settings.recombine = toLower(param.value("elementType", std::string{"triangle"})) == "quad";
+
+    if(settings.sizeMode != "absolute" && settings.sizeMode != "percentage") {
+        error = "sizeMode must be 'absolute' or 'percentage'";
+        return std::nullopt;
+    }
 
     if(settings.dimension != 2 && settings.dimension != 3) {
         error = "dimension must be 2 or 3";
@@ -316,41 +332,52 @@ bool buildMeshEntry(const TopoDS_Compound& compound,
         return false;
     }
 
-    gmshOptionSetNumber("Mesh.MeshSizeMin", settings.minSize, &ierr);
+    auto actual_settings = settings;
+    if(actual_settings.sizeMode == "percentage") {
+        Bnd_Box bbox;
+        BRepBndLib::Add(compound, bbox);
+        if(!bbox.IsVoid()) {
+            const double diagonal = std::sqrt(bbox.SquareExtent());
+            actual_settings.minSize = diagonal * (actual_settings.minSize / 100.0);
+            actual_settings.maxSize = diagonal * (actual_settings.maxSize / 100.0);
+        }
+    }
+
+    gmshOptionSetNumber("Mesh.MeshSizeMin", actual_settings.minSize, &ierr);
     if(!checkGmsh(ierr, error, "Failed to set Mesh.MeshSizeMin")) {
         return false;
     }
-    gmshOptionSetNumber("Mesh.MeshSizeMax", settings.maxSize, &ierr);
+    gmshOptionSetNumber("Mesh.MeshSizeMax", actual_settings.maxSize, &ierr);
     if(!checkGmsh(ierr, error, "Failed to set Mesh.MeshSizeMax")) {
         return false;
     }
-    gmshOptionSetNumber("Mesh.ElementOrder", settings.order, &ierr);
+    gmshOptionSetNumber("Mesh.ElementOrder", actual_settings.order, &ierr);
     if(!checkGmsh(ierr, error, "Failed to set Mesh.ElementOrder")) {
         return false;
     }
-    gmshOptionSetNumber("Mesh.RecombineAll", settings.recombine ? 1 : 0, &ierr);
+    gmshOptionSetNumber("Mesh.RecombineAll", actual_settings.recombine ? 1 : 0, &ierr);
     if(!checkGmsh(ierr, error, "Failed to set Mesh.RecombineAll")) {
         return false;
     }
 
-    if(settings.dimension == 2) {
-        gmshOptionSetNumber("Mesh.Algorithm", settings.algorithmCode, &ierr);
+    if(actual_settings.dimension == 2) {
+        gmshOptionSetNumber("Mesh.Algorithm", actual_settings.algorithmCode, &ierr);
         if(!checkGmsh(ierr, error, "Failed to set Mesh.Algorithm")) {
             return false;
         }
     } else {
-        gmshOptionSetNumber("Mesh.Algorithm3D", settings.algorithmCode, &ierr);
+        gmshOptionSetNumber("Mesh.Algorithm3D", actual_settings.algorithmCode, &ierr);
         if(!checkGmsh(ierr, error, "Failed to set Mesh.Algorithm3D")) {
             return false;
         }
     }
 
-    gmshModelMeshGenerate(settings.dimension, &ierr);
+    gmshModelMeshGenerate(actual_settings.dimension, &ierr);
     if(!checkGmsh(ierr, error, "gmsh mesh generation failed")) {
         return false;
     }
 
-    if(settings.optimize) {
+    if(actual_settings.optimize) {
         gmshModelMeshOptimize("Netgen", 1, -1, nullptr, 0, &ierr);
         if(!checkGmsh(ierr, error, "gmsh mesh optimization failed")) {
             return false;
@@ -497,6 +524,11 @@ nlohmann::json GenerateMeshAction::describe() const {
                {{"type", "string"},
                 {"required", false},
                 {"description", "Meshing algorithm name (default delaunay)."}}},
+              {"sizeMode",
+               {{"type", "string"},
+                {"required", false},
+                {"description",
+                 "Size mode: 'absolute' (default) or 'percentage' of bounding box diagonal."}}},
               {"advanced",
                {{"type", "object"},
                 {"required", false},
