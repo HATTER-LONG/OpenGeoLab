@@ -258,7 +258,7 @@ TEST_CASE("MeshStore: getTopology returns cached topology after setMesh") {
     MeshStore store;
     store.setMesh(1, makeTriangleMesh(1));
 
-    const auto* topo = store.getTopology(1);
+    const MeshTopology* topo = store.getTopology(1);
     REQUIRE(topo != nullptr);
     CHECK(topo->edges.size() == 3);
 }
@@ -319,7 +319,7 @@ TEST_CASE("MeshStore: modifyMesh rebuilds topology") {
     MeshStore store;
     store.setMesh(1, makeTriangleMesh(1));
 
-    const auto* topo_before = store.getTopology(1);
+    const MeshTopology* topo_before = store.getTopology(1);
     REQUIRE(topo_before != nullptr);
     CHECK(topo_before->edges.size() == 3);
 
@@ -331,7 +331,7 @@ TEST_CASE("MeshStore: modifyMesh rebuilds topology") {
         entry.elements.push_back(tri);
     });
 
-    const auto* topo_after = store.getTopology(1);
+    const MeshTopology* topo_after = store.getTopology(1);
     REQUIRE(topo_after != nullptr);
     CHECK(topo_after->edges.size() == 5);
 }
@@ -372,7 +372,27 @@ TEST_CASE("MeshStore: modifyMesh leaves mesh and topology unchanged if modifier 
     CHECK(entry->nodes.size() == 3);
     CHECK(entry->version == version_before);
 
-    const auto* topology = store.getTopology(1);
+    const MeshTopology* topology = store.getTopology(1);
     REQUIRE(topology != nullptr);
     CHECK(topology->edges.size() == edge_count_before);
+}
+
+TEST_CASE("MeshStore: setMesh replacing existing mesh rebuilds cached topology") {
+    MeshStore store;
+    store.setMesh(1, makeTriangleMesh(1));
+    REQUIRE(store.getTopology(1) != nullptr);
+    CHECK(store.getTopology(1)->edges.size() == 3);
+
+    auto replacement = makeTriangleMesh(1);
+    replacement.nodes.push_back(MeshNode{{1.5F, 1.0F, 0.0F}});
+    MeshElement tri{};
+    tri.type = MeshElementType::Triangle;
+    tri.nodeLocalIds = {2, 4, 3, 0, 0, 0, 0, 0};
+    replacement.elements.push_back(tri);
+
+    store.setMesh(1, std::move(replacement));
+
+    const MeshTopology* topology = store.getTopology(1);
+    REQUIRE(topology != nullptr);
+    CHECK(topology->edges.size() == 5);
 }

@@ -21,10 +21,11 @@ void MeshStore::setMesh(uint32_t shape_id, MeshEntry entry) {
         }
 
         entry.markUpdated();
+        MeshTopology topology = MeshTopology::build(entry);
         auto [stored_it, inserted] = m_entries.insert_or_assign(shape_id, std::move(entry));
         static_cast<void>(inserted);
+        m_topologies.insert_or_assign(shape_id, std::move(topology));
         stored_entry = stored_it->second;
-        m_topologies.insert_or_assign(shape_id, MeshTopology::build(stored_entry));
     }
 
     meshAdded(shape_id, stored_entry);
