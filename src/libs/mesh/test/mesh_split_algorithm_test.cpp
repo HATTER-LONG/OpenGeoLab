@@ -76,6 +76,68 @@ static MeshEntry makeSingleQuad() {
     return entry;
 }
 
+static MeshEntry makeSingleTri6() {
+    MeshEntry entry;
+    entry.shapeId = 1;
+    entry.nodes = {
+        MeshNode{{0.0F, 0.0F, 0.0F}}, // localId 1 = c0
+        MeshNode{{2.0F, 0.0F, 0.0F}}, // localId 2 = c1
+        MeshNode{{1.0F, 2.0F, 0.0F}}, // localId 3 = c2
+        MeshNode{{1.0F, 0.0F, 0.0F}}, // localId 4 = m01
+        MeshNode{{1.5F, 1.0F, 0.0F}}, // localId 5 = m12
+        MeshNode{{0.5F, 1.0F, 0.0F}}, // localId 6 = m20
+    };
+    MeshElement tri6{};
+    tri6.type = MeshElementType::Tri6;
+    tri6.nodeLocalIds = {1, 2, 3, 4, 5, 6, 0, 0};
+    entry.elements = {tri6};
+    return entry;
+}
+
+static MeshEntry makeSingleQuad8() {
+    MeshEntry entry;
+    entry.shapeId = 1;
+    entry.nodes = {
+        MeshNode{{0.0F, 0.0F, 0.0F}}, // localId 1 = c0
+        MeshNode{{2.0F, 0.0F, 0.0F}}, // localId 2 = c1
+        MeshNode{{2.0F, 2.0F, 0.0F}}, // localId 3 = c2
+        MeshNode{{0.0F, 2.0F, 0.0F}}, // localId 4 = c3
+        MeshNode{{1.0F, 0.0F, 0.0F}}, // localId 5 = m01
+        MeshNode{{2.0F, 1.0F, 0.0F}}, // localId 6 = m12
+        MeshNode{{1.0F, 2.0F, 0.0F}}, // localId 7 = m23
+        MeshNode{{0.0F, 1.0F, 0.0F}}, // localId 8 = m30
+    };
+    MeshElement quad8{};
+    quad8.type = MeshElementType::Quad8;
+    quad8.nodeLocalIds = {1, 2, 3, 4, 5, 6, 7, 8};
+    entry.elements = {quad8};
+    return entry;
+}
+
+static MeshEntry makeTri6AndTriangleSharedEdge() {
+    MeshEntry entry;
+    entry.shapeId = 1;
+    entry.nodes = {
+        MeshNode{{0.0F, 0.0F, 0.0F}}, // localId 1 = c0 (Tri6 only)
+        MeshNode{{2.0F, 0.0F, 0.0F}}, // localId 2 = c1 (shared corner)
+        MeshNode{{1.0F, 2.0F, 0.0F}}, // localId 3 = c2 (shared corner)
+        MeshNode{{1.0F, 0.0F, 0.0F}}, // localId 4 = m01 (Tri6 mid-edge)
+        MeshNode{{1.5F, 1.0F, 0.0F}}, // localId 5 = m12 (Tri6 mid-edge)
+        MeshNode{{0.5F, 1.0F, 0.0F}}, // localId 6 = m20 (Tri6 mid-edge)
+        MeshNode{{3.0F, 2.0F, 0.0F}}, // localId 7 = extra corner (Triangle only)
+    };
+    MeshElement tri6{};
+    tri6.type = MeshElementType::Tri6;
+    tri6.nodeLocalIds = {1, 2, 3, 4, 5, 6, 0, 0};
+
+    MeshElement tri{};
+    tri.type = MeshElementType::Triangle;
+    tri.nodeLocalIds = {2, 7, 3, 0, 0, 0, 0, 0};
+
+    entry.elements = {tri6, tri};
+    return entry;
+}
+
 static void applySplitResult(MeshEntry& entry, const SplitResult& result) {
     for(const auto& new_node : result.newNodes) {
         entry.nodes.push_back(
@@ -587,10 +649,12 @@ TEST_CASE("MeshSplitAlgorithm: quad 3-edge bitmask combined mode extraction") {
         uint32_t tri_count = 0;
         uint32_t quad_count = 0;
         for(const auto& elem : result.replacements[0].newElements) {
-            if(elem.type == MeshElementType::Triangle)
+            if(elem.type == MeshElementType::Triangle) {
                 ++tri_count;
-            if(elem.type == MeshElementType::Quad)
+            }
+            if(elem.type == MeshElementType::Quad) {
                 ++quad_count;
+            }
         }
         CHECK(tri_count == 1);
         CHECK(quad_count == 3);
@@ -605,10 +669,12 @@ TEST_CASE("MeshSplitAlgorithm: quad 3-edge bitmask combined mode extraction") {
         uint32_t tri_count = 0;
         uint32_t quad_count = 0;
         for(const auto& elem : result.replacements[0].newElements) {
-            if(elem.type == MeshElementType::Triangle)
+            if(elem.type == MeshElementType::Triangle) {
                 ++tri_count;
-            if(elem.type == MeshElementType::Quad)
+            }
+            if(elem.type == MeshElementType::Quad) {
                 ++quad_count;
+            }
         }
         CHECK(tri_count == 1);
         CHECK(quad_count == 2);
@@ -623,10 +689,12 @@ TEST_CASE("MeshSplitAlgorithm: quad 3-edge bitmask combined mode extraction") {
         uint32_t tri_count = 0;
         uint32_t quad_count = 0;
         for(const auto& elem : result.replacements[0].newElements) {
-            if(elem.type == MeshElementType::Triangle)
+            if(elem.type == MeshElementType::Triangle) {
                 ++tri_count;
-            if(elem.type == MeshElementType::Quad)
+            }
+            if(elem.type == MeshElementType::Quad) {
                 ++quad_count;
+            }
         }
         CHECK(tri_count == 3);
         CHECK(quad_count == 2);
@@ -812,4 +880,208 @@ TEST_CASE("MeshSplitAlgorithm: quad 3-edge in 2x2 grid with neighbor cuts") {
             }
         }
     }
+}
+
+// --- Second-order (Tri6) tests ---
+
+TEST_CASE("MeshSplitAlgorithm: Tri6 1-edge -> 2 Tri6") {
+    auto entry = makeSingleTri6();
+    const auto topo = MeshTopology::build(entry);
+    REQUIRE(topo.edges.size() == 3);
+
+    const auto edge01 = topo.findEdgeIndex(1, 2);
+    REQUIRE(edge01.has_value());
+
+    const MeshSplitAlgorithm algo;
+    const auto result = algo.compute(entry, topo, {edge01.value() + 1U}, {}, SplitMode::TriaFour);
+
+    CHECK(result.replacements.size() == 1);
+    CHECK(result.replacements[0].newElements.size() == 2);
+    CHECK(result.newNodes.size() == 3);
+
+    for(const auto& child : result.replacements[0].newElements) {
+        CHECK(child.type == MeshElementType::Tri6);
+    }
+
+    applySplitResult(entry, result);
+    CHECK(entry.elements.size() == 2);
+    CHECK(entry.nodes.size() == 9); // 6 original + 3 new
+}
+
+TEST_CASE("MeshSplitAlgorithm: Tri6 3-edge TriaFour -> 4 Tri6") {
+    auto entry = makeSingleTri6();
+    const auto topo = MeshTopology::build(entry);
+
+    const auto e01 = topo.findEdgeIndex(1, 2);
+    const auto e12 = topo.findEdgeIndex(2, 3);
+    const auto e20 = topo.findEdgeIndex(3, 1);
+    REQUIRE(e01.has_value());
+    REQUIRE(e12.has_value());
+    REQUIRE(e20.has_value());
+
+    const MeshSplitAlgorithm algo;
+    const auto result =
+        algo.compute(entry, topo, {e01.value() + 1U, e12.value() + 1U, e20.value() + 1U}, {},
+                     SplitMode::TriaFour);
+
+    CHECK(result.replacements.size() == 1);
+    CHECK(result.replacements[0].newElements.size() == 4);
+    CHECK(result.newNodes.size() == 9);
+
+    for(const auto& child : result.replacements[0].newElements) {
+        CHECK(child.type == MeshElementType::Tri6);
+    }
+
+    applySplitResult(entry, result);
+    CHECK(entry.elements.size() == 4);
+    CHECK(entry.nodes.size() == 15); // 6 original + 9 new
+}
+
+TEST_CASE("MeshSplitAlgorithm: Tri6 TriaThree node-split -> 3 Tri6") {
+    auto entry = makeSingleTri6();
+    const auto topo = MeshTopology::build(entry);
+
+    const MeshSplitAlgorithm algo;
+    const auto result = algo.compute(entry, topo, {}, {1, 2, 3}, SplitMode::TriaThree);
+
+    CHECK(result.replacements.size() == 1);
+    CHECK(result.replacements[0].newElements.size() == 3);
+    CHECK(result.newNodes.size() == 4); // 1 centroid + 3 sub-midpoints
+
+    for(const auto& child : result.replacements[0].newElements) {
+        CHECK(child.type == MeshElementType::Tri6);
+    }
+
+    // Verify centroid position (first new node)
+    CHECK(result.newNodes[0].x == doctest::Approx(1.0));
+    CHECK(result.newNodes[0].y == doctest::Approx(2.0 / 3.0));
+    CHECK(result.newNodes[0].z == doctest::Approx(0.0));
+
+    applySplitResult(entry, result);
+    CHECK(entry.elements.size() == 3);
+    CHECK(entry.nodes.size() == 10); // 6 original + 4 new
+}
+
+// --- Second-order (Quad8) tests ---
+
+TEST_CASE("MeshSplitAlgorithm: Quad8 1-edge -> 1 Tri6 + 1 Quad8") {
+    auto entry = makeSingleQuad8();
+    const auto topo = MeshTopology::build(entry);
+    REQUIRE(topo.edges.size() == 4);
+
+    const auto edge01 = topo.findEdgeIndex(1, 2);
+    REQUIRE(edge01.has_value());
+
+    const MeshSplitAlgorithm algo;
+    const auto result = algo.compute(entry, topo, {edge01.value() + 1U}, {}, SplitMode::TriaFour);
+
+    CHECK(result.replacements.size() == 1);
+    CHECK(result.replacements[0].newElements.size() == 2);
+    CHECK(result.newNodes.size() == 3);
+
+    const auto& children = result.replacements[0].newElements;
+    CHECK(children[0].type == MeshElementType::Tri6);
+    CHECK(children[1].type == MeshElementType::Quad8);
+
+    applySplitResult(entry, result);
+    CHECK(entry.elements.size() == 2);
+    CHECK(entry.nodes.size() == 11); // 8 original + 3 new
+}
+
+TEST_CASE("MeshSplitAlgorithm: Quad8 2-opposite -> 2 Quad8") {
+    auto entry = makeSingleQuad8();
+    const auto topo = MeshTopology::build(entry);
+
+    const auto edge01 = topo.findEdgeIndex(1, 2);
+    const auto edge23 = topo.findEdgeIndex(3, 4);
+    REQUIRE(edge01.has_value());
+    REQUIRE(edge23.has_value());
+
+    const MeshSplitAlgorithm algo;
+    const auto result = algo.compute(entry, topo, {edge01.value() + 1U, edge23.value() + 1U}, {},
+                                     SplitMode::TriaFour);
+
+    CHECK(result.replacements.size() == 1);
+    CHECK(result.replacements[0].newElements.size() == 2);
+    CHECK(result.newNodes.size() == 5);
+
+    for(const auto& child : result.replacements[0].newElements) {
+        CHECK(child.type == MeshElementType::Quad8);
+    }
+
+    applySplitResult(entry, result);
+    CHECK(entry.elements.size() == 2);
+    CHECK(entry.nodes.size() == 13); // 8 original + 5 new
+}
+
+TEST_CASE("MeshSplitAlgorithm: Quad8 4-edge -> 4 Quad8") {
+    auto entry = makeSingleQuad8();
+    const auto topo = MeshTopology::build(entry);
+
+    const auto e01 = topo.findEdgeIndex(1, 2);
+    const auto e12 = topo.findEdgeIndex(2, 3);
+    const auto e23 = topo.findEdgeIndex(3, 4);
+    const auto e30 = topo.findEdgeIndex(4, 1);
+    REQUIRE(e01.has_value());
+    REQUIRE(e12.has_value());
+    REQUIRE(e23.has_value());
+    REQUIRE(e30.has_value());
+
+    const MeshSplitAlgorithm algo;
+    const auto result = algo.compute(
+        entry, topo, {e01.value() + 1U, e12.value() + 1U, e23.value() + 1U, e30.value() + 1U}, {},
+        SplitMode::TriaFour);
+
+    CHECK(result.replacements.size() == 1);
+    CHECK(result.replacements[0].newElements.size() == 4);
+    CHECK(result.newNodes.size() == 13);
+
+    for(const auto& child : result.replacements[0].newElements) {
+        CHECK(child.type == MeshElementType::Quad8);
+    }
+
+    // Verify center position (first new node)
+    CHECK(result.newNodes[0].x == doctest::Approx(1.0));
+    CHECK(result.newNodes[0].y == doctest::Approx(1.0));
+    CHECK(result.newNodes[0].z == doctest::Approx(0.0));
+
+    applySplitResult(entry, result);
+    CHECK(entry.elements.size() == 4);
+    CHECK(entry.nodes.size() == 21); // 8 original + 13 new
+}
+
+// --- Mixed-order tests ---
+
+TEST_CASE("MeshSplitAlgorithm: mixed Tri6 + Triangle shared edge") {
+    auto entry = makeTri6AndTriangleSharedEdge();
+    const auto topo = MeshTopology::build(entry);
+
+    // Select the shared edge c1-c2 (localIds 2-3)
+    const auto shared_edge = topo.findEdgeIndex(2, 3);
+    REQUIRE(shared_edge.has_value());
+
+    const MeshSplitAlgorithm algo;
+    const auto result =
+        algo.compute(entry, topo, {shared_edge.value() + 1U}, {}, SplitMode::TriaFour);
+
+    // Both elements split: Tri6 -> 2 children, Triangle -> 2 children (neighbor cut)
+    CHECK(result.replacements.size() == 2);
+
+    // Count Tri6 and Triangle children across all replacements
+    uint32_t tri6_count = 0;
+    uint32_t tri_count = 0;
+    for(const auto& rep : result.replacements) {
+        for(const auto& child : rep.newElements) {
+            if(child.type == MeshElementType::Tri6) {
+                ++tri6_count;
+            } else if(child.type == MeshElementType::Triangle) {
+                ++tri_count;
+            }
+        }
+    }
+    CHECK(tri6_count == 2); // Tri6 element produces 2 Tri6 children
+    CHECK(tri_count == 2);  // Triangle element produces 2 Triangle children
+
+    applySplitResult(entry, result);
+    CHECK(entry.elements.size() == 4);
 }

@@ -37,7 +37,7 @@ static MeshEntry makeTestTriangle() {
 
 TEST_CASE("SplitMeshAction: describe() structure") {
     MeshStore store;
-    SplitMeshAction action(store);
+    const SplitMeshAction action(store);
     const auto desc = action.describe();
 
     CHECK(desc["name"] == "split_mesh");
@@ -142,7 +142,7 @@ TEST_CASE("SplitMeshAction: successful node split TriaThree") {
     CHECK(entry->nodes.size() == 4);
 }
 
-TEST_CASE("SplitMeshAction: rejects second-order elements") {
+TEST_CASE("SplitMeshAction: accepts Tri6 elements") {
     MeshStore store;
     MeshEntry entry;
     entry.shapeId = 99;
@@ -159,6 +159,27 @@ TEST_CASE("SplitMeshAction: rejects second-order elements") {
     SplitMeshAction action(store);
     const auto result = action.execute(
         {{"shapeId", 99}, {"selections", {{{"type", "edge"}, {"localId", 1}}}}}, nullptr);
+    CHECK(result["ok"].get<bool>() == true);
+}
+
+TEST_CASE("SplitMeshAction: rejects Quad9 elements") {
+    MeshStore store;
+    MeshEntry entry;
+    entry.shapeId = 100;
+    entry.nodes = {
+        MeshNode{{0.0F, 0.0F, 0.0F}}, MeshNode{{2.0F, 0.0F, 0.0F}}, MeshNode{{2.0F, 2.0F, 0.0F}},
+        MeshNode{{0.0F, 2.0F, 0.0F}}, MeshNode{{1.0F, 0.0F, 0.0F}}, MeshNode{{2.0F, 1.0F, 0.0F}},
+        MeshNode{{1.0F, 2.0F, 0.0F}}, MeshNode{{0.0F, 1.0F, 0.0F}}, MeshNode{{1.0F, 1.0F, 0.0F}},
+    };
+    MeshElement quad9{};
+    quad9.type = MeshElementType::Quad9;
+    quad9.nodeLocalIds = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+    entry.elements = {quad9};
+    store.setMesh(100, std::move(entry));
+
+    SplitMeshAction action(store);
+    const auto result = action.execute(
+        {{"shapeId", 100}, {"selections", {{{"type", "edge"}, {"localId", 1}}}}}, nullptr);
     CHECK(result["ok"].get<bool>() == false);
-    CHECK(result["summary"].get<std::string>().find("second-order") != std::string::npos);
+    CHECK(result["summary"].get<std::string>().find("Quad9") != std::string::npos);
 }

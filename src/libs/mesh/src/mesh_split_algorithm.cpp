@@ -28,6 +28,137 @@ MeshElement MeshSplitAlgorithm::makeQuad(uint32_t n1, uint32_t n2, uint32_t n3, 
     return element;
 }
 
+uint64_t MeshSplitAlgorithm::packNodePair(uint32_t node_a, uint32_t node_b) {
+    const auto lo = std::min(node_a, node_b);
+    const auto hi = std::max(node_a, node_b);
+    return (static_cast<uint64_t>(hi) << 32U) | static_cast<uint64_t>(lo);
+}
+
+void MeshSplitAlgorithm::getNodePosition(
+    const SplitContext& ctx, uint32_t local_id, double& out_x, double& out_y, double& out_z) const {
+    if(local_id <= ctx.originalNodeCount) {
+        const auto& pos = ctx.entry.nodes[local_id - 1U].position;
+        out_x = static_cast<double>(pos[0]);
+        out_y = static_cast<double>(pos[1]);
+        out_z = static_cast<double>(pos[2]);
+    } else {
+        const auto& node = ctx.result.newNodes[local_id - ctx.originalNodeCount - 1U];
+        out_x = node.x;
+        out_y = node.y;
+        out_z = node.z;
+    }
+}
+
+uint32_t MeshSplitAlgorithm::getOrCreateMidpointByNodes(SplitContext& ctx,
+                                                        uint32_t node_a,
+                                                        uint32_t node_b) const {
+    const uint64_t key = packNodePair(node_a, node_b);
+    const auto existing = ctx.nodePairMidpoints.find(key);
+    if(existing != ctx.nodePairMidpoints.end()) {
+        return existing->second;
+    }
+
+    double ax = 0.0;
+    double ay = 0.0;
+    double az = 0.0;
+    double bx = 0.0;
+    double by = 0.0;
+    double bz = 0.0;
+    getNodePosition(ctx, node_a, ax, ay, az);
+    getNodePosition(ctx, node_b, bx, by, bz);
+
+    SplitResult::NewNode midpoint{};
+    midpoint.x = (ax + bx) / 2.0;
+    midpoint.y = (ay + by) / 2.0;
+    midpoint.z = (az + bz) / 2.0;
+
+    ctx.result.newNodes.push_back(midpoint);
+    const uint32_t new_local_id = ctx.nextNodeLocalId++;
+    ctx.nodePairMidpoints[key] = new_local_id;
+    return new_local_id;
+}
+
+void MeshSplitAlgorithm::seedMidEdgeNodes(SplitContext& ctx) const {
+    for(uint32_t i = 0; i < ctx.entry.elements.size(); ++i) {
+        const auto& elem = ctx.entry.elements[i];
+
+        if(elem.type == MeshElementType::Tri6) {
+            const uint32_t c0 = elem.nodeLocalIds[0];
+            const uint32_t c1 = elem.nodeLocalIds[1];
+            const uint32_t c2 = elem.nodeLocalIds[2];
+            const uint32_t m01 = elem.nodeLocalIds[3];
+            const uint32_t m12 = elem.nodeLocalIds[4];
+            const uint32_t m20 = elem.nodeLocalIds[5];
+
+            if(const auto e = ctx.topology.findEdgeIndex(c0, c1)) {
+                ctx.edgeMidpointNodes.emplace(e.value(), m01);
+            }
+            if(const auto e = ctx.topology.findEdgeIndex(c1, c2)) {
+                ctx.edgeMidpointNodes.emplace(e.value(), m12);
+            }
+            if(const auto e = ctx.topology.findEdgeIndex(c2, c0)) {
+                ctx.edgeMidpointNodes.emplace(e.value(), m20);
+            }
+
+            ctx.nodePairMidpoints.emplace(packNodePair(c0, c1), m01);
+            ctx.nodePairMidpoints.emplace(packNodePair(c1, c2), m12);
+            ctx.nodePairMidpoints.emplace(packNodePair(c2, c0), m20);
+        } else if(elem.type == MeshElementType::Quad8) {
+            const uint32_t c0 = elem.nodeLocalIds[0];
+            const uint32_t c1 = elem.nodeLocalIds[1];
+            const uint32_t c2 = elem.nodeLocalIds[2];
+            const uint32_t c3 = elem.nodeLocalIds[3];
+            const uint32_t m01 = elem.nodeLocalIds[4];
+            const uint32_t m12 = elem.nodeLocalIds[5];
+            const uint32_t m23 = elem.nodeLocalIds[6];
+            const uint32_t m30 = elem.nodeLocalIds[7];
+
+            if(const auto e = ctx.topology.findEdgeIndex(c0, c1)) {
+                ctx.edgeMidpointNodes.emplace(e.value(), m01);
+            }
+            if(const auto e = ctx.topology.findEdgeIndex(c1, c2)) {
+                ctx.edgeMidpointNodes.emplace(e.value(), m12);
+            }
+            if(const auto e = ctx.topology.findEdgeIndex(c2, c3)) {
+                ctx.edgeMidpointNodes.emplace(e.value(), m23);
+            }
+            if(const auto e = ctx.topology.findEdgeIndex(c3, c0)) {
+                ctx.edgeMidpointNodes.emplace(e.value(), m30);
+            }
+
+            ctx.nodePairMidpoints.emplace(packNodePair(c0, c1), m01);
+            ctx.nodePairMidpoints.emplace(packNodePair(c1, c2), m12);
+            ctx.nodePairMidpoints.emplace(packNodePair(c2, c3), m23);
+            ctx.nodePairMidpoints.emplace(packNodePair(c3, c0), m30);
+        }
+    }
+}
+
+void MeshSplitAlgorithm::upgradeReplacementToSecondOrder(
+    SplitContext& ctx, SplitResult::ElementReplacement& rep) const {
+    for(auto& child : rep.newElements) {
+        if(child.type == MeshElementType::Triangle) {
+            const uint32_t c0 = child.nodeLocalIds[0];
+            const uint32_t c1 = child.nodeLocalIds[1];
+            const uint32_t c2 = child.nodeLocalIds[2];
+            child.nodeLocalIds[3] = getOrCreateMidpointByNodes(ctx, c0, c1);
+            child.nodeLocalIds[4] = getOrCreateMidpointByNodes(ctx, c1, c2);
+            child.nodeLocalIds[5] = getOrCreateMidpointByNodes(ctx, c2, c0);
+            child.type = MeshElementType::Tri6;
+        } else if(child.type == MeshElementType::Quad) {
+            const uint32_t c0 = child.nodeLocalIds[0];
+            const uint32_t c1 = child.nodeLocalIds[1];
+            const uint32_t c2 = child.nodeLocalIds[2];
+            const uint32_t c3 = child.nodeLocalIds[3];
+            child.nodeLocalIds[4] = getOrCreateMidpointByNodes(ctx, c0, c1);
+            child.nodeLocalIds[5] = getOrCreateMidpointByNodes(ctx, c1, c2);
+            child.nodeLocalIds[6] = getOrCreateMidpointByNodes(ctx, c2, c3);
+            child.nodeLocalIds[7] = getOrCreateMidpointByNodes(ctx, c3, c0);
+            child.type = MeshElementType::Quad8;
+        }
+    }
+}
+
 uint32_t MeshSplitAlgorithm::getOrCreateMidpoint(SplitContext& ctx, uint32_t edge_index) const {
     const auto existing = ctx.edgeMidpointNodes.find(edge_index);
     if(existing != ctx.edgeMidpointNodes.end()) {
@@ -51,7 +182,7 @@ uint32_t MeshSplitAlgorithm::getOrCreateMidpoint(SplitContext& ctx, uint32_t edg
 
 uint32_t MeshSplitAlgorithm::createCentroid(SplitContext& ctx, uint32_t elem_index) const {
     const auto& element = ctx.entry.elements[elem_index];
-    const auto element_node_count = nodeCount(element.type);
+    const auto element_node_count = cornerCount(element.type);
 
     double center_x = 0.0;
     double center_y = 0.0;
@@ -74,8 +205,8 @@ uint32_t MeshSplitAlgorithm::createCentroid(SplitContext& ctx, uint32_t elem_ind
 uint32_t MeshSplitAlgorithm::findOppositeNode(const MeshElement& element,
                                               uint32_t edge_node1_local_id,
                                               uint32_t edge_node2_local_id) {
-    const auto element_node_count = nodeCount(element.type);
-    for(uint8_t node_offset = 0; node_offset < element_node_count; ++node_offset) {
+    const auto element_corner_count = cornerCount(element.type);
+    for(uint8_t node_offset = 0; node_offset < element_corner_count; ++node_offset) {
         const auto node_local_id = element.nodeLocalIds[node_offset];
         if(node_local_id != edge_node1_local_id && node_local_id != edge_node2_local_id) {
             return node_local_id;
@@ -175,7 +306,8 @@ void MeshSplitAlgorithm::processNeighborCut(SplitContext& ctx,
     const uint32_t edge_node2_local_id = edge_node2_index + 1U;
     const uint32_t midpoint = getOrCreateMidpoint(ctx, shared_edge_index);
 
-    if(element.type == MeshElementType::Triangle) {
+    const auto linear_type = linearEquivalent(element.type);
+    if(linear_type == MeshElementType::Triangle) {
         const uint32_t opposite =
             findOppositeNode(element, edge_node1_local_id, edge_node2_local_id);
 
@@ -184,10 +316,13 @@ void MeshSplitAlgorithm::processNeighborCut(SplitContext& ctx,
         replacement.newElements.push_back(makeTriangle(edge_node1_local_id, midpoint, opposite));
         replacement.newElements.push_back(makeTriangle(midpoint, edge_node2_local_id, opposite));
         ctx.result.replacements.push_back(std::move(replacement));
+        if(isSecondOrder(element.type)) {
+            upgradeReplacementToSecondOrder(ctx, ctx.result.replacements.back());
+        }
         return;
     }
 
-    if(element.type == MeshElementType::Quad) {
+    if(linear_type == MeshElementType::Quad) {
         std::array<uint32_t, 4> corners{};
         for(uint8_t corner_index = 0; corner_index < 4; ++corner_index) {
             corners[corner_index] = element.nodeLocalIds[corner_index];
@@ -220,6 +355,9 @@ void MeshSplitAlgorithm::processNeighborCut(SplitContext& ctx,
                 makeQuad(midpoint, edge_node1_local_id, next_corner, opposite_corner));
         }
         ctx.result.replacements.push_back(std::move(replacement));
+        if(isSecondOrder(element.type)) {
+            upgradeReplacementToSecondOrder(ctx, ctx.result.replacements.back());
+        }
     }
 }
 
@@ -404,8 +542,13 @@ SplitResult MeshSplitAlgorithm::compute(const MeshEntry& entry,
     }
 
     SplitContext ctx{
-        entry, topology, result, {}, {}, static_cast<uint32_t>(entry.nodes.size()) + 1U,
+        entry,  topology,
+        result, {},
+        {},     static_cast<uint32_t>(entry.nodes.size()) + 1U,
+        {},     static_cast<uint32_t>(entry.nodes.size()),
     };
+
+    seedMidEdgeNodes(ctx);
 
     std::unordered_map<uint32_t, std::vector<uint32_t>> element_to_edges;
     for(const auto edge_local_id : selected_edge_local_ids) {
@@ -449,10 +592,17 @@ SplitResult MeshSplitAlgorithm::compute(const MeshEntry& entry,
         ctx.processedElements.insert(element_index);
 
         const auto& element = entry.elements[element_index];
-        if(element.type == MeshElementType::Triangle) {
+        const auto linear_type = linearEquivalent(element.type);
+        if(linear_type == MeshElementType::Triangle) {
             processTriangleEdges(ctx, element_index, edge_indices, mode);
-        } else if(element.type == MeshElementType::Quad) {
+            if(isSecondOrder(element.type)) {
+                upgradeReplacementToSecondOrder(ctx, ctx.result.replacements.back());
+            }
+        } else if(linear_type == MeshElementType::Quad) {
             processQuadEdges(ctx, element_index, edge_indices, mode);
+            if(isSecondOrder(element.type)) {
+                upgradeReplacementToSecondOrder(ctx, ctx.result.replacements.back());
+            }
         }
     }
 
@@ -473,10 +623,14 @@ SplitResult MeshSplitAlgorithm::compute(const MeshEntry& entry,
         }
 
         const auto& element = entry.elements[element_index];
-        if(element.type == MeshElementType::Triangle && node_ids.size() == 3U &&
+        const auto linear_type = linearEquivalent(element.type);
+        if(linear_type == MeshElementType::Triangle && node_ids.size() == 3U &&
            (static_cast<uint8_t>(mode) & static_cast<uint8_t>(SplitMode::TriaThree)) != 0U) {
             ctx.processedElements.insert(element_index);
             processTriangleNodes(ctx, element_index);
+            if(isSecondOrder(element.type)) {
+                upgradeReplacementToSecondOrder(ctx, ctx.result.replacements.back());
+            }
         }
     }
 
