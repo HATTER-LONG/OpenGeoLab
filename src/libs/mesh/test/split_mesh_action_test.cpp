@@ -37,7 +37,7 @@ static MeshEntry makeTestTriangle() {
 
 TEST_CASE("SplitMeshAction: describe() structure") {
     MeshStore store;
-    SplitMeshAction action(store);
+    const SplitMeshAction action(store);
     const auto desc = action.describe();
 
     CHECK(desc["name"] == "split_mesh");

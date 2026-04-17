@@ -649,10 +649,12 @@ TEST_CASE("MeshSplitAlgorithm: quad 3-edge bitmask combined mode extraction") {
         uint32_t tri_count = 0;
         uint32_t quad_count = 0;
         for(const auto& elem : result.replacements[0].newElements) {
-            if(elem.type == MeshElementType::Triangle)
+            if(elem.type == MeshElementType::Triangle) {
                 ++tri_count;
-            if(elem.type == MeshElementType::Quad)
+            }
+            if(elem.type == MeshElementType::Quad) {
                 ++quad_count;
+            }
         }
         CHECK(tri_count == 1);
         CHECK(quad_count == 3);
@@ -667,10 +669,12 @@ TEST_CASE("MeshSplitAlgorithm: quad 3-edge bitmask combined mode extraction") {
         uint32_t tri_count = 0;
         uint32_t quad_count = 0;
         for(const auto& elem : result.replacements[0].newElements) {
-            if(elem.type == MeshElementType::Triangle)
+            if(elem.type == MeshElementType::Triangle) {
                 ++tri_count;
-            if(elem.type == MeshElementType::Quad)
+            }
+            if(elem.type == MeshElementType::Quad) {
                 ++quad_count;
+            }
         }
         CHECK(tri_count == 1);
         CHECK(quad_count == 2);
@@ -685,10 +689,12 @@ TEST_CASE("MeshSplitAlgorithm: quad 3-edge bitmask combined mode extraction") {
         uint32_t tri_count = 0;
         uint32_t quad_count = 0;
         for(const auto& elem : result.replacements[0].newElements) {
-            if(elem.type == MeshElementType::Triangle)
+            if(elem.type == MeshElementType::Triangle) {
                 ++tri_count;
-            if(elem.type == MeshElementType::Quad)
+            }
+            if(elem.type == MeshElementType::Quad) {
                 ++quad_count;
+            }
         }
         CHECK(tri_count == 3);
         CHECK(quad_count == 2);

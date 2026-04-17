@@ -23,9 +23,7 @@
 
 namespace OpenGeoLab::Mesh {
 
-namespace {
-
-nlohmann::json makeFailure(std::string_view summary) {
+static nlohmann::json makeFailure(std::string_view summary) {
     return {
         {"ok", false},
         {"action", SplitMeshAction::ACTION_NAME},
@@ -33,7 +31,7 @@ nlohmann::json makeFailure(std::string_view summary) {
     };
 }
 
-std::optional<uint32_t> parseUint32(const nlohmann::json& value) {
+static std::optional<uint32_t> parseUint32(const nlohmann::json& value) {
     if(value.is_number_unsigned()) {
         return value.get<uint32_t>();
     }
@@ -51,7 +49,7 @@ std::optional<uint32_t> parseUint32(const nlohmann::json& value) {
     return static_cast<uint32_t>(parsed_value);
 }
 
-SplitMode parseSplitMode(const nlohmann::json& mode_value) {
+static SplitMode parseSplitMode(const nlohmann::json& mode_value) {
     if(mode_value.is_number_unsigned()) {
         return static_cast<SplitMode>(mode_value.get<uint8_t>());
     }
@@ -87,7 +85,7 @@ SplitMode parseSplitMode(const nlohmann::json& mode_value) {
     throw std::invalid_argument("Unknown split mode: " + mode_str);
 }
 
-void applySplitResult(MeshEntry& entry, const SplitResult& result) {
+static void applySplitResult(MeshEntry& entry, const SplitResult& result) {
     for(const auto& new_node : result.newNodes) {
         entry.nodes.push_back(
             MeshNode{{static_cast<float>(new_node.x), static_cast<float>(new_node.y),
@@ -111,8 +109,6 @@ void applySplitResult(MeshEntry& entry, const SplitResult& result) {
                               replacement.newElements.end());
     }
 }
-
-} // namespace
 
 SplitMeshAction::SplitMeshAction(MeshStore& mesh_store) : m_meshStore(mesh_store) {}
 
