@@ -23,6 +23,7 @@ Item {
 
     signal toggleGeoVisibility(int shapeId)
     signal toggleMeshVisibility(int shapeId)
+    signal renameShapeRequested(int shapeId, string newName)
     signal deleteShapeRequested(int shapeId)
 
     property bool expanded: false
@@ -96,66 +97,282 @@ Item {
                 }
 
                 contentItem: Item {
-                    implicitWidth: deleteRow.implicitWidth + 24
-                    implicitHeight: deleteRow.implicitHeight + 12
+                    implicitWidth: Math.max(renameRow.implicitWidth, deleteRow.implicitWidth) + 24
+                    implicitHeight: renameRow.implicitHeight + deleteRow.implicitHeight + 16
 
-                    Rectangle {
+                    Column {
                         anchors.fill: parent
-                        radius: root.theme.radiusSmall
-                        color: deleteMouseArea.containsMouse
-                            ? root.theme.tint(root.theme.danger, root.theme.darkMode ? 0.18 : 0.10)
-                            : "transparent"
+                        spacing: 2
 
-                        Behavior on color {
-                            ColorAnimation { duration: root.theme.animFast }
-                        }
-                    }
+                        // Rename row
+                        Item {
+                            width: parent.width
+                            height: renameRow.implicitHeight + 6
 
-                    MouseArea {
-                        id: deleteMouseArea
-
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            contextMenu.close();
-                            root.deleteShapeRequested(root.shapeId);
-                        }
-                    }
-
-                    Row {
-                        id: deleteRow
-
-                        anchors.centerIn: parent
-                        spacing: 8
-
-                        AppIcon {
-                            theme: root.theme
-                            iconKind: "trash"
-                            useThemeContrast: false
-                            primaryColor: deleteMouseArea.containsMouse
-                                ? root.theme.danger : root.theme.textSecondary
-                            width: 14
-                            height: 14
-                            anchors.verticalCenter: parent.verticalCenter
-
-                            Behavior on primaryColor {
-                                ColorAnimation { duration: root.theme.animFast }
-                            }
-                        }
-
-                        Text {
-                            text: qsTr("Delete Shape")
-                            color: deleteMouseArea.containsMouse
-                                ? root.theme.danger : root.theme.textPrimary
-                            font.pixelSize: 12
-                            anchors.verticalCenter: parent.verticalCenter
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: root.theme.radiusSmall
+                            color: renameMouseArea.containsMouse
+                                ? root.theme.tint(root.theme.accentA, root.theme.darkMode ? 0.18 : 0.10)
+                                : "transparent"
 
                             Behavior on color {
                                 ColorAnimation { duration: root.theme.animFast }
                             }
                         }
+
+                        MouseArea {
+                            id: renameMouseArea
+
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                contextMenu.close();
+                                renameDialog.open();
+                            }
+                        }
+
+                        Row {
+                            id: renameRow
+
+                            anchors.left: parent.left
+                            anchors.leftMargin: 12
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 8
+
+                            AppIcon {
+                                theme: root.theme
+                                iconKind: "edit"
+                                useThemeContrast: false
+                                primaryColor: renameMouseArea.containsMouse
+                                    ? root.theme.accentA : root.theme.textSecondary
+                                width: 14
+                                height: 14
+                                anchors.verticalCenter: parent.verticalCenter
+
+                                Behavior on primaryColor {
+                                    ColorAnimation { duration: root.theme.animFast }
+                                }
+                            }
+
+                            Text {
+                                text: qsTr("Rename Shape")
+                                color: renameMouseArea.containsMouse
+                                    ? root.theme.accentA : root.theme.textPrimary
+                                font.pixelSize: 12
+                                anchors.verticalCenter: parent.verticalCenter
+
+                                Behavior on color {
+                                    ColorAnimation { duration: root.theme.animFast }
+                                }
+                            }
+                        }
                     }
+
+                    // Delete row
+                    Item {
+                        width: parent.width
+                        height: deleteRow.implicitHeight + 6
+
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: root.theme.radiusSmall
+                            color: deleteMouseArea.containsMouse
+                                ? root.theme.tint(root.theme.danger, root.theme.darkMode ? 0.18 : 0.10)
+                                : "transparent"
+
+                            Behavior on color {
+                                ColorAnimation { duration: root.theme.animFast }
+                            }
+                        }
+
+                        MouseArea {
+                            id: deleteMouseArea
+
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                contextMenu.close();
+                                root.deleteShapeRequested(root.shapeId);
+                            }
+                        }
+
+                        Row {
+                            id: deleteRow
+
+                            anchors.left: parent.left
+                            anchors.leftMargin: 12
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 8
+
+                            AppIcon {
+                                theme: root.theme
+                                iconKind: "trash"
+                                useThemeContrast: false
+                                primaryColor: deleteMouseArea.containsMouse
+                                    ? root.theme.danger : root.theme.textSecondary
+                                width: 14
+                                height: 14
+                                anchors.verticalCenter: parent.verticalCenter
+
+                                Behavior on primaryColor {
+                                    ColorAnimation { duration: root.theme.animFast }
+                                }
+                            }
+
+                            Text {
+                                text: qsTr("Delete Shape")
+                                color: deleteMouseArea.containsMouse
+                                    ? root.theme.danger : root.theme.textPrimary
+                                font.pixelSize: 12
+                                anchors.verticalCenter: parent.verticalCenter
+
+                                Behavior on color {
+                                    ColorAnimation { duration: root.theme.animFast }
+                                }
+                            }
+                        }
+                    }
+                    }
+                }
+            }
+
+            Dialog {
+                id: renameDialog
+
+                title: qsTr("Rename Shape")
+                modal: true
+                closePolicy: Popup.CloseOnEscape
+
+                anchors.centerIn: Overlay.overlay
+                width: 320
+
+                background: Rectangle {
+                    radius: root.theme.radiusMedium
+                    color: root.theme.surfaceStrong
+                    border.width: 1
+                    border.color: root.theme.borderSubtle
+                }
+
+                header: Text {
+                    text: renameDialog.title
+                    font.pixelSize: 14
+                    color: root.theme.textPrimary
+                    padding: 16
+                }
+
+                contentItem: ColumnLayout {
+                    spacing: 12
+
+                    Text {
+                        text: qsTr("Enter a new name for shape #%1:").arg(root.shapeId)
+                        font.pixelSize: 12
+                        color: root.theme.textSecondary
+                        wrapMode: Text.WordWrap
+                        Layout.fillWidth: true
+                    }
+
+                    TextField {
+                        id: renameField
+
+                        Layout.fillWidth: true
+                        text: root.name
+                        font.pixelSize: 13
+                        color: root.theme.textPrimary
+                        selectByMouse: true
+
+                        background: Rectangle {
+                            radius: root.theme.radiusSmall
+                            color: root.theme.surface
+                            border.width: 1
+                            border.color: renameField.activeFocus
+                                ? root.theme.accentA : root.theme.borderSubtle
+                        }
+
+                        onAccepted: {
+                            if (text.length > 0) {
+                                renameDialog.doRename();
+                            }
+                        }
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Layout.alignment: Qt.AlignRight
+
+                        Button {
+                            text: qsTr("Cancel")
+                            font.pixelSize: 12
+                            flat: true
+
+                            background: Rectangle {
+                                radius: root.theme.radiusSmall
+                                color: cancelHover.hovered
+                                    ? root.theme.tint(root.theme.textPrimary, 0.1)
+                                    : "transparent"
+                                Behavior on color {
+                                    ColorAnimation { duration: root.theme.animFast }
+                                }
+                            }
+
+                            contentItem: Text {
+                                text: parent.text
+                                font: parent.font
+                                color: root.theme.textSecondary
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                            }
+
+                            HoverHandler { id: cancelHover }
+
+                            onClicked: renameDialog.reject()
+                        }
+
+                        Button {
+                            id: okBtn
+
+                            text: qsTr("OK")
+                            font.pixelSize: 12
+
+                            background: Rectangle {
+                                radius: root.theme.radiusSmall
+                                color: okHover.hovered
+                                    ? root.theme.tint(root.theme.accentA, 0.2)
+                                    : root.theme.accentA
+                                Behavior on color {
+                                    ColorAnimation { duration: root.theme.animFast }
+                                }
+                            }
+
+                            contentItem: Text {
+                                text: parent.text
+                                font: parent.font
+                                color: "#ffffff"
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                            }
+
+                            HoverHandler { id: okHover }
+
+                            onClicked: renameDialog.doRename()
+                        }
+                    }
+                }
+
+                function doRename() {
+                    let newName = renameField.text.trim();
+                    if (newName.length > 0 && newName !== root.name) {
+                        root.renameShapeRequested(root.shapeId, newName);
+                    }
+                    renameDialog.accept();
+                }
+
+                onOpened: {
+                    renameField.text = root.name;
+                    renameField.selectAll();
+                    renameField.forceActiveFocus();
                 }
             }
 

@@ -149,6 +149,7 @@ qt_add_qml_module(
     resource/icons/closeCircleOutline.svg
     resource/icons/syncOutline.svg
     resource/icons/copyOutline.svg
+    resource/icons/edit.svg
     resource/icons/exitOutline.svg
     resource/icons/viewFit.svg
     resource/icons/viewFront.svg
