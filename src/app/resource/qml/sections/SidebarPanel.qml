@@ -224,6 +224,14 @@ Item {
 
                 onToggleGeoVisibility: (sid) => root.toggleGeoVisibility(sid)
                 onToggleMeshVisibility: (sid) => root.toggleMeshVisibility(sid)
+                onRenameShapeRequested: function(sid, newName) {
+                    RequestService.submitAsync(JSON.stringify({
+                        module: "geometry",
+                        action: "rename_shape",
+                        param: { shapeId: sid, newName: newName },
+                        mute: false
+                    }));
+                }
                 onDeleteShapeRequested: function(sid) {
                     RequestService.submitAsync(JSON.stringify({
                         module: "geometry",

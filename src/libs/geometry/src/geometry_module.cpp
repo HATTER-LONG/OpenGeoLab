@@ -17,6 +17,7 @@
 #include <opengeolab/geometry/list_sub_shapes_action.hpp>
 #include <opengeolab/geometry/query_entity_info_action.hpp>
 #include <opengeolab/geometry/query_shape_action.hpp>
+#include <opengeolab/geometry/rename_shape_action.hpp>
 #include <opengeolab/geometry/tessellate_action.hpp>
 
 #include <opengeolab/core/module_data_event.hpp>
@@ -37,6 +38,7 @@ GeometryModule::GeometryModule(Kangaroo::Util::PluginComponentFactory& factory)
     registerAction<QueryShapeAction>(std::ref(m_shapeStore));
     registerAction<ListShapesAction>(std::ref(m_shapeStore));
     registerAction<ListSubShapesAction>(std::ref(m_shapeStore));
+    registerAction<RenameShapeAction>(std::ref(m_shapeStore));
     registerAction<DeleteShapeAction>(std::ref(m_shapeStore));
     registerAction<DeleteEntityAction>(std::ref(m_shapeStore));
     registerAction<DescribeTopologyAction>(std::ref(m_shapeStore));

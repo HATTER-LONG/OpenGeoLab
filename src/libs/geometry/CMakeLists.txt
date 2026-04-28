@@ -13,6 +13,7 @@ set(geometry_public_headers
     include/opengeolab/geometry/list_sub_shapes_action.hpp
     include/opengeolab/geometry/query_entity_info_action.hpp
     include/opengeolab/geometry/query_shape_action.hpp
+    include/opengeolab/geometry/rename_shape_action.hpp
     include/opengeolab/geometry/shape_entry.hpp
     include/opengeolab/geometry/shape_store.hpp
     include/opengeolab/geometry/tessellate_action.hpp
@@ -33,6 +34,7 @@ set(geometry_sources
     src/list_sub_shapes_action.cpp
     src/query_entity_info_action.cpp
     src/query_shape_action.cpp
+    src/rename_shape_action.cpp
     src/shape_store.cpp
     src/tessellate_action.cpp
     src/tessellator.cpp
