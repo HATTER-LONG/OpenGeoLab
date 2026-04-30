@@ -20,6 +20,7 @@ protected:
 
 private:
     ShaderProgram m_shader;
+    GLint m_normalMatrixLoc{0};
 };
 
 } // namespace OpenGeoLab::Render

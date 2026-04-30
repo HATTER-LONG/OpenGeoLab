@@ -141,6 +141,7 @@ bool HighlightPass::onInitialize() {
         m_faceShader.destroy();
         return false;
     }
+    m_normalMatrixLoc = glGetUniformLocation(m_faceShader.id(), "u_normalMatrix");
     return true;
 }
 
@@ -174,8 +175,7 @@ void HighlightPass::render(const FrameState& state, const GpuBufferManager& buff
         if(!faces.empty()) {
             m_faceShader.use();
             m_faceShader.setMat4("u_mvp", transforms.mvp);
-            const GLint loc = glGetUniformLocation(m_faceShader.id(), "u_normalMatrix");
-            glUniformMatrix3fv(loc, 1, GL_FALSE, glm::value_ptr(transforms.normalMatrix));
+            glUniformMatrix3fv(m_normalMatrixLoc, 1, GL_FALSE, glm::value_ptr(transforms.normalMatrix));
             m_faceShader.setVec4("u_highlightColor", toVec4(cfg.selectionFace.color));
             m_faceShader.setFloat("u_alpha", alpha);
             const auto batch =
@@ -222,8 +222,7 @@ void HighlightPass::render(const FrameState& state, const GpuBufferManager& buff
         if(!faces.empty()) {
             m_faceShader.use();
             m_faceShader.setMat4("u_mvp", transforms.mvp);
-            const GLint loc = glGetUniformLocation(m_faceShader.id(), "u_normalMatrix");
-            glUniformMatrix3fv(loc, 1, GL_FALSE, glm::value_ptr(transforms.normalMatrix));
+            glUniformMatrix3fv(m_normalMatrixLoc, 1, GL_FALSE, glm::value_ptr(transforms.normalMatrix));
             m_faceShader.setVec4("u_highlightColor", toVec4(cfg.hoverFace.color));
             m_faceShader.setFloat("u_alpha", alpha);
             const auto batch =

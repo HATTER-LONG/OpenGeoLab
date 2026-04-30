@@ -54,7 +54,13 @@ void main() {
 
 } // namespace
 
-bool OpaquePass::onInitialize() { return m_shader.create(OPAQUE_VS, OPAQUE_FS); }
+bool OpaquePass::onInitialize() {
+    if(!m_shader.create(OPAQUE_VS, OPAQUE_FS)) {
+        return false;
+    }
+    m_normalMatrixLoc = glGetUniformLocation(m_shader.id(), "u_normalMatrix");
+    return true;
+}
 
 void OpaquePass::onCleanup() { m_shader.destroy(); }
 
@@ -74,8 +80,7 @@ void OpaquePass::render(const FrameState& state, const GpuBufferManager& buffers
     m_shader.use();
     m_shader.setMat4("u_mvp", mvp);
 
-    const GLint normal_matrix_location = glGetUniformLocation(m_shader.id(), "u_normalMatrix");
-    glUniformMatrix3fv(normal_matrix_location, 1, GL_FALSE, glm::value_ptr(normal_mat));
+    glUniformMatrix3fv(m_normalMatrixLoc, 1, GL_FALSE, glm::value_ptr(normal_mat));
 
     m_shader.setFloat("u_alpha", state.xRayMode ? 0.25f : 1.0f);
 

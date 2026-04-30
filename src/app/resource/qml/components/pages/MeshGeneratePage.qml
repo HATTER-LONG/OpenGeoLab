@@ -20,6 +20,7 @@ FunctionPageBase {
     property string sizeMode: "absolute"
     property int meshOrder: 1
     property bool optimizeMesh: false
+    property bool appendMode: true
 
     readonly property var algorithmOptions2d: [
         { label: qsTr("Automatic"), value: "automatic" },
@@ -107,7 +108,8 @@ FunctionPageBase {
                 advanced: {
                     order: root.meshOrder,
                     optimize: root.optimizeMesh
-                }
+                },
+                append: root.appendMode
             },
             mute: false
         };
@@ -609,6 +611,29 @@ FunctionPageBase {
         Switch {
             checked: root.optimizeMesh
             onToggled: root.optimizeMesh = checked
+        }
+    }
+
+    RowLayout {
+        width: parent.width
+        spacing: 8
+
+        Text {
+            text: qsTr("Append")
+            color: root.theme.textSecondary
+            font.pixelSize: 12
+            Layout.fillWidth: true
+        }
+
+        Switch {
+            checked: root.appendMode
+            onToggled: root.appendMode = checked
+        }
+
+        Text {
+            text: qsTr("Merge with existing mesh")
+            color: root.theme.textTertiary
+            font.pixelSize: 10
         }
     }
 

@@ -111,6 +111,8 @@ bool LabelPass::onInitialize() {
     glBindVertexArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
+    m_viewportSizeLoc = glGetUniformLocation(m_shader.id(), "u_viewportSize");
+
     return true;
 }
 
@@ -262,16 +264,30 @@ void LabelPass::render(const FrameState& state, const GpuBufferManager& /*buffer
         return;
     }
 
-    buildLabelGeometry(state);
+    const bool labels_changed = state.labelVersion != m_lastLabelVersion;
+    const bool camera_changed =
+        state.viewMatrix != m_lastViewMatrix || state.projMatrix != m_lastProjMatrix ||
+        state.viewportWidth != m_lastViewportWidth || state.viewportHeight != m_lastViewportHeight;
+
+    if(labels_changed || camera_changed) {
+        buildLabelGeometry(state);
+        m_lastLabelVersion = state.labelVersion;
+        m_lastViewMatrix = state.viewMatrix;
+        m_lastProjMatrix = state.projMatrix;
+        m_lastViewportWidth = state.viewportWidth;
+        m_lastViewportHeight = state.viewportHeight;
+
+        // Upload vertex data
+        glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+        glBufferData(GL_ARRAY_BUFFER,
+                     static_cast<GLsizeiptr>(m_vertices.size() * sizeof(LabelVertex)),
+                     m_vertices.data(), GL_DYNAMIC_DRAW);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+    }
+
     if(m_vertices.empty()) {
         return;
     }
-
-    // Upload vertex data
-    glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
-    glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(m_vertices.size() * sizeof(LabelVertex)),
-                 m_vertices.data(), GL_DYNAMIC_DRAW);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
 
     // Set GL state: no depth test (labels always on top), alpha blending
     glDisable(GL_DEPTH_TEST);
@@ -283,8 +299,7 @@ void LabelPass::render(const FrameState& state, const GpuBufferManager& /*buffer
     m_shader.use();
 
     // Set viewport size uniform via direct GL call (ShaderProgram has no setVec2)
-    const GLint viewport_loc = glGetUniformLocation(m_shader.id(), "u_viewportSize");
-    glUniform2f(viewport_loc, static_cast<float>(state.viewportWidth),
+    glUniform2f(m_viewportSizeLoc, static_cast<float>(state.viewportWidth),
                 static_cast<float>(state.viewportHeight));
 
     m_shader.setFloat("u_pxRange", m_fontAtlas->pxRange());
