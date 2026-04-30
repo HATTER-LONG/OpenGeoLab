@@ -53,6 +53,12 @@ private:
     GLuint m_vao{0};
     GLuint m_vbo{0};
     std::vector<LabelVertex> m_vertices;
+    uint32_t m_lastLabelVersion{0};
+    glm::mat4 m_lastViewMatrix{0.0f};
+    glm::mat4 m_lastProjMatrix{0.0f};
+    int m_lastViewportWidth{0};
+    int m_lastViewportHeight{0};
+    GLint m_viewportSizeLoc{0};
 };
 
 } // namespace OpenGeoLab::Render

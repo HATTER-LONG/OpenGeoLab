@@ -61,6 +61,9 @@ struct FrameState {
 
     /// Whether labels should be rendered.
     bool labelsVisible{false};
+
+    /// Incremented whenever resolvedLabels changes; used by LabelPass to skip redundant rebuilds.
+    uint32_t labelVersion{0};
 };
 
 } // namespace OpenGeoLab::Render

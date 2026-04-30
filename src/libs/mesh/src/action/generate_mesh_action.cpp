@@ -536,7 +536,13 @@ nlohmann::json GenerateMeshAction::describe() const {
               {"advanced",
                {{"type", "object"},
                 {"required", false},
-                {"description", "Advanced params: minSize, maxSize, order, optimize."}}}}},
+                {"description", "Advanced params: minSize, maxSize, order, optimize."}}},
+              {"append",
+               {{"type", "boolean"},
+                {"required", false},
+                {"description",
+                 "If true (default), merge with existing mesh for the same shape. "
+                 "If false, replace the entire mesh."}}}}},
             {"returns",
              {{"ok", {{"type", "boolean"}, {"description", "true on success."}}},
               {"action", {{"type", "string"}, {"description", "Echo of action name."}}},
@@ -553,6 +559,8 @@ nlohmann::json GenerateMeshAction::execute(const nlohmann::json& param,
                 {"action", ACTION_NAME},
                 {"summary", "entities array is required and must not be empty"}};
     }
+
+    const bool append = param.value("append", true);
 
     std::string error;
     const auto settings = parseSettings(param, error);
@@ -595,6 +603,24 @@ nlohmann::json GenerateMeshAction::execute(const nlohmann::json& param,
         MeshEntry entry;
         if(!buildMeshEntry(compound, shape_id, *settings, entry, error)) {
             return {{"ok", false}, {"action", ACTION_NAME}, {"summary", error}};
+        }
+
+        if(append) {
+            const auto* existing = m_meshStore.find(shape_id);
+            if(existing != nullptr) {
+                const uint32_t node_offset = static_cast<uint32_t>(existing->nodes.size());
+                for(auto& element : entry.elements) {
+                    for(uint8_t i = 0; i < nodeCount(element.type); ++i) {
+                        if(element.nodeLocalIds[i] > 0) {
+                            element.nodeLocalIds[i] += node_offset;
+                        }
+                    }
+                }
+                entry.nodes.insert(entry.nodes.begin(), existing->nodes.begin(),
+                                   existing->nodes.end());
+                entry.elements.insert(entry.elements.begin(), existing->elements.begin(),
+                                      existing->elements.end());
+            }
         }
 
         m_meshStore.setMesh(shape_id, std::move(entry));

@@ -258,6 +258,7 @@ void GLViewportRenderer::synchronize(QQuickFramebufferObject* item) {
 
             m_frameState.resolvedLabels = std::move(resolved);
             m_cachedLabelVersion = lbl_ver;
+            ++m_frameState.labelVersion;
         }
     }
 

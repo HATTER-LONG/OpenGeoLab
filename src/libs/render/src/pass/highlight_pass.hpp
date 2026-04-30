@@ -26,6 +26,7 @@ protected:
 private:
     ShaderProgram m_faceShader;  /**< Lit faces with highlight color mix */
     ShaderProgram m_pointShader; /**< Flat-color points with highlight */
+    GLint m_normalMatrixLoc{0};
     ThickLineRenderer* m_thickLine{nullptr};
 };
 

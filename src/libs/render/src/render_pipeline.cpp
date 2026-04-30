@@ -60,6 +60,11 @@ struct RenderPipeline::Impl {
     uint64_t resolverVersion{0};      ///< Scene version when resolver was last built.
     float lastDevicePixelRatio{1.0F}; ///< Cached DPR for pick radius scaling.
     bool initialized{false};
+
+    // Cached pick state for lazy SelectionPass rendering.
+    FrameState cachedPickState{};
+    bool pickStateValid{false};
+    bool pickStateDirty{true};  ///< Set true when cached state is newer than FBO content.
 };
 
 RenderPipeline::RenderPipeline() : m_impl(std::make_unique<Impl>()) {}
@@ -131,12 +136,27 @@ void RenderPipeline::render(const FrameState& state) {
     m_impl->wireframePass.render(state, m_impl->bufferManager);
     m_impl->tessellationOverlayPass.render(state, m_impl->bufferManager);
     m_impl->labelPass.render(state, m_impl->bufferManager);
-    m_impl->selectionPass.render(state, m_impl->bufferManager);
+
+    // Cache pick state for lazy on-demand SelectionPass rendering.
+    m_impl->cachedPickState.viewMatrix = state.viewMatrix;
+    m_impl->cachedPickState.projMatrix = state.projMatrix;
+    m_impl->cachedPickState.viewportWidth = state.viewportWidth;
+    m_impl->cachedPickState.viewportHeight = state.viewportHeight;
+    m_impl->cachedPickState.xRayMode = state.xRayMode;
+    m_impl->cachedPickState.activePickMask = state.activePickMask;
+    m_impl->cachedPickState.devicePixelRatio = state.devicePixelRatio;
+    m_impl->pickStateValid = true;
+    m_impl->pickStateDirty = true;
 }
 
 PickResult RenderPipeline::pickAt(int x, int y, PickMask mask) const {
-    if(!m_impl->pickResolver) {
+    if(!m_impl->pickResolver || !m_impl->pickStateValid) {
         return {};
+    }
+
+    if(m_impl->pickStateDirty) {
+        m_impl->selectionPass.render(m_impl->cachedPickState, m_impl->bufferManager);
+        m_impl->pickStateDirty = false;
     }
 
     // Scale pick radius by DPR to maintain consistent logical-pixel hit area.
@@ -156,8 +176,13 @@ PickResult RenderPipeline::pickAt(int x, int y, PickMask mask) const {
 
 std::vector<PickResult>
 RenderPipeline::pickRegion(int cx, int cy, int radius, PickMask mask) const {
-    if(!m_impl->pickResolver) {
+    if(!m_impl->pickResolver || !m_impl->pickStateValid) {
         return {};
+    }
+
+    if(m_impl->pickStateDirty) {
+        m_impl->selectionPass.render(m_impl->cachedPickState, m_impl->bufferManager);
+        m_impl->pickStateDirty = false;
     }
 
     auto raw_pick_ids = m_impl->selectionPass.pickFbo().readPickRegion(cx, cy, radius);
@@ -170,9 +195,15 @@ RenderPipeline::pickRegion(int cx, int cy, int radius, PickMask mask) const {
 
 std::vector<PickResult>
 RenderPipeline::pickRect(int x0, int y0, int x1, int y1, PickMask mask) const {
-    if(!m_impl->pickResolver) {
+    if(!m_impl->pickResolver || !m_impl->pickStateValid) {
         return {};
     }
+
+    if(m_impl->pickStateDirty) {
+        m_impl->selectionPass.render(m_impl->cachedPickState, m_impl->bufferManager);
+        m_impl->pickStateDirty = false;
+    }
+
     auto raw_pick_ids = m_impl->selectionPass.pickFbo().readPickRect(x0, y0, x1, y1);
     const auto mode = Detail::pickModeFromMask(mask);
     if(mode == PickMode::VEF) {

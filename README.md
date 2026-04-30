@@ -17,6 +17,8 @@
 
 ---
 
+![gif](./docs/images/video.gif)
+
 ## ✨ 特性亮点
 
 <table>
