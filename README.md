@@ -221,16 +221,35 @@ def launch_ui():
 </details>
 
 <details>
-<summary><b>Linux (Ubuntu/Debian)</b></summary>
+<summary><b>Linux</b></summary>
+
+Arch Linux / CachyOS：
+
+```bash
+# 编译工具、Qt 开发组件和原生 Wayland 平台插件
+sudo pacman -S --needed base-devel cmake ninja git \
+  qt6-base qt6-declarative qt6-5compat qt6-svg qt6-tools qt6-wayland \
+  freetype2 uv
+
+# 使用 uv 安装项目使用的 CPython；无需修改系统 Python
+uv python install 3.12
+```
+
+Ubuntu / Debian（包名可能随发行版版本略有不同）：
 
 ```bash
 # 1. 基础工具
-sudo apt install cmake ninja-build g++-12 python3 python3-dev
+sudo apt install cmake ninja-build g++ python3 python3-dev python3-venv git
 
 # 2. Qt6
 sudo apt install qt6-base-dev qt6-declarative-dev qt6-tools-dev \
                  qt6-quick3d-dev qt6-svg-dev libqt6opengl6-dev \
-                 qml6-module-qtquick-controls qml6-module-qtquick-layouts
+                 qml6-module-qtquick-controls qml6-module-qtquick-layouts \
+                 qt6-wayland libfreetype-dev
+
+# 也可以安装 uv，并让 uv 提供独立于系统 Python 的 CPython 3.12
+# https://docs.astral.sh/uv/getting-started/installation/
+uv python install 3.12
 
 # 3. OpenCASCADE — 推荐从源码构建
 #    https://dev.opencascade.org/release
@@ -240,6 +259,22 @@ sudo apt install qt6-base-dev qt6-declarative-dev qt6-tools-dev \
 ```
 
 </details>
+
+#### Linux 本地依赖前缀
+
+建议将自行编译的 OCCT 和 Gmsh 安装到同一个用户目录，不写入
+`/usr` 或 `/usr/local`。例如：
+
+```text
+~/workspace/opensource/opensource-lib/
+├── include/opencascade/
+├── lib/cmake/opencascade/OpenCASCADEConfig.cmake
+├── lib/
+└── share/gmsh/gmshConfig.cmake
+```
+
+OpenGeoLab 只需要通过 `CMAKE_PREFIX_PATH`（或两个更精确的包目录）找到它们，
+运行时也会从该前缀加载对应动态库。Qt、Freetype 和基础编译工具则适合由系统包管理器维护。
 
 ### 配置与构建
 
@@ -262,6 +297,87 @@ ctest --test-dir build -C RelWithDebInfo --output-on-failure
 
 > **提示：** 可以创建 `CMakeUserPresets.json` 来持久化本地路径配置，
 > 避免每次手动传递 `-D` 参数。参考项目中的 `CMakePresets.json` 格式。
+
+#### Linux + uv + 本地 OCCT/Gmsh 完整示例
+
+下面的命令对应上述统一安装前缀，并使用 uv 管理的 Python 3.12：
+
+```bash
+cd ~/workspace/OpenGeoLab
+
+cmake --preset relwithdebinfo \
+  -DCMAKE_PREFIX_PATH="$HOME/workspace/opensource/opensource-lib" \
+  -DOpenCASCADE_DIR="$HOME/workspace/opensource/opensource-lib/lib/cmake/opencascade" \
+  -Dgmsh_DIR="$HOME/workspace/opensource/opensource-lib/share/gmsh" \
+  -DPython3_EXECUTABLE="$(uv python find 3.12)" \
+  -DOPENGEOLAB_PYVENV_DIR="$HOME/workspace/OpenGeoLab/pyvenv" \
+  -DOPENGEOLAB_ENABLE_PYSIDE6=ON \
+  -DOPENGEOLAB_USE_GMSH=ON \
+  -DOPENGEOLAB_BUILD_TESTS=ON
+
+cmake --build --preset relwithdebinfo
+ctest --preset relwithdebinfo
+```
+
+CMake 会在仓库根目录创建或复用 `pyvenv`，并在其中准备：
+
+- 与 Qt 主次版本匹配的 PySide6；
+- GLAD 代码生成所需的 Jinja2；
+- AI Chat 插件所需的 Python 包。
+
+嵌入式解释器的标准库来自 uv 管理的基础 CPython，项目插件和第三方包来自
+`pyvenv`。CMake 会校验两者的 Python 主次版本；如果切换了 Python 版本，需要先
+重新创建虚拟环境：
+
+```bash
+rm -rf pyvenv
+cmake --preset relwithdebinfo \
+  -DPython3_EXECUTABLE="$(uv python find 3.12)" \
+  -DCMAKE_PREFIX_PATH="$HOME/workspace/opensource/opensource-lib"
+```
+
+删除 `build/` 不会删除 `pyvenv`。但 `build/_deps` 中由 CPM 管理的源码也会一起
+删除，因此下一次配置需要重新访问网络获取缺失的 C++ 依赖。
+
+#### Linux 运行与 Wayland
+
+正常运行时让 Qt 自动选择当前桌面协议即可：
+
+```bash
+./build/bin/opengeolab_app
+```
+
+在 Wayland 会话中可以显式要求原生 Wayland：
+
+```bash
+QT_QPA_PLATFORM=wayland ./build/bin/opengeolab_app
+```
+
+OpenGeoLab 的 `QQuickFramebufferObject` 渲染器需要桌面 OpenGL。程序只指定
+OpenGL 类型，OpenGL 版本、profile 和窗口 framebuffer 属性由 Qt/EGL 根据驱动
+选择；视口自己的 depth/stencil 和 4x MSAA 离屏 FBO 不受影响。不要在 Linux 的
+`build/bin` 中放置 Windows 安装布局生成的 `qt.conf`，否则可能隐藏系统 Qt 的
+Wayland/XCB 插件路径。当前构建脚本会自动清理这种旧文件。
+
+如果原生 Wayland 无法启动，先检查插件加载：
+
+```bash
+QT_DEBUG_PLUGINS=1 \
+QT_QPA_PLATFORM=wayland \
+QSG_INFO=1 \
+./build/bin/opengeolab_app
+```
+
+常见错误及处理：
+
+| 错误 | 处理方式 |
+|------|----------|
+| `Could not find the Qt platform plugin "wayland"` | 安装发行版的 Qt Wayland 包，并确认 `build/bin/qt.conf` 不存在 |
+| `Failed to initialize graphics backend for OpenGL` | 不要在外部强制不受驱动支持的 `QSurfaceFormat`/EGL 属性；检查显卡驱动和 `QSG_INFO` 输出 |
+| 原生 Wayland 驱动仍有兼容问题 | 临时使用 `QT_QPA_PLATFORM=xcb` 通过 XWayland 启动 |
+
+`xcb` 是兼容回退，不是默认要求；支持正常 EGL/OpenGL 的环境应优先使用原生
+Wayland。
 
 ### Qt6 所需组件
 

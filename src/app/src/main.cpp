@@ -42,13 +42,13 @@ int main(int argc, char* argv[]) {
     // Force OpenGL backend — QQuickFramebufferObject requires OpenGL, not D3D/Vulkan.
     QQuickWindow::setGraphicsApi(QSGRendererInterface::OpenGL);
     {
-        QSurfaceFormat fmt;
-        fmt.setVersion(3, 3);
-        fmt.setProfile(QSurfaceFormat::CoreProfile);
-        fmt.setDepthBufferSize(24);
-        fmt.setStencilBufferSize(8);
-        fmt.setSamples(4);
-        QSurfaceFormat::setDefaultFormat(fmt);
+        // Request desktop OpenGL for the GLSL renderer, but leave version,
+        // profile and framebuffer attributes to the platform's EGLConfig
+        // selection. Over-constraining those attributes prevents Qt Wayland
+        // from creating its scene graph context on some drivers.
+        QSurfaceFormat format;
+        format.setRenderableType(QSurfaceFormat::OpenGL);
+        QSurfaceFormat::setDefaultFormat(format);
     }
 
 #if defined(_WIN32) && defined(OPENGEOLAB_QT_BIN_DIR)

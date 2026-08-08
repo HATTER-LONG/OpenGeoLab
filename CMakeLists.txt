@@ -112,6 +112,36 @@ endif ()
 qt_standard_project_setup(REQUIRES 6.9)
 
 # ---------------------------------------------------------------------------
+# Python runtime environment
+# ---------------------------------------------------------------------------
+
+find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module
+                                         Development.Embed)
+
+# PySide6 pip wheels only ship release Qt binaries. Debug builds load both
+# debug (Qt6Cored.dll) and release Qt DLLs, creating duplicate Qt singletons.
+# Default OFF for Debug to avoid this conflict.
+set(_pyside6_default ON)
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(_pyside6_default OFF)
+endif ()
+option(OPENGEOLAB_ENABLE_PYSIDE6 "Setup PySide6 venv (requires release Qt)"
+       ${_pyside6_default})
+
+if (OPENGEOLAB_ENABLE_PYSIDE6)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/SetupPySideVenv.cmake)
+else ()
+    set(OPENGEOLAB_PYTHON_EXECUTABLE
+        "${Python3_EXECUTABLE}"
+        CACHE FILEPATH "Python executable used by the embedded runtime" FORCE)
+    # glad uses FindPython rather than FindPython3.
+    set(Python_EXECUTABLE
+        "${Python3_EXECUTABLE}"
+        CACHE FILEPATH "Python executable used by build-time generators" FORCE)
+    message(STATUS "PySide6 venv setup disabled (Debug build or explicit OFF)")
+endif ()
+
+# ---------------------------------------------------------------------------
 # Third-party: fmt, spdlog, Kangaroo, nlohmann_json, GLM
 # ---------------------------------------------------------------------------
 
@@ -302,9 +332,6 @@ endif()
 # Python: embedded runtime + pybind11 bridge
 # ---------------------------------------------------------------------------
 
-find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module
-                                         Development.Embed)
-
 set(OPENGEOLAB_PYBIND11_VERSION 3.0.2)
 opengeolab_resolve_package(
     pybind11
@@ -315,22 +342,6 @@ opengeolab_resolve_package(
     pybind/pybind11
     GIT_TAG
     v${OPENGEOLAB_PYBIND11_VERSION})
-
-# PySide6 pip wheels only ship release Qt binaries.  Debug builds load both
-# debug (Qt6Cored.dll) and release Qt DLLs, creating duplicate Qt singletons.
-# Default OFF for Debug to avoid this conflict.
-set(_pyside6_default ON)
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    set(_pyside6_default OFF)
-endif ()
-option(OPENGEOLAB_ENABLE_PYSIDE6 "Setup PySide6 venv (requires release Qt)"
-       ${_pyside6_default})
-
-if (OPENGEOLAB_ENABLE_PYSIDE6)
-    include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/SetupPySideVenv.cmake)
-else ()
-    message(STATUS "PySide6 venv setup disabled (Debug build or explicit OFF)")
-endif ()
 
 # ---------------------------------------------------------------------------
 # Testing

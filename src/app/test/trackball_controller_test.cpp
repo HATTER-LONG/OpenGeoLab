@@ -56,6 +56,7 @@ TEST_CASE("TrackballController wheel zoom clamps to minimum distance") {
     TrackballController controller;
     CameraState camera;
 
+    camera.sceneExtent = 0.0F; // Isolate clipping derived from the minimum camera distance.
     camera.position = camera.target + glm::vec3{0.0F, 0.0F, 0.2F};
     camera.updateClipping();
 

@@ -56,6 +56,7 @@ TEST_CASE("CameraState reset and updateClipping restore symmetric defaults") {
     CameraState camera;
     camera.position = {5.0F, -2.0F, 6.0F};
     camera.target = {1.0F, -2.0F, 1.0F};
+    camera.sceneExtent = 0.0F; // Isolate the camera-distance clipping calculation.
 
     camera.updateClipping();
 

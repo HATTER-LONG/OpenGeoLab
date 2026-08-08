@@ -190,18 +190,26 @@ if (WIN32)
         PRIVATE "OPENGEOLAB_QT_BIN_DIR=\"${_qt_prefix_fwd}/bin\"")
 endif ()
 
-# Generate qt.conf at configure time; deploy with copy_if_different to avoid
-# spurious rebuilds caused by file(GENERATE) refreshing timestamps every build.
-file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/qt.conf"
-     "[Paths]\nPrefix = ${_qt_prefix_fwd}\n")
-add_custom_command(
-    TARGET opengeolab_app
-    POST_BUILD
-    COMMAND
-        ${CMAKE_COMMAND} -E copy_if_different
-        "${CMAKE_CURRENT_BINARY_DIR}/qt.conf"
-        "$<TARGET_FILE_DIR:opengeolab_app>/qt.conf"
-    COMMENT "Deploying qt.conf")
+# Windows uses the Qt installation layout rooted at Prefix. Linux distribution
+# packages commonly place plugins below lib/qt6, so a Prefix-only qt.conf hides
+# Qt's correct compiled-in paths. Keep the existing Windows behavior and let
+# Unix builds use their native Qt discovery paths.
+if (WIN32)
+    file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/qt.conf"
+         "[Paths]\nPrefix = ${_qt_prefix_fwd}\n")
+    add_custom_command(
+        TARGET opengeolab_app
+        POST_BUILD
+        COMMAND
+            ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_CURRENT_BINARY_DIR}/qt.conf"
+            "$<TARGET_FILE_DIR:opengeolab_app>/qt.conf"
+        COMMENT "Deploying qt.conf")
+else ()
+    # Remove files left by builds configured before qt.conf became
+    # platform-specific.
+    file(REMOVE "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/qt.conf")
+endif ()
 
 install(TARGETS opengeolab_app RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
 

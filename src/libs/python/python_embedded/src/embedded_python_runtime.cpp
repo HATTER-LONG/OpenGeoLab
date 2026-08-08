@@ -112,21 +112,12 @@ resolvePythonExecutable(const std::filesystem::path& python_home) {
 [[nodiscard]] static std::vector<std::filesystem::path>
 buildModuleSearchPaths(const std::filesystem::path& application_root,
                        const std::filesystem::path& runtime_root,
-                       const std::filesystem::path& plugin_root,
-                       const std::filesystem::path& python_home) {
-    const std::string python_version_tag =
-        std::to_string(PY_MAJOR_VERSION) + std::to_string(PY_MINOR_VERSION);
-
+                       const std::filesystem::path& plugin_root) {
     std::vector<std::filesystem::path> module_search_paths;
-    module_search_paths.reserve(9);
-    module_search_paths.emplace_back(python_home / ("python" + python_version_tag + ".zip"));
-    module_search_paths.emplace_back(python_home / "DLLs");
-    module_search_paths.emplace_back(python_home / "Lib");
+    module_search_paths.reserve(4);
     module_search_paths.emplace_back(application_root);
     module_search_paths.emplace_back(runtime_root);
     module_search_paths.emplace_back(plugin_root);
-    module_search_paths.emplace_back(python_home);
-    module_search_paths.emplace_back(python_home / "Lib" / "site-packages");
 #ifdef OPENGEOLAB_PYVENV_SITE_PACKAGES
     module_search_paths.emplace_back(compiledPath(OPENGEOLAB_PYVENV_SITE_PACKAGES));
 #endif
@@ -158,16 +149,13 @@ static void setConfigString(PyConfig& config, wchar_t*& field, const std::filesy
     }
 }
 
-static void appendModuleSearchPath(PyConfig& config, const std::filesystem::path& value) {
-    if(value.empty()) {
-        return;
-    }
-
-    const std::wstring wide_value = pathToWideString(value);
-    const PyStatus status =
-        PyWideStringList_Append(&config.module_search_paths, wide_value.c_str());
-    if(PyStatus_Exception(status) != 0) {
-        throwPythonStatusError("PyWideStringList_Append", status, pathToString(value));
+static void prependModuleSearchPaths(const std::vector<std::filesystem::path>& paths) {
+    auto sys_path = Py::module_::import("sys").attr("path");
+    // Insert in reverse so the final order matches the supplied path list.
+    for(auto path = paths.rbegin(); path != paths.rend(); ++path) {
+        if(!path->empty()) {
+            sys_path.attr("insert")(0, pathToString(*path));
+        }
     }
 }
 
@@ -209,7 +197,7 @@ void EmbeddedPythonRuntime::initialize() {
     const auto python_home = resolvePythonHome();
     const auto python_executable = resolvePythonExecutable(python_home);
     const auto module_search_paths =
-        buildModuleSearchPaths(m_applicationRoot, m_runtimeRoot, m_pluginRoot, python_home);
+        buildModuleSearchPaths(m_applicationRoot, m_runtimeRoot, m_pluginRoot);
     const InitializationContext context{.applicationRoot = m_applicationRoot,
                                         .runtimeRoot = m_runtimeRoot,
                                         .pluginRoot = m_pluginRoot,
@@ -228,21 +216,17 @@ void EmbeddedPythonRuntime::initialize() {
     try {
         config.install_signal_handlers = 0;
         config.parse_argv = 0;
-        config.module_search_paths_set = 1;
 
         setConfigString(config, config.home, python_home);
         setConfigString(config, config.program_name, python_executable);
         setConfigString(config, config.executable, python_executable);
-
-        for(const auto& module_search_path : module_search_paths) {
-            appendModuleSearchPath(config, module_search_path);
-        }
     } catch(...) {
         PyConfig_Clear(&config);
         throw;
     }
 
     m_impl = std::make_unique<Impl>(&config);
+    prependModuleSearchPaths(module_search_paths);
 
     auto os = Py::module_::import("os");
     auto environment = os.attr("environ");

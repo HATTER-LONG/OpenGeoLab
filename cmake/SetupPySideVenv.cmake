@@ -14,13 +14,11 @@ set(OPENGEOLAB_PYVENV_DIR
 
 # --- Platform-dependent paths inside the venv --------------------------------
 if (WIN32)
+    set(_pyvenv_python "${OPENGEOLAB_PYVENV_DIR}/Scripts/python.exe")
     set(_pyvenv_pip "${OPENGEOLAB_PYVENV_DIR}/Scripts/pip.exe")
-    set(_pyvenv_site_packages "${OPENGEOLAB_PYVENV_DIR}/Lib/site-packages")
 else ()
+    set(_pyvenv_python "${OPENGEOLAB_PYVENV_DIR}/bin/python")
     set(_pyvenv_pip "${OPENGEOLAB_PYVENV_DIR}/bin/pip")
-    set(_pyvenv_site_packages
-        "${OPENGEOLAB_PYVENV_DIR}/lib/python${Python3_VERSION_MAJOR}.${Python3_VERSION_MINOR}/site-packages"
-    )
 endif ()
 
 # --- Create venv if absent ---------------------------------------------------
@@ -35,6 +33,62 @@ if (NOT EXISTS "${OPENGEOLAB_PYVENV_DIR}/pyvenv.cfg")
                 "Failed to create Python venv (exit code ${venv_result})")
     endif ()
 endif ()
+
+if (NOT EXISTS "${_pyvenv_python}")
+    message(FATAL_ERROR "Python executable is missing from venv: ${_pyvenv_python}")
+endif ()
+
+# A venv survives build-directory cleanup, so verify that it still matches the
+# interpreter selected for this configuration before linking embedded Python.
+execute_process(
+    COMMAND "${_pyvenv_python}" -c
+            "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')"
+    RESULT_VARIABLE _pyvenv_version_result
+    OUTPUT_VARIABLE _pyvenv_version
+    ERROR_VARIABLE _pyvenv_version_error
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+if (NOT _pyvenv_version_result EQUAL 0)
+    message(
+        FATAL_ERROR
+            "Failed to query Python version from ${_pyvenv_python}: ${_pyvenv_version_error}"
+    )
+endif ()
+
+set(_python_required_version
+    "${Python3_VERSION_MAJOR}.${Python3_VERSION_MINOR}")
+if (NOT "${_pyvenv_version}" STREQUAL "${_python_required_version}")
+    message(
+        FATAL_ERROR
+            "Python venv version mismatch: ${_pyvenv_python} uses Python ${_pyvenv_version}, "
+            "but CMake selected Python ${_python_required_version}. Remove ${OPENGEOLAB_PYVENV_DIR} "
+            "and configure again, or select the matching Python3_EXECUTABLE.")
+endif ()
+
+# Let Python report the install scheme rather than duplicating platform-specific
+# venv layout rules in CMake.
+execute_process(
+    COMMAND "${_pyvenv_python}" -c
+            "import sysconfig; print(sysconfig.get_path('purelib'))"
+    RESULT_VARIABLE _pyvenv_site_result
+    OUTPUT_VARIABLE _pyvenv_site_packages
+    ERROR_VARIABLE _pyvenv_site_error
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+if (NOT _pyvenv_site_result EQUAL 0 OR _pyvenv_site_packages STREQUAL "")
+    message(
+        FATAL_ERROR
+            "Failed to query site-packages from ${_pyvenv_python}: ${_pyvenv_site_error}"
+    )
+endif ()
+
+# Build-time Python generators (notably glad) must use the project venv too.
+# Keep Python3::Python bound to the interpreter selected by find_package while
+# exposing the venv executable separately for tools and the embedded runtime.
+set(OPENGEOLAB_PYTHON_EXECUTABLE
+    "${_pyvenv_python}"
+    CACHE FILEPATH "Python executable used by the embedded runtime" FORCE)
+set(Python_EXECUTABLE
+    "${_pyvenv_python}"
+    CACHE FILEPATH "Python executable used by build-time generators" FORCE)
 
 # --- Install PySide6 with strict major.minor matching ------------------------
 execute_process(
@@ -87,6 +141,18 @@ if (_need_install)
         STATUS
             "PySide6 ${CMAKE_MATCH_1}.${CMAKE_MATCH_2}.x installed successfully."
     )
+endif ()
+
+# --- Install Python build dependencies ---------------------------------------
+# glad imports Jinja2 when generating the OpenGL loader during the build.
+execute_process(
+    COMMAND "${_pyvenv_pip}" install "jinja2>=3.1" --quiet
+    RESULT_VARIABLE _build_package_result)
+if (NOT _build_package_result EQUAL 0)
+    message(
+        FATAL_ERROR
+            "Failed to install jinja2 (exit code ${_build_package_result}); "
+            "the glad code generator cannot run without it.")
 endif ()
 
 # --- Install additional Python packages for AI Chat plugin -------------------

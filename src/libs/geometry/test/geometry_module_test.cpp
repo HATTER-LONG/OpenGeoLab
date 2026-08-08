@@ -24,17 +24,21 @@ TEST_CASE("GeometryModule describe returns module info with actions") {
     CHECK(desc["name"] == "geometry");
     CHECK(desc.contains("description"));
     CHECK(desc["actions"].is_array());
-    CHECK(desc["actions"].size() == 14);
+    CHECK(desc["actions"].size() == 15);
 
-    // Verify create_box is present (order depends on factory enumeration)
+    // Verify representative creation and topology-query actions are present
+    // (order depends on factory enumeration).
     bool found_create_box = false;
+    bool found_query_entity_info = false;
     for(const auto& action : desc["actions"]) {
         if(action["name"] == "create_box") {
             found_create_box = true;
-            break;
+        } else if(action["name"] == "query_entity_info") {
+            found_query_entity_info = true;
         }
     }
     CHECK(found_create_box);
+    CHECK(found_query_entity_info);
 }
 
 TEST_CASE("GeometryModule dispatches create_box action") {
