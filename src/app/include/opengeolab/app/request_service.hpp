@@ -54,7 +54,7 @@ public:
      * @brief Submit a request dispatched to a worker thread.
      * @param request_json JSON request envelope.
      */
-    Q_INVOKABLE void submitAsync(const QString& request_json);
+    Q_INVOKABLE quint64 submitAsync(const QString& request_json);
 
     /**
      * @brief Execute a request synchronously on the main thread.
@@ -63,14 +63,14 @@ public:
      * where Qt widget creation needs main-thread affinity.
      * @param request_json JSON request envelope.
      */
-    Q_INVOKABLE void executeOnMainThread(const QString& request_json);
+    Q_INVOKABLE quint64 executeOnMainThread(const QString& request_json);
 
     /** @brief True when at least one async request is in flight. */
     [[nodiscard]] bool isBusy() const;
 
 Q_SIGNALS:
-    void responseReady(const QString& response_json, bool muted);
-    void errorOccurred(const QString& error_message, bool muted);
+    void responseReady(const QString& response_json, bool muted, quint64 request_id);
+    void errorOccurred(const QString& error_message, bool muted, quint64 request_id);
     void busyChanged();
 
     /**
@@ -79,14 +79,17 @@ Q_SIGNALS:
      * @param request_json Original JSON envelope before injection.
      * @param muted True if the request should be hidden from progress UI.
      */
-    void requestSent(const QString& description, const QString& request_json, bool muted);
+    void requestSent(const QString& description,
+                     const QString& request_json,
+                     bool muted,
+                     quint64 request_id);
 
     /**
      * @brief Emitted when a long-running action reports progress.
      * @param progress Value in [0, 1] range.
      * @param message Human-readable status message.
      */
-    void progressUpdated(double progress, const QString& message);
+    void progressUpdated(double progress, const QString& message, quint64 request_id);
 
 private:
     struct PreparedRequest {
@@ -97,10 +100,11 @@ private:
     };
 
     static PreparedRequest prepareRequest(const QString& json);
-    void emitResponse(const QString& response, bool muted);
+    void emitResponse(const QString& response, bool muted, quint64 request_id);
 
     OpenGeoLab::Command::CommandDispatcher& m_dispatcher;
     OpenGeoLab::PythonEmbed::EmbeddedPythonRuntime& m_runtime;
+    std::atomic<quint64> m_nextRequestId{1};
     std::atomic<int> m_pendingCount{0};
     mutable std::mutex m_futuresMutex;
     std::vector<QFuture<QString>> m_pendingFutures;

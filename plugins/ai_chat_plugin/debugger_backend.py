@@ -34,6 +34,7 @@ class DebuggerBackend(QObject):
     requestJsonChanged = Signal()
     responseJsonChanged = Signal()
     isExecutingChanged = Signal()
+    executionStateChanged = Signal()
     progressChanged = Signal()
     progressMessageChanged = Signal()
     isDarkChanged = Signal()
@@ -46,9 +47,10 @@ class DebuggerBackend(QObject):
         self._detail_json = ""
         self._request_json = ""
         self._response_json = ""
-        self._is_executing = False
+        self._execution_state = "idle"
         self._progress = 0.0
         self._progress_message = ""
+        self._execution_id = 0
         self._is_dark = True
 
         self._schema_tree_model = SchemaTreeModel(self)
@@ -108,9 +110,14 @@ class DebuggerBackend(QObject):
     responseJson = Property(str, _get_response_json, notify=responseJsonChanged)
 
     def _get_is_executing(self) -> bool:
-        return self._is_executing
+        return self._execution_state == "running"
 
     isExecuting = Property(bool, _get_is_executing, notify=isExecutingChanged)
+
+    def _get_execution_state(self) -> str:
+        return self._execution_state
+
+    executionState = Property(str, _get_execution_state, notify=executionStateChanged)
 
     def _get_progress(self) -> float:
         return self._progress
@@ -132,6 +139,9 @@ class DebuggerBackend(QObject):
     @Slot(str, str)
     def selectAction(self, module: str, action: str) -> None:
         """Update detail panel and param form for the selected action."""
+        if self._get_is_executing():
+            return
+
         self._current_module = module
         self.currentModuleChanged.emit()
         self._current_action = action
@@ -166,7 +176,7 @@ class DebuggerBackend(QObject):
     @Slot()
     def execute(self) -> None:
         """Execute the current action using the request JSON."""
-        if self._is_executing or not self._current_action:
+        if self._get_is_executing() or not self._current_action:
             return
 
         text = self._request_json.strip()
@@ -177,14 +187,20 @@ class DebuggerBackend(QObject):
                 {"ok": False, "error": "Invalid request JSON"}, indent=2
             )
             self.responseJsonChanged.emit()
+            self._progress = 0.0
+            self.progressChanged.emit()
+            self._progress_message = "Invalid request JSON"
+            self.progressMessageChanged.emit()
+            self._set_execution_state("failed")
             return
 
         module = request.get("module", self._current_module)
         action = request.get("action", self._current_action)
         params = request.get("param", {})
 
-        self._is_executing = True
-        self.isExecutingChanged.emit()
+        self._execution_id += 1
+        execution_id = self._execution_id
+        self._set_execution_state("running")
         self._progress = 0.0
         self.progressChanged.emit()
         self._progress_message = ""
@@ -192,28 +208,34 @@ class DebuggerBackend(QObject):
         self._response_json = ""
         self.responseJsonChanged.emit()
 
-        def progress_cb(pct: float, msg: str) -> None:
+        def progress_cb(pct: float, msg: str) -> bool:
             QMetaObject.invokeMethod(
                 self,
                 "_onProgress",
                 Qt.ConnectionType.QueuedConnection,
+                Q_ARG(int, execution_id),
                 Q_ARG(float, pct),
                 Q_ARG(str, msg),
             )
+            return True
 
         def run() -> None:
             try:
                 result = scene_tools.execute_action(
                     module, action, params, progress_callback=progress_cb
                 )
-                out = json.dumps(result, indent=2, ensure_ascii=False)
+                succeeded = result.get("ok") is True
             except Exception as exc:
-                out = json.dumps({"ok": False, "error": str(exc)}, indent=2)
+                result = {"ok": False, "error": str(exc)}
+                succeeded = False
+            out = json.dumps(result, indent=2, ensure_ascii=False)
             QMetaObject.invokeMethod(
                 self,
                 "_onExecuteDone",
                 Qt.ConnectionType.QueuedConnection,
+                Q_ARG(int, execution_id),
                 Q_ARG(str, out),
+                Q_ARG(bool, succeeded),
             )
 
         threading.Thread(target=run, daemon=True).start()
@@ -221,6 +243,9 @@ class DebuggerBackend(QObject):
     @Slot()
     def clear(self) -> None:
         """Reset the param form and response."""
+        if self._get_is_executing():
+            return
+
         self._param_list_model.clear()
         self._response_json = ""
         self.responseJsonChanged.emit()
@@ -228,8 +253,20 @@ class DebuggerBackend(QObject):
         self.progressChanged.emit()
         self._progress_message = ""
         self.progressMessageChanged.emit()
+        self._set_execution_state("idle")
         if self._current_action:
             self._rebuild_request_json()
+
+    @Slot()
+    def dismissExecutionStatus(self) -> None:
+        """Hide a completed execution status without clearing its response."""
+        if self._get_is_executing():
+            return
+        self._progress = 0.0
+        self.progressChanged.emit()
+        self._progress_message = ""
+        self.progressMessageChanged.emit()
+        self._set_execution_state("idle")
 
     @Slot()
     def toggleTheme(self) -> None:
@@ -239,22 +276,29 @@ class DebuggerBackend(QObject):
 
     # ── Internal slots (called from worker thread via QueuedConnection) ─
 
-    @Slot(float, str)
-    def _onProgress(self, pct: float, msg: str) -> None:
-        self._progress = pct
+    @Slot(int, float, str)
+    def _onProgress(self, execution_id: int, pct: float, msg: str) -> None:
+        if execution_id != self._execution_id or not self._get_is_executing():
+            return
+        self._progress = max(0.0, min(1.0, pct))
         self.progressChanged.emit()
         self._progress_message = msg
         self.progressMessageChanged.emit()
 
-    @Slot(str)
-    def _onExecuteDone(self, result_json: str) -> None:
+    @Slot(int, str, bool)
+    def _onExecuteDone(self, execution_id: int, result_json: str, succeeded: bool) -> None:
+        if execution_id != self._execution_id:
+            return
         self._response_json = result_json
         self.responseJsonChanged.emit()
-        self._is_executing = False
-        self.isExecutingChanged.emit()
-        self._progress = 1.0
-        self.progressChanged.emit()
-        self._progress_message = "Done"
+        if succeeded:
+            self._progress = 1.0
+            self.progressChanged.emit()
+            self._progress_message = "Done"
+            self._set_execution_state("succeeded")
+        else:
+            self._progress_message = self._error_message(result_json)
+            self._set_execution_state("failed")
         self.progressMessageChanged.emit()
 
     # ── Private helpers ─────────────────────────────────────────────────
@@ -263,6 +307,27 @@ class DebuggerBackend(QObject):
         """Re-serialise requestJson when param model changes."""
         if self._current_action:
             self._rebuild_request_json()
+
+    def _set_execution_state(self, state: str) -> None:
+        if self._execution_state == state:
+            return
+        was_executing = self._get_is_executing()
+        self._execution_state = state
+        self.executionStateChanged.emit()
+        if was_executing != self._get_is_executing():
+            self.isExecutingChanged.emit()
+
+    @staticmethod
+    def _error_message(result_json: str) -> str:
+        try:
+            result = json.loads(result_json)
+        except json.JSONDecodeError:
+            return "Execution failed"
+        for key in ("summary", "error"):
+            value = result.get(key)
+            if isinstance(value, str) and value:
+                return value
+        return "Execution failed"
 
     def _rebuild_request_json(self) -> None:
         """Build request JSON from current module/action and param values."""

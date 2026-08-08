@@ -36,6 +36,7 @@ FunctionPageBase {
     }
 
     property bool pendingFit_: false
+    property double pendingRequestId_: -1
 
     function open(payload) {
         root.selectedFilePath = "";
@@ -43,6 +44,7 @@ FunctionPageBase {
         root.shapeName = "";
         root.keepTriangulation = false;
         root.pendingFit_ = false;
+        root.pendingRequestId_ = -1;
         root.x = 292;
         root.y = 0;
         root.pageVisible = true;
@@ -55,15 +57,17 @@ FunctionPageBase {
             return;
         }
         root.pendingFit_ = true;
-        RequestService.submitAsync(JSON.stringify(root.getParameters()));
+        root.pendingRequestId_ = RequestService.submitAsync(
+            JSON.stringify(root.getParameters()));
         root.close();
     }
 
     Connections {
         target: RequestService
-        function onResponseReady(response, muted) {
-            if (!root.pendingFit_) return;
+        function onResponseReady(response, muted, requestId) {
+            if (!root.pendingFit_ || requestId !== root.pendingRequestId_) return;
             root.pendingFit_ = false;
+            root.pendingRequestId_ = -1;
             try {
                 const result = JSON.parse(response);
                 if (result.ok) {
@@ -75,6 +79,12 @@ FunctionPageBase {
                     }));
                 }
             } catch (e) { /* ignore parse errors */ }
+        }
+
+        function onErrorOccurred(errorMessage, muted, requestId) {
+            if (requestId !== root.pendingRequestId_) return;
+            root.pendingFit_ = false;
+            root.pendingRequestId_ = -1;
         }
     }
 

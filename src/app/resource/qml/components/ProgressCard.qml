@@ -20,37 +20,37 @@ Item {
     property real progress: 0
     property string description: ""
     property string message: ""
+    property double requestId: -1
 
     property string completionState: ""
     property string lastDescription: ""
-    property bool freshStart: true
+    property bool hasDeterminateProgress: false
 
     onDescriptionChanged: {
         if (root.description.length > 0)
             root.lastDescription = root.description;
     }
 
-    onProgressChanged: {
-        if (root.progress > 0)
-            root.freshStart = false;
-    }
-
     Connections {
         target: RequestService
 
-        function onRequestSent(desc: string, requestJson: string, muted: bool): void {
+        function onRequestSent(desc: string, requestJson: string, muted: bool,
+                               requestId: double): void {
             if (muted)
                 return;
+            hideTimer.stop();
+            root.requestId = requestId;
             root.active = true;
             root.progress = 0;
             root.description = desc;
             root.message = "";
-            root.freshStart = true;
+            root.hasDeterminateProgress = false;
             root.completionState = "";
         }
 
-        function onResponseReady(responseJson: string, muted: bool): void {
-            if (muted)
+        function onResponseReady(responseJson: string, muted: bool,
+                                 requestId: double): void {
+            if (muted || requestId !== root.requestId)
                 return;
             root.completionState = "done";
             root.active = false;
@@ -58,8 +58,9 @@ Item {
             hideTimer.restart();
         }
 
-        function onErrorOccurred(errorMessage: string, muted: bool): void {
-            if (muted)
+        function onErrorOccurred(errorMessage: string, muted: bool,
+                                 requestId: double): void {
+            if (muted || requestId !== root.requestId)
                 return;
             root.completionState = "failed";
             root.active = false;
@@ -67,8 +68,13 @@ Item {
             hideTimer.restart();
         }
 
-        function onProgressUpdated(prog: double, msg: string): void {
-            root.progress = prog;
+        function onProgressUpdated(prog: double, msg: string,
+                                   requestId: double): void {
+            if (requestId !== root.requestId)
+                return;
+            root.progress = Math.max(0, Math.min(1, prog));
+            if (prog > 0)
+                root.hasDeterminateProgress = true;
             root.message = msg;
         }
     }
@@ -99,6 +105,7 @@ Item {
 
     Timer {
         id: hideTimer
+        objectName: "hideTimer"
         repeat: false
         onTriggered: {
             root.completionState = "";
@@ -117,10 +124,12 @@ Item {
     }
 
     readonly property real displayProgress: {
-        if (root.completionState !== "")
+        if (root.completionState === "done")
             return 1.0;
         return root.progress;
     }
+
+    readonly property bool indeterminate: root.active && !root.hasDeterminateProgress
 
     readonly property color iconColor: root.completionState === "done" ? root.theme.success : (root.completionState === "failed" ? root.theme.danger : root.theme.accentA)
 
@@ -185,19 +194,17 @@ Item {
                         id: progressFill
 
                         width: {
-                            if (root.freshStart)
-                                return 0;
-                            if (root.displayProgress <= 0)
+                            if (root.indeterminate)
                                 return Math.max(parent.width * 0.32, 40);
                             return parent.width * Math.max(0, Math.min(1, root.displayProgress));
                         }
                         height: parent.height
                         radius: parent.radius
-                        color: root.theme.accentA
-                        x: root.displayProgress <= 0 && !root.freshStart ? -width : 0
+                        color: root.iconColor
+                        x: root.indeterminate ? -width : 0
 
                         Behavior on width {
-                            enabled: root.displayProgress > 0 && root.completionState === "" && !root.freshStart
+                            enabled: root.hasDeterminateProgress && root.completionState === ""
                             NumberAnimation {
                                 duration: 280
                                 easing.type: Easing.OutCubic
@@ -205,7 +212,7 @@ Item {
                         }
 
                         NumberAnimation on x {
-                            running: root.displayProgress <= 0 && root.visible && root.completionState === "" && !root.freshStart
+                            running: root.indeterminate && root.visible
                             from: -progressFill.parent.width * 0.32
                             to: progressFill.parent.width
                             duration: 1200
@@ -216,6 +223,7 @@ Item {
 
                 Text {
                     visible: root.displayProgress > 0
+                             && root.completionState !== "failed"
                     text: Math.round(root.displayProgress * 100) + "%"
                     font.pixelSize: 10
                     font.weight: Font.DemiBold

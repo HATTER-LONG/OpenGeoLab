@@ -5,9 +5,18 @@
 
 #include <doctest/doctest.h>
 
+#include <QCoreApplication>
+#include <QGuiApplication>
+#include <QQmlComponent>
+#include <QQmlEngine>
+#include <QUrl>
+#include <QVariant>
+#include <QtQml/qqml.h>
+
 #include <filesystem>
 #include <fstream>
 #include <initializer_list>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -15,6 +24,19 @@
 namespace OpenGeoLab::App::Tests {
 
 namespace Fs = std::filesystem;
+
+class FakeRequestService final : public QObject {
+    Q_OBJECT
+
+Q_SIGNALS:
+    void responseReady(const QString& response_json, bool muted, quint64 request_id);
+    void errorOccurred(const QString& error_message, bool muted, quint64 request_id);
+    void requestSent(const QString& description,
+                     const QString& request_json,
+                     bool muted,
+                     quint64 request_id);
+    void progressUpdated(double progress, const QString& message, quint64 request_id);
+};
 
 static std::string readFile(const Fs::path& path) {
     const std::ifstream input(path);
@@ -32,6 +54,19 @@ static void requireSnippets(const std::string& content,
 }
 
 static Fs::path appSourceDir() { return Fs::path{OPENGEOLAB_APP_SOURCE_DIR}; }
+
+static QGuiApplication& ensureQmlApplication() {
+    if(auto* application = qobject_cast<QGuiApplication*>(QCoreApplication::instance())) {
+        return *application;
+    }
+
+    qputenv("QT_QPA_PLATFORM", "offscreen");
+    static int argc = 1;
+    static char app_name[] = "opengeolab_qml_progress_test";
+    static char* argv[] = {app_name, nullptr};
+    static auto application = std::make_unique<QGuiApplication>(argc, argv);
+    return *application;
+}
 
 TEST_CASE("MainPages registers all geometry creation pages") {
     const auto main_pages_path = appSourceDir() / "resource/qml/MainPages.qml";
@@ -131,4 +166,66 @@ TEST_CASE("Chinese translations cover the new geometry pages") {
                               "<source>Minor radius should be less than major radius</source>"});
 }
 
+TEST_CASE("ProgressCard supports determinate and indeterminate request states") {
+    const auto progress_path = appSourceDir() / "resource/qml/components/ProgressCard.qml";
+    REQUIRE_MESSAGE(Fs::exists(progress_path), "Missing file: " << progress_path.string());
+
+    const auto content = readFile(progress_path);
+    requireSnippets(
+        content,
+        {"property bool hasDeterminateProgress: false", "property double requestId: -1",
+         "readonly property bool indeterminate:", "root.active && !root.hasDeterminateProgress",
+         "if (root.completionState === \"done\")", "root.completionState !== \"failed\"",
+         "requestId !== root.requestId", "hideTimer.stop()"});
+}
+
+TEST_CASE("Muted requests do not publish visible progress") {
+    const auto service_path = appSourceDir() / "src/request_service.cpp";
+    REQUIRE_MESSAGE(Fs::exists(service_path), "Missing file: " << service_path.string());
+
+    const auto content = readFile(service_path);
+    requireSnippets(content, {"[this, muted, request_id](double progress", "if(muted) {",
+                              "Q_EMIT progressUpdated(progress, msg, request_id);"});
+}
+
+TEST_CASE("ProgressCard stops a previous completion timer for a new request") {
+    (void)ensureQmlApplication();
+    FakeRequestService service;
+    qmlRegisterSingletonInstance("OpenGeoLab.Services", 1, 0, "RequestService", &service);
+
+    QQmlEngine engine;
+    const auto qml_root = appSourceDir() / "resource/qml";
+
+    QQmlComponent theme_component(&engine, QUrl::fromLocalFile(QString::fromStdString(
+                                               (qml_root / "theme/AppTheme.qml").string())));
+    INFO(theme_component.errorString().toStdString());
+    std::unique_ptr<QObject> theme(theme_component.create());
+    REQUIRE(theme != nullptr);
+
+    QQmlComponent card_component(
+        &engine, QUrl::fromLocalFile(
+                     QString::fromStdString((qml_root / "components/ProgressCard.qml").string())));
+    INFO(card_component.errorString().toStdString());
+    std::unique_ptr<QObject> card(
+        card_component.createWithInitialProperties({{"theme", QVariant::fromValue(theme.get())}}));
+    REQUIRE(card != nullptr);
+
+    Q_EMIT service.requestSent(QStringLiteral("first.action"), QStringLiteral("{}"), false, 1);
+    Q_EMIT service.responseReady(QStringLiteral(R"({"ok":true})"), false, 1);
+    QCoreApplication::processEvents();
+
+    auto* hide_timer = card->findChild<QObject*>(QStringLiteral("hideTimer"));
+    REQUIRE(hide_timer != nullptr);
+    CHECK(hide_timer->property("running").toBool());
+
+    Q_EMIT service.requestSent(QStringLiteral("second.action"), QStringLiteral("{}"), false, 2);
+    QCoreApplication::processEvents();
+
+    CHECK_FALSE(hide_timer->property("running").toBool());
+    CHECK(card->property("active").toBool());
+    CHECK(card->property("lastDescription").toString() == QStringLiteral("second.action"));
+}
+
 } // namespace OpenGeoLab::App::Tests
+
+#include "qml_page_registration_test.moc"

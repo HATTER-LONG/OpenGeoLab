@@ -118,7 +118,7 @@ Item {
 
     Connections {
         target: RequestService
-        function onResponseReady(responseJson, muted) {
+        function onResponseReady(responseJson, muted, requestId) {
             try {
                 const resp = JSON.parse(responseJson)
                 if (resp.action === "list_shapes" && resp.ok) {

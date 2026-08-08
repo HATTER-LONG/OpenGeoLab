@@ -37,7 +37,7 @@ Window {
     Connections {
         target: RequestService
 
-        function onResponseReady(responseJson, muted) {
+        function onResponseReady(responseJson, muted, requestId) {
             const resp = JSON.parse(responseJson);
             if (resp.module === "plugins" && resp.action === "list" && resp.ok) {
                 root.pluginList = resp.result.plugins || [];
@@ -45,7 +45,7 @@ Window {
             }
         }
 
-        function onErrorOccurred(errorMessage, muted) {
+        function onErrorOccurred(errorMessage, muted, requestId) {
             root.statusNote = qsTr("Error: %1").arg(errorMessage);
             console.warn("[Main] Request error:", errorMessage);
         }

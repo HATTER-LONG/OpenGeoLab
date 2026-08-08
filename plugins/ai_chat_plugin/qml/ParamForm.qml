@@ -12,10 +12,13 @@ Item {
 
     required property var model
     required property bool isExecuting
+    required property string executionState
     required property real progress
+    required property string progressMessage
 
     signal executeClicked()
     signal clearClicked()
+    signal statusDismissed()
     signal valueChanged(string name, var value)
 
     ColumnLayout {
@@ -198,6 +201,7 @@ Item {
 
             Button {
                 text: qsTr("Clear")
+                enabled: !root.isExecuting
                 onClicked: root.clearClicked()
 
                 contentItem: Label {
@@ -221,14 +225,108 @@ Item {
 
             Item { Layout.fillWidth: true }
 
-            ProgressBar {
-                id: progressBar
-                visible: root.isExecuting || root.progress >= 1.0
-                value: root.progress
-                Layout.preferredWidth: 120
-                Layout.preferredHeight: 4
+            ColumnLayout {
+                visible: root.executionState !== "idle"
+                spacing: 3
+                Layout.preferredWidth: 230
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: PluginTheme.gapTight
+
+                    Label {
+                        Layout.fillWidth: true
+                        text: root.progressMessage.length > 0
+                              ? root.progressMessage
+                              : (root.executionState === "failed"
+                                 ? qsTr("Execution failed")
+                                 : root.executionState === "succeeded"
+                                   ? qsTr("Completed")
+                                   : qsTr("Processing…"))
+                        color: root.executionState === "failed"
+                               ? PluginTheme.danger
+                               : root.executionState === "succeeded"
+                                 ? PluginTheme.success
+                                 : PluginTheme.textSecondary
+                        font.pixelSize: 11
+                        elide: Text.ElideRight
+                    }
+
+                    Label {
+                        visible: root.progress > 0
+                                 && root.executionState !== "failed"
+                        text: Math.round(Math.max(0, Math.min(1, root.progress)) * 100) + "%"
+                        color: root.executionState === "succeeded"
+                               ? PluginTheme.success
+                               : PluginTheme.accentA
+                        font.pixelSize: 10
+                        font.weight: Font.DemiBold
+                    }
+                }
+
+                ProgressBar {
+                    id: progressBar
+                    readonly property bool waitingForProgress:
+                        root.isExecuting && root.progress <= 0
+
+                    from: 0
+                    to: 1
+                    value: Math.max(from, Math.min(to, root.progress))
+                    indeterminate: waitingForProgress
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 6
+
+                    background: Rectangle {
+                        radius: 3
+                        color: PluginTheme.surfaceStrong
+                    }
+
+                    contentItem: Item {
+                        clip: true
+
+                        Rectangle {
+                            id: progressFill
+                            width: progressBar.waitingForProgress
+                                   ? Math.max(parent.width * 0.3, 32)
+                                   : parent.width * progressBar.visualPosition
+                            height: parent.height
+                            radius: 3
+                            color: root.executionState === "failed"
+                                   ? PluginTheme.danger
+                                   : root.executionState === "succeeded"
+                                     ? PluginTheme.success
+                                     : PluginTheme.accentA
+                            x: progressBar.waitingForProgress ? -width : 0
+
+                            Behavior on width {
+                                enabled: !progressBar.waitingForProgress
+                                NumberAnimation {
+                                    duration: PluginTheme.animNormal
+                                    easing.type: Easing.OutCubic
+                                }
+                            }
+
+                            NumberAnimation on x {
+                                running: progressBar.waitingForProgress
+                                         && progressBar.visible
+                                from: -progressFill.width
+                                to: progressFill.parent.width
+                                duration: 1100
+                                loops: Animation.Infinite
+                            }
+                        }
+                    }
+                }
             }
         }
+    }
+
+    Timer {
+        interval: root.executionState === "failed" ? 4000 : 3000
+        running: root.executionState === "succeeded"
+                 || root.executionState === "failed"
+        repeat: false
+        onTriggered: root.statusDismissed()
     }
 
     // ── Inline delegate components ─────────────────────────────────────
