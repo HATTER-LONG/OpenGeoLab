@@ -34,9 +34,6 @@ def launch_ui() -> dict:
     from ai_chat_plugin.chat_backend import ChatBackend
     from ai_chat_plugin._qml_setup import setup_engine
 
-    from PySide6.QtQuickControls2 import QQuickStyle
-    QQuickStyle.setStyle("Basic")
-
     backend = DebuggerBackend()
     config = ChatConfig()
     chat_backend = ChatBackend(config=config)

@@ -69,16 +69,19 @@ Item {
     Connections {
         target: RequestService
 
-        function onRequestSent(description: string, requestJson: string, muted: bool): void {
+        function onRequestSent(description: string, requestJson: string, muted: bool,
+                               requestId: double): void {
             const label = "[" + description + "]" + (muted ? " (muted)" : "");
             root.appendTerminalEntry("command", label, root.formatJson(requestJson));
         }
 
-        function onResponseReady(responseJson: string, muted: bool): void {
+        function onResponseReady(responseJson: string, muted: bool,
+                                 requestId: double): void {
             root.appendTerminalEntry("response", "", root.formatJson(responseJson));
         }
 
-        function onErrorOccurred(errorMessage: string, muted: bool): void {
+        function onErrorOccurred(errorMessage: string, muted: bool,
+                                 requestId: double): void {
             root.appendTerminalEntry("error", "", errorMessage);
         }
     }

@@ -33,14 +33,11 @@ def launch_ui(param: dict | None = None) -> dict:
 
     from PySide6.QtCore import QUrl
     from PySide6.QtQml import QQmlApplicationEngine
-    from PySide6.QtQuickControls2 import QQuickStyle
     from PySide6.QtWidgets import QApplication
 
     application = QApplication.instance()
     if application is None:
         return {"ok": False, "message": "No QApplication instance."}
-
-    QQuickStyle.setStyle("Basic")
 
     from http_server_plugin.server_backend import ServerBackend
 

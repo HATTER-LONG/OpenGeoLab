@@ -29,6 +29,7 @@ Item {
 
         SchemaTreeView {
             model: root.backend.schemaTreeModel
+            enabled: !root.backend.isExecuting
             SplitView.preferredWidth: 240
             SplitView.minimumWidth: 180
 
@@ -63,12 +64,15 @@ Item {
             ParamForm {
                 model: root.backend.paramListModel
                 isExecuting: root.backend.isExecuting
+                executionState: root.backend.executionState
                 progress: root.backend.progress
+                progressMessage: root.backend.progressMessage
                 SplitView.preferredHeight: 240
                 SplitView.minimumHeight: 120
 
                 onExecuteClicked: root.backend.execute()
                 onClearClicked: root.backend.clear()
+                onStatusDismissed: root.backend.dismissExecutionStatus()
             }
 
             RequestResponseView {
