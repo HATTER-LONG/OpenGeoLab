@@ -14,6 +14,8 @@
 
 #include <glm/vec3.hpp>
 
+#include <QtCore/qglobal.h>
+
 #include <memory>
 #include <span>
 #include <string>
@@ -25,29 +27,19 @@ class TopologyIndex;
 struct DrawRange;
 } // namespace OpenGeoLab::Scene
 
-namespace OpenGeoLab::Render {
+QT_BEGIN_NAMESPACE
+class QRhi;
+class QRhiCommandBuffer;
+class QRhiRenderTarget;
+QT_END_NAMESPACE
 
-/**
- * @brief GL function loader — a function pointer compatible with platform getProcAddress.
- *
- * The caller supplies a loader (e.g. wrapping QOpenGLContext::getProcAddress)
- * so the render DLL can populate its own glad function pointers.
- */
-using GlLoaderFunc = void* (*)(const char*);
+namespace OpenGeoLab::Render {
 
 /** @brief Top-level rendering entry point managing the multi-pass pipeline. */
 class OPENGEOLAB_RENDER_EXPORT RenderPipeline final {
 public:
     RenderPipeline();
     ~RenderPipeline();
-
-    /**
-     * @brief Initialize GPU resources and shader programs.
-     * @param glLoader Optional GL function loader. When non-null the render
-     *        library calls gladLoadGL internally so that its function pointers
-     *        are valid (necessary when the render library is a separate DLL).
-     */
-    void initialize(GlLoaderFunc gl_loader = nullptr);
 
     /**
      * @brief Upload scene geometry changes to GPU buffers.
@@ -61,7 +53,10 @@ public:
      * @brief Execute the full multi-pass rendering pipeline.
      * @param state Per-frame camera, viewport and display state.
      */
-    void render(const FrameState& state);
+    void render(QRhi* rhi,
+                QRhiCommandBuffer* command_buffer,
+                QRhiRenderTarget* render_target,
+                const FrameState& state);
 
     /**
      * @brief Resolve a single-pixel pick at the given framebuffer coordinate.
@@ -125,7 +120,7 @@ public:
                                                  Core::EntityType entity_type,
                                                  uint32_t local_id) const;
 
-    /** @brief Release all GPU resources owned by the pipeline. */
+    /** @brief Release all QRhi resources owned by the pipeline. */
     void cleanup();
 
 private:

@@ -1,11 +1,11 @@
 /**
- * @file gl_viewport_renderer.cpp
- * @brief GLViewportRenderer implementation
+ * @file rhi_viewport_renderer.cpp
+ * @brief RhiViewportRenderer implementation
  */
 
-#include <opengeolab/app/gl_viewport_renderer.hpp>
+#include <opengeolab/app/rhi_viewport_renderer.hpp>
 
-#include <opengeolab/app/gl_viewport.hpp>
+#include <opengeolab/app/rhi_viewport.hpp>
 #include <opengeolab/core/entity_ref.hpp>
 #include <opengeolab/core/entity_tag.hpp>
 #include <opengeolab/render/label_anchor.hpp>
@@ -13,17 +13,13 @@
 #include <opengeolab/scene/scene_graph.hpp>
 #include <opengeolab/scene/selection_state.hpp>
 
-#include <glad/gl.h>
-
 #include <QCoreApplication>
 #include <QDir>
 #include <QFileInfo>
 #include <QImage>
 #include <QMetaObject>
-#include <QOpenGLContext>
-#include <QOpenGLFramebufferObject>
-#include <QQuickOpenGLUtils>
 #include <QQuickWindow>
+#include <rhi/qrhi.h>
 
 #include <algorithm>
 #include <cstring>
@@ -56,53 +52,36 @@ void fulfillCapturePromise(const Scene::PendingCapture& capture, Scene::CaptureR
 
 } // namespace
 
-GLViewportRenderer::GLViewportRenderer() = default;
+RhiViewportRenderer::RhiViewportRenderer() = default;
 
-GLViewportRenderer::~GLViewportRenderer() {
-    if(m_pipelineInitialized && QOpenGLContext::currentContext() != nullptr) {
+RhiViewportRenderer::~RhiViewportRenderer() {
+    if(m_pipelineInitialized) {
         m_pipeline.cleanup();
     }
 }
 
-QOpenGLFramebufferObject* GLViewportRenderer::createFramebufferObject(const QSize& size) {
-    static_cast<void>(ensureGladInitialized());
-
-    QOpenGLFramebufferObjectFormat format;
-    format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    format.setInternalTextureFormat(GL_RGBA8);
-    format.setSamples(4);
-    return new QOpenGLFramebufferObject(size, format);
-}
-
-void GLViewportRenderer::synchronize(QQuickFramebufferObject* item) {
-    auto* viewport = static_cast<GLViewport*>(item);
-    m_viewport = viewport;
-
-    if(!ensureGladInitialized()) {
-        return;
-    }
-
+void RhiViewportRenderer::initialize(QRhiCommandBuffer* command_buffer) {
+    Q_UNUSED(command_buffer);
     if(!m_pipelineInitialized) {
-        auto gl_loader = +[](const char* name) -> void* {
-            if(const auto* const ctx = QOpenGLContext::currentContext(); ctx != nullptr) {
-                return reinterpret_cast<void*>(ctx->getProcAddress(name));
-            }
-            return nullptr;
-        };
         m_pipeline.setFontAtlasDir(QCoreApplication::applicationDirPath().toStdString() +
                                    "/resources/fonts");
-        m_pipeline.initialize(gl_loader);
         m_pipelineInitialized = true;
     }
+}
+
+void RhiViewportRenderer::synchronize(QQuickRhiItem* item) {
+    auto* viewport = static_cast<RhiViewport*>(item);
+    m_viewport = viewport;
 
     if(const auto* scene = viewport->sceneGraph(); scene != nullptr) {
-        [[maybe_unused]] auto lock = scene->readLock();
         m_pipeline.synchronize(*scene);
     }
 
+    // QQuickRhiItem may render at a scale different from QWindow's DPR.
+    // effectiveDevicePixelRatio() is the authoritative texture scale.
     const auto* const window = viewport->window();
     const float device_pixel_ratio =
-        window != nullptr ? static_cast<float>(window->devicePixelRatio()) : 1.0F;
+        window != nullptr ? static_cast<float>(window->effectiveDevicePixelRatio()) : 1.0F;
     const float width_px =
         static_cast<float>(std::max(viewport->width(), 1.0)) * device_pixel_ratio;
     const float height_px =
@@ -118,7 +97,7 @@ void GLViewportRenderer::synchronize(QQuickFramebufferObject* item) {
     m_frameState.viewportWidth = static_cast<int>(width_px);
     m_frameState.viewportHeight = static_cast<int>(height_px);
     m_frameState.devicePixelRatio = device_pixel_ratio;
-    // Read display mode from ViewportState (authoritative) with GLViewport fallback.
+    // Read display mode from ViewportState (authoritative) with RhiViewport fallback.
     if(viewport->sceneGraph() != nullptr) {
         m_frameState.xRayMode = viewport->sceneGraph()->viewportState().xRayMode();
         m_frameState.showTessellation = viewport->sceneGraph()->viewportState().showTessellation();
@@ -267,12 +246,17 @@ void GLViewportRenderer::synchronize(QQuickFramebufferObject* item) {
     m_frameState.activePickMask = m_selectionActive ? m_selectionPickMask : Core::PickMask::All;
 }
 
-void GLViewportRenderer::render() {
-    if(!m_gladInitialized || !m_pipelineInitialized) {
+void RhiViewportRenderer::render(QRhiCommandBuffer* command_buffer) {
+    if(!m_pipelineInitialized || command_buffer == nullptr || renderTarget() == nullptr) {
         return;
     }
 
-    m_pipeline.render(m_frameState);
+    // The actual render target can be rounded or resized independently from
+    // the item. Use its pixel size for viewport/scissor and CPU picking.
+    const QSize target_size = renderTarget()->pixelSize();
+    m_frameState.viewportWidth = target_size.width();
+    m_frameState.viewportHeight = target_size.height();
+    m_pipeline.render(rhi(), command_buffer, renderTarget(), m_frameState);
 
     if(m_pickingEnabled) {
         if(m_hoverPick.active) {
@@ -298,33 +282,12 @@ void GLViewportRenderer::render() {
 
     // Viewport capture (independent of picking state).
     if(m_pendingCapture.has_value()) {
-        executeCaptureRequest(*m_pendingCapture);
+        executeCaptureRequest(*m_pendingCapture, command_buffer);
         m_pendingCapture.reset();
     }
-
-    QQuickOpenGLUtils::resetOpenGLState();
 }
 
-bool GLViewportRenderer::ensureGladInitialized() {
-    if(m_gladInitialized) {
-        return true;
-    }
-
-    if(QOpenGLContext::currentContext() == nullptr) {
-        return false;
-    }
-
-    const int version = gladLoadGL(reinterpret_cast<GLADloadfunc>(+[](const char* name) -> void* {
-        if(const auto* const context = QOpenGLContext::currentContext(); context != nullptr) {
-            return reinterpret_cast<void*>(context->getProcAddress(name));
-        }
-        return nullptr;
-    }));
-    m_gladInitialized = version != 0;
-    return m_gladInitialized;
-}
-
-Render::PickMask GLViewportRenderer::pickMask() const {
+Render::PickMask RhiViewportRenderer::pickMask() const {
     // When selection mode is active, use SelectionState's pickMask
     // so the GPU pick pass only matches the entity types the user selected.
     if(m_selectionActive && m_selectionPickMask != Render::PickMask::None) {
@@ -333,7 +296,7 @@ Render::PickMask GLViewportRenderer::pickMask() const {
     return pickMaskFromMode(m_pickMode);
 }
 
-Render::PickResult GLViewportRenderer::pickAtItemPosition(float x, float y) const {
+Render::PickResult RhiViewportRenderer::pickAtItemPosition(float x, float y) const {
     if(m_frameState.viewportWidth <= 0 || m_frameState.viewportHeight <= 0) {
         return {};
     }
@@ -347,13 +310,13 @@ Render::PickResult GLViewportRenderer::pickAtItemPosition(float x, float y) cons
     return m_pipeline.pickAt(pixel_x, pixel_y, pickMask());
 }
 
-void GLViewportRenderer::dispatchPickResult(const Render::PickResult& result,
-                                            Core::PickAction action) const {
+void RhiViewportRenderer::dispatchPickResult(const Render::PickResult& result,
+                                             Core::PickAction action) const {
     if(m_viewport.isNull()) {
         return;
     }
 
-    const QPointer<GLViewport> viewport = m_viewport;
+    const QPointer<RhiViewport> viewport = m_viewport;
     QMetaObject::invokeMethod(
         viewport.data(),
         [viewport, result, action]() {
@@ -385,12 +348,12 @@ void GLViewportRenderer::dispatchPickResult(const Render::PickResult& result,
         Qt::QueuedConnection);
 }
 
-void GLViewportRenderer::dispatchHoverResult(const Render::PickResult& result) const {
+void RhiViewportRenderer::dispatchHoverResult(const Render::PickResult& result) const {
     if(m_viewport.isNull()) {
         return;
     }
 
-    const QPointer<GLViewport> viewport = m_viewport;
+    const QPointer<RhiViewport> viewport = m_viewport;
 
     if(!result.valid) {
         QMetaObject::invokeMethod(
@@ -432,7 +395,7 @@ void GLViewportRenderer::dispatchHoverResult(const Render::PickResult& result) c
         Qt::QueuedConnection);
 }
 
-void GLViewportRenderer::dispatchBoxSelectResults(const GLViewport::PendingBoxSelect& box) const {
+void RhiViewportRenderer::dispatchBoxSelectResults(const RhiViewport::PendingBoxSelect& box) const {
     if(m_viewport.isNull()) {
         return;
     }
@@ -460,7 +423,7 @@ void GLViewportRenderer::dispatchBoxSelectResults(const GLViewport::PendingBoxSe
         }
     }
 
-    const QPointer<GLViewport> viewport = m_viewport;
+    const QPointer<RhiViewport> viewport = m_viewport;
     const Core::PickAction action = box.action;
     QMetaObject::invokeMethod(
         viewport.data(),
@@ -480,7 +443,7 @@ void GLViewportRenderer::dispatchBoxSelectResults(const GLViewport::PendingBoxSe
         Qt::QueuedConnection);
 }
 
-void GLViewportRenderer::dispatchPickAreaResults(const Scene::PendingPickArea& area) const {
+void RhiViewportRenderer::dispatchPickAreaResults(const Scene::PendingPickArea& area) const {
     if(m_viewport.isNull()) {
         return;
     }
@@ -520,7 +483,7 @@ void GLViewportRenderer::dispatchPickAreaResults(const Scene::PendingPickArea& a
         }
     }
 
-    const QPointer<GLViewport> viewport = m_viewport;
+    const QPointer<RhiViewport> viewport = m_viewport;
     const Core::PickAction action = area.action;
     QMetaObject::invokeMethod(
         viewport.data(),
@@ -540,7 +503,8 @@ void GLViewportRenderer::dispatchPickAreaResults(const Scene::PendingPickArea& a
         Qt::QueuedConnection);
 }
 
-void GLViewportRenderer::executeCaptureRequest(const Scene::PendingCapture& capture) {
+void RhiViewportRenderer::executeCaptureRequest(const Scene::PendingCapture& capture,
+                                                QRhiCommandBuffer* command_buffer) {
     const int w = m_frameState.viewportWidth;
     const int h = m_frameState.viewportHeight;
 
@@ -551,27 +515,51 @@ void GLViewportRenderer::executeCaptureRequest(const Scene::PendingCapture& capt
         return;
     }
 
-    // The viewport FBO uses 4× MSAA, so direct glReadPixels yields
-    // undefined data.  QOpenGLFramebufferObject::toImage() resolves the
-    // multisample buffer, reads the pixels and flips the image in one step.
-    // Convert to RGB32 (opaque) so the saved PNG matches the on-screen
-    // composite regardless of FBO alpha state.
-    QImage image = framebufferObject()->toImage().convertToFormat(QImage::Format_RGB32);
-
-    Scene::CaptureResult result;
-
-    const QString output_path = QString::fromStdString(capture.outputPath);
-    const QFileInfo output_file(output_path);
-    QDir output_dir = output_file.dir();
-    if(!output_dir.exists() && !output_dir.mkpath(QStringLiteral("."))) {
-        result.savedPathError = "Failed to create the output directory for filePath.";
-    } else if(!image.save(output_path, "PNG")) {
-        result.savedPathError = "Failed to write PNG to filePath.";
-    } else {
-        result.savedPath = capture.outputPath;
+    QRhiTexture* texture = resolveTexture() != nullptr ? resolveTexture() : colorTexture();
+    if(texture == nullptr) {
+        Scene::CaptureResult result;
+        result.savedPathError = "Capture failed because the RHI color texture is unavailable.";
+        fulfillCapturePromise(capture, std::move(result));
+        return;
     }
 
-    fulfillCapturePromise(capture, std::move(result));
+    auto* readback = new QRhiReadbackResult;
+    const bool flip_vertically = rhi()->isYUpInFramebuffer();
+    readback->completed = [readback, capture, flip_vertically]() mutable {
+        Scene::CaptureResult result;
+        if(readback->pixelSize.isEmpty() || readback->data.isEmpty()) {
+            result.savedPathError = "Capture failed because the QRhi readback returned no pixels.";
+            fulfillCapturePromise(capture, std::move(result));
+            delete readback;
+            return;
+        }
+
+        const auto image_format = readback->format == QRhiTexture::BGRA8 ? QImage::Format_ARGB32
+                                                                         : QImage::Format_RGBA8888;
+        QImage image(reinterpret_cast<const uchar*>(readback->data.constData()),
+                     readback->pixelSize.width(), readback->pixelSize.height(), image_format);
+        image = image.copy();
+        if(flip_vertically) {
+            image.flip();
+        }
+        image = image.convertToFormat(QImage::Format_RGB32);
+
+        const QString output_path = QString::fromStdString(capture.outputPath);
+        QDir output_dir = QFileInfo(output_path).dir();
+        if(!output_dir.exists() && !output_dir.mkpath(QStringLiteral("."))) {
+            result.savedPathError = "Failed to create the output directory for filePath.";
+        } else if(!image.save(output_path, "PNG")) {
+            result.savedPathError = "Failed to write PNG to filePath.";
+        } else {
+            result.savedPath = capture.outputPath;
+        }
+        fulfillCapturePromise(capture, std::move(result));
+        delete readback;
+    };
+
+    auto* updates = rhi()->nextResourceUpdateBatch();
+    updates->readBackTexture(QRhiReadbackDescription(texture), readback);
+    command_buffer->resourceUpdate(updates);
 }
 
 } // namespace OpenGeoLab::App

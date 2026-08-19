@@ -2,7 +2,7 @@
 # OpenGeoLab Application
 # ---------------------------------------------------------------------------
 
-find_package(Qt6 6.9 REQUIRED COMPONENTS Concurrent Core5Compat OpenGL Svg
+find_package(Qt6 6.9 REQUIRED COMPONENTS Concurrent Core5Compat Svg
                                          QuickLayouts Widgets)
 
 qt_add_executable(
@@ -14,8 +14,8 @@ qt_add_executable(
     src/log_filter_proxy_model.cpp
     src/module_data_notifier.cpp
     src/trackball_controller.cpp
-    src/gl_viewport.cpp
-    src/gl_viewport_renderer.cpp
+    src/rhi_viewport.cpp
+    src/rhi_viewport_renderer.cpp
     src/selection_service.cpp)
 
 target_compile_features(opengeolab_app PRIVATE cxx_std_20)
@@ -33,15 +33,14 @@ target_link_libraries(
             Qt6::Quick
             Qt6::QuickControls2
             Qt6::QuickLayouts
-            Qt6::OpenGL
+            Qt6::GuiPrivate
             Qt6::Svg
             Qt6::Widgets
             OpenGeoLab::Python_Embed
             OpenGeoLab::Command
             OpenGeoLab::Geometry
             OpenGeoLab::Scene
-            OpenGeoLab::Render
-            glad::glad)
+            OpenGeoLab::Render)
 add_dependencies(opengeolab_app opengeolab_pywrapper)
 
 set_source_files_properties(resource/qml/MainPages.qml
@@ -59,7 +58,7 @@ qt_add_qml_module(
     include/opengeolab/app/log_event_model.hpp
     include/opengeolab/app/log_filter_proxy_model.hpp
     include/opengeolab/app/module_data_notifier.hpp
-    include/opengeolab/app/gl_viewport.hpp
+    include/opengeolab/app/rhi_viewport.hpp
     include/opengeolab/app/selection_service.hpp
     QML_FILES
     resource/qml/Main.qml
@@ -250,21 +249,20 @@ if (OPENGEOLAB_BUILD_TESTS)
         test/camera_state_test.cpp
         test/trackball_controller_test.cpp
         test/qml_page_registration_test.cpp
-        test/gl_viewport_test.cpp
-        include/opengeolab/app/gl_viewport.hpp
-        include/opengeolab/app/gl_viewport_renderer.hpp
-        src/gl_viewport.cpp
-        src/gl_viewport_renderer.cpp
+        test/rhi_viewport_test.cpp
+        include/opengeolab/app/rhi_viewport.hpp
+        include/opengeolab/app/rhi_viewport_renderer.hpp
+        src/rhi_viewport.cpp
+        src/rhi_viewport_renderer.cpp
         src/trackball_controller.cpp
         LINKS
         Qt6::Core
         Qt6::Gui
         Qt6::Qml
         Qt6::Quick
-        Qt6::OpenGL
+        Qt6::GuiPrivate
         OpenGeoLab::Scene
         OpenGeoLab::Render
-        glad::glad
         DEFINITIONS
         OPENGEOLAB_APP_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
     target_compile_definitions(opengeolab_app_test PRIVATE QT_NO_KEYWORDS)

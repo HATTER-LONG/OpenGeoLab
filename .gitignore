@@ -98,6 +98,7 @@ out
 .worktrees/
 **/temp/**
 /pyvenv/
+/pyvenv-*/
 
 .superpowers
 .understand-anything/

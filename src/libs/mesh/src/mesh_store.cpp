@@ -80,6 +80,12 @@ const MeshEntry* MeshStore::find(uint32_t shape_id) const {
     return it != m_entries.end() ? &it->second : nullptr;
 }
 
+std::optional<MeshEntry> MeshStore::meshCopy(uint32_t shape_id) const {
+    const std::shared_lock lock(m_mutex);
+    const auto it = m_entries.find(shape_id);
+    return it != m_entries.end() ? std::optional<MeshEntry>{it->second} : std::nullopt;
+}
+
 const MeshTopology* MeshStore::getTopology(uint32_t shape_id) const {
     const std::shared_lock lock(m_mutex);
     const auto it = m_topologies.find(shape_id);

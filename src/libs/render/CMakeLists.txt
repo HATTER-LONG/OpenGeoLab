@@ -1,5 +1,5 @@
 # ---------------------------------------------------------------------------
-# OpenGeoLab Render Library — pure OpenGL, no Qt dependency
+# OpenGeoLab Render Library — Qt Rendering Hardware Interface backend
 # ---------------------------------------------------------------------------
 
 set(render_public_headers
@@ -7,22 +7,12 @@ set(render_public_headers
     include/opengeolab/render/pick_mask.hpp
     include/opengeolab/render/pick_result.hpp
     include/opengeolab/render/render_pipeline.hpp
-    include/opengeolab/render/batch_utils.hpp)
+    include/opengeolab/render/render_scene_snapshot.hpp)
 
 set(render_sources
     src/render_pipeline.cpp
-    src/batch_utils.cpp
+    src/render_scene_snapshot.cpp
     src/pick_resolver.cpp
-    src/core/shader_program.cpp
-    src/core/gpu_buffer_manager.cpp
-    src/core/thick_line_renderer.cpp
-    src/core/pick_fbo.cpp
-    src/pass/opaque_pass.cpp
-    src/pass/wireframe_pass.cpp
-    src/pass/highlight_pass.cpp
-    src/pass/selection_pass.cpp
-    src/pass/label_pass.cpp
-    src/pass/tessellation_overlay_pass.cpp
     src/label_anchor.cpp
     src/font/font_atlas.cpp)
 
@@ -37,14 +27,31 @@ opengeolab_add_module(
     PUBLIC_LINKS
     OpenGeoLab::Core
     OpenGeoLab::Scene
-    glad::glad
     glm::glm
     PRIVATE_LINKS
-    stb_image
+    Qt6::Core
+    Qt6::Gui
+    Qt6::GuiPrivate
     nlohmann_json::nlohmann_json)
 
 target_include_directories(opengeolab_render
                            PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+
+qt_add_shaders(
+    opengeolab_render
+    opengeolab_render_shaders
+    PRECOMPILE
+    PREFIX
+    /opengeolab/render/shaders
+    FILES
+    resource/shaders/mesh.vert
+    resource/shaders/mesh.frag
+    resource/shaders/point.vert
+    resource/shaders/point.frag
+    resource/shaders/label.vert
+    resource/shaders/label.frag
+    resource/shaders/simple.vert
+    resource/shaders/simple.frag)
 
 # Copy MSDF atlas resources to build output for runtime loading.
 set(RENDER_RESOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/resource")
@@ -64,15 +71,11 @@ if (OPENGEOLAB_BUILD_TESTS)
         opengeolab_render_test
         SOURCES
         test/pick_resolver_test.cpp
-        test/batch_utils_test.cpp
-        test/render_pass_base_test.cpp
-        test/selection_pass_test.cpp
-        test/tessellation_overlay_pass_test.cpp
         test/render_pipeline_test.cpp
+        test/render_scene_snapshot_test.cpp
         test/label_anchor_test.cpp
         test/font_atlas_test.cpp
         LINKS
         OpenGeoLab::Render)
-    target_include_directories(opengeolab_render_test
-                               PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+    target_include_directories(opengeolab_render_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
 endif ()

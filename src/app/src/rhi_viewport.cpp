@@ -1,11 +1,11 @@
 /**
- * @file gl_viewport.cpp
- * @brief GLViewport implementation
+ * @file rhi_viewport.cpp
+ * @brief RhiViewport implementation
  */
 
-#include <opengeolab/app/gl_viewport.hpp>
+#include <opengeolab/app/rhi_viewport.hpp>
 
-#include <opengeolab/app/gl_viewport_renderer.hpp>
+#include <opengeolab/app/rhi_viewport_renderer.hpp>
 #include <opengeolab/scene/scene_graph.hpp>
 #include <opengeolab/scene/viewport_state.hpp>
 
@@ -30,18 +30,21 @@ constexpr float DRAG_THRESHOLD_PIXELS = 4.0F;
 
 } // namespace
 
-GLViewport::GLViewport(QQuickItem* parent) : QQuickFramebufferObject(parent) {
+RhiViewport::RhiViewport(QQuickItem* parent) : QQuickRhiItem(parent) {
     setAcceptedMouseButtons(Qt::AllButtons);
     setAcceptHoverEvents(true);
     setFlag(ItemAcceptsInputMethod, true);
-    setMirrorVertically(true);
+    // All render passes use QRhi::clipSpaceCorrMatrix(), so their output already
+    // follows the backend framebuffer convention. Mirroring the item again makes
+    // the live Qt Quick composition upside-down even though texture readback is
+    // correct.
+    setMirrorVertically(false);
+    setSampleCount(4);
 }
 
-QQuickFramebufferObject::Renderer* GLViewport::createRenderer() const {
-    return new GLViewportRenderer();
-}
+QQuickRhiItemRenderer* RhiViewport::createRenderer() { return new RhiViewportRenderer(); }
 
-void GLViewport::setSceneGraph(Scene::SceneGraph* scene) {
+void RhiViewport::setSceneGraph(Scene::SceneGraph* scene) {
     if(m_sceneGraph == scene) {
         return;
     }
@@ -79,7 +82,7 @@ void GLViewport::setSceneGraph(Scene::SceneGraph* scene) {
     update();
 }
 
-void GLViewport::setPickingEnabled(bool enabled) {
+void RhiViewport::setPickingEnabled(bool enabled) {
     if(m_pickingEnabled == enabled) {
         return;
     }
@@ -92,7 +95,7 @@ void GLViewport::setPickingEnabled(bool enabled) {
     update();
 }
 
-void GLViewport::setPickMode(int mode) {
+void RhiViewport::setPickMode(int mode) {
     if(!isValidPickMode(mode)) {
         return;
     }
@@ -107,7 +110,7 @@ void GLViewport::setPickMode(int mode) {
     update();
 }
 
-void GLViewport::setXRayMode(bool enabled) {
+void RhiViewport::setXRayMode(bool enabled) {
     if(m_xRayMode == enabled) {
         return;
     }
@@ -120,19 +123,19 @@ void GLViewport::setXRayMode(bool enabled) {
     update();
 }
 
-GLViewport::PendingPick GLViewport::consumePendingPick() {
+RhiViewport::PendingPick RhiViewport::consumePendingPick() {
     const PendingPick pending_pick = m_pendingPick;
     m_pendingPick = {};
     return pending_pick;
 }
 
-GLViewport::PendingBoxSelect GLViewport::consumePendingBoxSelect() {
+RhiViewport::PendingBoxSelect RhiViewport::consumePendingBoxSelect() {
     const PendingBoxSelect pending = m_pendingBoxSelect;
     m_pendingBoxSelect = {};
     return pending;
 }
 
-void GLViewport::notifyPickResult(const Render::PickResult& result) {
+void RhiViewport::notifyPickResult(const Render::PickResult& result) {
     if(!result.valid) {
         Q_EMIT pickCleared();
         return;
@@ -142,7 +145,7 @@ void GLViewport::notifyPickResult(const Render::PickResult& result) {
                         static_cast<int>(result.localId));
 }
 
-void GLViewport::notifyHoverResult(const Render::PickResult& result) {
+void RhiViewport::notifyHoverResult(const Render::PickResult& result) {
     if(!result.valid) {
         Q_EMIT pickCleared();
         return;
@@ -152,7 +155,7 @@ void GLViewport::notifyHoverResult(const Render::PickResult& result) {
                          static_cast<int>(result.localId));
 }
 
-void GLViewport::fitToScene() {
+void RhiViewport::fitToScene() {
     if(m_sceneGraph == nullptr) {
         return;
     }
@@ -160,7 +163,7 @@ void GLViewport::fitToScene() {
     update();
 }
 
-void GLViewport::setViewPreset(int preset) {
+void RhiViewport::setViewPreset(int preset) {
     if(m_sceneGraph == nullptr) {
         return;
     }
@@ -172,9 +175,9 @@ void GLViewport::setViewPreset(int preset) {
     update();
 }
 
-void GLViewport::toggleXRay() { setXRayMode(!m_xRayMode); }
+void RhiViewport::toggleXRay() { setXRayMode(!m_xRayMode); }
 
-void GLViewport::setShowTessellation(bool enabled) {
+void RhiViewport::setShowTessellation(bool enabled) {
     if(m_showTessellation == enabled) {
         return;
     }
@@ -187,9 +190,9 @@ void GLViewport::setShowTessellation(bool enabled) {
     update();
 }
 
-void GLViewport::toggleShowTessellation() { setShowTessellation(!m_showTessellation); }
+void RhiViewport::toggleShowTessellation() { setShowTessellation(!m_showTessellation); }
 
-void GLViewport::mousePressEvent(QMouseEvent* event) {
+void RhiViewport::mousePressEvent(QMouseEvent* event) {
     m_pressPos = event->position();
     m_movedSincePress = false;
     m_pressedButtons = event->buttons();
@@ -197,7 +200,7 @@ void GLViewport::mousePressEvent(QMouseEvent* event) {
     event->accept();
 }
 
-void GLViewport::mouseMoveEvent(QMouseEvent* event) {
+void RhiViewport::mouseMoveEvent(QMouseEvent* event) {
     if(m_trackball.isActive()) {
         if(m_sceneGraph != nullptr) {
             auto state = m_sceneGraph->viewportState().camera();
@@ -247,7 +250,7 @@ void GLViewport::mouseMoveEvent(QMouseEvent* event) {
     event->accept();
 }
 
-void GLViewport::mouseReleaseEvent(QMouseEvent* event) {
+void RhiViewport::mouseReleaseEvent(QMouseEvent* event) {
     if(m_trackball.isActive()) {
         m_trackball.end();
         update();
@@ -284,19 +287,16 @@ void GLViewport::mouseReleaseEvent(QMouseEvent* event) {
     event->accept();
 }
 
-void GLViewport::wheelEvent(QWheelEvent* event) {
-    if((event->modifiers() & Qt::ControlModifier) == Qt::ControlModifier) {
-        const float steps = static_cast<float>(event->angleDelta().y()) / 120.0F;
-        if(steps != 0.0F) {
-            m_trackball.setViewportSize(static_cast<float>(std::max(width(), 1.0)),
-                                        static_cast<float>(std::max(height(), 1.0)));
-            if(m_sceneGraph != nullptr) {
-                auto state = m_sceneGraph->viewportState().camera();
-                m_trackball.wheelZoom(steps * 2.0F, state);
-                m_sceneGraph->viewportState().setCamera(state);
-            }
-            update();
-        }
+void RhiViewport::wheelEvent(QWheelEvent* event) {
+    const float steps = static_cast<float>(event->angleDelta().y()) / 120.0F;
+    if(steps != 0.0F && m_sceneGraph != nullptr) {
+        m_trackball.setViewportSize(static_cast<float>(std::max(width(), 1.0)),
+                                    static_cast<float>(std::max(height(), 1.0)));
+        auto state = m_sceneGraph->viewportState().camera();
+        const float speed = (event->modifiers() & Qt::ControlModifier) != 0 ? 2.0F : 1.0F;
+        m_trackball.wheelZoom(steps * speed, state);
+        m_sceneGraph->viewportState().setCamera(state);
+        update();
         event->accept();
         return;
     }
@@ -304,34 +304,34 @@ void GLViewport::wheelEvent(QWheelEvent* event) {
     event->ignore();
 }
 
-void GLViewport::hoverMoveEvent(QHoverEvent* event) {
+TrackballController::Mode RhiViewport::mapMouseMode(Qt::MouseButtons buttons,
+                                                    Qt::KeyboardModifiers modifiers) const {
+    // Navigation remains available while selecting through Ctrl/Alt + left.
+    if(((modifiers & (Qt::ControlModifier | Qt::AltModifier)) != 0 &&
+        (buttons & Qt::LeftButton) != 0) ||
+       (!m_selectionActive && (buttons & Qt::LeftButton) != 0)) {
+        return TrackballController::Mode::Orbit;
+    }
+
+    if(((modifiers & Qt::ShiftModifier) != 0 && (buttons & Qt::LeftButton) != 0) ||
+       (buttons & Qt::MiddleButton) != 0) {
+        return TrackballController::Mode::Pan;
+    }
+
+    if((buttons & Qt::RightButton) != 0 && !m_selectionActive) {
+        return TrackballController::Mode::Zoom;
+    }
+
+    return TrackballController::Mode::None;
+}
+
+void RhiViewport::hoverMoveEvent(QHoverEvent* event) {
     m_hoverPos = event->position();
     m_hoverActive = true;
     if(m_pickingEnabled) {
         update();
     }
     event->accept();
-}
-
-TrackballController::Mode GLViewport::mapMouseMode(Qt::MouseButtons buttons,
-                                                   Qt::KeyboardModifiers modifiers) const {
-    if((modifiers & Qt::ControlModifier) == Qt::ControlModifier &&
-       (buttons & Qt::LeftButton) == Qt::LeftButton) {
-        return TrackballController::Mode::Orbit;
-    }
-
-    if(((modifiers & Qt::ShiftModifier) == Qt::ShiftModifier &&
-        (buttons & Qt::LeftButton) == Qt::LeftButton) ||
-       (buttons & Qt::MiddleButton) == Qt::MiddleButton) {
-        return TrackballController::Mode::Pan;
-    }
-
-    // Right-drag is zoom ONLY when selection mode is NOT active.
-    if((buttons & Qt::RightButton) == Qt::RightButton && !m_selectionActive) {
-        return TrackballController::Mode::Zoom;
-    }
-
-    return TrackballController::Mode::None;
 }
 
 } // namespace OpenGeoLab::App

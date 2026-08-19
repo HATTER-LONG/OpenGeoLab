@@ -12,6 +12,22 @@
 
 namespace OpenGeoLab::App {
 
+namespace {
+
+[[nodiscard]] glm::vec3 cameraRight(const glm::vec3& view_direction,
+                                    const glm::vec3& up) {
+    glm::vec3 right = glm::cross(up, view_direction);
+    if(glm::dot(right, right) < 1.0e-10F) {
+        const glm::vec3 fallback = std::abs(view_direction.y) < 0.95F
+                                       ? glm::vec3{0.0F, 1.0F, 0.0F}
+                                       : glm::vec3{1.0F, 0.0F, 0.0F};
+        right = glm::cross(fallback, view_direction);
+    }
+    return glm::normalize(right);
+}
+
+} // namespace
+
 void TrackballController::setViewportSize(float width, float height) {
     m_viewportWidth = std::max(width, 1.0F);
     m_viewportHeight = std::max(height, 1.0F);
@@ -76,7 +92,7 @@ void TrackballController::applyOrbit(float x, float y, CameraState& state) {
     const float angle = -ORBIT_SCALE * std::asin(std::clamp(axis_length, -1.0F, 1.0F));
 
     const glm::vec3 view_direction = glm::normalize(state.position - state.target);
-    const glm::vec3 right = glm::normalize(glm::cross(state.up, view_direction));
+    const glm::vec3 right = cameraRight(view_direction, state.up);
     const glm::vec3 true_up = glm::cross(view_direction, right);
     const glm::mat3 view_to_world(right, true_up, view_direction);
     const glm::vec3 world_axis = view_to_world * axis;
@@ -86,7 +102,11 @@ void TrackballController::applyOrbit(float x, float y, CameraState& state) {
     glm::vec3 offset = state.position - state.target;
     offset = world_rotation * offset;
     state.position = state.target + glm::normalize(offset) * camera_distance;
-    state.up = world_rotation * state.up;
+    state.up = glm::normalize(world_rotation * state.up);
+    // Remove accumulated roll/skew from repeated incremental rotations.
+    const glm::vec3 new_view_direction = glm::normalize(state.position - state.target);
+    const glm::vec3 new_right = cameraRight(new_view_direction, state.up);
+    state.up = glm::normalize(glm::cross(new_view_direction, new_right));
     state.updateClipping();
 }
 
@@ -95,7 +115,7 @@ void TrackballController::applyPan(float x, float y, CameraState& state) {
     const float delta_y = y - m_lastY;
 
     const glm::vec3 view_direction = glm::normalize(state.target - state.position);
-    const glm::vec3 right = glm::normalize(glm::cross(view_direction, state.up));
+    const glm::vec3 right = cameraRight(-view_direction, state.up);
     const glm::vec3 up = glm::cross(right, view_direction);
 
     const float scale = state.distance() * PAN_SCALE;

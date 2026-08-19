@@ -52,6 +52,22 @@ void LabelManager::removeByEntity(const Core::EntityRef& entity) {
     labelsChanged.emit();
 }
 
+std::size_t LabelManager::removeWhere(const std::function<bool(const Label3D&)>& predicate) {
+    std::size_t removed = 0;
+    {
+        std::unique_lock lock(m_mutex);
+        const auto previous_size = m_labels.size();
+        std::erase_if(m_labels, predicate);
+        removed = previous_size - m_labels.size();
+        if(removed == 0) {
+            return 0;
+        }
+        ++m_version;
+    }
+    labelsChanged.emit();
+    return removed;
+}
+
 void LabelManager::clearLabels() {
     {
         std::unique_lock lock(m_mutex);

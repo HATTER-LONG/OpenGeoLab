@@ -7,7 +7,6 @@
 
 #include <opengeolab/render/render_export.hpp>
 
-#include <glad/gl.h>
 #include <glm/vec2.hpp>
 
 #include <cstdint>
@@ -27,28 +26,14 @@ struct GlyphMetrics {
 /**
  * @brief Loads a pre-generated MSDF font atlas for label rendering.
  *
- * Two-phase initialization:
- *   1. parseMetrics(jsonString) — parse glyph metrics (no GL required).
- *   2. loadTexture(pngPath) — create GL texture (requires valid GL context).
- *
- * parseMetrics can be called independently for unit testing without GL.
+ * GPU texture ownership belongs to the active QRhi renderer. This class only
+ * stores backend-neutral atlas metrics.
  */
 class OPENGEOLAB_RENDER_EXPORT FontAtlas final {
 public:
     /// Parse glyph metrics from a JSON string. No GL context needed.
     /// @return true on success.
     bool parseMetrics(std::string_view json_string);
-
-    /// Load the MSDF atlas PNG and create a GL_RGB8 texture.
-    /// Requires a valid GL context. Call after parseMetrics().
-    /// @return true on success.
-    bool loadTexture(const std::string& png_path);
-
-    /// Release the GL texture. Safe to call if not initialized.
-    void cleanup();
-
-    /// Bind the atlas texture to the given texture unit.
-    void bind(GLuint texture_unit = 0) const;
 
     /// Look up glyph metrics by Unicode code point.
     /// @return nullptr if the glyph is not in the atlas.
@@ -59,10 +44,7 @@ public:
     [[nodiscard]] float ascender() const noexcept { return m_ascender; }
     [[nodiscard]] float descender() const noexcept { return m_descender; }
     [[nodiscard]] float pxRange() const noexcept { return m_pxRange; }
-    [[nodiscard]] GLuint textureId() const noexcept { return m_texture; }
-
 private:
-    GLuint m_texture{0};
     glm::ivec2 m_atlasSize{};
     float m_lineHeight{};
     float m_ascender{};

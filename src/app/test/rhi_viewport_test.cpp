@@ -1,10 +1,10 @@
 /**
- * @file gl_viewport_test.cpp
- * @brief Tests for GLViewport integration points and app build wiring.
+ * @file rhi_viewport_test.cpp
+ * @brief Tests for RhiViewport integration points and app build wiring.
  */
 
-#include <opengeolab/app/gl_viewport.hpp>
-#include <opengeolab/app/gl_viewport_renderer.hpp>
+#include <opengeolab/app/rhi_viewport.hpp>
+#include <opengeolab/app/rhi_viewport_renderer.hpp>
 #include <opengeolab/core/entity_tag.hpp>
 #include <opengeolab/render/pick_result.hpp>
 #include <opengeolab/scene/scene_graph.hpp>
@@ -49,43 +49,42 @@ QGuiApplication& ensureGuiApplication() {
     }
 
     static int argc = 1;
-    static char app_name[] = "opengeolab_gl_viewport_test";
+    static char app_name[] = "opengeolab_rhi_viewport_test";
     static char* argv[] = {app_name, nullptr};
     static std::unique_ptr<QGuiApplication> app = std::make_unique<QGuiApplication>(argc, argv);
     return *app;
 }
 
-class TestGLViewport final : public GLViewport {
+class TestRhiViewport final : public RhiViewport {
 public:
-    using GLViewport::GLViewport;
-    using GLViewport::mousePressEvent;
-    using GLViewport::mouseReleaseEvent;
+    using RhiViewport::RhiViewport;
+    using RhiViewport::mousePressEvent;
+    using RhiViewport::mouseReleaseEvent;
 };
 
 } // namespace
 
-TEST_CASE("App CMake packages GLViewport sources and QML registration header") {
+TEST_CASE("App CMake packages RhiViewport sources and QML registration header") {
     const auto cmake_path = appSourceDir() / "CMakeLists.txt";
     REQUIRE_MESSAGE(Fs::exists(cmake_path), "Missing file: " << cmake_path.string());
 
     const auto content = readFile(cmake_path);
-    CHECK(content.find("OpenGL") != std::string::npos);
-    CHECK(content.find("src/gl_viewport.cpp") != std::string::npos);
-    CHECK(content.find("src/gl_viewport_renderer.cpp") != std::string::npos);
-    CHECK(content.find("include/opengeolab/app/gl_viewport.hpp") != std::string::npos);
+    CHECK(content.find("GuiPrivate") != std::string::npos);
+    CHECK(content.find("src/rhi_viewport.cpp") != std::string::npos);
+    CHECK(content.find("src/rhi_viewport_renderer.cpp") != std::string::npos);
+    CHECK(content.find("include/opengeolab/app/rhi_viewport.hpp") != std::string::npos);
     CHECK(content.find("OpenGeoLab::Render") != std::string::npos);
-    CHECK(content.find("Qt6::OpenGL") != std::string::npos);
-    CHECK(content.find("glad::glad") != std::string::npos);
+    CHECK(content.find("Qt6::GuiPrivate") != std::string::npos);
 }
 
-TEST_CASE("ViewportPanel wires the GLViewport QML item for interactive picking") {
+TEST_CASE("ViewportPanel wires the RhiViewport QML item for interactive picking") {
     const auto qml_path = appSourceDir() / "resource/qml/sections/ViewportPanel.qml";
     REQUIRE_MESSAGE(Fs::exists(qml_path), "Missing file: " << qml_path.string());
 
     const auto content = readFile(qml_path);
     CHECK(content.find("required property AppTheme theme") != std::string::npos);
     CHECK(content.find("import OpenGeoLab.App") != std::string::npos);
-    CHECK(content.find("GLViewport") != std::string::npos);
+    CHECK(content.find("RhiViewport") != std::string::npos);
     CHECK(content.find("anchors.fill: parent") != std::string::npos);
     CHECK(content.find("pickingEnabled: true") != std::string::npos);
     CHECK(content.find("pickMode: 0") != std::string::npos);
@@ -94,10 +93,10 @@ TEST_CASE("ViewportPanel wires the GLViewport QML item for interactive picking")
     CHECK(content.find("onPickCleared") != std::string::npos);
 }
 
-TEST_CASE("GLViewport queues click picking and forwards pick signals") {
+TEST_CASE("RhiViewport queues click picking and forwards pick signals") {
     static_cast<void>(ensureGuiApplication());
 
-    TestGLViewport viewport;
+    TestRhiViewport viewport;
     viewport.setWidth(320.0);
     viewport.setHeight(200.0);
 
@@ -107,7 +106,7 @@ TEST_CASE("GLViewport queues click picking and forwards pick signals") {
     Render::PickResult picked_result;
     Render::PickResult hovered_result;
 
-    QObject::connect(&viewport, &GLViewport::entityPicked,
+    QObject::connect(&viewport, &RhiViewport::entityPicked,
                      [&](int shape_id, int entity_type, int local_id) {
                          ++picked_count;
                          picked_result.shapeId = static_cast<uint32_t>(shape_id);
@@ -115,7 +114,7 @@ TEST_CASE("GLViewport queues click picking and forwards pick signals") {
                          picked_result.localId = static_cast<uint32_t>(local_id);
                          picked_result.valid = true;
                      });
-    QObject::connect(&viewport, &GLViewport::entityHovered,
+    QObject::connect(&viewport, &RhiViewport::entityHovered,
                      [&](int shape_id, int entity_type, int local_id) {
                          ++hovered_count;
                          hovered_result.shapeId = static_cast<uint32_t>(shape_id);
@@ -123,7 +122,7 @@ TEST_CASE("GLViewport queues click picking and forwards pick signals") {
                          hovered_result.localId = static_cast<uint32_t>(local_id);
                          hovered_result.valid = true;
                      });
-    QObject::connect(&viewport, &GLViewport::pickCleared, [&]() { ++cleared_count; });
+    QObject::connect(&viewport, &RhiViewport::pickCleared, [&]() { ++cleared_count; });
 
     const QPointF click_position{42.0, 26.0};
     QMouseEvent press_event(QEvent::MouseButtonPress, click_position, click_position,
@@ -158,7 +157,7 @@ TEST_CASE("GLViewport queues click picking and forwards pick signals") {
     CHECK(cleared_count == 1);
 }
 
-TEST_CASE("GLViewport fits the camera to the scene and creates a renderer") {
+TEST_CASE("RhiViewport fits the camera to the scene and creates a renderer") {
     static_cast<void>(ensureGuiApplication());
 
     Scene::SceneGraph scene;
@@ -173,7 +172,7 @@ TEST_CASE("GLViewport fits the camera to the scene and creates a renderer") {
     node->setLocalBounds(bounds);
     node->markDirty();
 
-    TestGLViewport viewport;
+    TestRhiViewport viewport;
     viewport.setSceneGraph(&scene);
     viewport.fitToScene();
 
@@ -189,19 +188,19 @@ TEST_CASE("GLViewport fits the camera to the scene and creates a renderer") {
 
     auto* renderer = viewport.createRenderer();
     CHECK(renderer != nullptr);
-    auto* viewport_renderer = dynamic_cast<GLViewportRenderer*>(renderer);
+    auto* viewport_renderer = dynamic_cast<RhiViewportRenderer*>(renderer);
     CHECK(viewport_renderer != nullptr);
     if(viewport_renderer != nullptr) {
         delete viewport_renderer;
     }
 }
 
-TEST_CASE("GLViewport toggles tessellation overlay state and emits change signal") {
+TEST_CASE("RhiViewport toggles tessellation overlay state and emits change signal") {
     static_cast<void>(ensureGuiApplication());
 
-    TestGLViewport viewport;
+    TestRhiViewport viewport;
     int changed_count = 0;
-    QObject::connect(&viewport, &GLViewport::showTessellationChanged, [&]() { ++changed_count; });
+    QObject::connect(&viewport, &RhiViewport::showTessellationChanged, [&]() { ++changed_count; });
 
     CHECK_FALSE(viewport.showTessellation());
 

@@ -11,7 +11,7 @@
 #include "opengeolab/app/request_service.hpp"
 #include "opengeolab/app/selection_service.hpp"
 
-#include <opengeolab/app/gl_viewport.hpp>
+#include <opengeolab/app/rhi_viewport.hpp>
 #include <opengeolab/command/command_dispatcher.hpp>
 #include <opengeolab/command/module_registry.hpp>
 #include <opengeolab/core/logger.hpp>
@@ -26,8 +26,6 @@
 #include <QCommandLineParser>
 #include <QQmlApplicationEngine>
 #include <QQuickStyle>
-#include <QQuickWindow>
-#include <QSurfaceFormat>
 #include <QTimer>
 #include <QtQml/qqml.h>
 
@@ -39,18 +37,6 @@
 #endif
 
 int main(int argc, char* argv[]) {
-    // Force OpenGL backend — QQuickFramebufferObject requires OpenGL, not D3D/Vulkan.
-    QQuickWindow::setGraphicsApi(QSGRendererInterface::OpenGL);
-    {
-        // Request desktop OpenGL for the GLSL renderer, but leave version,
-        // profile and framebuffer attributes to the platform's EGLConfig
-        // selection. Over-constraining those attributes prevents Qt Wayland
-        // from creating its scene graph context on some drivers.
-        QSurfaceFormat format;
-        format.setRenderableType(QSurfaceFormat::OpenGL);
-        QSurfaceFormat::setDefaultFormat(format);
-    }
-
 #if defined(_WIN32) && defined(OPENGEOLAB_QT_BIN_DIR)
     {
         const auto qt_bin = std::filesystem::path(OPENGEOLAB_QT_BIN_DIR);
@@ -135,8 +121,8 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    // ── Wire GLViewport to the SceneGraph ─────────────────────────────
-    auto* viewport = engine.rootObjects().first()->findChild<OpenGeoLab::App::GLViewport*>();
+    // ── Wire RhiViewport to the SceneGraph ─────────────────────────────
+    auto* viewport = engine.rootObjects().first()->findChild<OpenGeoLab::App::RhiViewport*>();
     if(viewport != nullptr && scene_module != nullptr) {
         viewport->setSceneGraph(&scene_module->sceneGraph());
 

@@ -33,6 +33,12 @@ class ShapeStore;
 
 namespace OpenGeoLab::Scene {
 
+/** Immutable copy of all visible render meshes from one scene version. */
+struct VisibleRenderSnapshot {
+    uint64_t sceneVersion{0};
+    std::vector<RenderMeshData> meshes;
+};
+
 /**
  * @brief Root container for a scene node tree.
  *
@@ -133,6 +139,16 @@ public:
      * @brief Visit all visible nodes (skips invisible subtrees).
      */
     void traverseVisible(std::function<void(const SceneNode&)> visitor) const;
+
+    /**
+     * @brief Copy visible render data while holding exactly one scene read lock.
+     *
+
+     * * Render threads consume the returned value without touching SceneGraph again.
+     * This
+     * avoids recursive shared_mutex acquisition during Qt Quick synchronize().
+     */
+    [[nodiscard]] VisibleRenderSnapshot visibleRenderSnapshot() const;
 
     /**
      * @brief Visit every non-root node in the tree (thread-safe).

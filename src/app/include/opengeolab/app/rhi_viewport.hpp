@@ -1,6 +1,6 @@
 /**
- * @file gl_viewport.hpp
- * @brief QQuickFramebufferObject subclass for 3D rendering viewport
+ * @file rhi_viewport.hpp
+ * @brief QQuickRhiItem subclass for the 3D rendering viewport
  */
 
 #pragma once
@@ -14,7 +14,7 @@
 #include <kangaroo/util/signal.hpp>
 
 #include <QPointF>
-#include <QQuickFramebufferObject>
+#include <QQuickRhiItem>
 #include <QRectF>
 #include <QtQml/qqmlregistration.h>
 
@@ -24,15 +24,15 @@ class SceneGraph;
 
 namespace OpenGeoLab::App {
 
-class GLViewportRenderer;
+class RhiViewportRenderer;
 
 /**
  * @brief Interactive 3D viewport for Qt Quick scene graph
  *
  * Provides orbit/pan/zoom via TrackballController and GPU picking.
- * Rendering is performed on the Qt render thread via GLViewportRenderer.
+ * Rendering is performed on the Qt render thread via RhiViewportRenderer.
  */
-class GLViewport : public QQuickFramebufferObject {
+class RhiViewport : public QQuickRhiItem {
     Q_OBJECT
     QML_ELEMENT
 
@@ -50,13 +50,13 @@ public:
      * @brief Construct a Qt Quick framebuffer viewport item.
      * @param parent Optional QQuickItem parent.
      */
-    explicit GLViewport(QQuickItem* parent = nullptr);
+    explicit RhiViewport(QQuickItem* parent = nullptr);
 
     /**
      * @brief Create the render-thread renderer instance for this viewport.
      * @return Newly allocated renderer owned by Qt Quick.
      */
-    [[nodiscard]] Renderer* createRenderer() const override;
+    [[nodiscard]] QQuickRhiItemRenderer* createRenderer() override;
 
     /**
      * @brief Assign the scene graph mirrored into the render pipeline.
@@ -186,7 +186,7 @@ private:
     [[nodiscard]] TrackballController::Mode mapMouseMode(Qt::MouseButtons buttons,
                                                          Qt::KeyboardModifiers modifiers) const;
 
-    friend class GLViewportRenderer;
+    friend class RhiViewportRenderer;
 
     Scene::SceneGraph* m_sceneGraph{nullptr};
     TrackballController m_trackball;

@@ -6,14 +6,14 @@ import "../theme"
 import "../components"
 import OpenGeoLab.App
 
-/** @brief Interactive 3D viewport powered by OpenGL, with rounded-corner mask. */
+/** @brief Interactive 3D viewport powered by Qt RHI, with rounded-corner mask. */
 Item {
     id: root
 
     required property AppTheme theme
 
-    /** @brief Expose the GLViewport so other panels can call its methods. */
-    property alias glViewport: viewport
+    /** @brief Expose the RhiViewport so other panels can call its methods. */
+    property alias rhiViewport: viewport
 
     /** @brief Rounded-corner container that masks the FBO output. */
     Item {
@@ -28,7 +28,7 @@ Item {
             }
         }
 
-        GLViewport {
+        RhiViewport {
             id: viewport
             anchors.fill: parent
             pickingEnabled: true

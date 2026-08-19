@@ -18,6 +18,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <optional>
 #include <shared_mutex>
 #include <unordered_map>
 #include <vector>
@@ -73,6 +74,9 @@ public:
      * @note The returned pointer is valid only while the caller holds no write lock.
      */
     [[nodiscard]] const MeshEntry* find(uint32_t shape_id) const;
+
+    /** @brief Return a thread-safe value copy suitable for work after unlocking. */
+    [[nodiscard]] std::optional<MeshEntry> meshCopy(uint32_t shape_id) const;
 
     /**
      * @brief Get cached topology for a shape. Returns nullptr if not found.

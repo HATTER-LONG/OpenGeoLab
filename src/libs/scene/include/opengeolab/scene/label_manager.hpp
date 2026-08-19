@@ -16,6 +16,7 @@
 
 #include <atomic>
 #include <cstdint>
+#include <functional>
 #include <shared_mutex>
 #include <string>
 #include <vector>
@@ -46,6 +47,9 @@ public:
 
     /// Remove any label associated with an entity.
     void removeByEntity(const Core::EntityRef& entity);
+
+    /** Remove labels matching @p predicate and return the number removed. */
+    std::size_t removeWhere(const std::function<bool(const Label3D&)>& predicate);
 
     /// Remove all labels.
     void clearLabels();

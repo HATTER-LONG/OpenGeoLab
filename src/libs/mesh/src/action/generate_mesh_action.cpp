@@ -540,9 +540,8 @@ nlohmann::json GenerateMeshAction::describe() const {
               {"append",
                {{"type", "boolean"},
                 {"required", false},
-                {"description",
-                 "If true (default), merge with existing mesh for the same shape. "
-                 "If false, replace the entire mesh."}}}}},
+                {"description", "If true (default), merge with existing mesh for the same shape. "
+                                "If false, replace the entire mesh."}}}}},
             {"returns",
              {{"ok", {{"type", "boolean"}, {"description", "true on success."}}},
               {"action", {{"type", "string"}, {"description", "Echo of action name."}}},
@@ -606,8 +605,8 @@ nlohmann::json GenerateMeshAction::execute(const nlohmann::json& param,
         }
 
         if(append) {
-            const auto* existing = m_meshStore.find(shape_id);
-            if(existing != nullptr) {
+            const auto existing = m_meshStore.meshCopy(shape_id);
+            if(existing.has_value()) {
                 const uint32_t node_offset = static_cast<uint32_t>(existing->nodes.size());
                 for(auto& element : entry.elements) {
                     for(uint8_t i = 0; i < nodeCount(element.type); ++i) {
@@ -624,9 +623,9 @@ nlohmann::json GenerateMeshAction::execute(const nlohmann::json& param,
         }
 
         m_meshStore.setMesh(shape_id, std::move(entry));
-        const auto* stored_entry = m_meshStore.find(shape_id);
-        const auto node_count = stored_entry != nullptr ? stored_entry->nodes.size() : 0;
-        const auto element_count = stored_entry != nullptr ? stored_entry->elements.size() : 0;
+        const auto stored_entry = m_meshStore.meshCopy(shape_id);
+        const auto node_count = stored_entry.has_value() ? stored_entry->nodes.size() : 0;
+        const auto element_count = stored_entry.has_value() ? stored_entry->elements.size() : 0;
         results.push_back(
             {{"shapeId", shape_id}, {"nodeCount", node_count}, {"elementCount", element_count}});
 

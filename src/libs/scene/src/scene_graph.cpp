@@ -231,6 +231,19 @@ void SceneGraph::traverseVisible(std::function<void(const SceneNode&)> visitor) 
     traverseVisibleImpl(m_root.get(), visitor);
 }
 
+VisibleRenderSnapshot SceneGraph::visibleRenderSnapshot() const {
+    VisibleRenderSnapshot snapshot;
+    std::shared_lock const lock(m_mutex);
+    snapshot.sceneVersion = m_version;
+    traverseVisibleImpl(m_root.get(), [&](const SceneNode& node) {
+        const auto* component = node.renderComponent();
+        if(component != nullptr && !component->meshData().vertices.empty()) {
+            snapshot.meshes.push_back(component->meshData());
+        }
+    });
+    return snapshot;
+}
+
 void SceneGraph::forEachNode(std::function<void(const SceneNode&)> visitor) const {
     std::shared_lock const lock(m_mutex);
     std::function<void(const SceneNode&)> recurse = [&](const SceneNode& node) {

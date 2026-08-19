@@ -1,18 +1,11 @@
 /**
  * @file font_atlas.cpp
- * @brief FontAtlas implementation — JSON parsing + GL texture loading
+ * @brief Backend-neutral FontAtlas metric parsing
  */
 
 #include "font/font_atlas.hpp"
 
 #include <nlohmann/json.hpp>
-
-#define STB_IMAGE_IMPLEMENTATION
-#define STBI_ONLY_PNG
-#include <stb_image.h>
-
-#include <fstream>
-#include <sstream>
 
 namespace OpenGeoLab::Render {
 
@@ -64,41 +57,6 @@ bool FontAtlas::parseMetrics(std::string_view json_string) {
     } catch(const nlohmann::json::exception&) {
         return false;
     }
-}
-
-bool FontAtlas::loadTexture(const std::string& png_path) {
-    int width = 0;
-    int height = 0;
-    int channels = 0;
-    stbi_set_flip_vertically_on_load(1);
-    auto* data = stbi_load(png_path.c_str(), &width, &height, &channels, 3);
-    if(data == nullptr) {
-        return false;
-    }
-
-    glGenTextures(1, &m_texture);
-    glBindTexture(GL_TEXTURE_2D, m_texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glBindTexture(GL_TEXTURE_2D, 0);
-
-    stbi_image_free(data);
-    return true;
-}
-
-void FontAtlas::cleanup() {
-    if(m_texture != 0) {
-        glDeleteTextures(1, &m_texture);
-        m_texture = 0;
-    }
-}
-
-void FontAtlas::bind(GLuint texture_unit) const {
-    glActiveTexture(GL_TEXTURE0 + texture_unit);
-    glBindTexture(GL_TEXTURE_2D, m_texture);
 }
 
 const GlyphMetrics* FontAtlas::glyph(uint32_t code_point) const {

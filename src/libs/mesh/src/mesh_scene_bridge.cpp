@@ -14,6 +14,11 @@ namespace OpenGeoLab::Mesh {
 
 namespace {
 
+[[nodiscard]] bool isMeshEntity(Core::EntityType type) {
+    return type == Core::EntityType::MeshNode || type == Core::EntityType::MeshEdge ||
+           type == Core::EntityType::MeshElement;
+}
+
 class MeshRenderComponent final : public Scene::IRenderComponent {
 public:
     explicit MeshRenderComponent(Scene::RenderMeshData data) : m_data(std::move(data)) {}
@@ -65,6 +70,24 @@ void MeshSceneBridge::onMeshAdded(uint32_t shape_id, const MeshEntry& entry) {
     }
 
     auto mesh_data = MeshRenderBuilder::build(shape_id, entry);
+    const auto node_count = mesh_data.pointRanges.size();
+    const auto edge_count = mesh_data.lineRanges.size();
+    const auto element_count = mesh_data.triangleRanges.size();
+    m_scene.labelManager().removeWhere([=](const Scene::Label3D& label) {
+        if(label.entity.shapeId != shape_id || !isMeshEntity(label.entity.entityType)) {
+            return false;
+        }
+        switch(label.entity.entityType) {
+        case Core::EntityType::MeshNode:
+            return label.entity.localId == 0 || label.entity.localId > node_count;
+        case Core::EntityType::MeshEdge:
+            return label.entity.localId == 0 || label.entity.localId > edge_count;
+        case Core::EntityType::MeshElement:
+            return label.entity.localId == 0 || label.entity.localId > element_count;
+        default:
+            return false;
+        }
+    });
     if(mesh_data.vertices.empty()) {
         return;
     }
@@ -87,13 +110,16 @@ void MeshSceneBridge::onMeshAdded(uint32_t shape_id, const MeshEntry& entry) {
 }
 
 void MeshSceneBridge::onMeshModified(uint32_t shape_id) {
-    const auto* entry = m_store.find(shape_id);
-    if(entry != nullptr) {
+    const auto entry = m_store.meshCopy(shape_id);
+    if(entry.has_value()) {
         onMeshAdded(shape_id, *entry);
     }
 }
 
 void MeshSceneBridge::onMeshRemoved(uint32_t shape_id) {
+    m_scene.labelManager().removeWhere([shape_id](const Scene::Label3D& label) {
+        return label.entity.shapeId == shape_id && isMeshEntity(label.entity.entityType);
+    });
     if(const auto iterator = m_meshToNode.find(shape_id); iterator != m_meshToNode.end()) {
         m_scene.removeNode(iterator->second);
         m_meshToNode.erase(iterator);
@@ -101,6 +127,8 @@ void MeshSceneBridge::onMeshRemoved(uint32_t shape_id) {
 }
 
 void MeshSceneBridge::onStoreCleared() {
+    m_scene.labelManager().removeWhere(
+        [](const Scene::Label3D& label) { return isMeshEntity(label.entity.entityType); });
     for(const auto& [shape_id, node_id] : m_meshToNode) {
         static_cast<void>(shape_id);
         m_scene.removeNode(node_id);

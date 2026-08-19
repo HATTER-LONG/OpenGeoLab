@@ -179,7 +179,22 @@ endforeach ()
 # which is NOT a link dependency of any CMake target — TARGET_RUNTIME_DLLS
 # cannot capture it.
 if (WIN32)
-    cmake_path(GET Python3_EXECUTABLE PARENT_PATH _python_home)
+    # Python3_EXECUTABLE may be a launcher/shim (for example uv's
+    # ~/.local/bin/python3.12.exe), so its parent is not necessarily the
+    # directory that owns the stable-ABI runtime.  Ask Python for the real
+    # installation prefix instead.
+    execute_process(
+        COMMAND "${Python3_EXECUTABLE}" -c
+                "import sys; print(sys.base_prefix)"
+        RESULT_VARIABLE _python_home_result
+        OUTPUT_VARIABLE _python_home
+        ERROR_VARIABLE _python_home_error
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if (NOT _python_home_result EQUAL 0 OR _python_home STREQUAL "")
+        message(
+            FATAL_ERROR
+                "Failed to resolve Python base prefix: ${_python_home_error}")
+    endif ()
     set(_python3_dll "${_python_home}/python3.dll")
     if (EXISTS "${_python3_dll}")
         file(COPY "${_python3_dll}"

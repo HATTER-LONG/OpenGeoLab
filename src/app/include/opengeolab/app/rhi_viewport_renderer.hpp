@@ -1,11 +1,11 @@
 /**
- * @file gl_viewport_renderer.hpp
- * @brief Render-thread renderer for GLViewport
+ * @file rhi_viewport_renderer.hpp
+ * @brief Render-thread renderer for RhiViewport
  */
 
 #pragma once
 
-#include <opengeolab/app/gl_viewport.hpp>
+#include <opengeolab/app/rhi_viewport.hpp>
 #include <opengeolab/render/frame_state.hpp>
 #include <opengeolab/render/pick_mask.hpp>
 #include <opengeolab/render/render_pipeline.hpp>
@@ -13,7 +13,7 @@
 #include <opengeolab/scene/viewport_state.hpp>
 
 #include <QPointer>
-#include <QQuickFramebufferObject>
+#include <QQuickRhiItem>
 
 #include <cstdint>
 #include <optional>
@@ -22,42 +22,39 @@
 namespace OpenGeoLab::App {
 
 /**
- * @brief Performs OpenGL rendering on the Qt render thread
+ * @brief Records portable QRhi rendering on the Qt Quick render thread
  *
- * Created by GLViewport::createRenderer(). Initializes glad on first
- * createFramebufferObject() call, then synchronizes scene state and
- * renders each frame through RenderPipeline.
+ * Created by RhiViewport::createRenderer(), synchronizes scene state, and
+ * records each frame through QRhi on Qt Quick's render thread.
  */
-class GLViewportRenderer : public QQuickFramebufferObject::Renderer {
+class RhiViewportRenderer : public QQuickRhiItemRenderer {
 public:
-    GLViewportRenderer();
-    ~GLViewportRenderer() override;
+    RhiViewportRenderer();
+    ~RhiViewportRenderer() override;
 
-    [[nodiscard]] QOpenGLFramebufferObject* createFramebufferObject(const QSize& size) override;
-    void synchronize(QQuickFramebufferObject* item) override;
-    void render() override;
+    void initialize(QRhiCommandBuffer* command_buffer) override;
+    void synchronize(QQuickRhiItem* item) override;
+    void render(QRhiCommandBuffer* command_buffer) override;
 
 private:
-    [[nodiscard]] bool ensureGladInitialized();
     [[nodiscard]] Render::PickMask pickMask() const;
     [[nodiscard]] Render::PickResult pickAtItemPosition(float x, float y) const;
     void dispatchPickResult(const Render::PickResult& result, Core::PickAction action) const;
     void dispatchHoverResult(const Render::PickResult& result) const;
-    void dispatchBoxSelectResults(const GLViewport::PendingBoxSelect& box) const;
+    void dispatchBoxSelectResults(const RhiViewport::PendingBoxSelect& box) const;
     void dispatchPickAreaResults(const Scene::PendingPickArea& area) const;
-    void executeCaptureRequest(const Scene::PendingCapture& capture);
+    void executeCaptureRequest(const Scene::PendingCapture& capture, QRhiCommandBuffer* command_buffer);
 
-    QPointer<GLViewport> m_viewport;
+    QPointer<RhiViewport> m_viewport;
     Render::RenderPipeline m_pipeline;
     Render::FrameState m_frameState;
-    GLViewport::PendingPick m_pendingPick;
-    GLViewport::PendingPick m_hoverPick;
-    GLViewport::PendingBoxSelect m_pendingBoxSelect;
+    RhiViewport::PendingPick m_pendingPick;
+    RhiViewport::PendingPick m_hoverPick;
+    RhiViewport::PendingBoxSelect m_pendingBoxSelect;
     std::optional<Scene::PendingPickArea> m_pendingPickArea;
     std::optional<Scene::PendingCapture> m_pendingCapture;
     bool m_pickingEnabled{true};
     Render::PickMode m_pickMode{Render::PickMode::VEF};
-    bool m_gladInitialized{false};
     bool m_pipelineInitialized{false};
 
     uint64_t m_cachedSceneVersion{0};     ///< Tracks GPU buffer rebuilds.

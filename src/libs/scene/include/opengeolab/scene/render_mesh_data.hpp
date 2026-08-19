@@ -4,7 +4,7 @@
  *
  * RenderVertex packs position, normal, and color into a 40-byte vertex.
  * PickIdEntry holds the 64-bit pick identifier per vertex (8 bytes).
- * DrawRange describes a contiguous sub-mesh for glDraw* calls.
+ * DrawRange describes a contiguous sub-mesh for backend draw calls.
  * RenderMeshData aggregates all per-shape render data.
  */
 
@@ -55,7 +55,7 @@ enum class PrimitiveTopology : uint8_t {
 /**
  * @brief Describes a contiguous sub-mesh for a single entity.
  *
- * Renderer uses DrawRange to issue glDrawElements or glDrawArrays
+ * Renderer uses DrawRange to issue indexed or non-indexed draw commands.
  * per entity. Also used for highlight expansion (draw all edges of
  * a selected wire, all faces of a solid, etc.).
  */
